@@ -11,8 +11,10 @@ ReexecBackend.verdict(specHash, prestateAnchor)
   -> { verdict: Reproduced | Failed, traceHash, prestateRoot }
 ```
 
-The verdict envelope (`specHash`, `prestateAnchor`, `verdict`, `traceHash`,
-`prestateRoot`) is VM-agnostic. Only the replay engine underneath is VM-specific.
+The verdict envelope (`specHash`, `deliveryHash`, `prestateAnchor`, `verdict`,
+`traceHash`, `prestateRoot`, backend id/version) is VM-agnostic. Only the replay
+engine underneath is VM-specific. The exact types and invariants are in
+[`protocol-architecture.md`](protocol-architecture.md).
 
 ## Act 1 — EVM (now, hackathon)
 

@@ -72,7 +72,9 @@ ReexecBackend.verdict(specHash, prestateAnchor)
 - **cross-VM binder** (third act) — routes a dispute to the right VM backend
 
 The verdict envelope is VM-agnostic; only the engine underneath differs. See
-[`docs/roadmap-crossvm.md`](docs/roadmap-crossvm.md).
+[`docs/protocol-architecture.md`](docs/protocol-architecture.md) for the
+versioned interface, predicate profile, trust boundary, and EVM-first plan; see
+[`docs/roadmap-crossvm.md`](docs/roadmap-crossvm.md) for the extension roadmap.
 
 ## Target
 
@@ -82,7 +84,8 @@ orchestration · MCP control plane · Circle Arc settlement.
 
 ## Status
 
-Scaffold. Architecture convergence in [`docs/architecture-brief.md`](docs/architecture-brief.md).
+Scaffold. The converged EVM-first architecture is in
+[`docs/protocol-architecture.md`](docs/protocol-architecture.md).
 
 ## Collaboration model
 
