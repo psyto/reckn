@@ -118,14 +118,21 @@ codecs). See the module map in
 
 ## Status
 
+The whole dispute → verdict → settlement slice exists and is tested: a funded
+escrow, a deterministic re-execution backend that binds its prestate to a
+committed state root, the canonical verdict record, the settlement signature the
+contract provably accepts, and a money-shot dashboard on real engine output. What
+remains is live-chain I/O (the keeper's event loop and transitive-witness builder)
+and the judge-legibility integrations.
+
 - **Protocol:** locked — [`docs/protocol-architecture.md`](docs/protocol-architecture.md)
   (VM-neutral verdict envelope, committed spec/delivery/anchor codecs, EVM V1
   profile, data-availability + timeout policy, and the reproducibility vs
   settlement-authority split).
-- **Settlement contract (EVM V1):** skeleton implemented in
-  [`contracts/`](contracts) — four-state escrow, EIP-712 resolver verdicts,
-  resolver/backend allow-list, timeout escape hatches, nonzero-window guards.
-  `forge test`: **17 passing**.
+- **Settlement contract (EVM V1):** implemented in [`contracts/`](contracts) —
+  four-state escrow, EIP-712 resolver verdicts, resolver/backend allow-list,
+  timeout escape hatches, nonzero-window guards, and a cross-language digest pin
+  against the keeper. `forge test`: **18 passing**.
 - **Re-execution backend (EVM V1):** revm 38 replay implemented in
   [`reexec-evm/`](reexec-evm) — deterministic CALL replay with `RESULT_EQUALS` /
   `POSTSTATE_EQUALS` predicates. Honest delivery → `Reproduced`; a seller's false
@@ -145,6 +152,33 @@ codecs). See the module map in
   / fetch / submit) is a stub. `cargo test` + `forge test`: **keeper 2, contracts 18**.
 - **Next:** the keeper's chain shell + transitive-witness builder (review R2),
   then Arc / x402 / ERC-8004 integration and durable witness publication.
+
+## Build & test
+
+Each component is self-contained; there is no top-level build.
+
+```bash
+# settlement contracts (Foundry) — 18 tests
+cd contracts && forge install foundry-rs/forge-std --no-git && forge test
+
+# re-execution engine (revm 38, MPT-verified prestate) — 6 tests
+cd reexec-evm && cargo test
+
+# keeper settlement-signature core — 2 tests
+cd keeper && cargo test
+
+# regenerate the dashboard's data from the real engine
+cd reexec-evm && cargo run --example moneyshot > ../dashboard/moneyshot.json
+
+# view the money-shot (data is inline, so file:// works)
+open dashboard/index.html
+```
+
+The contract↔keeper EIP-712 digest is pinned by a shared golden
+([`packages/protocol/golden/verdict-eip712-v1.json`](packages/protocol/golden/verdict-eip712-v1.json)):
+`forge test --match-contract VerdictDigestTest` and the keeper's
+`eip712_digest_matches_golden` must agree, or a keeper signature would be rejected
+by `resolve()`.
 
 ## Collaboration model
 

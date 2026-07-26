@@ -245,6 +245,14 @@ not alternate settlement paths.
 
 ## Surface-first implementation order
 
+> Progress: (1) done — `contracts/`, 18 tests. (2) done — `reexec-evm/`, revm 38
+> with offline MPT verification and real-anchor (base-fee/nonce) support, 6 tests;
+> canonical `ReplayRecordV1` in `packages/protocol/`. (3) core done — `keeper/`
+> builds and EIP-712-signs the verdict `resolve()` accepts (cross-checked against
+> the contract by a shared golden); the watch/fetch/submit shell and the
+> transitive-witness builder remain. (4) done — `dashboard/`, real engine output.
+> (5) not started.
+
 1. Build the four-state contract, EIP-3009 adapter, events, deadlines, mock
    resolver, and transition/conservation/signature tests.
 2. Implement canonical hashing, anchored EVM call plan, `RESULT_EQUALS`, local
