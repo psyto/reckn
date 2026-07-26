@@ -1,0 +1,27 @@
+{
+  "codec": "reckn/v1/verdict-eip712",
+  "note": "Cross-language pin for the EIP-712 VerdictCommitment digest. The Rust keeper signs this digest and the Solidity escrow re-derives it in resolve(); both MUST match or a keeper signature is rejected. Verified by keeper/src/lib.rs::eip712_digest_matches_golden and contracts/test/VerdictDigest.t.sol.",
+  "domain": {
+    "name": "Reckn",
+    "version": "1",
+    "typehash_string": "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+  },
+  "verdict_typehash_string": "VerdictCommitment(bytes32 dealId,bytes32 specHash,bytes32 deliveryHash,bytes32 prestateAnchorHash,bytes32 prestateRoot,bytes32 backendId,bytes32 backendVersionHash,uint8 outcome,bytes32 resultHash,bytes32 traceHash)",
+  "vector": {
+    "chain_id": 1,
+    "verifying_contract": "0x000000000000000000000000000000000000cafe",
+    "commitment": {
+      "dealId": "0xd1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1",
+      "specHash": "0x5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c",
+      "deliveryHash": "0xdededededededededededededededededededededededededededededededede",
+      "prestateAnchorHash": "0xa0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0",
+      "prestateRoot": "0x0606060606060606060606060606060606060606060606060606060606060606",
+      "backendId": "0xb0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0",
+      "backendVersionHash": "0xb1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1",
+      "outcome": 1,
+      "resultHash": "0x0707070707070707070707070707070707070707070707070707070707070707",
+      "traceHash": "0x2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b"
+    },
+    "digest": "0x1c8d7d89486545d7e3a23da1f5438c4f36c244c85646dcc1a0b5f3c5ef19846c"
+  }
+}

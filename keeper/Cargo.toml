@@ -1,0 +1,14 @@
+[package]
+name = "reckn-keeper"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Reckn resolver keeper: watch Disputed, re-execute, sign the EIP-712 VerdictCommitment the escrow's resolve() accepts, submit idempotently."
+
+[dependencies]
+reckn-reexec-evm = { path = "../reexec-evm" }
+# alloy-primitives resolves to the same 1.6.x revm 38 uses, so B256/Address types
+# unify with the engine's public API (no conversion boundary).
+alloy-primitives = "1"
+alloy-signer = "1"
+alloy-signer-local = "1"

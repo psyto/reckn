@@ -106,11 +106,15 @@ packages/protocol/          # canonical cross-VM codecs — started
   golden/                   #   cross-language conformance vectors
 dashboard/                  # LLM-judge vs replay money-shot — implemented
   index.html                #   self-contained split-screen, real engine data
+keeper/                     # resolver keeper — decision + settlement signature
+  src/lib.rs                #   verified core: build + EIP-712-sign VerdictCommitment
+  src/main.rs               #   chain shell (subscribe / fetch / submit) — stub
 ```
 
-Planned (not yet in the tree): `keeper` (Disputed → sign → resolve), `mcp-server`,
-and the rest of `packages/protocol` (spec/delivery/anchor codecs). See the module
-map in [`docs/protocol-architecture.md`](docs/protocol-architecture.md).
+Planned (not yet in the tree): the keeper's chain shell + transitive-witness
+builder, `mcp-server`, and the rest of `packages/protocol` (spec/delivery/anchor
+codecs). See the module map in
+[`docs/protocol-architecture.md`](docs/protocol-architecture.md).
 
 ## Status
 
@@ -134,8 +138,13 @@ map in [`docs/protocol-architecture.md`](docs/protocol-architecture.md).
   split-screen (opinion judge vs re-execution) driven by real `reexec-evm` output.
   Same dispute: the opinion judge releases escrow to a false claim; Reckn replays
   the actual plan and refunds the buyer.
-- **Next:** the keeper wiring `Disputed → sign → resolve` (contract ↔ engine),
-  the keeper's transitive-witness builder, and durable witness publication.
+- **Keeper (settlement signature):** [`keeper/`](keeper) — maps a reproducible
+  replay to the `VerdictCommitment` and EIP-712-signs it. The digest is
+  cross-checked against the contract in both Rust and Foundry (a shared golden),
+  so a keeper signature is provably accepted by `resolve()`. Chain shell (subscribe
+  / fetch / submit) is a stub. `cargo test` + `forge test`: **keeper 2, contracts 18**.
+- **Next:** the keeper's chain shell + transitive-witness builder (review R2),
+  then Arc / x402 / ERC-8004 integration and durable witness publication.
 
 ## Collaboration model
 
