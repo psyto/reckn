@@ -11,7 +11,10 @@ name = "reckn_reexec_evm"
 [dependencies]
 # Pinned to the version used across the psyto Reth lab (telos) so primitives and
 # EVM semantics stay consistent with the rest of the toolchain.
-revm = { version = "38" }
+# `optional_no_base_fee` exposes CfgEnv.disable_base_fee: a replay adjudicates
+# whether a plan satisfies a predicate, not whether a real fee-paying tx is valid,
+# so base-fee gating must be off (a committed real block always has base_fee > 0).
+revm = { version = "38", features = ["optional_no_base_fee"] }
 # Cross-VM canonical hashing is SHA-256 (see docs/protocol-architecture.md and
 # packages/protocol/REPLAY_RECORD_V1.md), distinct from EVM-native keccak256.
 sha2 = "0.10"

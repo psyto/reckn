@@ -208,10 +208,9 @@ pub enum Verdict {
     Failed(FailReason),
 }
 
-/// The reproducible result of a replay. `trace_hash` is a deterministic digest
-/// over the canonical replay record; the exact `ReplayRecordV1` TLV encoding
-/// lives in `packages/protocol` (shared across VMs) — here it is a stable
-/// placeholder over the same fields.
+/// The reproducible result of a replay. `trace_hash` is the SHA-256 of the
+/// canonical [`ReplayRecordV1`]; the TLV encoding is specified in
+/// `packages/protocol/REPLAY_RECORD_V1.md` (shared across VMs).
 #[derive(Clone, Debug)]
 pub struct ReplayOutcome {
     pub verdict: Verdict,
@@ -489,6 +488,15 @@ pub fn replay(
         .modify_cfg_chained(|c| {
             c.chain_id = anchor.chain_id;
             c.spec = anchor.spec_id;
+            // A replay judges whether the seller's CALL satisfies the funded
+            // predicate against the committed prestate — not whether it is a valid
+            // fee-paying, correctly-nonced transaction. Disable both checks so a
+            // real anchor (base_fee > 0) and a real caller (nonce > 0) do not turn
+            // an honest delivery into a spurious Failed verdict. Balance is still
+            // checked, so a CALL that sends `value` the caller lacks fails as it
+            // should — that is prestate truth, not tx-validity ceremony.
+            c.disable_base_fee = true;
+            c.disable_nonce_check = true;
         })
         .modify_block_chained(|b| {
             b.number = U256::from(anchor.block_number);
@@ -717,6 +725,14 @@ mod tests {
         caller: Address,
         target: Address,
     ) -> (EvmAnchorV1, PrestateWitnessV1) {
+        anchored_identity_witness_with(caller, target, 0)
+    }
+
+    fn anchored_identity_witness_with(
+        caller: Address,
+        target: Address,
+        caller_nonce: u64,
+    ) -> (EvmAnchorV1, PrestateWitnessV1) {
         let coinbase = addr(0xc0);
         let storage_slot = U256::from(7u64);
         let storage_value = U256::from(42u64);
@@ -727,7 +743,7 @@ mod tests {
         let caller_code = Bytes::new();
         let target_code = Bytes::from_static(&IDENTITY_RUNTIME);
         let caller_account = TrieAccount {
-            nonce: 0,
+            nonce: caller_nonce,
             balance: U256::from(10u64).pow(U256::from(18)),
             storage_root: EMPTY_ROOT_HASH,
             code_hash: keccak256(caller_code.as_ref()),
@@ -825,6 +841,37 @@ mod tests {
         );
         assert_eq!(out.result_hash, evm_result_content_hash(good.as_ref()));
         assert_eq!(out.prestate_root, anchor.state_root);
+    }
+
+    // Regression for review R1: an honest delivery must reproduce against a
+    // realistic anchor (base_fee > 0) and a realistic caller (nonce > 0). Before
+    // disabling base-fee / nonce checks, revm rejected the tx pre-execution
+    // (GasPriceLessThanBasefee / NonceMismatch) and it collapsed to Failed.
+    #[test]
+    fn real_anchor_base_fee_and_nonce_reproduces() {
+        let caller = addr(0xaa);
+        let target = addr(0xbb);
+        let (mut anchor, witness) = anchored_identity_witness_with(caller, target, 7);
+        anchor.base_fee = 1_000_000_000; // 1 gwei
+
+        let good = Bytes::from_static(b"swap-out>=1000USDC-good-output--");
+        let predicate = PredicateV1::ResultEquals {
+            expected_result_hash: keccak256(good.as_ref()),
+        };
+        let plan = EvmCallPlanV1 {
+            caller,
+            target,
+            calldata: good.clone(),
+            value: U256::ZERO,
+            gas_limit: 200_000,
+        };
+
+        let out = replay(&anchor, &witness, &plan, &predicate, &commitments()).unwrap();
+        assert!(
+            out.reproduced(),
+            "honest plan must reproduce under real base_fee/nonce: {:?}",
+            out.verdict
+        );
     }
 
     #[test]

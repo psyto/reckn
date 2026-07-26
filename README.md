@@ -125,7 +125,9 @@ codecs). See the module map in
   `POSTSTATE_EQUALS` predicates. Honest delivery → `Reproduced`; a seller's false
   success claim → `Failed` (→ refund). Offline MPT account/storage proofs bind
   the closed replay witness to `anchor.state_root`; proof failure or a missing
-  witness is an operational error, not a verdict. `cargo test`: **5 passing**.
+  witness is an operational error, not a verdict. Replay ignores tx-validity
+  ceremony (base-fee / nonce) so honest deliveries reproduce against real blocks;
+  balance for `value` is still enforced. `cargo test`: **6 passing**.
 - **Next:** the split-screen money-shot dashboard (LLM judge vs replay), the
   keeper wiring `Disputed → sign → resolve`, and durable witness publication.
 
