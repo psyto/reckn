@@ -100,15 +100,17 @@ contracts/                  # EVM V1 settlement half (Foundry) — implemented
   test/                     #   forge tests
 reexec-evm/                 # EVM V1 re-execution backend (revm 38) — implemented
   src/lib.rs                #   deterministic CALL replay + predicate verdict
+  examples/moneyshot.rs     #   emits real engine output for the dashboard
 packages/protocol/          # canonical cross-VM codecs — started
   REPLAY_RECORD_V1.md       #   ReplayRecordV1 TLV spec (trace_hash source)
   golden/                   #   cross-language conformance vectors
+dashboard/                  # LLM-judge vs replay money-shot — implemented
+  index.html                #   self-contained split-screen, real engine data
 ```
 
-Planned (not yet in the tree): `dashboard` (LLM-judge vs replay money-shot),
-`keeper`, `mcp-server`, and the rest of `packages/protocol` (spec/delivery/anchor
-codecs). See the module map in
-[`docs/protocol-architecture.md`](docs/protocol-architecture.md).
+Planned (not yet in the tree): `keeper` (Disputed → sign → resolve), `mcp-server`,
+and the rest of `packages/protocol` (spec/delivery/anchor codecs). See the module
+map in [`docs/protocol-architecture.md`](docs/protocol-architecture.md).
 
 ## Status
 
@@ -128,8 +130,12 @@ codecs). See the module map in
   witness is an operational error, not a verdict. Replay ignores tx-validity
   ceremony (base-fee / nonce) so honest deliveries reproduce against real blocks;
   balance for `value` is still enforced. `cargo test`: **6 passing**.
-- **Next:** the split-screen money-shot dashboard (LLM judge vs replay), the
-  keeper wiring `Disputed → sign → resolve`, and durable witness publication.
+- **Money-shot dashboard:** [`dashboard/`](dashboard) — a self-contained
+  split-screen (opinion judge vs re-execution) driven by real `reexec-evm` output.
+  Same dispute: the opinion judge releases escrow to a false claim; Reckn replays
+  the actual plan and refunds the buyer.
+- **Next:** the keeper wiring `Disputed → sign → resolve` (contract ↔ engine),
+  the keeper's transitive-witness builder, and durable witness publication.
 
 ## Collaboration model
 

@@ -1,0 +1,37 @@
+{
+  "anchor": {
+    "chain_id": 1,
+    "block_number": 21000000,
+    "base_fee_gwei": 1,
+    "state_root": "0xdc5320f6e1e9bb40b91d34cad77afc91fc95d799c6a03eaa29539ec6412e24a6"
+  },
+  "predicate": {
+    "kind": "RESULT_EQUALS",
+    "expected_keccak": "0x69e1a53cd51592dddc9a3bb00447b712a8b6b3ecd5a5473b70444d5766c3e4d9",
+    "expected_output_ascii": "swap-out=1024USDC@0.31pct-slippage"
+  },
+  "scenarios": [
+    {
+      "name": "honest",
+      "seller_claim": "Executed the swap as agreed: 1024 USDC out at 0.31% slippage. Deliverable attached.",
+      "delivered_output_ascii": "swap-out=1024USDC@0.31pct-slippage",
+      "return_data": "0x737761702d6f75743d313032345553444340302e33317063742d736c697070616765",
+      "result_hash": "0x2c48daa905066618b1071532f08fd6714b8adde8c4e34db9f2638b94719a51f6",
+      "trace_hash": "0x71ce9c5f338669b974dce7e7660f2f7a121c71ed961269d976ecb095e6c1dd25",
+      "verdict": "Reproduced",
+      "llm_judge": "APPROVE",
+      "reckn_settlement": "release → seller"
+    },
+    {
+      "name": "false_claim",
+      "seller_claim": "Executed the swap as agreed: 1024 USDC out at 0.31% slippage. ✅ All good, please release.",
+      "delivered_output_ascii": "swap-out=0006USDC@98.7pct-slippage",
+      "return_data": "0x737761702d6f75743d30303036555344434039382e377063742d736c697070616765",
+      "result_hash": "0xf1846cc92f5d3a04701c28886a449fd5caf52b84f9017e6efa521f513b449a20",
+      "trace_hash": "0x2bf9692fe585295592983bf9cec62592dd32e97f3e00bd888e8a765dc8f28fd8",
+      "verdict": "Failed",
+      "llm_judge": "APPROVE",
+      "reckn_settlement": "refund → buyer"
+    }
+  ]
+}
