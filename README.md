@@ -156,6 +156,34 @@ remains is judge-legibility integrations and production content publication.
 - **Next:** Arc / x402 / ERC-8004 integration, persistent event checkpoints, and
   durable canonical witness publication.
 
+## Try it (one command)
+
+Run the whole live dispute on a throwaway local chain:
+
+```bash
+bash scripts/anvil-e2e.sh
+```
+
+Prerequisites: [Foundry](https://getfoundry.sh) (`anvil`, `forge`, `cast`), Rust
+(`cargo`), and `jq`. The script needs no arguments and cleans up after itself.
+
+It spins up `anvil`, deploys the escrow / registry / a mock USDC, then funds a
+deal, delivers a seller plan, and files a dispute. The keeper picks up the
+`Disputed` event, fetches the committed spec/delivery/anchor from a content store
+(hash-checked before parsing), builds a **proof-verified** prestate witness
+(`eth_createAccessList` + `eth_getProof`, bound to the block's `state_root`),
+**re-executes the seller's plan** — here a real `balanceOf` SLOAD whose output
+can't satisfy the funded predicate — signs the `Failed` verdict, and submits
+`resolve()`. Expected final line:
+
+```
+PASS: re-execution returned Failed and refunded buyer; deal=0x…
+```
+
+That is the entire trust chain end-to-end on a real node:
+`deal.prestateAnchorHash → checked anchor → state_root → MPT-proven witness →
+closed-world replay → verdict → settlement`.
+
 ## Build & test
 
 Each component is self-contained; there is no top-level build.

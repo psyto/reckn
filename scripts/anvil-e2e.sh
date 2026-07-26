@@ -35,6 +35,8 @@ done
 cast chain-id --rpc-url "$rpc_url" >/dev/null
 
 pushd "$root/contracts" >/dev/null
+# forge-std is git-ignored; install it on first run so this is truly one command.
+[[ -d lib/forge-std ]] || forge install foundry-rs/forge-std --no-git >/dev/null 2>&1
 forge build --quiet
 deploy() {
   forge create --broadcast --rpc-url "$rpc_url" --private-key "$buyer_pk" "$@" \
