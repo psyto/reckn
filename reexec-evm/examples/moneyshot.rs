@@ -128,6 +128,7 @@ fn main() {
     let anchor = EvmAnchorV1 {
         chain_id: 1,
         block_number: 21_000_000,
+        block_hash: B256::from([0x10; 32]),
         state_root,
         timestamp: 1_800_000_000,
         base_fee: 1_000_000_000, // 1 gwei — a real block

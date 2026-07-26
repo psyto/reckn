@@ -104,8 +104,8 @@ all state reads against the root, commits all verdict-relevant input/result into
 `ReplayRecordV1`, pins its engine/config/image, and never uses `latest`, wall
 clock, random data, mutable feeds, or uncommitted network input.
 
-`Failed` is a deterministic result: revert, failed proof, result mismatch, or a
-false predicate. Missing content, non-final anchors, unsupported versions, and
+`Failed` is a deterministic result: revert/halt, result mismatch, or a false
+predicate. Invalid/failed proofs, missing content, non-final anchors, unsupported versions, and
 transport errors are operational errors: they cannot be signed as a verdict.
 They remain `Disputed` until `resolveDeadline`; the timeout policy below then
 settles the liveness case.
@@ -177,6 +177,26 @@ and can publish the evidence at delivery time. The funding implementation must
 add raw spec/anchor publication (or a checked content-store registration) before
 claiming production-grade independent reproduction; hashes alone are insufficient.
 
+### V1.1 demo content-store binding
+
+The anvil keeper uses a deliberately small file content store as the transport:
+`<contentHash-without-0x>.json`. The filename is only a lookup hint. Before it
+deserializes **any** spec, delivery, or anchor field, the keeper computes
+`SHA-256(raw file bytes)` and requires exact equality with the corresponding
+on-chain commitment (`specHash`, `deliveryHash`, or `prestateAnchorHash`). A
+missing file, digest mismatch, bad codec, or a spec whose anchor hash differs
+from the deal is an operational error and is never signed.
+
+This closes the demo's trust chain:
+
+```text
+deal.prestateAnchorHash → checked anchor bytes → stateRoot → MPT-proven witness
+```
+
+The JSON files are a V1.1 demo codec, not a replacement for the canonical
+`SpecV1` TLV codec above. Production content addressing keeps the same
+"hash-before-parse" property with the canonical bytes.
+
 ## EVM V1 backend
 
 The only initial schema is `EvmCallPlanV1`: a fully specified `CALL` with chain
@@ -201,6 +221,21 @@ closed witness DB so a missing state read is an operational error. An RPC fork
 or `debug_traceCall` helps development but is not verification: it delegates
 execution/state authenticity to the RPC. `reth` is acceptable only with the
 same root and environment checks.
+
+V1.1 serializes `blockHash` in `EvmAnchorV1` now, so an anchor has a stable
+header identity. It does **not** yet accept EVM `BLOCKHASH` reads: the
+closed-world DB returns `MissingBlockHashWitness`, an operational error, until a
+connected-header witness verifier is introduced. The demo plan intentionally
+does not use that opcode.
+
+The current keeper acquires a transitive witness with
+`eth_createAccessList` at the committed block, explicitly adds the plan caller,
+target, and coinbase, then uses `eth_getProof(address, slots, block)` plus
+`eth_getCode`. It first rejects an RPC block whose header hash differs from the
+committed `blockHash`, then keeps the raw RLP proof nodes and verifies the completed witness
+against `stateRoot` offline before replay, and treats any later closed-world
+`Missing*Witness` error as the final completeness check rather than a `Failed`
+verdict.
 
 For result commitments, EVM's `keccak256(returnData)` remains the
 `RESULT_EQUALS` predicate input. The VM-neutral envelope `resultHash` is instead

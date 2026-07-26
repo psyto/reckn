@@ -12,3 +12,13 @@ reckn-reexec-evm = { path = "../reexec-evm" }
 alloy-primitives = "1"
 alloy-signer = "1"
 alloy-signer-local = "1"
+# Live chain shell: the same Alloy family as the engine's primitives.
+alloy = { version = "1.8.3", features = ["providers", "provider-http", "rpc-types", "sol-types", "network", "signer-local"] }
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }
+# Anchor JSON must select the exact revm hardfork used by the backend. Keeping
+# this direct dependency at the engine's pinned major prevents a hidden mapper.
+revm = { version = "38", features = ["optional_no_base_fee"] }

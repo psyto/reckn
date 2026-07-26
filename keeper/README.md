@@ -28,19 +28,29 @@ cargo test              # keeper core
 (cd ../contracts && forge test --match-contract VerdictDigestTest)  # contract side
 ```
 
-## What's a stub
+## Live shell (V1.1)
 
-[`src/main.rs`](src/main.rs) is the chain shell: subscribe to `Disputed`, fetch
-committed bytes, replay, submit `resolve()` idempotently. It's deliberately thin
-so it can target anvil / a testnet / Circle Arc without touching the verified
-core. Operational errors from the engine are **never signed** — they fall to the
-escrow's resolve-timeout (buyer refund, review C1).
+[`src/main.rs`](src/main.rs) implements the anvil/HTTP path:
 
-## Open frame-thick piece (review R2)
+- `once <rpc> <escrow> <store> <resolver-key>` polls `Disputed`, checks the raw
+  SHA-256 of all committed content before parsing, collects a transitive witness,
+  replays, signs, and submits `resolve()`.
+- `watch <rpc> <escrow> <store> <resolver-key>` repeats that identical poll path
+  (default 3 s; override with `RECKN_POLL_MS`) without changing adjudication logic.
+- `witness <rpc> <store> <anchorHash> <deliveryHash>` exercises just the R2
+  collector.
 
-Step 2 must build the **transitive** proof-carrying witness — every account /
-code / storage / blockhash the CALL touches — because the engine's DB is
-closed-world and aborts on any unwitnessed read. Approach: collect the access set
-against an RPC-backed DB at the committed block, then `eth_getProof` for exactly
-that set and verify against `anchor.state_root`. This is the next task for a
-keeper cross-pass with Codex.
+The collector calls `eth_createAccessList` at the committed block, adds caller /
+target / coinbase explicitly, obtains raw RLP account and storage proofs through
+`eth_getProof`, fetches code at that block, and verifies every proof locally
+against the committed state root before replay. The engine remains closed-world:
+any uncollected account, code, slot, or `BLOCKHASH` read is an operational error
+and produces no signature. That leaves the C1 `timeoutRefund` escape hatch
+available. `BLOCKHASH` connected-header witnessing is intentionally deferred.
+
+Run the complete false-claim → proof-verified `Failed` → buyer-refund demo from
+the repository root:
+
+```bash
+bash scripts/anvil-e2e.sh
+```

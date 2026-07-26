@@ -106,14 +106,13 @@ packages/protocol/          # canonical cross-VM codecs — started
   golden/                   #   cross-language conformance vectors
 dashboard/                  # LLM-judge vs replay money-shot — implemented
   index.html                #   self-contained split-screen, real engine data
-keeper/                     # resolver keeper — decision + settlement signature
+keeper/                     # resolver keeper — replay, EIP-712 signature, live chain shell
   src/lib.rs                #   verified core: build + EIP-712-sign VerdictCommitment
   src/main.rs               #   chain shell (subscribe / fetch / submit) — stub
 ```
 
-Planned (not yet in the tree): the keeper's chain shell + transitive-witness
-builder, `mcp-server`, and the rest of `packages/protocol` (spec/delivery/anchor
-codecs). See the module map in
+Planned (not yet in the tree): `mcp-server` and the rest of
+`packages/protocol`'s production spec/delivery/anchor codecs. See the module map in
 [`docs/protocol-architecture.md`](docs/protocol-architecture.md).
 
 ## Status
@@ -122,8 +121,7 @@ The whole dispute → verdict → settlement slice exists and is tested: a funde
 escrow, a deterministic re-execution backend that binds its prestate to a
 committed state root, the canonical verdict record, the settlement signature the
 contract provably accepts, and a money-shot dashboard on real engine output. What
-remains is live-chain I/O (the keeper's event loop and transitive-witness builder)
-and the judge-legibility integrations.
+remains is judge-legibility integrations and production content publication.
 
 - **Protocol:** locked — [`docs/protocol-architecture.md`](docs/protocol-architecture.md)
   (VM-neutral verdict envelope, committed spec/delivery/anchor codecs, EVM V1
@@ -147,13 +145,16 @@ and the judge-legibility integrations.
   split-screen (opinion judge vs re-execution) driven by real `reexec-evm` output.
   Same dispute: the opinion judge releases escrow to a false claim; Reckn replays
   the actual plan and refunds the buyer.
-- **Keeper (settlement signature):** [`keeper/`](keeper) — maps a reproducible
+- **Keeper (chain shell + settlement signature):** [`keeper/`](keeper) — maps a reproducible
   replay to the `VerdictCommitment` and EIP-712-signs it. The digest is
   cross-checked against the contract in both Rust and Foundry (a shared golden),
-  so a keeper signature is provably accepted by `resolve()`. Chain shell (subscribe
-  / fetch / submit) is a stub. `cargo test` + `forge test`: **keeper 2, contracts 20**.
-- **Next:** the keeper's chain shell + transitive-witness builder (review R2),
-  then Arc / x402 / ERC-8004 integration and durable witness publication.
+  so a keeper signature is provably accepted by `resolve()`. Its HTTP shell polls
+  `Disputed`, SHA-256-checks content-store bytes before parsing, collects an
+  access-list-derived MPT witness, replays, and submits `resolve()`. The included
+  anvil E2E proves false claim → `Failed` → refund. `cargo test` + `forge test`:
+  **keeper 3, contracts 20**.
+- **Next:** Arc / x402 / ERC-8004 integration, persistent event checkpoints, and
+  durable canonical witness publication.
 
 ## Build & test
 
@@ -166,8 +167,11 @@ cd contracts && forge install foundry-rs/forge-std --no-git && forge test
 # re-execution engine (revm 38, MPT-verified prestate) — 6 tests
 cd reexec-evm && cargo test
 
-# keeper settlement-signature core — 2 tests
+# keeper signature + content-store guard — 3 tests
 cd keeper && cargo test
+
+# one-command local chain demo: false claim → re-execution Failed → buyer refund
+cd .. && bash scripts/anvil-e2e.sh
 
 # regenerate the dashboard's data from the real engine
 cd reexec-evm && cargo run --example moneyshot > ../dashboard/moneyshot.json

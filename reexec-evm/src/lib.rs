@@ -39,6 +39,10 @@ use std::fmt;
 pub struct EvmAnchorV1 {
     pub chain_id: u64,
     pub block_number: u64,
+    /// Header hash for the committed snapshot. V1.1 binds this field to the
+    /// anchor bytes; BLOCKHASH opcode witnesses remain deliberately unsupported
+    /// until connected-header verification is introduced.
+    pub block_hash: B256,
     pub state_root: B256,
     pub timestamp: u64,
     pub base_fee: u64,
@@ -670,6 +674,7 @@ mod tests {
         EvmAnchorV1 {
             chain_id: 1,
             block_number: 21_000_000,
+            block_hash: B256::from([0x10; 32]),
             state_root,
             timestamp: 1_800_000_000,
             base_fee: 0,
