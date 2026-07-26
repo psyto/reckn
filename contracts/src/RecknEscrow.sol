@@ -15,9 +15,9 @@ import {VerdictHash} from "./libraries/VerdictHash.sol";
 /// @dev Phase-clock policy (review M2):
 ///        fundedAt < deliveredAt <= deliverDeadline
 ///        deliveredAt < challengeDeadline; challengedAt < resolveDeadline
-///      Window validation and phase timestamp recording are a next-pass hardening
-///      item; callers must not treat the three configurable windows as an
-///      informal global deadline ordering.
+///      Each configurable window must be nonzero (enforced). Phase timestamp
+///      recording and richer window validation remain a next-pass hardening item;
+///      callers must not treat the three windows as an informal global ordering.
 ///      Escape hatches so funds never lock forever (review C1):
 ///        - Held      + past deliverDeadline  -> buyer reclaims (seller no-show)
 ///        - Delivered + past challengeDeadline -> seller claims (buyer silent)
@@ -115,6 +115,7 @@ contract RecknEscrow {
     error DisallowedBackend();
     error CommitmentMismatch();
     error BadSignature();
+    error ZeroWindow();
 
     constructor(ResolverRegistry registry_) {
         registry = registry_;
@@ -151,6 +152,7 @@ contract RecknEscrow {
     ) external returns (bytes32 dealId) {
         if (amount == 0) revert ZeroAmount();
         if (seller == address(0) || seller == msg.sender) revert BadParty();
+        if (deliverWindow == 0) revert ZeroWindow();
 
         dealId = keccak256(
             abi.encode(
@@ -216,6 +218,7 @@ contract RecknEscrow {
         if (d.state != DealState.Held) revert BadState();
         if (msg.sender != d.seller) revert NotSeller();
         if (block.timestamp > d.deliverDeadline) revert DeadlinePassed();
+        if (challengeWindow == 0) revert ZeroWindow();
 
         d.deliveryHash = deliveryHash;
         uint64 challengeDeadline = uint64(block.timestamp) + challengeWindow;
@@ -233,6 +236,7 @@ contract RecknEscrow {
         if (d.state != DealState.Delivered) revert BadState();
         if (msg.sender != d.buyer) revert NotBuyer();
         if (block.timestamp > d.challengeDeadline) revert DeadlinePassed();
+        if (resolveWindow == 0) revert ZeroWindow();
 
         uint64 resolveDeadline = uint64(block.timestamp) + resolveWindow;
         d.resolveDeadline = resolveDeadline;

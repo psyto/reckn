@@ -240,6 +240,33 @@ contract RecknEscrowTest is Test {
         );
     }
 
+    // --- review M2: windows must be nonzero ---
+
+    function test_fund_rejects_zero_deliver_window() public {
+        vm.expectRevert(RecknEscrow.ZeroWindow.selector);
+        vm.prank(buyer);
+        escrow.fundWithAuthorization(
+            "zw", seller, address(token), AMOUNT, SPEC_HASH, ANCHOR_HASH, BACKEND_ID, BACKEND_VER, 0,
+            0, type(uint256).max, keccak256("zw-auth"), 0, bytes32(0), bytes32(0)
+        );
+    }
+
+    function test_deliver_rejects_zero_challenge_window() public {
+        bytes32 id = _fund("zw2");
+        vm.expectRevert(RecknEscrow.ZeroWindow.selector);
+        vm.prank(seller);
+        escrow.deliver(id, DELIVERY_HASH, 0);
+    }
+
+    function test_challenge_rejects_zero_resolve_window() public {
+        bytes32 id = _fund("zw3");
+        vm.prank(seller);
+        escrow.deliver(id, DELIVERY_HASH, CHALLENGE_W);
+        vm.expectRevert(RecknEscrow.ZeroWindow.selector);
+        vm.prank(buyer);
+        escrow.challenge(id, 0);
+    }
+
     // --- conservation: escrow never mints or strands value ---
 
     function testFuzz_conservation(uint8 pathSel) public {
