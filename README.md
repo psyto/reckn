@@ -131,8 +131,10 @@ and the judge-legibility integrations.
   settlement-authority split).
 - **Settlement contract (EVM V1):** implemented in [`contracts/`](contracts) —
   four-state escrow, EIP-712 resolver verdicts, resolver/backend allow-list,
-  timeout escape hatches, nonzero-window guards, and a cross-language digest pin
-  against the keeper. `forge test`: **18 passing**.
+  timeout escape hatches, nonzero-window guards, a cross-language digest pin
+  against the keeper, and end-to-end tests that settle on the **real engine
+  output** (the `moneyshot.json` hashes) and assert `VerdictCommitted` carries the
+  actual `traceHash`. `forge test`: **20 passing**.
 - **Re-execution backend (EVM V1):** revm 38 replay implemented in
   [`reexec-evm/`](reexec-evm) — deterministic CALL replay with `RESULT_EQUALS` /
   `POSTSTATE_EQUALS` predicates. Honest delivery → `Reproduced`; a seller's false
@@ -149,7 +151,7 @@ and the judge-legibility integrations.
   replay to the `VerdictCommitment` and EIP-712-signs it. The digest is
   cross-checked against the contract in both Rust and Foundry (a shared golden),
   so a keeper signature is provably accepted by `resolve()`. Chain shell (subscribe
-  / fetch / submit) is a stub. `cargo test` + `forge test`: **keeper 2, contracts 18**.
+  / fetch / submit) is a stub. `cargo test` + `forge test`: **keeper 2, contracts 20**.
 - **Next:** the keeper's chain shell + transitive-witness builder (review R2),
   then Arc / x402 / ERC-8004 integration and durable witness publication.
 
@@ -158,7 +160,7 @@ and the judge-legibility integrations.
 Each component is self-contained; there is no top-level build.
 
 ```bash
-# settlement contracts (Foundry) — 18 tests
+# settlement contracts (Foundry) — 20 tests (incl. end-to-end on real engine output)
 cd contracts && forge install foundry-rs/forge-std --no-git && forge test
 
 # re-execution engine (revm 38, MPT-verified prestate) — 6 tests

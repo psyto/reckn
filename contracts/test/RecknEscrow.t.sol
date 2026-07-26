@@ -267,6 +267,59 @@ contract RecknEscrowTest is Test {
         escrow.challenge(id, 0);
     }
 
+    // --- end to end: the full flow settles on REAL reexec-evm output ---
+    // resultHash / traceHash below are the actual engine outputs captured in
+    // dashboard/moneyshot.json (cargo run --example moneyshot), so this proves the
+    // deployed contract accepts and settles a verdict the real engine produced.
+
+    event VerdictCommitted(
+        bytes32 indexed dealId,
+        RecknEscrow.Outcome outcome,
+        bytes32 prestateRoot,
+        bytes32 resultHash,
+        bytes32 traceHash,
+        address resolver
+    );
+
+    function test_e2e_false_claim_refunds_buyer_on_real_engine_output() public {
+        bytes32 id = _fund("e2e-false");
+        vm.prank(seller);
+        escrow.deliver(id, DELIVERY_HASH, CHALLENGE_W);
+        vm.prank(buyer);
+        escrow.challenge(id, RESOLVE_W);
+
+        VerdictHash.VerdictCommitment memory c = _commitment(id, 1); // Failed
+        c.resultHash = 0xf1846cc92f5d3a04701c28886a449fd5caf52b84f9017e6efa521f513b449a20;
+        c.traceHash = 0x2bf9692fe585295592983bf9cec62592dd32e97f3e00bd888e8a765dc8f28fd8;
+        (uint8 v, bytes32 r, bytes32 s) = _sign(c, resolverPk);
+
+        // The on-chain record commits the engine's real trace hash.
+        vm.expectEmit(true, false, false, true, address(escrow));
+        emit VerdictCommitted(id, RecknEscrow.Outcome.Failed, c.prestateRoot, c.resultHash, c.traceHash, resolver);
+        escrow.resolve(c, v, r, s);
+
+        assertEq(token.balanceOf(buyer), AMOUNT, "false claim -> buyer refunded");
+        assertEq(token.balanceOf(seller), 0, "seller unpaid");
+    }
+
+    function test_e2e_honest_releases_seller_on_real_engine_output() public {
+        bytes32 id = _fund("e2e-honest");
+        vm.prank(seller);
+        escrow.deliver(id, DELIVERY_HASH, CHALLENGE_W);
+        vm.prank(buyer);
+        escrow.challenge(id, RESOLVE_W);
+
+        VerdictHash.VerdictCommitment memory c = _commitment(id, 0); // Reproduced
+        c.resultHash = 0x2c48daa905066618b1071532f08fd6714b8adde8c4e34db9f2638b94719a51f6;
+        c.traceHash = 0x71ce9c5f338669b974dce7e7660f2f7a121c71ed961269d976ecb095e6c1dd25;
+        (uint8 v, bytes32 r, bytes32 s) = _sign(c, resolverPk);
+
+        escrow.resolve(c, v, r, s);
+
+        assertEq(token.balanceOf(seller), AMOUNT, "honest -> seller released");
+        assertEq(token.balanceOf(buyer), 0, "buyer spent");
+    }
+
     // --- conservation: escrow never mints or strands value ---
 
     function testFuzz_conservation(uint8 pathSel) public {
