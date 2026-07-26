@@ -98,11 +98,13 @@ contracts/                  # EVM V1 settlement half (Foundry) — implemented
   src/libraries/VerdictHash.sol
   src/interfaces/IUSDC3009.sol
   test/                     #   forge tests
+reexec-evm/                 # EVM V1 re-execution backend (revm 38) — implemented
+  src/lib.rs                #   deterministic CALL replay + predicate verdict
 ```
 
-Planned (not yet in the tree): `reexec-evm` (revm replay engine), `dashboard`
-(LLM-judge vs replay money-shot), `keeper`, `mcp-server`. See the module map in
-[`docs/protocol-architecture.md`](docs/protocol-architecture.md).
+Planned (not yet in the tree): `dashboard` (LLM-judge vs replay money-shot),
+`keeper`, `mcp-server`, `packages/protocol` (canonical codecs). See the module
+map in [`docs/protocol-architecture.md`](docs/protocol-architecture.md).
 
 ## Status
 
@@ -114,9 +116,15 @@ Planned (not yet in the tree): `reexec-evm` (revm replay engine), `dashboard`
   [`contracts/`](contracts) — four-state escrow, EIP-712 resolver verdicts,
   resolver/backend allow-list, timeout escape hatches, nonzero-window guards.
   `forge test`: **17 passing**.
-- **Next:** `reexec-evm` — the revm replay engine (`EvmCallPlanV1` with
-  `RESULT_EQUALS` / `POSTSTATE_EQUALS`, anchor proof verification), then the
-  split-screen money-shot dashboard.
+- **Re-execution backend (EVM V1):** revm 38 replay implemented in
+  [`reexec-evm/`](reexec-evm) — deterministic CALL replay with `RESULT_EQUALS` /
+  `POSTSTATE_EQUALS` predicates. Honest delivery → `Reproduced`; a seller's false
+  success claim → `Failed` (→ refund). `cargo test`: **3 passing**. Binding the
+  prestate witness to `anchor.state_root` via MPT proofs is the flagged next
+  hardening (V1 runs `demo-unverified`: reproducible, witness trusted).
+- **Next:** the split-screen money-shot dashboard (LLM judge vs replay), the
+  keeper wiring `Disputed → sign → resolve`, and witness-vs-root proof
+  verification.
 
 ## Collaboration model
 

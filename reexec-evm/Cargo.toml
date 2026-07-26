@@ -1,0 +1,18 @@
+[package]
+name = "reckn-reexec-evm"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Reckn EVM V1 re-execution backend: deterministic revm replay of a committed CALL plan against a committed prestate, evaluated by a funded predicate."
+
+[lib]
+name = "reckn_reexec_evm"
+
+[dependencies]
+# Pinned to the version used across the psyto Reth lab (telos) so primitives and
+# EVM semantics stay consistent with the rest of the toolchain.
+revm = { version = "38" }
+
+[profile.dev]
+# revm is heavy; keep debug builds tolerable without losing determinism.
+opt-level = 1
