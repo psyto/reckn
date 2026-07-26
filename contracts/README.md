@@ -28,12 +28,14 @@ forge test -vv
 Requires `via_ir = true` (set in `foundry.toml`) — `fundWithAuthorization` has a
 wide argument list.
 
-## Open protocol questions (blocked on Codex, review C1/C2)
+## Resolved protocol decisions (review C1/C2)
 
-- **C2 — seller's degrees of freedom.** This skeleton assumes the seller supplies
-  the execution plan in `delivery` and the spec fixes anchor+predicate. If the
-  plan is instead fixed at funding time, the escrow is degenerate. Resolve before
-  building `reexec-evm`.
-- **C1 — data-availability responsibility.** Timeout currently refunds the buyer
-  (delivery/anchor availability treated as the seller's burden). Confirm this is
-  the intended default and which party must persist which artifact.
+- **Seller freedom (C2):** funding fixes the spec's anchor, predicate, and
+  delivery schema. The seller supplies the concrete execution plan and claim in
+  `delivery`; re-execution tests that plan against the fixed predicate. See the
+  EVM V1 profile in `../docs/protocol-architecture.md`.
+- **Data availability / timeout (C1):** buyer-authored spec and anchor bytes must
+  be published at funding. Seller supplies delivery plus replay witness at
+  `deliver()`. After a seller delivery, no valid verdict by `resolveDeadline`
+  refunds the buyer. The next contract pass must add raw spec/anchor publication
+  or checked content-store registration; hashes alone are not sufficient.

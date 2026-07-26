@@ -106,7 +106,9 @@ clock, random data, mutable feeds, or uncommitted network input.
 
 `Failed` is a deterministic result: revert, failed proof, result mismatch, or a
 false predicate. Missing content, non-final anchors, unsupported versions, and
-transport errors are operational errors: remain `Disputed`, never refund.
+transport errors are operational errors: they cannot be signed as a verdict.
+They remain `Disputed` until `resolveDeadline`; the timeout policy below then
+settles the liveness case.
 
 ## Minimal committed spec
 
@@ -145,6 +147,36 @@ backend-owned bytes. Store compact spec/delivery bytes on-chain in the demo
 (bounded size), or publish them to durable content-addressed storage before
 acceptance. A hash with unavailable content cannot be independently reproduced.
 
+### Data availability and timeout policy
+
+The protocol distinguishes terms chosen by the buyer from work supplied by the
+seller. This removes ambiguity in the only default outcome that preserves
+liveness:
+
+| Material | Publisher / accountable party | Required availability point |
+| --- | --- | --- |
+| `SpecV1` canonical bytes | buyer / deal author | at funding; the bytes must be emitted, stored, or durably content-addressed before `Held` |
+| `PrestateAnchorV1` header/root/environment bytes | buyer / deal author | at funding, by the same mechanism as `SpecV1` |
+| delivery, plan, claimed result, and any attachments | seller | at `deliver()` and throughout the challenge/resolve window |
+| state-proof/code witness needed to replay the seller plan | seller | attached to delivery, or retrievable from a durable source whose proofs verify against the fixed root |
+
+The anchor descriptor is buyer-authored because it defines the deal's world
+state. The seller is not compelled to deliver against an unavailable or invalid
+anchor: no delivery leads to the normal buyer reclaim. Once the seller calls
+`deliver()`, they attest that their concrete plan and replay witness are
+available against that fixed anchor. Therefore V1's liveness rule is:
+
+```text
+Disputed + no valid signed verdict by resolveDeadline → refund buyer
+```
+
+This covers missing delivery data, an unavailable witness, a keeper outage, and
+other operational errors uniformly. It is intentionally seller-unfavourable
+after delivery, because the seller controls whether to accept the fixed terms
+and can publish the evidence at delivery time. The funding implementation must
+add raw spec/anchor publication (or a checked content-store registration) before
+claiming production-grade independent reproduction; hashes alone are insufficient.
+
 ## EVM V1 backend
 
 The only initial schema is `EvmCallPlanV1`: a fully specified `CALL` with chain
@@ -154,10 +186,12 @@ environment. `EvmActionSpecV1` permits only:
 * `RESULT_EQUALS`: `keccak256(returnData)` is the expected hash.
 * `POSTSTATE_EQUALS`: ordered `(address, storageSlot, expectedWord)` checks.
 
-The demo commits an exact plan at funding time. It intentionally has no general
-calldata DSL, arbitrary EVM expression interpreter, or quality judge. Seller
-`deliver()` records a delivery and claim hash; replay evaluates the plan instead
-of trusting the claim.
+Funding commits the **plan schema**, anchor, and predicate—not a seller plan.
+The seller supplies the concrete, schema-valid `EvmCallPlanV1` and claimed result
+inside `DeliveryV1` at `deliver()`. Replay answers the meaningful question:
+“does this seller-supplied plan, run on the committed prestate, satisfy the
+buyer-funded predicate?” It intentionally has no general calldata DSL, arbitrary
+EVM expression interpreter, or quality judge.
 
 An EVM anchor commits `chainId`, finalized block number/hash, `stateRoot`, and
 the full `revm` environment: timestamp, base fee, gas limit, coinbase,
@@ -194,7 +228,8 @@ is buyer-only in `Delivered` before deadline and emits full `Disputed` terms.
 `resolve()` is valid only in `Disputed`: verify the registered resolver's
 EIP-712 signature over every `VerdictCommitment` field, ensure it matches the
 deal, emit `VerdictCommitted`, then atomically release on `Reproduced` or refund
-on `Failed`.
+on `Failed`. `timeoutRefund()` is callable by anyone after `resolveDeadline` if
+no verdict was posted; it applies the data-availability policy above.
 
 Never sign `traceHash` alone, let a resolver pick a fresh anchor, or permit a
 second resolution. Backend id and exact version are part of the deal/signature;
@@ -212,9 +247,11 @@ not alternate settlement paths.
 3. Keeper watches `Disputed`, fetches by hash, executes, signs, and submits
    `resolve` idempotently by `(chainId, dealId, verdictHash)`. Start here; add
    CRE only if it runs the identical pinned image and commits identical bytes.
-4. Dashboard split screen: left is an opaque “LLM judge”; right displays anchor,
-   plan, predicate, output, `traceHash`, verdict, and a one-command re-run. Show
-   both `Reproduced → release` and false predicate `→ refund`.
+4. Dashboard money-shot: seller supplies a plan that fails the slippage / output
+   predicate but claims success. The left “LLM judge” accepts the persuasive
+   claim; the right replay shows the fixed anchor, seller plan, predicate,
+   output, `traceHash`, and `Failed → refund`. Include the positive
+   `Reproduced → release` control path and a one-command independent re-run.
 5. Add Arc settlement, EIP-3009, ERC-8004, x402, and MCP as thin, inspectable
    integrations around the replay path.
 
@@ -235,6 +272,33 @@ not alternate settlement paths.
 - [ ] A Solana replay is another `ReexecBackend`; an LLM judge is a distinct
       resolution kind. Require independent fixtures/implementation before
       claiming any new VM profile is deterministic.
+
+## Follow-on economic and reputation hooks
+
+The four time bounds must be nonzero and phase-ordered:
+
+```text
+fundedAt < deliveredAt ≤ deliverDeadline
+deliveredAt < challengeDeadline
+challengedAt < resolveDeadline
+```
+
+The contract should validate the window parameters and record/emits each phase
+timestamp; it must not rely on an informal reading of four independent clocks.
+`challengeDeadline` need not be after the *unused* `deliverDeadline` when a
+seller delivers early—the invariant is about the actual phase transition.
+
+A future challenge bond is an anti-griefing cut-line, not an input to replay.
+It must be fixed in the funded spec, escrowed separately, and have an explicit
+outcome policy (for example, return on `Failed`, transfer on `Reproduced`, and a
+timeout rule). It must never alter the predicate or let a resolver price an
+opinion.
+
+After resolution, emit or index a canonical ERC-8004 reputation-evidence
+projection keyed by `dealId` and the full `verdictHash`. It may record outcome,
+backend/version, and reproducibility links, but never infer quality or change
+settlement. This makes the verdict a verifiable reputation source later without
+coupling identity/reputation into the deterministic core.
 
 An immutable predicate is funded against an immutable snapshot. A dispute
 replays exact work, commits reproducible evidence, and releases or refunds:

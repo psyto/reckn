@@ -12,14 +12,19 @@ import {VerdictHash} from "./libraries/VerdictHash.sol";
 ///         a registered resolver's EIP-712 signature. It never parses spec bytes
 ///         and holds no EVM/Solana/RPC-specific types (cross-VM cut-line).
 ///
-/// @dev Four clocks (review M2), all enforced here to avoid deadlock:
-///        fund  <  deliverDeadline  <  challengeDeadline  <  resolveDeadline
+/// @dev Phase-clock policy (review M2):
+///        fundedAt < deliveredAt <= deliverDeadline
+///        deliveredAt < challengeDeadline; challengedAt < resolveDeadline
+///      Window validation and phase timestamp recording are a next-pass hardening
+///      item; callers must not treat the three configurable windows as an
+///      informal global deadline ordering.
 ///      Escape hatches so funds never lock forever (review C1):
 ///        - Held      + past deliverDeadline  -> buyer reclaims (seller no-show)
 ///        - Delivered + past challengeDeadline -> seller claims (buyer silent)
 ///        - Disputed  + past resolveDeadline   -> buyer refunded (no verdict:
-///          delivery/anchor availability is the seller's burden, so timeout
-///          favors the buyer)
+///          seller-provided delivery/replay evidence is unavailable, so timeout
+///          favors the buyer). The buyer publishes the spec/anchor descriptor
+///          at funding under the protocol's data-availability policy.
 ///
 ///      This is NOT a trustless settlement. Reproducibility (anyone re-derives
 ///      the verdict from published inputs) is separate from settlement authority
@@ -301,8 +306,9 @@ contract RecknEscrow {
     }
 
     /// @notice Anyone may refund the buyer if a dispute produced no verdict
-    ///         before the resolve deadline (review C1). Delivery/anchor
-    ///         availability is the seller's burden, so timeout favors the buyer.
+    ///         before the resolve deadline (review C1). Seller-provided delivery
+    ///         and replay evidence are the seller's burden, so timeout favors
+    ///         the buyer; the buyer publishes spec/anchor bytes at funding.
     function timeoutRefund(bytes32 id) external {
         Deal storage d = deals[id];
         if (d.state != DealState.Disputed) revert BadState();
