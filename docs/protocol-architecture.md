@@ -195,11 +195,17 @@ EVM expression interpreter, or quality judge.
 
 An EVM anchor commits `chainId`, finalized block number/hash, `stateRoot`, and
 the full `revm` environment: timestamp, base fee, gas limit, coinbase,
-`prevrandao`, and chain rules. `reexec-evm` runs locally with `revm`, obtains
-account/storage proofs and code for the block, verifies proofs against the root,
-and verifies code hashes. An RPC fork or `debug_traceCall` helps development but
-is not verification: it delegates execution/state authenticity to the RPC.
-`reth` is acceptable only with the same root and environment checks.
+`prevrandao`, and chain rules. `reexec-evm` runs locally with `revm`, verifies
+offline MPT account/storage proofs and code hashes against the root, and uses a
+closed witness DB so a missing state read is an operational error. An RPC fork
+or `debug_traceCall` helps development but is not verification: it delegates
+execution/state authenticity to the RPC. `reth` is acceptable only with the
+same root and environment checks.
+
+For result commitments, EVM's `keccak256(returnData)` remains the
+`RESULT_EQUALS` predicate input. The VM-neutral envelope `resultHash` is instead
+`SHA-256("reckn/v1/" || "evm-return-data" || returnData)`, a domain-separated
+ContentHash. See [`REPLAY_RECORD_V1.md`](../packages/protocol/REPLAY_RECORD_V1.md).
 
 ## On-chain commitment and wiring
 
@@ -242,8 +248,9 @@ not alternate settlement paths.
 1. Build the four-state contract, EIP-3009 adapter, events, deadlines, mock
    resolver, and transition/conservation/signature tests.
 2. Implement canonical hashing, anchored EVM call plan, `RESULT_EQUALS`, local
-   `revm`, and golden test vectors. Add storage checks and proof verification;
-   label temporary RPC-only mode `demo-unverified`.
+   `revm`, offline MPT account/storage verification, and golden test vectors.
+   Any temporary RPC-only convenience mode is `demo-unverified` and cannot post
+   a production verdict.
 3. Keeper watches `Disputed`, fetches by hash, executes, signs, and submits
    `resolve` idempotently by `(chainId, dealId, verdictHash)`. Start here; add
    CRE only if it runs the identical pinned image and commits identical bytes.

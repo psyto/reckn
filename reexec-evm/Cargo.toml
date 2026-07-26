@@ -15,6 +15,10 @@ revm = { version = "38" }
 # Cross-VM canonical hashing is SHA-256 (see docs/protocol-architecture.md and
 # packages/protocol/REPLAY_RECORD_V1.md), distinct from EVM-native keccak256.
 sha2 = "0.10"
+# Offline Ethereum MPT proof verification. 0.9.5 resolves against the already
+# pinned alloy-primitives 1.6.1 used by revm 38; `ethereum` provides TrieAccount.
+alloy-trie = { version = "0.9.5", features = ["ethereum"] }
+alloy-rlp = "0.3.16"
 
 [profile.dev]
 # revm is heavy; keep debug builds tolerable without losing determinism.

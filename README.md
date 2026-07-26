@@ -123,12 +123,11 @@ codecs). See the module map in
 - **Re-execution backend (EVM V1):** revm 38 replay implemented in
   [`reexec-evm/`](reexec-evm) — deterministic CALL replay with `RESULT_EQUALS` /
   `POSTSTATE_EQUALS` predicates. Honest delivery → `Reproduced`; a seller's false
-  success claim → `Failed` (→ refund). `cargo test`: **3 passing**. Binding the
-  prestate witness to `anchor.state_root` via MPT proofs is the flagged next
-  hardening (V1 runs `demo-unverified`: reproducible, witness trusted).
+  success claim → `Failed` (→ refund). Offline MPT account/storage proofs bind
+  the closed replay witness to `anchor.state_root`; proof failure or a missing
+  witness is an operational error, not a verdict. `cargo test`: **5 passing**.
 - **Next:** the split-screen money-shot dashboard (LLM judge vs replay), the
-  keeper wiring `Disputed → sign → resolve`, and witness-vs-root proof
-  verification.
+  keeper wiring `Disputed → sign → resolve`, and durable witness publication.
 
 ## Collaboration model
 

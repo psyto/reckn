@@ -1,0 +1,51 @@
+# MPT witness V1 golden fixture
+
+This is the fixed, offline fixture exercised by
+`witness_proof_fixture_is_valid_and_tampering_is_operational`. It has no RPC
+dependency. Values use the Ethereum secure-trie keys `keccak256(address)` and
+`keccak256(slot-as-32-byte-big-endian)`.
+
+```text
+stateRoot = 0x26449071e16a2d2fad50256c613af90004c98c289775205fada7c91ac5bcb3c3
+
+caller   = 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+target   = 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+coinbase = 0xc0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0
+
+target code = 0x365f5f37365ff3
+target storage[7] = 42
+```
+
+The raw RLP proof nodes are ordered root-to-leaf. The shared state-trie root node
+is intentionally repeated in each account proof; each proof is independently
+verifiable against `stateRoot`.
+
+```text
+caller account proof
+  0xf8718080808080a02c098dfd2de217fda0d6ff51f465800310f2c6421d62a29da941138c3409061280808080808080a05f5c3112fef9bae063a41a61e29e3bac2c6a79ded456ff765af73f56f1e0645fa057a034447c71feaeceda5fdeddb302fd8c3816d4001f86483208f0f6c83276e08080
+  0xf871a03ab9a75647463db7d9263bfdf0f9b455fd5a2ff89f446d3dfa3dfe67cae5649db84ef84c80880de0b6b3a7640000a056e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421a0c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470
+
+target account proof
+  0xf8718080808080a02c098dfd2de217fda0d6ff51f465800310f2c6421d62a29da941138c3409061280808080808080a05f5c3112fef9bae063a41a61e29e3bac2c6a79ded456ff765af73f56f1e0645fa057a034447c71feaeceda5fdeddb302fd8c3816d4001f86483208f0f6c83276e08080
+  0xf869a03b279aac74f4f3342ef71cc0a5321aa36b383c525c7260e761ee23299c5f2f1fb846f8440180a077d0ab3d39d51d39dd9870f6b474e1dd4a06510b42f54b2336c1996f0f3c4846a02fec8f31a9970b0f4ecc5e23be5802c38210902df5c8ae31b251da5b9d0ed416
+
+target storage[7] proof
+  0xe3a120a66cc928b5edb82af9bd49922954155ab7b0942694bea4ce44661d9a8736c6882a
+
+coinbase account proof
+  0xf8718080808080a02c098dfd2de217fda0d6ff51f465800310f2c6421d62a29da941138c3409061280808080808080a05f5c3112fef9bae063a41a61e29e3bac2c6a79ded456ff765af73f56f1e0645fa057a034447c71feaeceda5fdeddb302fd8c3816d4001f86483208f0f6c83276e08080
+  0xf869a03bcc49514933c89b264e7606b376625b1a5ce2da6643650e7a0cccf0e55074ccb846f8440101a056e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421a0c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470
+```
+
+Golden commitments (Keccak-256 over concatenated raw proof nodes):
+
+```text
+caller account  = 0x95addfb0bda74d25cde7ebc2518e98b56906a8be6ad2df851587ac87019c0f56
+target account  = 0xc6afa6e155b00876ed014a5fafd19a27eb4879cd99581285f11c7e8c62eb28b9
+target storage  = 0x77d0ab3d39d51d39dd9870f6b474e1dd4a06510b42f54b2336c1996f0f3c4846
+coinbase account= 0x46d710bbdf2532a3aa2667185a1628c34d44e8cb205e6e093f6480afaa8086da
+```
+
+Changing the target value from `42` to `43` while retaining these nodes causes
+`StorageProofMismatch`; this is an operational error and must never produce a
+`Failed` verdict.

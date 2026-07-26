@@ -26,8 +26,10 @@ SHA-256( "reckn/v1/" || typeTag || canonicalBytes )
 
 `trace_hash` is a 32-byte digest. It is distinct from EVM-native `keccak256`,
 which is only used *inside* the EVM backend (e.g. the `RESULT_EQUALS` predicate
-compares `keccak256(returnData)`); such keccak outputs enter this record only as
-opaque 32-byte content in the `resultHash` field.
+compares `keccak256(returnData)`). The envelope's `resultHash` follows the
+cross-VM `ContentHash` convention instead: EVM V1 commits
+`SHA-256("reckn/v1/" || "evm-return-data" || returnData)`. Both are 32-byte
+values, but their domain tags and roles are intentionally different.
 
 ## TLV encoding
 
@@ -54,7 +56,7 @@ Unsigned integers use **minimal big-endian**: no leading zero bytes; the value
 | 0x06 | `prestateAnchorHash` | 32 bytes        | committed anchor descriptor |
 | 0x07 | `prestateRoot`       | 32 bytes        | anchor state root the witness is proven against |
 | 0x08 | `outcome`            | uint (minimal)  | `1` = Reproduced, `2` = Failed |
-| 0x09 | `resultHash`         | 32 bytes        | backend result commitment (EVM: `keccak256(returnData)`) |
+| 0x09 | `resultHash`         | 32 bytes        | backend result ContentHash (EVM: SHA-256 over `evm-return-data` + returnData) |
 
 The record deliberately holds **only hashes and enums** — no addresses, slots,
 blocks, or calldata. All VM-specific material is already folded into
@@ -64,9 +66,10 @@ record itself VM-neutral (cross-VM cut-line).
 `VerdictEnvelopeV1` = `dealId` + these fields + `trace_hash` (the hash of this
 record). The record never contains `dealId` or `trace_hash` itself.
 
-## Open item (flagged for Codex cross-pass)
+## Pinned EVM result mapping
 
-How EVM-native `keccak256(returnData)` maps into the envelope's `resultHash`
-`ContentHash` (keccak verbatim vs a SHA-256 re-commitment) is not yet fixed. The
-TLV format is stable either way — `resultHash` is 32 opaque bytes — but the
-producer's convention must be pinned before multi-language producers exist.
+`PredicateV1::ResultEquals` receives native `keccak256(returnData)`, preserving
+normal EVM semantics. Independently, the verdict envelope and this record set
+`resultHash` to `SHA-256("reckn/v1/" || "evm-return-data" || returnData)`.
+This makes the field a protocol-level `ContentHash` and leaves the TLV format
+unchanged.
