@@ -100,11 +100,15 @@ contracts/                  # EVM V1 settlement half (Foundry) — implemented
   test/                     #   forge tests
 reexec-evm/                 # EVM V1 re-execution backend (revm 38) — implemented
   src/lib.rs                #   deterministic CALL replay + predicate verdict
+packages/protocol/          # canonical cross-VM codecs — started
+  REPLAY_RECORD_V1.md       #   ReplayRecordV1 TLV spec (trace_hash source)
+  golden/                   #   cross-language conformance vectors
 ```
 
 Planned (not yet in the tree): `dashboard` (LLM-judge vs replay money-shot),
-`keeper`, `mcp-server`, `packages/protocol` (canonical codecs). See the module
-map in [`docs/protocol-architecture.md`](docs/protocol-architecture.md).
+`keeper`, `mcp-server`, and the rest of `packages/protocol` (spec/delivery/anchor
+codecs). See the module map in
+[`docs/protocol-architecture.md`](docs/protocol-architecture.md).
 
 ## Status
 

@@ -12,6 +12,9 @@ name = "reckn_reexec_evm"
 # Pinned to the version used across the psyto Reth lab (telos) so primitives and
 # EVM semantics stay consistent with the rest of the toolchain.
 revm = { version = "38" }
+# Cross-VM canonical hashing is SHA-256 (see docs/protocol-architecture.md and
+# packages/protocol/REPLAY_RECORD_V1.md), distinct from EVM-native keccak256.
+sha2 = "0.10"
 
 [profile.dev]
 # revm is heavy; keep debug builds tolerable without losing determinism.

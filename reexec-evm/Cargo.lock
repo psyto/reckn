@@ -1942,6 +1942,7 @@ name = "reckn-reexec-evm"
 version = "0.1.0"
 dependencies = [
  "revm",
+ "sha2",
 ]
 
 [[package]]

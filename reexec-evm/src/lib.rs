@@ -24,6 +24,7 @@ use revm::primitives::hardfork::SpecId;
 use revm::primitives::{keccak256, Address, Bytes, TxKind, B256, U256};
 use revm::state::{AccountInfo, Bytecode};
 use revm::{Context, ExecuteEvm, MainBuilder, MainContext};
+use sha2::{Digest, Sha256};
 
 /// Committed block environment. In production every field is part of the anchor
 /// descriptor the buyer publishes at funding; `state_root` is what the witness
@@ -69,6 +70,77 @@ pub struct EvmCallPlanV1 {
     pub gas_limit: u64,
 }
 
+/// The commitment hashes that bind a replay to a specific deal. These come from
+/// the protocol/escrow layer (hashes of the canonical spec/delivery/anchor bytes
+/// and the backend identity); the re-execution engine treats them as opaque
+/// 32-byte content and folds them into the canonical [`ReplayRecordV1`].
+#[derive(Clone, Debug, Default)]
+pub struct ReexecCommitmentsV1 {
+    pub backend_id: B256,
+    pub backend_version_hash: B256,
+    pub spec_hash: B256,
+    pub delivery_hash: B256,
+    pub prestate_anchor_hash: B256,
+}
+
+/// Canonical, VM-neutral record of an adjudicated replay. `trace_hash` is its
+/// SHA-256 digest. The encoding is specified in
+/// `packages/protocol/REPLAY_RECORD_V1.md`; this struct is the reference Rust
+/// implementation and must match that spec and the golden vectors.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ReplayRecordV1 {
+    pub protocol_version: u64,
+    pub backend_id: B256,
+    pub backend_version_hash: B256,
+    pub spec_hash: B256,
+    pub delivery_hash: B256,
+    pub prestate_anchor_hash: B256,
+    pub prestate_root: B256,
+    /// 1 = Reproduced, 2 = Failed (matches the ReexecVerdict enum).
+    pub outcome: u8,
+    pub result_hash: B256,
+}
+
+impl ReplayRecordV1 {
+    /// TLV bytes: entries with strictly ascending 1-byte tags, 1-byte length
+    /// (all V1 values ≤ 32 bytes), minimal-big-endian unsigned integers.
+    pub fn canonical_bytes(&self) -> Vec<u8> {
+        fn tlv(out: &mut Vec<u8>, tag: u8, value: &[u8]) {
+            out.push(tag);
+            out.push(value.len() as u8);
+            out.extend_from_slice(value);
+        }
+        fn minimal_be(v: u64) -> Vec<u8> {
+            if v == 0 {
+                return Vec::new();
+            }
+            let bytes = v.to_be_bytes();
+            let first = bytes.iter().position(|&b| b != 0).unwrap();
+            bytes[first..].to_vec()
+        }
+        let mut o = Vec::new();
+        tlv(&mut o, 0x01, &minimal_be(self.protocol_version));
+        tlv(&mut o, 0x02, self.backend_id.as_slice());
+        tlv(&mut o, 0x03, self.backend_version_hash.as_slice());
+        tlv(&mut o, 0x04, self.spec_hash.as_slice());
+        tlv(&mut o, 0x05, self.delivery_hash.as_slice());
+        tlv(&mut o, 0x06, self.prestate_anchor_hash.as_slice());
+        tlv(&mut o, 0x07, self.prestate_root.as_slice());
+        tlv(&mut o, 0x08, &minimal_be(self.outcome as u64));
+        tlv(&mut o, 0x09, self.result_hash.as_slice());
+        o
+    }
+
+    /// `SHA-256("reckn/v1/" || "replay-record" || canonicalBytes)`.
+    pub fn trace_hash(&self) -> B256 {
+        let mut h = Sha256::new();
+        h.update(b"reckn/v1/");
+        h.update(b"replay-record");
+        h.update(self.canonical_bytes());
+        B256::from_slice(&h.finalize())
+    }
+}
+
 /// The buyer-funded predicate. Fixed at funding; the seller cannot change it.
 #[derive(Clone, Debug)]
 pub enum PredicateV1 {
@@ -104,7 +176,9 @@ pub struct ReplayOutcome {
     pub verdict: Verdict,
     pub result_hash: B256,
     pub prestate_root: B256,
+    /// SHA-256 of `record` (the canonical ReplayRecordV1).
     pub trace_hash: B256,
+    pub record: ReplayRecordV1,
     pub return_data: Bytes,
     pub gas_used: u64,
 }
@@ -131,6 +205,7 @@ pub fn replay(
     witness: &PrestateWitnessV1,
     plan: &EvmCallPlanV1,
     predicate: &PredicateV1,
+    commitments: &ReexecCommitmentsV1,
 ) -> ReplayOutcome {
     // 1. Seed an in-memory DB purely from the committed witness. No RPC.
     let mut db = CacheDB::<EmptyDB>::default();
@@ -216,13 +291,29 @@ pub fn replay(
         judge(predicate, result_hash, &return_data, post_state.as_ref(), witness)
     };
 
-    let trace_hash = compute_trace_hash(anchor, plan, predicate, &return_data, &verdict);
+    let outcome_code = match verdict {
+        Verdict::Reproduced => 1u8,
+        Verdict::Failed(_) => 2u8,
+    };
+    let record = ReplayRecordV1 {
+        protocol_version: 1,
+        backend_id: commitments.backend_id,
+        backend_version_hash: commitments.backend_version_hash,
+        spec_hash: commitments.spec_hash,
+        delivery_hash: commitments.delivery_hash,
+        prestate_anchor_hash: commitments.prestate_anchor_hash,
+        prestate_root: anchor.state_root,
+        outcome: outcome_code,
+        result_hash,
+    };
+    let trace_hash = record.trace_hash();
 
     ReplayOutcome {
         verdict,
         result_hash,
         prestate_root: anchor.state_root,
         trace_hash,
+        record,
         return_data,
         gas_used,
     }
@@ -287,46 +378,6 @@ fn read_post_slot(
     U256::ZERO
 }
 
-/// Deterministic digest over the replay record. Placeholder for the canonical
-/// cross-VM `ReplayRecordV1` TLV in `packages/protocol`.
-fn compute_trace_hash(
-    anchor: &EvmAnchorV1,
-    plan: &EvmCallPlanV1,
-    predicate: &PredicateV1,
-    return_data: &Bytes,
-    verdict: &Verdict,
-) -> B256 {
-    let mut buf: Vec<u8> = Vec::new();
-    buf.extend_from_slice(b"reckn/v1/replay-record");
-    buf.extend_from_slice(&anchor.chain_id.to_be_bytes());
-    buf.extend_from_slice(&anchor.block_number.to_be_bytes());
-    buf.extend_from_slice(anchor.state_root.as_slice());
-    buf.extend_from_slice(plan.caller.as_slice());
-    buf.extend_from_slice(plan.target.as_slice());
-    buf.extend_from_slice(&plan.calldata);
-    buf.extend_from_slice(&plan.value.to_be_bytes::<32>());
-    match predicate {
-        PredicateV1::ResultEquals { expected_result_hash } => {
-            buf.push(0x01);
-            buf.extend_from_slice(expected_result_hash.as_slice());
-        }
-        PredicateV1::PostStateEquals { checks } => {
-            buf.push(0x02);
-            for (a, s, e) in checks {
-                buf.extend_from_slice(a.as_slice());
-                buf.extend_from_slice(&s.to_be_bytes::<32>());
-                buf.extend_from_slice(&e.to_be_bytes::<32>());
-            }
-        }
-    }
-    buf.extend_from_slice(return_data);
-    buf.push(match verdict {
-        Verdict::Reproduced => 0x00,
-        Verdict::Failed(_) => 0x01,
-    });
-    keccak256(&buf)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -353,6 +404,16 @@ mod tests {
             coinbase: addr(0xc0),
             prevrandao: B256::from([0x22; 32]),
             spec_id: SpecId::CANCUN,
+        }
+    }
+
+    fn commitments() -> ReexecCommitmentsV1 {
+        ReexecCommitmentsV1 {
+            backend_id: B256::from([0xb0; 32]),
+            backend_version_hash: B256::from([0xb1; 32]),
+            spec_hash: B256::from([0x5c; 32]),
+            delivery_hash: B256::from([0xde; 32]),
+            prestate_anchor_hash: B256::from([0xa0; 32]),
         }
     }
 
@@ -396,7 +457,7 @@ mod tests {
             gas_limit: 200_000,
         };
 
-        let out = replay(&anchor(), &witness, &plan, &predicate);
+        let out = replay(&anchor(), &witness, &plan, &predicate, &commitments());
         assert!(out.reproduced(), "honest plan should reproduce: {:?}", out.verdict);
         assert_eq!(out.result_hash, keccak256(good.as_ref()));
         assert_eq!(out.prestate_root, anchor().state_root);
@@ -422,11 +483,49 @@ mod tests {
             gas_limit: 200_000,
         };
 
-        let out = replay(&anchor(), &witness, &plan, &predicate);
+        let out = replay(&anchor(), &witness, &plan, &predicate, &commitments());
         assert_eq!(
             out.verdict,
             Verdict::Failed(FailReason::ResultMismatch),
             "false claim must fail -> refund",
+        );
+    }
+
+    /// Golden vector for the canonical ReplayRecordV1 codec. The expected
+    /// `trace_hash` was computed independently (Python `hashlib.sha256`), so this
+    /// asserts the Rust reference impl matches real SHA-256 and the spec in
+    /// `packages/protocol/REPLAY_RECORD_V1.md` / `golden/replay-record-v1.json`.
+    #[test]
+    fn golden_replay_record_v1() {
+        let rec = ReplayRecordV1 {
+            protocol_version: 1,
+            backend_id: B256::from([0x01; 32]),
+            backend_version_hash: B256::from([0x02; 32]),
+            spec_hash: B256::from([0x03; 32]),
+            delivery_hash: B256::from([0x04; 32]),
+            prestate_anchor_hash: B256::from([0x05; 32]),
+            prestate_root: B256::from([0x06; 32]),
+            outcome: 1,
+            result_hash: B256::from([0x07; 32]),
+        };
+
+        let mut expected = vec![0x01u8, 0x01, 0x01];
+        for (tag, val) in [(0x02u8, 0x01u8), (0x03, 0x02), (0x04, 0x03), (0x05, 0x04), (0x06, 0x05), (0x07, 0x06)] {
+            expected.push(tag);
+            expected.push(0x20);
+            expected.extend_from_slice(&[val; 32]);
+        }
+        expected.extend_from_slice(&[0x08, 0x01, 0x01]);
+        expected.push(0x09);
+        expected.push(0x20);
+        expected.extend_from_slice(&[0x07; 32]);
+
+        assert_eq!(rec.canonical_bytes(), expected, "canonical TLV bytes");
+        assert_eq!(rec.canonical_bytes().len(), 244);
+        assert_eq!(
+            format!("{:x}", rec.trace_hash()),
+            "94b20b2330662638857fb412dc648f84c183e8e214431bd25f8915452258d33e",
+            "trace_hash must match independent SHA-256",
         );
     }
 
@@ -445,8 +544,8 @@ mod tests {
             gas_limit: 200_000,
         };
 
-        let a = replay(&anchor(), &witness, &plan, &predicate);
-        let b = replay(&anchor(), &witness, &plan, &predicate);
+        let a = replay(&anchor(), &witness, &plan, &predicate, &commitments());
+        let b = replay(&anchor(), &witness, &plan, &predicate, &commitments());
         assert_eq!(a.trace_hash, b.trace_hash, "same inputs -> same trace hash");
         assert_eq!(a.result_hash, b.result_hash);
     }
