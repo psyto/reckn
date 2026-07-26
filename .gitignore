@@ -1,0 +1,21 @@
+# deps
+node_modules/
+# rust
+target/
+# foundry
+out/
+cache/
+broker/
+# env / secrets
+.env
+.env.*
+*.local
+# os / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/
+# build / logs
+dist/
+build/
+*.log
