@@ -1,5 +1,10 @@
 # Reckn — architecture convergence brief (frame-thick / Codex)
 
+> **STATUS: COMPLETED.** This was the frame-thick convergence *task*. Its result
+> is [`protocol-architecture.md`](protocol-architecture.md), which supersedes this
+> brief and is the source of truth. Kept here for history. The C1/C2 review points
+> raised against the first convergence are also resolved there.
+
 > Self-contained. No external conversation context required.
 
 ## What we're building
