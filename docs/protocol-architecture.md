@@ -18,6 +18,12 @@ does not itself make settlement trustless. Permissionless settlement needs a
 fraud proof, an optimistic challenge game, or a bonded quorum. Do not overclaim
 this in the demo.
 
+Reproducibility is not just asserted — it is executable: `reckn-keeper verify`
+re-derives a settled deal's verdict from public inputs alone (content store +
+re-execution), with no resolver key, and asserts it matches the on-chain
+`VerdictCommitted`. That keyless check is exactly the fraud-detection primitive a
+future challenge/bond layer turns into slashable proofs.
+
 Subjective quality is out of scope. A future conventional judge is a separate
 `ResolutionBackend`, never a `ReexecBackend` verdict.
 
@@ -280,13 +286,18 @@ not alternate settlement paths.
 
 ## Surface-first implementation order
 
-> Progress: (1) done — `contracts/`, 18 tests. (2) done — `reexec-evm/`, revm 38
-> with offline MPT verification and real-anchor (base-fee/nonce) support, 6 tests;
-> canonical `ReplayRecordV1` in `packages/protocol/`. (3) core done — `keeper/`
-> builds and EIP-712-signs the verdict `resolve()` accepts (cross-checked against
-> the contract by a shared golden); the watch/fetch/submit shell and the
-> transitive-witness builder remain. (4) done — `dashboard/`, real engine output.
-> (5) not started.
+> Progress: (1) done — `contracts/`, 22 tests (incl. cross-language digest pin,
+> ERC-8004 `ReputationEvidence`, and end-to-end settlement on real engine output).
+> (2) done — `reexec-evm/`, revm 38 with offline MPT verification and real-anchor
+> (base-fee/nonce) support, 6 tests; canonical `ReplayRecordV1` in
+> `packages/protocol/`. (3) done — `keeper/` builds and EIP-712-signs the verdict
+> `resolve()` accepts (shared-golden cross-check), plus the live HTTP shell
+> (`once`/`watch`: content store SHA-256-checked, transitive `eth_getProof` witness,
+> replay, submit) and a **keyless independent re-verifier** (`verify`: re-derives a
+> settled verdict from public inputs and asserts it matches on-chain). `scripts/
+> anvil-e2e.sh` runs the whole loop incl. re-verification. (4) done — `dashboard/`
+> (v5), real engine output. (5) partial — ERC-8004 reputation done; Arc / x402 /
+> MCP remain. Next big swings: a challenge/bond layer and a Solana backend.
 
 1. Build the four-state contract, EIP-3009 adapter, events, deadlines, mock
    resolver, and transition/conservation/signature tests.
@@ -349,6 +360,12 @@ projection keyed by `dealId` and the full `verdictHash`. It may record outcome,
 backend/version, and reproducibility links, but never infer quality or change
 settlement. This makes the verdict a verifiable reputation source later without
 coupling identity/reputation into the deterministic core.
+
+**Implemented:** `RecknEscrow.resolve()` emits
+`ReputationEvidence(agent, reproduced, dealId, traceHash, backendId)` — a pure
+projection that never touches settlement (tested for both outcomes). The
+differentiator vs self-reported feedback (e.g. AgentRankr) is that the evidence
+is a re-derivable verdict, not an opinion: `reckn-keeper verify` reproduces it.
 
 An immutable predicate is funded against an immutable snapshot. A dispute
 replays exact work, commits reproducible evidence, and releases or refunds:

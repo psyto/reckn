@@ -118,7 +118,7 @@ dashboard/                  # LLM-judge vs replay money-shot — implemented
   media/reckn-moneyshot.gif #   README hero animation
 keeper/                     # resolver keeper — replay, EIP-712 signature, live chain shell
   src/lib.rs                #   verified core: build + EIP-712-sign VerdictCommitment
-  src/main.rs               #   chain shell (subscribe / fetch / submit) — stub
+  src/main.rs               #   live shell: once/watch (resolve) + verify (keyless recheck)
 ```
 
 Planned (not yet in the tree): `mcp-server` and the rest of
@@ -127,11 +127,14 @@ Planned (not yet in the tree): `mcp-server` and the rest of
 
 ## Status
 
-The whole dispute → verdict → settlement slice exists and is tested: a funded
-escrow, a deterministic re-execution backend that binds its prestate to a
-committed state root, the canonical verdict record, the settlement signature the
-contract provably accepts, and a money-shot dashboard on real engine output. What
-remains is judge-legibility integrations and production content publication.
+The whole dispute → verdict → settlement → **re-verification** slice exists, runs
+live on a real node, and is tested: a funded escrow, a deterministic re-execution
+backend that binds its prestate to a committed state root, the canonical verdict
+record, the settlement signature the contract provably accepts, a keyless
+third-party re-verifier that reproduces the on-chain verdict from public inputs,
+ERC-8004 reputation evidence, and a money-shot dashboard on real engine output.
+What remains is judge-legibility integrations (Arc / x402 / MCP), a challenge/bond
+layer, cross-VM, and production content publication.
 
 - **Protocol:** locked — [`docs/protocol-architecture.md`](docs/protocol-architecture.md)
   (VM-neutral verdict envelope, committed spec/delivery/anchor codecs, EVM V1

@@ -16,12 +16,14 @@ The verdict envelope (`specHash`, `deliveryHash`, `prestateAnchor`, `verdict`,
 engine underneath is VM-specific. The exact types and invariants are in
 [`protocol-architecture.md`](protocol-architecture.md).
 
-## Act 1 — EVM (now, hackathon)
+## Act 1 — EVM (shipped)
 
-- Backend: revm / reth fork replay.
-- Single chain. Escrow, payment (x402/EIP-3009), and execution all on one EVM
-  chain (target: Circle Arc).
-- The whole product is provable end-to-end here.
+- Backend: revm replay with offline MPT-verified prestate.
+- Single chain. Escrow, payment (EIP-3009), execution, and settlement all on one
+  EVM chain (target: Circle Arc; the E2E runs on anvil).
+- The whole product is provable end-to-end here — and is: `scripts/anvil-e2e.sh`
+  drives fund → deliver → challenge → keeper resolve → **keyless re-verification**
+  of the on-chain verdict.
 
 ## Act 2 — Solana port (straightforward)
 
