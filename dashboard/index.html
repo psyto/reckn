@@ -182,6 +182,20 @@
   .diverge p { margin: 0; font-size: 13.5px; color: var(--ink); max-width: 78ch; }
   .diverge .em { font-weight: 700; }
 
+  /* reputation evidence */
+  .rep { margin-top: 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); padding: 16px 18px; }
+  .rep-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .rep-sub { font-size: 12.5px; color: var(--muted); }
+  .rep-body { display: flex; gap: 22px; flex-wrap: wrap; }
+  .rep-kv { display: flex; flex-direction: column; gap: 3px; }
+  .rep-kv .rk { font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--faint); font-weight: 650; }
+  .rep-kv .rv { font-size: 13px; font-weight: 600; }
+  .rep-kv .rv.mono { font-family: var(--mono); font-size: 12px; word-break: break-all; }
+  .rep-repro.yes { color: var(--good); }
+  .rep-repro.no { color: var(--bad); }
+  .rep-foot { margin: 12px 0 0; font-size: 12.5px; color: var(--muted); }
+  .rep-foot code { font-family: var(--mono); font-size: 11.5px; background: var(--panel-2); padding: 1px 5px; border-radius: 4px; color: var(--ink); }
+
   /* footer / provenance */
   .prov { margin-top: 30px; border-top: 1px solid var(--line); padding-top: 18px; color: var(--muted); font-size: 12.5px; }
   .prov code { font-family: var(--mono); background: var(--panel-2); padding: 1px 6px; border-radius: 5px; font-size: 11.5px; color: var(--ink); }
@@ -301,6 +315,23 @@
     </div>
   </div>
 
+  <div class="rep">
+    <div class="rep-head">
+      <span class="eyebrow">ERC-8004 reputation evidence</span>
+      <span class="rep-sub">emitted on-chain with every verdict — earned by re-execution, not self-reported</span>
+    </div>
+    <div class="rep-body">
+      <div class="rep-kv"><span class="rk">agent</span><span class="rv mono">0xbb…bb · seller</span></div>
+      <div class="rep-kv"><span class="rk">reproduced</span><span class="rv rep-repro" id="rep-repro"></span></div>
+      <div class="rep-kv"><span class="rk">evidence (trace)</span><span class="rv mono" id="rep-evidence"></span></div>
+    </div>
+    <p class="rep-foot">
+      AgentRankr ranks agents by self-reported feedback (sybil-gameable). Reckn's
+      reputation is a verdict anyone can re-derive from <code>evidence</code> — the
+      score is the re-execution, not an opinion about it.
+    </p>
+  </div>
+
   <div class="prov">
     <p>
       <span class="real">Every value on the Reckn side is real output of the
@@ -398,6 +429,12 @@
       $("dv-title").textContent = "Same dispute, opposite outcomes.";
       $("dv-body").innerHTML = "The opinion judge believed the claim and <span class='em'>released 1,000 USDC to a false delivery</span>. Reckn replayed the actual plan, saw 6 USDC out at 98.7% slippage, and <span class='em'>refunded the buyer</span>. The words lied; the re-execution couldn't.";
     }
+
+    // reputation evidence (projected from the verdict)
+    const repro = $("rep-repro");
+    repro.textContent = reproduced ? "✓ true" : "✗ false";
+    repro.className = "rv rep-repro " + (reproduced ? "yes" : "no");
+    $("rep-evidence").textContent = short(s.trace_hash);
 
     // fade
     document.querySelectorAll(".split .panel, .diverge").forEach(el => {

@@ -103,6 +103,20 @@ contract RecknEscrow {
     // reason: 0 = verdict release, 1 = verdict refund, 2 = timeout refund,
     //         3 = unchallenged release, 4 = undelivered reclaim
 
+    /// @notice Reputation evidence about the seller-agent, projected from a
+    ///         re-execution verdict (ERC-8004 style). Unlike self-reported
+    ///         feedback, the evidence is a reproducible verdict: `traceHash`
+    ///         (the canonical ReplayRecordV1 digest) can be re-derived by anyone.
+    ///         Emission is a pure projection — it never infers quality and never
+    ///         affects settlement.
+    event ReputationEvidence(
+        address indexed agent,
+        bool reproduced,
+        bytes32 indexed dealId,
+        bytes32 verdictTraceHash,
+        bytes32 backendId
+    );
+
     error BadState();
     error NotBuyer();
     error NotSeller();
@@ -279,6 +293,10 @@ contract RecknEscrow {
 
         Outcome outcome = Outcome(c.outcome);
         emit VerdictCommitted(c.dealId, outcome, c.prestateRoot, c.resultHash, c.traceHash, signer);
+        // Pure ERC-8004-style projection: reputation for the seller-agent, earned
+        // by a reproducible verdict rather than self-reported feedback. Does not
+        // touch settlement below.
+        emit ReputationEvidence(d.seller, outcome == Outcome.Reproduced, id, c.traceHash, c.backendId);
 
         if (outcome == Outcome.Reproduced) {
             _pay(d, id, d.seller, 0);

@@ -130,9 +130,16 @@ remains is judge-legibility integrations and production content publication.
 - **Settlement contract (EVM V1):** implemented in [`contracts/`](contracts) —
   four-state escrow, EIP-712 resolver verdicts, resolver/backend allow-list,
   timeout escape hatches, nonzero-window guards, a cross-language digest pin
-  against the keeper, and end-to-end tests that settle on the **real engine
-  output** (the `moneyshot.json` hashes) and assert `VerdictCommitted` carries the
-  actual `traceHash`. `forge test`: **20 passing**.
+  against the keeper, an ERC-8004-style `ReputationEvidence` projection (below),
+  and end-to-end tests that settle on the **real engine output** (the
+  `moneyshot.json` hashes) and assert `VerdictCommitted` carries the actual
+  `traceHash`. `forge test`: **22 passing**.
+- **Reputation (ERC-8004 style):** on every verdict the escrow emits
+  `ReputationEvidence(agent, reproduced, dealId, traceHash, backendId)` — a pure
+  projection that never changes settlement. Unlike AgentRankr's self-reported,
+  sybil-gameable feedback, the seller-agent's reputation is **earned by a
+  reproducible verdict**: anyone can re-derive `traceHash`. Surfaced in the
+  dashboard.
 - **Re-execution backend (EVM V1):** revm 38 replay implemented in
   [`reexec-evm/`](reexec-evm) — deterministic CALL replay with `RESULT_EQUALS` /
   `POSTSTATE_EQUALS` predicates. Honest delivery → `Reproduced`; a seller's false
@@ -189,7 +196,7 @@ closed-world replay → verdict → settlement`.
 Each component is self-contained; there is no top-level build.
 
 ```bash
-# settlement contracts (Foundry) — 20 tests (incl. end-to-end on real engine output)
+# settlement contracts (Foundry) — 22 tests (incl. end-to-end on real engine output)
 cd contracts && forge install foundry-rs/forge-std --no-git && forge test
 
 # re-execution engine (revm 38, MPT-verified prestate) — 6 tests

@@ -281,6 +281,14 @@ contract RecknEscrowTest is Test {
         address resolver
     );
 
+    event ReputationEvidence(
+        address indexed agent,
+        bool reproduced,
+        bytes32 indexed dealId,
+        bytes32 verdictTraceHash,
+        bytes32 backendId
+    );
+
     function test_e2e_false_claim_refunds_buyer_on_real_engine_output() public {
         bytes32 id = _fund("e2e-false");
         vm.prank(seller);
@@ -318,6 +326,39 @@ contract RecknEscrowTest is Test {
 
         assertEq(token.balanceOf(seller), AMOUNT, "honest -> seller released");
         assertEq(token.balanceOf(buyer), 0, "buyer spent");
+    }
+
+    // --- ERC-8004-style reputation evidence (pure projection of the verdict) ---
+
+    function test_reputation_evidence_emitted_on_failed() public {
+        bytes32 id = _fund("rep-fail");
+        vm.prank(seller);
+        escrow.deliver(id, DELIVERY_HASH, CHALLENGE_W);
+        vm.prank(buyer);
+        escrow.challenge(id, RESOLVE_W);
+
+        VerdictHash.VerdictCommitment memory c = _commitment(id, 1); // Failed
+        (uint8 v, bytes32 r, bytes32 s) = _sign(c, resolverPk);
+
+        // agent = seller, reproduced = false, evidence = the verdict trace hash.
+        vm.expectEmit(true, true, false, true, address(escrow));
+        emit ReputationEvidence(seller, false, id, c.traceHash, BACKEND_ID);
+        escrow.resolve(c, v, r, s);
+    }
+
+    function test_reputation_evidence_emitted_on_reproduced() public {
+        bytes32 id = _fund("rep-ok");
+        vm.prank(seller);
+        escrow.deliver(id, DELIVERY_HASH, CHALLENGE_W);
+        vm.prank(buyer);
+        escrow.challenge(id, RESOLVE_W);
+
+        VerdictHash.VerdictCommitment memory c = _commitment(id, 0); // Reproduced
+        (uint8 v, bytes32 r, bytes32 s) = _sign(c, resolverPk);
+
+        vm.expectEmit(true, true, false, true, address(escrow));
+        emit ReputationEvidence(seller, true, id, c.traceHash, BACKEND_ID);
+        escrow.resolve(c, v, r, s);
     }
 
     // --- conservation: escrow never mints or strands value ---
