@@ -17,6 +17,8 @@ signature that releases (or refunds) escrow binds to a re-execution, not to pros
 Toggle *Honest delivery* / *False claim* and watch them disagree. Or run the whole
 thing live on a local chain: [`bash scripts/anvil-e2e.sh`](#try-it-one-command).
 
+![Reckn money-shot — the same dispute: the opinion judge reads the seller's claim and approves; re-execution replays the actual plan, sees the real output, and refunds the buyer.](dashboard/media/reckn-moneyshot.gif)
+
 ## Why
 
 This is the "correct version" of a pattern that keeps winning agent-economy
