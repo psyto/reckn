@@ -171,9 +171,17 @@ remains is judge-legibility integrations and production content publication.
   `Disputed`, SHA-256-checks content-store bytes before parsing, collects an
   access-list-derived MPT witness, replays, and submits `resolve()`. The included
   anvil E2E proves false claim → `Failed` → refund. `cargo test` + `forge test`:
-  **keeper 3, contracts 20**.
-- **Next:** Arc / x402 / ERC-8004 integration, persistent event checkpoints, and
-  durable canonical witness publication.
+  **keeper 3, contracts 22**.
+- **Independent re-verification (the trust property, executable):**
+  `reckn-keeper verify <rpc> <escrow> <content-store> <dealId>` — a **keyless**
+  third party reads the resolver's on-chain `VerdictCommitted` and re-derives the
+  verdict from public inputs alone (content store + re-execution), then asserts
+  outcome / resultHash / prestateRoot / traceHash all match. This is what a TEE'd
+  LLM verdict cannot offer: **don't trust the resolver — reproduce its verdict
+  yourself.** The anvil E2E runs it as a final step and fails on any mismatch.
+- **Next:** Arc / x402 integration, a challenge/bond layer (turn the checkable
+  verdict into slashable fraud proofs), and cross-VM (a Solana backend behind the
+  same verdict envelope).
 
 ## Try it (one command)
 
@@ -193,10 +201,14 @@ deal, delivers a seller plan, and files a dispute. The keeper picks up the
 (`eth_createAccessList` + `eth_getProof`, bound to the block's `state_root`),
 **re-executes the seller's plan** — here a real `balanceOf` SLOAD whose output
 can't satisfy the funded predicate — signs the `Failed` verdict, and submits
-`resolve()`. Expected final line:
+`resolve()`. Finally, a **keyless independent re-verifier** reads the on-chain
+verdict back and reproduces it from public inputs alone — proving the resolver
+couldn't have lied. Expected final lines:
 
 ```
 PASS: re-execution returned Failed and refunded buyer; deal=0x…
+VERIFIED — resolver verdict reproduced from public inputs with no resolver key. …
+PASS: independent re-verification reproduced the on-chain verdict.
 ```
 
 That is the entire trust chain end-to-end on a real node:

@@ -113,3 +113,11 @@ buyer_balance=$(cast call --rpc-url "$rpc_url" "$token" 'balanceOf(address)(uint
 escrow_balance=$(cast call --rpc-url "$rpc_url" "$token" 'balanceOf(address)(uint256)' "$escrow")
 [[ "$buyer_balance" == "1000000" && "$escrow_balance" == "0" ]]
 echo "PASS: re-execution returned Failed and refunded buyer; deal=$deal_id"
+
+# Independent, keyless re-verification: a third party reproduces the resolver's
+# on-chain verdict from public inputs alone (content store + re-execution) — no
+# resolver key. This is the trust property made executable: don't trust the
+# resolver, reproduce its verdict yourself. A mismatch here fails the script.
+cargo run --quiet --manifest-path "$root/keeper/Cargo.toml" -- \
+  verify "$rpc_url" "$escrow" "$store" "$deal_id"
+echo "PASS: independent re-verification reproduced the on-chain verdict."

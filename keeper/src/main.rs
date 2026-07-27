@@ -16,7 +16,7 @@ use alloy::{
 use alloy_primitives::{Address, Bytes, B256, U256};
 use alloy_signer_local::PrivateKeySigner;
 use anyhow::{bail, Context as _, Result};
-use reckn_keeper::{build_commitment, sign_verdict, DealTerms};
+use reckn_keeper::{build_commitment, sign_verdict, DealTerms, VerdictCommitment};
 use reckn_reexec_evm::{
     replay, verify_witness_against_root, AccountWitness, EvmAnchorV1, EvmCallPlanV1, PredicateV1,
     PrestateWitnessV1, ReexecCommitmentsV1, StorageWitnessV1,
@@ -53,6 +53,14 @@ sol! {
         bytes32 backendId,
         bytes32 backendVersionHash,
         uint64 resolveDeadline
+    );
+    event VerdictCommitted(
+        bytes32 indexed dealId,
+        uint8 outcome,
+        bytes32 prestateRoot,
+        bytes32 resultHash,
+        bytes32 traceHash,
+        address resolver
     );
 }
 
@@ -303,31 +311,20 @@ where
     Ok(witness)
 }
 
-/// Decode, authenticate, replay and settle exactly one Disputed event.
-///
-/// Every `?` before `send_transaction` is operational: the caller logs it and
-/// continues polling, while the contract's C1 `timeoutRefund` remains available.
-async fn resolve_dispute<P>(
+/// Reconstruct the verdict from PUBLIC inputs only (content store + committed
+/// deal terms), with no resolver key. Shared by the keeper (which then signs it)
+/// and the independent verifier (which compares it to the on-chain verdict), so
+/// the two can never drift: the thing the keeper signs is exactly the thing
+/// anyone else re-derives.
+async fn recompute_verdict<P>(
     read_provider: &P,
-    rpc_url: &str,
-    escrow: Address,
     chain_id: u64,
     store: &FileContentStore,
-    signer: &PrivateKeySigner,
-    event: Disputed,
-    submitted: &mut BTreeSet<(u64, B256, B256)>,
-) -> Result<Option<B256>>
+    terms: &DealTerms,
+) -> Result<VerdictCommitment>
 where
     P: Provider<Ethereum>,
 {
-    let terms = DealTerms {
-        deal_id: event.dealId,
-        spec_hash: event.specHash,
-        delivery_hash: event.deliveryHash,
-        prestate_anchor_hash: event.prestateAnchorHash,
-        backend_id: event.backendId,
-        backend_version_hash: event.backendVersionHash,
-    };
     // Each lookup verifies the raw bytes against the event/deal commitment.
     let spec: SpecV11Json = store.load_json(terms.spec_hash)?;
     if spec.backend_id != terms.backend_id
@@ -367,9 +364,128 @@ where
             prestate_anchor_hash: terms.prestate_anchor_hash,
         },
     )
-    .map_err(|error| anyhow::anyhow!("operational replay error (not signed): {error:?}"))?;
-    let signed = sign_verdict(build_commitment(&terms, &replay), chain_id, escrow, signer)
-        .context("EIP-712 verdict signing")?;
+    .map_err(|error| anyhow::anyhow!("operational replay error: {error:?}"))?;
+    Ok(build_commitment(terms, &replay))
+}
+
+/// Independent, keyless re-verification of a settled dispute. Reads the resolver's
+/// on-chain `VerdictCommitted` and the committed deal terms, re-derives the verdict
+/// from public inputs (content store + re-execution), and asserts they match. This
+/// is the trust property Reckn is built on, made executable: don't trust the
+/// resolver — reproduce its verdict yourself. Returns Err on any mismatch.
+async fn verify_dispute<P>(
+    read_provider: &P,
+    escrow: Address,
+    chain_id: u64,
+    store: &FileContentStore,
+    deal_id: B256,
+) -> Result<()>
+where
+    P: Provider<Ethereum>,
+{
+    let disputed_logs = read_provider
+        .get_logs(
+            &Filter::new()
+                .address(escrow)
+                .event_signature(Disputed::SIGNATURE_HASH)
+                .topic1(deal_id)
+                .from_block(0u64),
+        )
+        .await?;
+    let disputed = disputed_logs
+        .last()
+        .context("no Disputed event for this deal")?
+        .log_decode_validate::<Disputed>()?
+        .inner
+        .data;
+    let terms = DealTerms {
+        deal_id,
+        spec_hash: disputed.specHash,
+        delivery_hash: disputed.deliveryHash,
+        prestate_anchor_hash: disputed.prestateAnchorHash,
+        backend_id: disputed.backendId,
+        backend_version_hash: disputed.backendVersionHash,
+    };
+
+    let verdict_logs = read_provider
+        .get_logs(
+            &Filter::new()
+                .address(escrow)
+                .event_signature(VerdictCommitted::SIGNATURE_HASH)
+                .topic1(deal_id)
+                .from_block(0u64),
+        )
+        .await?;
+    let committed = verdict_logs
+        .last()
+        .context("no VerdictCommitted event — the deal is not resolved on-chain yet")?
+        .log_decode_validate::<VerdictCommitted>()?
+        .inner
+        .data;
+
+    // Re-derive from public inputs only. No resolver key is involved.
+    let recomputed = recompute_verdict(read_provider, chain_id, store, &terms).await?;
+
+    let mark = |ok: bool| if ok { "OK" } else { "MISMATCH" };
+    let outcome_ok = recomputed.outcome == committed.outcome;
+    let result_ok = recomputed.result_hash == committed.resultHash;
+    let root_ok = recomputed.prestate_root == committed.prestateRoot;
+    let trace_ok = recomputed.trace_hash == committed.traceHash;
+
+    println!("independent re-verification · deal {deal_id:#x}");
+    println!(
+        "  outcome      {} (on-chain {}, recomputed {})",
+        mark(outcome_ok),
+        committed.outcome,
+        recomputed.outcome
+    );
+    println!("  resultHash   {}", mark(result_ok));
+    println!("  prestateRoot {}", mark(root_ok));
+    println!(
+        "  traceHash    {} {:#x}",
+        mark(trace_ok),
+        recomputed.trace_hash
+    );
+
+    if outcome_ok && result_ok && root_ok && trace_ok {
+        println!(
+            "VERIFIED — resolver verdict reproduced from public inputs with no resolver key. Reproduce, or refund."
+        );
+        Ok(())
+    } else {
+        bail!("MISMATCH — the resolver's on-chain verdict does not reproduce under independent re-execution");
+    }
+}
+
+/// Decode, authenticate, replay and settle exactly one Disputed event.
+///
+/// Every `?` before `send_transaction` is operational: the caller logs it and
+/// continues polling, while the contract's C1 `timeoutRefund` remains available.
+#[allow(clippy::too_many_arguments)]
+async fn resolve_dispute<P>(
+    read_provider: &P,
+    rpc_url: &str,
+    escrow: Address,
+    chain_id: u64,
+    store: &FileContentStore,
+    signer: &PrivateKeySigner,
+    event: Disputed,
+    submitted: &mut BTreeSet<(u64, B256, B256)>,
+) -> Result<Option<B256>>
+where
+    P: Provider<Ethereum>,
+{
+    let terms = DealTerms {
+        deal_id: event.dealId,
+        spec_hash: event.specHash,
+        delivery_hash: event.deliveryHash,
+        prestate_anchor_hash: event.prestateAnchorHash,
+        backend_id: event.backendId,
+        backend_version_hash: event.backendVersionHash,
+    };
+    let commitment = recompute_verdict(read_provider, chain_id, store, &terms).await?;
+    let signed =
+        sign_verdict(commitment, chain_id, escrow, signer).context("EIP-712 verdict signing")?;
     let idempotency_key = (chain_id, terms.deal_id, signed.digest);
     if submitted.contains(&idempotency_key) {
         return Ok(None);
@@ -473,7 +589,9 @@ async fn main() -> Result<()> {
         eprintln!(
             "usage:\n  reckn-keeper witness <rpc-url> <content-store> <anchor-hash> <delivery-hash>\n\
               reckn-keeper once|watch <rpc-url> <escrow> <content-store> <resolver-private-key>\n\
-             content files are <sha256-without-0x>.json and are checked before parsing"
+              reckn-keeper verify <rpc-url> <escrow> <content-store> <deal-id>\n\
+             content files are <sha256-without-0x>.json and are checked before parsing.\n\
+             `verify` is keyless: it reproduces a resolved deal's on-chain verdict from public inputs."
         );
         return Ok(());
     };
@@ -541,7 +659,18 @@ async fn main() -> Result<()> {
                 tokio::time::sleep(std::time::Duration::from_millis(poll_ms)).await;
             }
         }
-        _ => bail!("unsupported command {command:?}; use witness, once, or watch"),
+        "verify" => {
+            let escrow: Address = args.next().context("missing escrow")?.parse()?;
+            let store = FileContentStore::new(args.next().context("missing content-store")?);
+            let deal_id: B256 = args.next().context("missing deal-id")?.parse()?;
+            if args.next().is_some() {
+                bail!("too many arguments");
+            }
+            let provider = alloy::providers::ProviderBuilder::new().connect_http(rpc_url.parse()?);
+            let chain_id = provider.get_chain_id().await?;
+            verify_dispute(&provider, escrow, chain_id, &store, deal_id).await
+        }
+        _ => bail!("unsupported command {command:?}; use witness, once, watch, or verify"),
     }
 }
 

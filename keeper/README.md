@@ -39,6 +39,12 @@ cargo test              # keeper core
   (default 3 s; override with `RECKN_POLL_MS`) without changing adjudication logic.
 - `witness <rpc> <store> <anchorHash> <deliveryHash>` exercises just the R2
   collector.
+- `verify <rpc> <escrow> <store> <dealId>` is the **keyless** third-party check:
+  it reads the resolver's on-chain `VerdictCommitted`, re-derives the verdict from
+  public inputs alone (`recompute_verdict`, the same path the keeper signs — so the
+  two can't drift), and asserts outcome / resultHash / prestateRoot / traceHash all
+  match. No resolver key. Exits non-zero on any mismatch. This makes Reckn's core
+  claim executable: reproduce the verdict yourself instead of trusting the resolver.
 
 The collector calls `eth_createAccessList` at the committed block, adds caller /
 target / coinbase explicitly, obtains raw RLP account and storage proofs through
