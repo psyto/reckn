@@ -12,6 +12,11 @@ funding time. The verdict commits the re-execution trace hash and pre-state root
 on-chain, so **anyone can independently re-run and reach the same verdict**. The
 signature that releases (or refunds) escrow binds to a re-execution, not to prose.
 
+**▶ Live money-shot:** <https://claude.ai/code/artifact/88a370e4-bfeb-480c-af14-015661e6e6f7>
+— the same dispute, judged by an opinion LLM vs deterministic re-execution.
+Toggle *Honest delivery* / *False claim* and watch them disagree. Or run the whole
+thing live on a local chain: [`bash scripts/anvil-e2e.sh`](#try-it-one-command).
+
 ## Why
 
 This is the "correct version" of a pattern that keeps winning agent-economy
