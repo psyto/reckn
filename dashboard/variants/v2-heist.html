@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Reckn — Reproduce, or refund</title>
+<style>
+  :root{
+    --paper:#e9e6df;
+    --surface:#f6f4ef;
+    --card:#ffffff;
+    --ink:#211f2a;
+    --muted:#6c6776;
+    --line:#dcd8cf;
+    --teal:#0f7d6e;
+    --teal-soft:#d3ece7;
+    --gold:#cf9518;
+    --gold-soft:#f6e6be;
+    --coral:#d34638;
+    --coral-soft:#f6dcd7;
+    --lav:#7d769a;
+    --reckn:#26233a;
+    --radius:16px;
+    --shadow:0 1px 0 rgba(33,31,42,.04), 0 14px 34px -18px rgba(33,31,42,.34);
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --paper:#141219;
+      --surface:#1b1922;
+      --card:#23202f;
+      --ink:#f2f0ea;
+      --muted:#a49eb1;
+      --line:#332f3f;
+      --teal:#3cbaa5;
+      --teal-soft:#123933;
+      --gold:#eab73f;
+      --gold-soft:#3d3416;
+      --coral:#ef6a5b;
+      --coral-soft:#3f2320;
+      --lav:#a79fc0;
+      --reckn:#0f0d18;
+      --shadow:0 1px 0 rgba(0,0,0,.3), 0 18px 40px -20px rgba(0,0,0,.7);
+    }
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--sans);
+    color:var(--ink);
+    background:
+      radial-gradient(120% 90% at 50% -20%, color-mix(in oklab, var(--gold) 12%, var(--paper)) 0%, var(--paper) 46%);
+    min-height:100vh;
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+  }
+  .wrap{max-width:1020px;margin:0 auto;padding:26px 20px 60px}
+
+  /* ---------- header ---------- */
+  header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px 20px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .mark{width:38px;height:38px;flex:none}
+  .brand h1{font-size:1.34rem;letter-spacing:-.02em;margin:0;font-weight:680}
+  .brand p{margin:1px 0 0;font-size:.82rem;color:var(--muted);font-weight:520}
+  .brand .tag{font-family:var(--mono);color:var(--teal);font-weight:600}
+  .lede{max-width:34ch;font-size:.9rem;color:var(--muted);margin:0}
+  .lede b{color:var(--ink);font-weight:620}
+
+  /* ---------- controls ---------- */
+  .controls{
+    display:flex;flex-wrap:wrap;align-items:center;gap:12px;
+    margin:22px 0 14px;
+  }
+  .seg{
+    display:inline-flex;background:var(--card);border:1px solid var(--line);
+    border-radius:999px;padding:4px;box-shadow:var(--shadow);gap:2px;
+  }
+  .seg button{
+    appearance:none;border:0;background:transparent;color:var(--muted);
+    font:inherit;font-weight:600;font-size:.85rem;padding:8px 16px;border-radius:999px;
+    cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:color .18s,background .18s;
+  }
+  .seg button .dot{width:8px;height:8px;border-radius:50%;background:currentColor;opacity:.55}
+  .seg button[aria-pressed="true"]{color:var(--ink);background:color-mix(in oklab,var(--ink) 8%, var(--card))}
+  .seg button.honest[aria-pressed="true"]{color:var(--teal);background:var(--teal-soft)}
+  .seg button.false[aria-pressed="true"]{color:var(--coral);background:var(--coral-soft)}
+  .ghost{
+    appearance:none;font:inherit;font-weight:600;font-size:.85rem;cursor:pointer;
+    border:1px solid var(--line);background:var(--card);color:var(--ink);
+    padding:9px 15px;border-radius:999px;display:inline-flex;align-items:center;gap:8px;
+    box-shadow:var(--shadow);transition:transform .12s, border-color .18s;
+  }
+  .ghost:hover{border-color:color-mix(in oklab,var(--ink) 24%,var(--line))}
+  .ghost:active{transform:translateY(1px)}
+  .ghost svg{width:15px;height:15px}
+  .scene-label{margin-left:auto;font-size:.8rem;color:var(--muted);font-family:var(--mono)}
+  .scene-label b{color:var(--ink)}
+
+  button:focus-visible, .rcpt summary:focus-visible{
+    outline:2.5px solid var(--gold);outline-offset:2px;border-radius:999px;
+  }
+
+  /* ---------- stage ---------- */
+  .stage{
+    position:relative;background:var(--surface);border:1px solid var(--line);
+    border-radius:24px;padding:22px 20px 20px;box-shadow:var(--shadow);overflow:hidden;
+  }
+  .stage::before{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:
+      radial-gradient(80% 60% at 50% 8%, color-mix(in oklab,var(--gold) 9%, transparent), transparent 70%);
+    opacity:.6;
+  }
+
+  /* judges row */
+  .judges{display:grid;grid-template-columns:1fr 1fr;gap:14px;position:relative;z-index:2}
+  .judge{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:13px 14px;display:flex;gap:12px;align-items:flex-start;
+    transition:border-color .25s, box-shadow .25s, background .25s;
+  }
+  .judge .av{flex:none}
+  .judge h3{margin:0;font-size:.92rem;font-weight:650;letter-spacing:-.01em}
+  .judge .role{margin:2px 0 0;font-size:.76rem;color:var(--muted)}
+  .judge .say{
+    margin:9px 0 0;font-size:.82rem;min-height:2.4em;color:var(--ink);
+    opacity:.55;transition:opacity .25s;
+  }
+  .judge .verdict{
+    display:inline-flex;align-items:center;gap:6px;margin-top:8px;
+    font-family:var(--mono);font-size:.72rem;font-weight:650;letter-spacing:.02em;
+    padding:4px 9px;border-radius:8px;border:1px solid var(--line);
+    background:color-mix(in oklab,var(--ink) 4%, var(--card));color:var(--muted);
+    text-transform:uppercase;transition:all .25s;
+  }
+  .judge.hot{box-shadow:0 0 0 2px color-mix(in oklab,var(--gold) 55%, transparent), var(--shadow)}
+  .judge.hot .say{opacity:1}
+  .verdict.ok{color:var(--teal);border-color:color-mix(in oklab,var(--teal) 40%,var(--line));background:var(--teal-soft)}
+  .verdict.bad{color:var(--coral);border-color:color-mix(in oklab,var(--coral) 45%,var(--line));background:var(--coral-soft)}
+  .verdict.dupe{color:var(--gold);border-color:color-mix(in oklab,var(--gold) 45%,var(--line));background:var(--gold-soft)}
+  .judge .head{display:flex;flex-direction:column}
+
+  /* actor lane */
+  .lane{
+    position:relative;z-index:2;margin-top:18px;
+    display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;
+    min-height:170px;
+  }
+  .actor{display:flex;flex-direction:column;align-items:center;gap:9px;text-align:center}
+  .actor .name{font-size:.82rem;font-weight:640;letter-spacing:-.01em}
+  .actor .sub{font-size:.72rem;color:var(--muted);max-width:15ch}
+  .anchor{width:1px;height:1px}
+  .escrow{
+    display:flex;flex-direction:column;align-items:center;gap:8px;justify-self:center;
+    padding:0 6px;position:relative;
+  }
+  .escrow .plate{
+    font-family:var(--mono);font-size:.66rem;letter-spacing:.08em;color:var(--muted);
+    text-transform:uppercase;padding:3px 10px;border:1px dashed var(--line);border-radius:999px;
+    background:color-mix(in oklab,var(--ink) 3%, var(--card));
+  }
+  .pedestal{
+    width:118px;height:22px;border-radius:50%;
+    background:radial-gradient(closest-side, color-mix(in oklab,var(--ink) 14%, transparent), transparent 78%);
+    filter:blur(.3px);
+  }
+
+  /* coin character */
+  .coin{
+    position:absolute;left:0;top:0;width:96px;height:96px;z-index:5;
+    will-change:transform;pointer-events:none;filter:drop-shadow(0 12px 18px rgba(33,31,42,.28));
+  }
+  .coin.wobble{animation:wobble 2.4s ease-in-out infinite}
+  @keyframes wobble{0%,100%{rotate:-3deg}50%{rotate:3deg}}
+  .coin .danger-ring{opacity:0;transition:opacity .3s}
+  .stage[data-danger="1"] .coin .danger-ring{opacity:1;animation:pulseRing 1s ease-in-out infinite}
+  @keyframes pulseRing{0%,100%{opacity:.35}50%{opacity:1}}
+  .coin .eye{transform-box:fill-box;transform-origin:center}
+  .stage[data-panic="1"] .coin .eye{animation:blink .5s steps(2) infinite}
+  @keyframes blink{50%{scale:1 .18}}
+
+  /* reckn scan beam */
+  .beam{
+    position:absolute;z-index:4;left:0;top:0;width:150px;height:150px;pointer-events:none;
+    opacity:0;transition:opacity .2s;
+  }
+  .stage[data-scan="1"] .beam{opacity:1}
+  .beam .ring{
+    position:absolute;inset:0;border-radius:50%;
+    border:2px solid color-mix(in oklab,var(--gold) 70%, transparent);
+    animation:scanRing 1.05s ease-out infinite;
+  }
+  .beam .ring:nth-child(2){animation-delay:.35s}
+  @keyframes scanRing{0%{transform:scale(.35);opacity:.9}100%{transform:scale(1);opacity:0}}
+
+  /* seller sweat when caught */
+  .sweat{opacity:0;transition:opacity .25s}
+  .actor.caught .sweat{opacity:1;animation:drip 1.1s ease-in infinite}
+  @keyframes drip{0%{transform:translateY(0);opacity:.9}100%{transform:translateY(7px);opacity:0}}
+
+  /* status banner */
+  .banner{
+    margin-top:16px;border:1px solid var(--line);border-radius:var(--radius);
+    background:var(--card);padding:14px 16px;display:flex;align-items:center;gap:14px;
+    box-shadow:var(--shadow);transition:border-color .3s, background .3s;min-height:64px;
+  }
+  .banner .glyph{
+    width:40px;height:40px;flex:none;border-radius:11px;display:grid;place-items:center;
+    background:color-mix(in oklab,var(--ink) 6%, var(--card));transition:background .3s;
+  }
+  .banner .glyph svg{width:22px;height:22px}
+  .banner .txt strong{display:block;font-size:1rem;letter-spacing:-.01em}
+  .banner .txt span{font-size:.82rem;color:var(--muted)}
+  .banner[data-tone="release"]{border-color:color-mix(in oklab,var(--teal) 45%,var(--line));background:var(--teal-soft)}
+  .banner[data-tone="release"] .glyph{background:color-mix(in oklab,var(--teal) 24%, var(--card));color:var(--teal)}
+  .banner[data-tone="release"] .txt strong{color:var(--teal)}
+  .banner[data-tone="refund"]{border-color:color-mix(in oklab,var(--coral) 48%,var(--line));background:var(--coral-soft)}
+  .banner[data-tone="refund"] .glyph{background:color-mix(in oklab,var(--coral) 22%, var(--card));color:var(--coral)}
+  .banner[data-tone="refund"] .txt strong{color:var(--coral)}
+  .banner[data-tone="refund"]{animation:snapPop .5s cubic-bezier(.2,1.4,.4,1)}
+  @keyframes snapPop{0%{transform:scale(.97)}55%{transform:scale(1.015)}100%{transform:scale(1)}}
+
+  /* receipts */
+  .rcpt{margin-top:14px;border:1px solid var(--line);border-radius:var(--radius);background:var(--card);box-shadow:var(--shadow);overflow:hidden}
+  .rcpt summary{
+    cursor:pointer;list-style:none;padding:13px 16px;display:flex;align-items:center;gap:10px;
+    font-size:.84rem;font-weight:600;color:var(--ink);
+  }
+  .rcpt summary::-webkit-details-marker{display:none}
+  .rcpt summary .chev{margin-left:auto;transition:transform .2s;color:var(--muted)}
+  .rcpt[open] summary .chev{transform:rotate(90deg)}
+  .rcpt summary .lbl{font-family:var(--mono);font-size:.7rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+  .rcpt .body{padding:0 16px 16px;border-top:1px solid var(--line)}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin-top:12px;font-size:.8rem}
+  .kv dt{font-family:var(--mono);color:var(--muted);text-transform:uppercase;font-size:.68rem;letter-spacing:.05em;align-self:center}
+  .kv dd{margin:0;font-family:var(--mono);word-break:break-all}
+  .kv dd b{color:var(--teal);font-weight:600}
+  .kv dd.bad b{color:var(--coral)}
+  .chip{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:.7rem;padding:3px 8px;border-radius:6px;background:color-mix(in oklab,var(--ink) 5%,var(--card));border:1px solid var(--line)}
+  .chip.settled{color:var(--teal);border-color:color-mix(in oklab,var(--teal) 35%,var(--line))}
+  .foot{margin-top:22px;font-size:.74rem;color:var(--muted);text-align:center;line-height:1.6}
+  .foot code{font-family:var(--mono)}
+
+  @media (max-width:640px){
+    .judges{grid-template-columns:1fr}
+    .lane{grid-template-columns:1fr auto 1fr;min-height:150px}
+    .coin{width:80px;height:80px}
+    .actor .av svg{width:66px;height:66px}
+    .scene-label{width:100%;margin-left:0}
+    .lede{display:none}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 40 40" aria-hidden="true">
+        <rect x="1.5" y="1.5" width="37" height="37" rx="11" fill="var(--reckn)"/>
+        <path d="M12 28V12h8.4c3.5 0 5.6 2 5.6 5 0 2.3-1.2 3.9-3.3 4.6L27 28h-4.4l-3.4-5.6H16V28h-4z" fill="var(--gold)"/>
+        <circle cx="17" cy="16.3" r="1.6" fill="var(--reckn)"/>
+      </svg>
+      <div>
+        <h1>Reckn</h1>
+        <p><span class="tag">Reproduce, or refund.</span></p>
+      </div>
+    </div>
+    <p class="lede">Escrow for agent-to-agent payments. A disputed delivery is judged by <b>deterministic re-execution</b> — not an opinion.</p>
+  </header>
+
+  <div class="controls" role="group" aria-label="Scenario controls">
+    <div class="seg" role="group" aria-label="Choose dispute">
+      <button type="button" class="honest" data-scene="honest" aria-pressed="false">
+        <span class="dot"></span>Honest delivery
+      </button>
+      <button type="button" class="false" data-scene="false" aria-pressed="true">
+        <span class="dot"></span>False claim
+      </button>
+    </div>
+    <button type="button" class="ghost" id="replay">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v4h-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Replay
+    </button>
+    <span class="scene-label" id="sceneLabel">dispute: <b>#RX-1042</b></span>
+  </div>
+
+  <!-- ============ STAGE ============ -->
+  <div class="stage" id="stage" data-danger="0" data-scan="0" data-panic="0">
+
+    <div class="judges">
+      <!-- Opinion judge -->
+      <div class="judge" id="jOpinion">
+        <div class="av">
+          <svg viewBox="0 0 88 88" width="60" height="60" aria-hidden="true">
+            <rect x="4" y="4" width="80" height="80" rx="22" fill="var(--card)" stroke="var(--line)" stroke-width="2"/>
+            <rect x="4" y="4" width="80" height="80" rx="22" fill="color-mix(in oklab,var(--lav) 16%, transparent)"/>
+            <!-- heavy sleepy eyelids: gullible -->
+            <path d="M28 40c2.4 2.6 7.6 2.6 10 0" stroke="var(--lav)" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+            <path d="M50 40c2.4 2.6 7.6 2.6 10 0" stroke="var(--lav)" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+            <!-- easy smile -->
+            <path d="M34 56c5 5 15 5 20 0" stroke="var(--lav)" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+            <!-- rubber stamp glint -->
+            <circle id="opStamp" cx="66" cy="24" r="9" fill="var(--gold)" opacity="0"/>
+            <path id="opStampMark" d="M62 24l3 3 5-6" stroke="var(--reckn)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0"/>
+          </svg>
+        </div>
+        <div class="head">
+          <h3>Opinion Judge</h3>
+          <p class="role">Reads the seller's claim.</p>
+          <p class="say" id="opSay">Waiting for a dispute…</p>
+          <span class="verdict" id="opVerdict">Pending</span>
+        </div>
+      </div>
+
+      <!-- Reckn re-executor -->
+      <div class="judge" id="jReckn">
+        <div class="av">
+          <svg viewBox="0 0 88 88" width="60" height="60" aria-hidden="true">
+            <rect x="4" y="4" width="80" height="80" rx="22" fill="var(--reckn)"/>
+            <!-- vigilant lens eye -->
+            <circle cx="44" cy="42" r="18" fill="none" stroke="var(--gold)" stroke-width="3"/>
+            <circle cx="44" cy="42" r="8.5" fill="none" stroke="var(--gold)" stroke-width="2.4"/>
+            <circle cx="44" cy="42" r="3.4" fill="var(--gold)"/>
+            <!-- crosshair ticks -->
+            <path d="M44 20v6M44 58v6M20 42h6M62 42h6" stroke="var(--gold)" stroke-width="2.2" stroke-linecap="round"/>
+            <path id="rkScanLine" d="M28 42h32" stroke="color-mix(in oklab,var(--gold) 90%,#fff)" stroke-width="2" stroke-linecap="round" opacity="0"/>
+          </svg>
+        </div>
+        <div class="head">
+          <h3>Reckn re-execution</h3>
+          <p class="role">Replays the seller's actual plan.</p>
+          <p class="say" id="rkSay">Idle. Ready to replay.</p>
+          <span class="verdict" id="rkVerdict">Pending</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- actors + coin -->
+    <div class="lane">
+      <div class="actor" id="buyer">
+        <div class="av">
+          <svg viewBox="0 0 88 88" width="78" height="78" aria-hidden="true">
+            <rect x="4" y="4" width="80" height="80" rx="24" fill="var(--card)" stroke="var(--line)" stroke-width="2"/>
+            <rect x="4" y="4" width="80" height="80" rx="24" fill="color-mix(in oklab,var(--teal) 12%, transparent)"/>
+            <circle cx="34" cy="40" r="3.4" fill="var(--teal)"/>
+            <circle cx="54" cy="40" r="3.4" fill="var(--teal)"/>
+            <path d="M34 55c5 4.5 15 4.5 20 0" stroke="var(--teal)" stroke-width="2.8" stroke-linecap="round" fill="none"/>
+          </svg>
+        </div>
+        <span class="name">Buyer</span>
+        <span class="sub">Funds the escrow, sets the predicate</span>
+        <span class="anchor" id="aBuyer"></span>
+      </div>
+
+      <div class="escrow">
+        <span class="plate">Escrow · x402 / EIP-3009</span>
+        <div class="pedestal"></div>
+        <span class="anchor" id="aEscrow"></span>
+      </div>
+
+      <div class="actor" id="seller">
+        <div class="av">
+          <svg viewBox="0 0 88 88" width="78" height="78" aria-hidden="true">
+            <rect x="4" y="4" width="80" height="80" rx="24" fill="var(--card)" stroke="var(--line)" stroke-width="2"/>
+            <rect x="4" y="4" width="80" height="80" rx="24" fill="color-mix(in oklab,var(--gold) 15%, transparent)"/>
+            <!-- shifty: one raised brow -->
+            <path d="M28 33l12 3" stroke="var(--ink)" stroke-width="2.4" stroke-linecap="round"/>
+            <circle cx="34" cy="41" r="3.4" fill="var(--ink)"/>
+            <circle cx="55" cy="41" r="3.4" fill="var(--ink)"/>
+            <!-- smirk -->
+            <path d="M33 56c6 4 14 1 20-2" stroke="var(--ink)" stroke-width="2.8" stroke-linecap="round" fill="none"/>
+            <!-- sweat drop when caught -->
+            <path class="sweat" d="M66 30c0 3-2.4 4.6-2.4 6.6a2.4 2.4 0 004.8 0C68.4 34.6 66 33 66 30z" fill="var(--coral)"/>
+          </svg>
+        </div>
+        <span class="name">Seller-agent</span>
+        <span class="sub">Delivered the swap — and the invoice</span>
+        <span class="anchor" id="aSeller"></span>
+      </div>
+    </div>
+
+    <!-- reckn scan beam (positioned by JS) -->
+    <div class="beam" id="beam" aria-hidden="true"><div class="ring"></div><div class="ring"></div></div>
+
+    <!-- the coin character (positioned by JS) -->
+    <div class="coin wobble" id="coin" role="img" aria-label="1,000 USDC held in escrow">
+      <svg viewBox="0 0 96 96" width="96" height="96">
+        <circle class="danger-ring" cx="48" cy="48" r="46" fill="none" stroke="var(--coral)" stroke-width="3" stroke-dasharray="6 8"/>
+        <circle cx="48" cy="48" r="40" fill="var(--gold)"/>
+        <circle cx="48" cy="48" r="40" fill="none" stroke="color-mix(in oklab,var(--gold) 60%,#000 12%)" stroke-width="2"/>
+        <circle cx="48" cy="48" r="33" fill="none" stroke="color-mix(in oklab,var(--gold) 55%,#fff 30%)" stroke-width="1.6" stroke-dasharray="2 4"/>
+        <text x="48" y="45" text-anchor="middle" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="21" font-weight="800" fill="#2a2205">1000</text>
+        <text x="48" y="61" text-anchor="middle" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="9.5" font-weight="700" letter-spacing="2" fill="#2a2205">USDC</text>
+        <circle class="eye" cx="38" cy="34" r="2.1" fill="#2a2205"/>
+        <circle class="eye" cx="58" cy="34" r="2.1" fill="#2a2205"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- money banner -->
+  <div class="banner" id="banner" data-tone="idle" aria-live="polite">
+    <div class="glyph" id="bannerGlyph">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="7" width="18" height="12" rx="2" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="13" r="2.6" stroke="currentColor" stroke-width="2"/></svg>
+    </div>
+    <div class="txt">
+      <strong id="bannerTitle">Escrow armed — 1,000 USDC held</strong>
+      <span id="bannerSub">Buyer funded the escrow. Pick a scenario to see who gets paid.</span>
+    </div>
+  </div>
+
+  <!-- receipts (secondary proof) -->
+  <details class="rcpt" id="rcpt">
+    <summary>
+      <span>Settlement receipt</span>
+      <span class="lbl" id="rcptState">verified on re-exec</span>
+      <svg class="chev" viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </summary>
+    <div class="body">
+      <dl class="kv">
+        <dt>Predicate</dt><dd>RESULT_EQUALS</dd>
+        <dt>Expected</dt><dd id="rExpected">swap-out=1024USDC@0.31pct-slippage</dd>
+        <dt>Actual</dt><dd id="rActual"><b id="rActualB">swap-out=1024USDC@0.31pct-slippage</b></dd>
+        <dt>Engine</dt><dd>reckn-reexec · Rust / revm · deterministic replay</dd>
+        <dt>Trace</dt><dd id="rTrace">0x71ce9c5f338669b974dce7e7660f2f7a121c71ed961269d976ecb095e6c1dd25</dd>
+        <dt>Outcome</dt><dd id="rOutcome"><span class="chip settled" id="rChip">● reproduced · released on-chain</span></dd>
+      </dl>
+    </div>
+  </details>
+
+  <p class="foot">
+    Same input, judged two ways. The opinion judge trusts the words; Reckn re-runs the plan.<br>
+    Outputs and trace hashes are real output of Reckn's Rust re-execution engine (revm). Archetypes only — not any real product.
+  </p>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  var stage   = document.getElementById("stage");
+  var coin    = document.getElementById("coin");
+  var beam    = document.getElementById("beam");
+  var banner  = document.getElementById("banner");
+  var bTitle  = document.getElementById("bannerTitle");
+  var bSub    = document.getElementById("bannerSub");
+  var bGlyph  = document.getElementById("bannerGlyph");
+
+  var jOp = document.getElementById("jOpinion");
+  var jRk = document.getElementById("jReckn");
+  var opSay = document.getElementById("opSay");
+  var rkSay = document.getElementById("rkSay");
+  var opVerdict = document.getElementById("opVerdict");
+  var rkVerdict = document.getElementById("rkVerdict");
+  var opStamp = document.getElementById("opStamp");
+  var opStampMark = document.getElementById("opStampMark");
+  var rkScanLine = document.getElementById("rkScanLine");
+
+  var seller = document.getElementById("seller");
+  var sceneLabel = document.getElementById("sceneLabel");
+
+  var rExpected = document.getElementById("rExpected");
+  var rActualB  = document.getElementById("rActualB");
+  var rActual   = document.getElementById("rActual");
+  var rTrace    = document.getElementById("rTrace");
+  var rChip     = document.getElementById("rChip");
+  var rcptState = document.getElementById("rcptState");
+
+  var anchors = {
+    buyer: document.getElementById("aBuyer"),
+    escrow: document.getElementById("aEscrow"),
+    seller: document.getElementById("aSeller")
+  };
+
+  var curT = {x:0,y:0};
+  var curName = "escrow";
+
+  function center(el){
+    var r = el.getBoundingClientRect();
+    var s = stage.getBoundingClientRect();
+    return { x: r.left - s.left + r.width/2, y: r.top - s.top + r.height/2 };
+  }
+  function coinBaseCenter(){
+    var r = coin.getBoundingClientRect();
+    var s = stage.getBoundingClientRect();
+    return { x: r.left - s.left + r.width/2 - curT.x, y: r.top - s.top + r.height/2 - curT.y };
+  }
+  function moveTo(name, anim){
+    var b = coinBaseCenter();
+    var c = center(anchors[name]);
+    var to = { x: c.x - b.x, y: c.y - b.y };
+    var from = { x: curT.x, y: curT.y };
+    curT = to; curName = name;
+    coin.style.transform = "translate(" + to.x + "px," + to.y + "px)";
+    if(!anim || reduced) return Promise.resolve();
+    var a = coin.animate(
+      [ {transform:"translate("+from.x+"px,"+from.y+"px)"},
+        {transform:"translate("+to.x+"px,"+to.y+"px)"} ],
+      anim
+    );
+    return a.finished.then(function(){}, function(){});
+  }
+  function placeBeamOn(name){
+    var c = center(anchors[name]);
+    beam.style.transform = "translate(" + (c.x - beam.offsetWidth/2) + "px," + (c.y - beam.offsetHeight/2) + "px)";
+  }
+  function relayout(){ moveTo(curName, null); }
+  window.addEventListener("resize", relayout);
+
+  function delay(ms){
+    if(reduced) ms = Math.min(ms, 60);
+    return new Promise(function(res){ setTimeout(res, ms); });
+  }
+
+  // verdict helpers
+  function setVerdict(el, text, cls){
+    el.className = "verdict" + (cls ? " "+cls : "");
+    el.textContent = text;
+  }
+  function hot(el, on){ el.classList.toggle("hot", !!on); }
+
+  function resetScene(){
+    stage.setAttribute("data-danger","0");
+    stage.setAttribute("data-scan","0");
+    stage.setAttribute("data-panic","0");
+    seller.classList.remove("caught");
+    hot(jOp,false); hot(jRk,false);
+    setVerdict(opVerdict,"Pending","");
+    setVerdict(rkVerdict,"Pending","");
+    opSay.textContent = "Waiting for a dispute…"; opSay.style.opacity = "";
+    rkSay.textContent = "Idle. Ready to replay.";
+    opStamp.setAttribute("opacity","0"); opStampMark.setAttribute("opacity","0");
+    rkScanLine.setAttribute("opacity","0");
+    banner.setAttribute("data-tone","idle");
+    coin.classList.add("wobble");
+    return moveTo("escrow", null);
+  }
+
+  // ---- run token so switching scenes cancels an in-flight play ----
+  var runId = 0;
+  function alive(id){ return id === runId; }
+
+  var EASE_DRIFT = "cubic-bezier(.45,.05,.55,.95)";
+  var EASE_SMOOTH = "cubic-bezier(.34,.9,.3,1)";
+  var EASE_SNAP  = "cubic-bezier(.2,1.5,.35,1)";
+
+  function setReceipt(scene){
+    if(scene === "honest"){
+      rActualB.textContent = "swap-out=1024USDC@0.31pct-slippage";
+      rActual.className = "";
+      rTrace.textContent = "0x71ce9c5f338669b974dce7e7660f2f7a121c71ed961269d976ecb095e6c1dd25";
+      rChip.textContent = "● reproduced · released on-chain";
+      rChip.className = "chip settled";
+      rcptState.textContent = "reproduced · settled";
+    } else {
+      rActualB.textContent = "swap-out=0006USDC@98.7pct-slippage";
+      rActual.className = "bad";
+      rTrace.textContent = "0x2bf9692fe585295592983bf9cec62592dd32e97f3e00bd888e8a765dc8f28fd8";
+      rChip.textContent = "● failed · refunded on-chain";
+      rChip.className = "chip";
+      rChip.style.color = "var(--coral)";
+      rcptState.textContent = "failed · refunded";
+    }
+    if(scene === "honest"){ rChip.style.color = ""; }
+  }
+
+  function bannerSet(tone, glyph, title, sub){
+    banner.setAttribute("data-tone", tone);
+    bGlyph.innerHTML = glyph;
+    bTitle.textContent = title;
+    bSub.textContent = sub;
+  }
+  var G_RELEASE = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var G_REFUND  = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 010 10" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  // =================== HONEST ===================
+  async function playHonest(){
+    var id = ++runId;
+    await resetScene();
+    setReceipt("honest");
+    sceneLabel.innerHTML = 'dispute: <b>#RX-1042 · honest</b>';
+    if(!alive(id)) return;
+
+    hot(jOp,true);
+    opSay.textContent = 'Seller claims “1024 USDC out.” Reads clean.';
+    await delay(700); if(!alive(id)) return;
+    opStamp.setAttribute("opacity","1"); opStampMark.setAttribute("opacity","1");
+    setVerdict(opVerdict,"Approve","ok");
+
+    hot(jRk,true);
+    rkSay.textContent = "Replaying the swap on real state…";
+    stage.setAttribute("data-scan","1"); placeBeamOn("seller");
+    rkScanLine.setAttribute("opacity","1");
+    await delay(900); if(!alive(id)) return;
+    stage.setAttribute("data-scan","0");
+    rkSay.textContent = "Output matches expected. Reproduced.";
+    setVerdict(rkVerdict,"Reproduced","ok");
+
+    await delay(320); if(!alive(id)) return;
+    coin.classList.remove("wobble");
+    bannerSet("release", G_RELEASE, "Release 1,000 USDC → Seller",
+      "Both judges agree — delivery is genuine. The seller earned it.");
+    await moveTo("seller", {duration: reduced?1:900, easing:EASE_SMOOTH, fill:"none"});
+  }
+
+  // =================== FALSE CLAIM (hero) ===================
+  async function playFalse(){
+    var id = ++runId;
+    await resetScene();
+    setReceipt("false");
+    sceneLabel.innerHTML = 'dispute: <b>#RX-1042 · false claim</b>';
+    if(!alive(id)) return;
+
+    // 1. opinion judge reads the claim and waves it through
+    hot(jOp,true);
+    opSay.textContent = 'Seller says: “1024 USDC out ✅ — please release.”';
+    await delay(760); if(!alive(id)) return;
+    opStamp.setAttribute("opacity","1"); opStampMark.setAttribute("opacity","1");
+    setVerdict(opVerdict,"Approve","dupe");
+    opSay.textContent = "Looks great. Approved. (never checked)";
+    coin.classList.remove("wobble");
+
+    // 2. the money starts drifting to the scammer — danger
+    stage.setAttribute("data-danger","1");
+    stage.setAttribute("data-panic","1");
+    bannerSet("idle", G_RELEASE,
+      "Opinion judge would pay the scammer…",
+      "1,000 USDC is unlocking toward the seller on the claim alone.");
+    await moveTo("seller", {duration: reduced?1:1150, easing:EASE_DRIFT, fill:"none"});
+    if(!alive(id)) return;
+    // hold a beat near the seller for tension
+    await delay(reduced?40:260); if(!alive(id)) return;
+
+    // 3. Reckn re-executes and catches the lie
+    hot(jRk,true);
+    stage.setAttribute("data-scan","1"); placeBeamOn("seller");
+    rkScanLine.setAttribute("opacity","1");
+    rkSay.textContent = "Replaying the actual plan…";
+    await delay(820); if(!alive(id)) return;
+    stage.setAttribute("data-scan","0");
+    rkSay.textContent = "Got 6 USDC, not 1024. Slippage 98.7%. Failed.";
+    setVerdict(rkVerdict,"Failed","bad");
+    setVerdict(opVerdict,"Approve","bad"); // recolor: this approval was wrong
+    opSay.textContent = "…would have paid the scammer.";
+    seller.classList.add("caught");
+
+    // 4. SNAP the money back to the buyer
+    await delay(reduced?40:180); if(!alive(id)) return;
+    stage.setAttribute("data-danger","0");
+    stage.setAttribute("data-panic","0");
+    await moveTo("buyer", {duration: reduced?1:520, easing:EASE_SNAP, fill:"none"});
+    if(!alive(id)) return;
+    coin.classList.add("wobble");
+    bannerSet("refund", G_REFUND, "Refund 1,000 USDC → Buyer",
+      "Re-execution didn’t reproduce the claim. Money snapped back to the buyer.");
+    // nudge banner animation
+    banner.style.animation = "none"; void banner.offsetWidth; banner.style.animation = "";
+  }
+
+  // ---- controls ----
+  var scene = "false";
+  var segBtns = document.querySelectorAll(".seg button");
+  function selectScene(next){
+    scene = next;
+    segBtns.forEach(function(b){ b.setAttribute("aria-pressed", String(b.dataset.scene === next)); });
+    if(next === "honest") playHonest(); else playFalse();
+  }
+  segBtns.forEach(function(b){
+    b.addEventListener("click", function(){ selectScene(b.dataset.scene); });
+  });
+  document.getElementById("replay").addEventListener("click", function(){
+    if(scene === "honest") playHonest(); else playFalse();
+  });
+
+  // ---- boot: align coin, then autoplay the hero (false claim) ----
+  function boot(){
+    moveTo("escrow", null);
+    requestAnimationFrame(function(){
+      moveTo("escrow", null);
+      setTimeout(function(){ playFalse(); }, reduced ? 0 : 550);
+    });
+  }
+  if(document.readyState === "complete") boot();
+  else window.addEventListener("load", boot);
+})();
+</script>
+</body>
+</html>

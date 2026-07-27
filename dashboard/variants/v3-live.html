@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reckn — Reproduce, or refund</title>
+<style>
+  /* ---------- Palette ----------
+     ink    #0a0e14  near-black, blue-ink bias   (dark bg)
+     panel  #111823  raised surface (dark)
+     line   #1f2b3a  hairline borders (dark)
+     jade   #34c3a4  reproduced / release  (considered green, not acid)
+     amber  #e6b04a  the claim / opinion judge
+     red    #e5555b  failed / refund
+     azure  #5c8cf0  pending / tx / on-chain
+  ------------------------------- */
+  :root {
+    color-scheme: dark;
+    --ink: #0a0e14;
+    --ink-2: #0c1119;
+    --panel: #111823;
+    --panel-2: #0e1520;
+    --line: #1f2b3a;
+    --line-soft: #17212e;
+    --fg: #dbe4ee;
+    --fg-dim: #8ea0b5;
+    --fg-faint: #5c6c80;
+    --jade: #34c3a4;
+    --jade-ink: #0c2a25;
+    --amber: #e6b04a;
+    --amber-ink: #2c2410;
+    --red: #e5555b;
+    --red-ink: #2c1417;
+    --azure: #5c8cf0;
+    --azure-ink: #101d34;
+    --shadow: 0 18px 48px -24px rgba(0,0,0,.8);
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --radius: 7px;
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --ink: #eef1f6;
+    --ink-2: #e8ecf3;
+    --panel: #ffffff;
+    --panel-2: #f5f7fb;
+    --line: #d6deea;
+    --line-soft: #e3e9f2;
+    --fg: #16202b;
+    --fg-dim: #4b5b6e;
+    --fg-faint: #8494a7;
+    --jade: #0f8f76;
+    --jade-ink: #d9f2ec;
+    --amber: #a9741a;
+    --amber-ink: #f6ecd4;
+    --red: #cc2f36;
+    --red-ink: #f8dcde;
+    --azure: #2f5fd0;
+    --azure-ink: #dde6fb;
+    --shadow: 0 16px 40px -28px rgba(20,40,70,.4);
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]):not([data-theme="light"]) { color-scheme: light; }
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background:
+      radial-gradient(1100px 620px at 82% -8%, color-mix(in oklab, var(--azure) 12%, transparent), transparent 60%),
+      radial-gradient(900px 540px at 0% 108%, color-mix(in oklab, var(--jade) 9%, transparent), transparent 62%),
+      var(--ink);
+    color: var(--fg);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+  a { color: var(--azure); }
+  :focus-visible {
+    outline: 2px solid var(--azure);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 22px clamp(14px, 3vw, 30px) 60px;
+  }
+
+  /* ---------- Header ---------- */
+  header.top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: baseline; gap: 12px; margin-right: auto; }
+  .mark {
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 21px;
+    letter-spacing: .01em;
+    color: var(--fg);
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+  }
+  .mark .dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--jade);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--jade) 22%, transparent);
+  }
+  .tag {
+    font-size: 12.5px;
+    color: var(--fg-dim);
+    font-family: var(--mono);
+    letter-spacing: .02em;
+  }
+
+  .controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .seg {
+    display: inline-flex;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 3px;
+    gap: 2px;
+  }
+  .seg button {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--fg-dim);
+    font-family: var(--mono);
+    font-size: 12.5px;
+    letter-spacing: .01em;
+    padding: 7px 13px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: color .15s, background .15s;
+    white-space: nowrap;
+  }
+  .seg button[aria-pressed="true"] {
+    background: var(--panel);
+    color: var(--fg);
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+  .seg button.mode-false[aria-pressed="true"] { color: var(--red); }
+  .seg button.mode-honest[aria-pressed="true"] { color: var(--jade); }
+  .seg button:hover { color: var(--fg); }
+
+  .icon-btn {
+    appearance: none;
+    width: 38px; height: 38px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    color: var(--fg-dim);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: color .15s, border-color .15s;
+  }
+  .icon-btn:hover { color: var(--fg); border-color: var(--azure); }
+
+  .run {
+    appearance: none;
+    display: inline-flex; align-items: center; gap: 9px;
+    background: var(--jade);
+    color: #06231d;
+    border: 0;
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 13.5px;
+    letter-spacing: .02em;
+    padding: 10px 18px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: transform .12s, filter .15s, background .2s;
+  }
+  :root[data-theme="light"] .run { color: #fff; }
+  .run:hover { filter: brightness(1.06); }
+  .run:active { transform: translateY(1px); }
+  .run[disabled] { opacity: .5; cursor: default; filter: none; }
+  .run .glyph { font-size: 11px; }
+
+  /* ---------- Chain meta bar ---------- */
+  .meta {
+    margin-top: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--fg-dim);
+  }
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: var(--panel-2);
+    border: 1px solid var(--line-soft);
+    border-radius: 20px;
+    padding: 4px 11px;
+    white-space: nowrap;
+  }
+  .chip b { color: var(--fg); font-weight: 600; }
+  .chip .k { color: var(--fg-faint); }
+  .pulse {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--fg-faint);
+    transition: background .2s;
+  }
+  .live .pulse { background: var(--jade); animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--jade) 55%, transparent); }
+    50% { box-shadow: 0 0 0 5px color-mix(in oklab, var(--jade) 0%, transparent); }
+  }
+
+  /* ---------- Layout grid ---------- */
+  .grid {
+    margin-top: 18px;
+    display: grid;
+    grid-template-columns: minmax(0, 0.86fr) minmax(0, 1.14fr);
+    gap: 16px;
+  }
+  @media (max-width: 900px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: linear-gradient(180deg, var(--panel), var(--panel-2));
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+  .card + .card { margin-top: 16px; }
+  .card-h {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 15px;
+    border-bottom: 1px solid var(--line-soft);
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--fg-faint);
+  }
+  .card-h .grow { margin-left: auto; }
+
+  /* ---------- Ledger ---------- */
+  .ledger { padding: 6px 15px 16px; }
+  .acct {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 4px 12px;
+    padding: 12px 0;
+    border-bottom: 1px dashed var(--line-soft);
+  }
+  .acct:last-child { border-bottom: 0; }
+  .acct .role { font-weight: 600; font-size: 14px; }
+  .acct .addr { font-family: var(--mono); font-size: 11px; color: var(--fg-faint); }
+  .acct .amt {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -.01em;
+    text-align: right;
+    transition: color .25s;
+  }
+  .acct .amt .u { font-size: 11px; color: var(--fg-faint); font-weight: 500; margin-left: 3px; }
+  .acct.escrow .amt { color: var(--azure); }
+  .acct.flash-in .amt { color: var(--jade); animation: bump .5s ease; }
+  .acct.flash-out .amt { animation: bump .5s ease; }
+  @keyframes bump { 0%{ transform: none;} 30%{ transform: scale(1.09);} 100%{transform:none;} }
+
+  .flowbar {
+    height: 6px;
+    margin: 4px 0 2px;
+    border-radius: 6px;
+    background: var(--line-soft);
+    overflow: hidden;
+    position: relative;
+  }
+  .flowbar > i {
+    position: absolute; inset: 0;
+    width: var(--fill, 0%);
+    background: linear-gradient(90deg, color-mix(in oklab, var(--azure) 70%, transparent), var(--azure));
+    transition: width .6s cubic-bezier(.4,0,.2,1), background .4s;
+    border-radius: 6px;
+  }
+  .flowbar.to-seller > i { background: linear-gradient(90deg, color-mix(in oklab, var(--jade) 70%, transparent), var(--jade)); }
+  .flowbar.to-buyer > i { background: linear-gradient(90deg, color-mix(in oklab, var(--red) 70%, transparent), var(--red)); }
+  .flowlabel {
+    display: flex; justify-content: space-between;
+    font-family: var(--mono); font-size: 10.5px; color: var(--fg-faint);
+    margin-top: 6px;
+  }
+
+  /* predicate + actual */
+  .kv { padding: 13px 15px; display: grid; gap: 11px; }
+  .kv .row { display: grid; grid-template-columns: 96px 1fr; gap: 10px; align-items: start; }
+  .kv .row .lbl {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .04em;
+    text-transform: uppercase; color: var(--fg-faint); padding-top: 2px;
+  }
+  .kv .row .val { font-family: var(--mono); font-size: 12.5px; color: var(--fg); word-break: break-word; }
+  .kv .val.expected { color: var(--fg-dim); }
+  .kv .val.pending { color: var(--fg-faint); font-style: italic; }
+  .kv .val.good { color: var(--jade); }
+  .kv .val.bad { color: var(--red); }
+  .kv .val .mono-em { background: var(--panel); padding: 1px 5px; border-radius: 4px; border: 1px solid var(--line-soft); }
+
+  /* ---------- Terminal / log ---------- */
+  .terminal {
+    display: flex; flex-direction: column;
+    min-height: 320px;
+  }
+  .term-bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line-soft);
+    font-family: var(--mono); font-size: 11px; color: var(--fg-faint);
+  }
+  .tl { display: inline-flex; gap: 6px; }
+  .tl i { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
+  .tl i:nth-child(1){ background: #e5555b66; }
+  .tl i:nth-child(2){ background: #e6b04a66; }
+  .tl i:nth-child(3){ background: #34c3a466; }
+  .term-title { margin-left: 4px; letter-spacing: .04em; }
+  .term-status { margin-left: auto; display: inline-flex; align-items: center; gap: 7px; color: var(--fg-dim); }
+
+  .log {
+    flex: 1;
+    margin: 0;
+    padding: 12px 14px 16px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.62;
+    color: var(--fg-dim);
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 46vh;
+    scrollbar-width: thin;
+  }
+  .log .ln {
+    display: block;
+    white-space: pre;
+    animation: rise .22s ease both;
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(3px);} to { opacity:1; transform:none;} }
+  .log .ts { color: var(--fg-faint); }
+  .log .sev {
+    display: inline-block;
+    min-width: 74px;
+    color: var(--fg-faint);
+  }
+  .log .sev.dispute { color: var(--azure); }
+  .log .sev.keeper  { color: var(--fg); }
+  .log .sev.predicate { color: var(--fg-dim); }
+  .log .sev.fetch   { color: var(--amber); }
+  .log .sev.opinion { color: var(--amber); }
+  .log .sev.revm    { color: var(--azure); }
+  .log .sev.verdict { color: var(--fg); }
+  .log .sev.tx      { color: var(--azure); }
+  .log .txt.good { color: var(--jade); }
+  .log .txt.bad  { color: var(--red); }
+  .log .txt.warn { color: var(--amber); }
+  .log .txt.em   { color: var(--fg); }
+  .log .hash { color: var(--azure); }
+  .cursor {
+    display: inline-block; width: 8px; height: 14px;
+    background: var(--jade); vertical-align: -2px; margin-left: 1px;
+    animation: blink 1s steps(1) infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .spin {
+    display: inline-block; width: 11px; height: 11px;
+    border: 2px solid var(--fg-faint);
+    border-top-color: var(--azure);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    vertical-align: -1px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .tx-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--fg-faint); }
+  .tx-dot.pending { background: var(--amber); animation: pulse2 1s ease-in-out infinite; }
+  .tx-dot.confirmed { background: var(--jade); }
+  @keyframes pulse2 { 50% { opacity: .35; } }
+
+  /* ---------- Judges money-shot ---------- */
+  .judges {
+    margin-top: 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 620px) { .judges { grid-template-columns: 1fr; } }
+  .judge {
+    position: relative;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: linear-gradient(180deg, var(--panel), var(--panel-2));
+    padding: 16px 16px 15px;
+    overflow: hidden;
+  }
+  .judge .who {
+    display: flex; align-items: center; gap: 9px;
+    font-family: var(--mono); font-size: 12px; color: var(--fg-dim);
+    letter-spacing: .02em;
+  }
+  .judge .who .k { font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--fg-faint); margin-left: auto; }
+  .judge .sub { font-size: 12px; color: var(--fg-faint); margin: 8px 0 14px; min-height: 34px; }
+  .judge .verdict {
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 21px;
+    letter-spacing: .01em;
+    display: flex; align-items: center; gap: 10px;
+    color: var(--fg-faint);
+    transition: color .3s;
+  }
+  .judge .verdict .badge {
+    font-size: 10px; font-weight: 700; letter-spacing: .1em;
+    padding: 3px 8px; border-radius: 5px;
+    text-transform: uppercase;
+  }
+  .judge[data-state="pending"] .verdict { color: var(--fg-faint); }
+  .judge[data-state="approve"] .verdict { color: var(--amber); }
+  .judge[data-state="approve"] .badge { background: var(--amber-ink); color: var(--amber); }
+  .judge[data-state="pass"] .verdict { color: var(--jade); }
+  .judge[data-state="pass"] .badge { background: var(--jade-ink); color: var(--jade); }
+  .judge[data-state="fail"] .verdict { color: var(--red); }
+  .judge[data-state="fail"] .badge { background: var(--red-ink); color: var(--red); }
+
+  .judge.opinion[data-overruled="true"]::after {
+    content: "OVERRULED";
+    position: absolute;
+    top: 14px; right: -34px;
+    transform: rotate(34deg);
+    background: var(--red);
+    color: #fff;
+    font-family: var(--mono);
+    font-weight: 700; font-size: 10px; letter-spacing: .18em;
+    padding: 4px 44px;
+    box-shadow: 0 4px 12px -4px rgba(0,0,0,.5);
+    animation: stamp .35s cubic-bezier(.2,1.4,.4,1) both;
+  }
+  @keyframes stamp { from { opacity: 0; transform: rotate(34deg) scale(1.6); } to { opacity: 1; transform: rotate(34deg) scale(1); } }
+  .judge.opinion[data-overruled="true"] { border-color: color-mix(in oklab, var(--red) 45%, var(--line)); }
+  .judge.reckn { border-color: color-mix(in oklab, var(--azure) 22%, var(--line)); }
+  .judge .method { font-size: 11px; color: var(--fg-faint); margin-top: 12px; font-family: var(--mono); }
+
+  /* ---------- Final banner ---------- */
+  .banner {
+    margin-top: 16px;
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    background: var(--panel);
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+    transition: border-color .3s, background .3s;
+  }
+  .banner .status { flex: 1; min-width: 240px; }
+  .banner .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--fg-faint); }
+  .banner .headline {
+    font-size: clamp(20px, 3.4vw, 27px);
+    font-weight: 700;
+    letter-spacing: -.01em;
+    margin: 6px 0 4px;
+    color: var(--fg);
+  }
+  .banner .detail { font-family: var(--mono); font-size: 12px; color: var(--fg-dim); word-break: break-word; }
+  .banner .amount-move {
+    font-family: var(--mono);
+    text-align: right;
+    min-width: 180px;
+  }
+  .banner .amount-move .big { font-size: clamp(26px, 5vw, 38px); font-weight: 700; letter-spacing: -.02em; }
+  .banner .amount-move .to { font-size: 12px; color: var(--fg-faint); margin-top: 2px; }
+
+  .banner[data-outcome="idle"] .headline { color: var(--fg-dim); }
+  .banner[data-outcome="release"] { border-color: color-mix(in oklab, var(--jade) 42%, var(--line)); background: linear-gradient(180deg, color-mix(in oklab, var(--jade) 7%, var(--panel)), var(--panel)); }
+  .banner[data-outcome="release"] .headline,
+  .banner[data-outcome="release"] .amount-move .big { color: var(--jade); }
+  .banner[data-outcome="refund"] { border-color: color-mix(in oklab, var(--red) 42%, var(--line)); background: linear-gradient(180deg, color-mix(in oklab, var(--red) 8%, var(--panel)), var(--panel)); }
+  .banner[data-outcome="refund"] .headline,
+  .banner[data-outcome="refund"] .amount-move .big { color: var(--red); }
+
+  .foot {
+    margin-top: 26px;
+    display: flex; flex-wrap: wrap; gap: 6px 16px;
+    font-family: var(--mono); font-size: 11px; color: var(--fg-faint);
+    padding-top: 14px; border-top: 1px solid var(--line-soft);
+  }
+  .foot b { color: var(--fg-dim); font-weight: 600; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+    .cursor { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <span class="mark"><span class="dot" aria-hidden="true"></span>reckn</span>
+      <span class="tag">escrow adjudicated by re-execution — reproduce, or refund</span>
+    </div>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Scenario">
+        <button type="button" class="mode-honest" data-mode="honest" aria-pressed="false">honest delivery</button>
+        <button type="button" class="mode-false" data-mode="false" aria-pressed="true">false claim</button>
+      </div>
+      <button type="button" class="icon-btn" id="themeBtn" aria-label="Toggle light and dark theme" title="Toggle theme">◐</button>
+      <button type="button" class="run" id="runBtn"><span class="glyph" aria-hidden="true">▶</span> run it</button>
+    </div>
+  </header>
+
+  <div class="meta live" id="metaBar">
+    <span class="chip"><span class="pulse" aria-hidden="true"></span> <span class="k">status</span> <b id="phaseVal">idle</b></span>
+    <span class="chip"><span class="k">chain</span> <b>31337</b></span>
+    <span class="chip"><span class="k">head</span> <b class="tnum" id="headVal">#21,000,000</b></span>
+    <span class="chip"><span class="k">re-exec fork</span> <b class="tnum">#21,000,000</b></span>
+    <span class="chip"><span class="k">base fee</span> <b>1 gwei</b></span>
+    <span class="chip"><span class="k">rail</span> <b>x402 · EIP-3009</b></span>
+  </div>
+
+  <div class="grid">
+
+    <!-- LEFT: ledger + predicate/actual -->
+    <section class="col-left">
+      <div class="card">
+        <div class="card-h">escrow ledger <span class="grow"></span><span id="escrowState">1,000 USDC locked</span></div>
+        <div class="ledger">
+          <div class="acct" id="acctBuyer">
+            <div>
+              <div class="role">Buyer</div>
+              <div class="addr">0xB0b…4e21</div>
+            </div>
+            <div class="amt tnum" data-acct="buyer">0<span class="u">USDC</span></div>
+          </div>
+          <div class="acct escrow" id="acctEscrow">
+            <div>
+              <div class="role">Escrow contract</div>
+              <div class="addr">reckn.vault · 0xE5c…c0de</div>
+            </div>
+            <div class="amt tnum" data-acct="escrow">1,000<span class="u">USDC</span></div>
+          </div>
+          <div class="acct" id="acctSeller">
+            <div>
+              <div class="role">Seller agent</div>
+              <div class="addr">0x5e1…a7f9</div>
+            </div>
+            <div class="amt tnum" data-acct="seller">0<span class="u">USDC</span></div>
+          </div>
+
+          <div class="flowbar" id="flowbar" aria-hidden="true"><i></i></div>
+          <div class="flowlabel"><span id="flowFrom">escrow held</span><span id="flowTo">awaiting verdict</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h">funded predicate &amp; re-exec output</div>
+        <div class="kv">
+          <div class="row">
+            <div class="lbl">predicate</div>
+            <div class="val"><span class="mono-em">RESULT_EQUALS</span></div>
+          </div>
+          <div class="row">
+            <div class="lbl">expected</div>
+            <div class="val expected" id="expectedVal">swap-out=1024USDC@0.31pct-slippage</div>
+          </div>
+          <div class="row">
+            <div class="lbl">seller claim</div>
+            <div class="val pending" id="claimVal">—</div>
+          </div>
+          <div class="row">
+            <div class="lbl">actual</div>
+            <div class="val pending" id="actualVal">not yet re-executed</div>
+          </div>
+          <div class="row">
+            <div class="lbl">trace</div>
+            <div class="val pending" id="traceVal">—</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT: terminal -->
+    <section class="col-right">
+      <div class="card terminal">
+        <div class="term-bar">
+          <span class="tl" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span class="term-title">reckn-keeper · dispute #4821</span>
+          <span class="term-status">
+            <span class="tx-dot" id="txDot" aria-hidden="true"></span>
+            <span id="txState">idle</span>
+          </span>
+        </div>
+        <pre class="log" id="log" tabindex="0" aria-live="polite" aria-label="Live adjudication log"><span class="ln"><span class="txt em">press </span>▶ run it<span class="txt em"> to watch the dispute resolve on-chain.</span></span></pre>
+      </div>
+    </section>
+  </div>
+
+  <!-- MONEY SHOT: two judges -->
+  <div class="judges">
+    <div class="judge opinion" id="judgeOpinion" data-state="pending" data-overruled="false">
+      <div class="who">Opinion Judge <span class="k">reads the claim</span></div>
+      <div class="sub" id="opinionSub">An LLM reads the seller's attestation and decides whether it sounds delivered.</div>
+      <div class="verdict"><span id="opinionVerdict">awaiting</span><span class="badge" id="opinionBadge" hidden></span></div>
+      <div class="method">input · the seller's words</div>
+    </div>
+    <div class="judge reckn" id="judgeReckn" data-state="pending">
+      <div class="who">Reckn re-execution <span class="k">replays the plan</span></div>
+      <div class="sub" id="recknSub">Replays the seller's actual on-chain plan in revm and checks the funded predicate.</div>
+      <div class="verdict"><span id="recknVerdict">awaiting</span><span class="badge" id="recknBadge" hidden></span></div>
+      <div class="method">input · the on-chain truth</div>
+    </div>
+  </div>
+
+  <!-- FINAL banner -->
+  <div class="banner" id="banner" data-outcome="idle" role="status" aria-live="polite">
+    <div class="status">
+      <div class="eyebrow" id="bannerEyebrow">verdict</div>
+      <div class="headline" id="bannerHeadline">Fund a predicate. Run the dispute.</div>
+      <div class="detail" id="bannerDetail">The verdict a keeper can reproduce byte-for-byte is the one the escrow obeys.</div>
+    </div>
+    <div class="amount-move">
+      <div class="big tnum" id="bannerAmt">1,000<span class="u" style="font-size:14px;color:var(--fg-faint)"> USDC</span></div>
+      <div class="to" id="bannerTo">held in escrow</div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span><b>engine</b> reckn · Rust · revm</span>
+    <span><b>chain</b> 31337 @ block 21,000,000</span>
+    <span><b>data</b> real engine output · scripted playback, zero network</span>
+    <span><b>“Opinion Judge”</b> is a generic stand-in, not any real product</span>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var reduced = function () { return window.matchMedia("(prefers-reduced-motion: reduce)").matches; };
+
+  // ---------- Theme ----------
+  var root = document.documentElement;
+  $("#themeBtn").addEventListener("click", function () {
+    var cur = root.getAttribute("data-theme") || "dark";
+    root.setAttribute("data-theme", cur === "dark" ? "light" : "dark");
+  });
+
+  // ---------- Scenario data (verbatim) ----------
+  var DATA = {
+    honest: {
+      claim: '"1024 USDC out ✅"',
+      expected: "swap-out=1024USDC@0.31pct-slippage",
+      actual: "swap-out=1024USDC@0.31pct-slippage",
+      actualHuman: "1,024 USDC out · 0.31% slippage",
+      trace: "0x71ce9c5f338669b974dce7e7660f2f7a121c71ed961269d976ecb095e6c1dd25",
+      pass: true
+    },
+    "false": {
+      claim: '"1024 USDC out ✅"',
+      expected: "swap-out=1024USDC@0.31pct-slippage",
+      actual: "swap-out=0006USDC@98.7pct-slippage",
+      actualHuman: "6 USDC out · 98.7% slippage",
+      trace: "0x2bf9692fe585295592983bf9cec62592dd32e97f3e00bd888e8a765dc8f28fd8",
+      pass: false
+    }
+  };
+
+  var mode = "false";
+  var runToken = 0;
+  var headBlock = 21000000;
+  var headTimer = null;
+
+  // ---------- helpers ----------
+  function fmt(n) { return n.toLocaleString("en-US"); }
+  function setAmt(acct, n) {
+    var el = document.querySelector('.amt[data-acct="' + acct + '"]');
+    el.firstChild.nodeValue = fmt(n);
+  }
+  function getAmt(acct) {
+    var el = document.querySelector('.amt[data-acct="' + acct + '"]');
+    return parseInt(el.firstChild.nodeValue.replace(/,/g, ""), 10) || 0;
+  }
+  function sleep(ms) {
+    return new Promise(function (res) { setTimeout(res, reduced() ? Math.min(ms, 12) : ms); });
+  }
+  function alive(tok) { return tok === runToken; }
+
+  function animateNumber(acct, to, dur) {
+    return new Promise(function (res) {
+      var from = getAmt(acct);
+      if (reduced()) { setAmt(acct, to); res(); return; }
+      var start = performance.now();
+      function step(now) {
+        var p = Math.min(1, (now - start) / dur);
+        var e = 1 - Math.pow(1 - p, 3);
+        setAmt(acct, Math.round(from + (to - from) * e));
+        if (p < 1) requestAnimationFrame(step); else { setAmt(acct, to); res(); }
+      }
+      requestAnimationFrame(step);
+    });
+  }
+
+  function startHead() {
+    stopHead();
+    $("#metaBar").classList.add("live");
+    headTimer = setInterval(function () {
+      headBlock += 1;
+      $("#headVal").textContent = "#" + fmt(headBlock);
+    }, 1100);
+  }
+  function stopHead() { if (headTimer) { clearInterval(headTimer); headTimer = null; } }
+
+  // ---------- log ----------
+  var logEl = $("#log");
+  function esc(t) { return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+  function logLine(sev, htmlBody) {
+    return new Promise(function (res) {
+      var ln = document.createElement("span");
+      ln.className = "ln";
+      var ts = "[" + new Date().toLocaleTimeString("en-GB", { hour12: false }) + "] ";
+      ln.innerHTML = '<span class="ts">' + ts + '</span><span class="sev ' + sev + '">' + sev + '  </span>';
+      var body = document.createElement("span");
+      body.className = "txtwrap";
+      ln.appendChild(body);
+      logEl.appendChild(ln);
+      logEl.scrollTop = logEl.scrollHeight;
+
+      if (reduced()) { body.innerHTML = htmlBody; logEl.scrollTop = logEl.scrollHeight; res(); return; }
+
+      // type effect: reveal by walking the plain text, then swap to rich html
+      var tmp = document.createElement("span");
+      tmp.innerHTML = htmlBody;
+      var full = tmp.textContent;
+      var cursor = document.createElement("span");
+      cursor.className = "cursor";
+      ln.appendChild(cursor);
+      var i = 0;
+      var speed = full.length > 60 ? 5 : 10;
+      var iv = setInterval(function () {
+        i += 2;
+        body.textContent = full.slice(0, i);
+        logEl.scrollTop = logEl.scrollHeight;
+        if (i >= full.length) {
+          clearInterval(iv);
+          body.innerHTML = htmlBody;
+          if (cursor.parentNode) cursor.parentNode.removeChild(cursor);
+          logEl.scrollTop = logEl.scrollHeight;
+          res();
+        }
+      }, speed);
+    });
+  }
+
+  function setPhase(t) { $("#phaseVal").textContent = t; }
+  function setTx(state, label) {
+    var dot = $("#txDot");
+    dot.className = "tx-dot" + (state ? " " + state : "");
+    $("#txState").textContent = label;
+  }
+
+  function resetBoard() {
+    // ledger
+    setAmt("buyer", 0); setAmt("escrow", 1000); setAmt("seller", 0);
+    $("#acctBuyer").className = "acct"; $("#acctSeller").className = "acct"; $("#acctEscrow").className = "acct escrow";
+    $("#escrowState").textContent = "1,000 USDC locked";
+    var fb = $("#flowbar"); fb.className = "flowbar"; fb.querySelector("i").style.setProperty("--fill", "0%"); fb.querySelector("i").style.width = "0%";
+    $("#flowFrom").textContent = "escrow held";
+    $("#flowTo").textContent = "awaiting verdict";
+    // predicate panel
+    $("#expectedVal").textContent = DATA[mode].expected;
+    var claim = $("#claimVal"); claim.textContent = "—"; claim.className = "val pending";
+    var actual = $("#actualVal"); actual.textContent = "not yet re-executed"; actual.className = "val pending";
+    var trace = $("#traceVal"); trace.textContent = "—"; trace.className = "val pending";
+    // log
+    logEl.innerHTML = "";
+    // judges
+    var jo = $("#judgeOpinion"); jo.setAttribute("data-state", "pending"); jo.setAttribute("data-overruled", "false");
+    $("#opinionVerdict").textContent = "awaiting"; $("#opinionBadge").hidden = true;
+    $("#opinionSub").textContent = "An LLM reads the seller's attestation and decides whether it sounds delivered.";
+    var jr = $("#judgeReckn"); jr.setAttribute("data-state", "pending");
+    $("#recknVerdict").textContent = "awaiting"; $("#recknBadge").hidden = true;
+    $("#recknSub").textContent = "Replays the seller's actual on-chain plan in revm and checks the funded predicate.";
+    // banner
+    var b = $("#banner"); b.setAttribute("data-outcome", "idle");
+    $("#bannerEyebrow").textContent = "resolving";
+    $("#bannerHeadline").textContent = "Adjudicating dispute #4821…";
+    $("#bannerDetail").textContent = "Two judges, one dispute. Watch which one the escrow can trust.";
+    $("#bannerAmt").innerHTML = '1,000<span class="u" style="font-size:14px;color:var(--fg-faint)"> USDC</span>';
+    $("#bannerTo").textContent = "held in escrow";
+    setPhase("idle"); setTx("", "idle");
+  }
+
+  // ---------- the live sequence ----------
+  async function run() {
+    var tok = ++runToken;
+    var d = DATA[mode];
+    $("#runBtn").setAttribute("disabled", "true");
+    resetBoard();
+    startHead();
+    setPhase("disputed"); setTx("pending", "keeper active");
+
+    if (!alive(tok)) return finish();
+    await logLine("dispute", 'Dispute <span class="txt em">#4821</span> opened — buyer contests delivery. <span class="hash">1,000 USDC</span> locked in escrow.');
+    await sleep(360); if (!alive(tok)) return finish();
+
+    setPhase("keeper");
+    await logLine("keeper", 'Keeper <span class="hash">0x9f…a3</span> claimed the dispute. Loading funded predicate.');
+    await sleep(300); if (!alive(tok)) return finish();
+
+    await logLine("predicate", '<span class="txt em">RESULT_EQUALS</span> · expect <span class="txt em">' + esc(d.expected) + '</span>');
+    await sleep(340); if (!alive(tok)) return finish();
+
+    // fetch claim
+    setPhase("fetch");
+    await logLine("fetch", 'Seller attestation retrieved. Claim reads: <span class="txt warn">' + esc(d.claim) + '</span>');
+    var claim = $("#claimVal"); claim.textContent = d.claim; claim.className = "val";
+    await sleep(320); if (!alive(tok)) return finish();
+
+    // OPINION JUDGE
+    setPhase("opinion judge");
+    $("#opinionSub").textContent = "Reading the claim string…";
+    await logLine("opinion", 'Opinion Judge read the words <span class="txt warn">' + esc(d.claim) + '</span> → <span class="txt warn em">APPROVE</span>. Would release 1,000 USDC to the seller.');
+    var jo = $("#judgeOpinion");
+    jo.setAttribute("data-state", "approve");
+    $("#opinionVerdict").textContent = "APPROVE";
+    var ob = $("#opinionBadge"); ob.hidden = false; ob.textContent = "release to seller";
+    $("#opinionSub").textContent = "It sounds delivered, so it approves. It never checked the chain.";
+    await sleep(520); if (!alive(tok)) return finish();
+
+    // RECKN RE-EXEC
+    setPhase("re-executing");
+    $("#recknSub").textContent = "Forking state at block 21,000,000…";
+    await logLine("revm", 'Re-executing the seller\'s on-chain plan · <span class="txt em">revm</span> · fork <span class="hash">#21,000,000</span> · base fee 1 gwei.');
+    await sleep(300); if (!alive(tok)) return finish();
+    await logLine("revm", 'Replaying swap route ' + '<span class="spin" aria-hidden="true"></span>' + ' <span class="txt">simulating fills…</span>');
+    $("#recknSub").textContent = "Replaying the swap route, reading real fills…";
+    await sleep(reduced() ? 40 : 900); if (!alive(tok)) return finish();
+
+    // actual result
+    var actual = $("#actualVal");
+    actual.textContent = d.actual;
+    actual.className = "val " + (d.pass ? "good" : "bad");
+    await logLine("revm", 'actual = <span class="txt ' + (d.pass ? "good" : "bad") + ' em">' + esc(d.actual) + '</span>  <span class="txt">(' + esc(d.actualHuman) + ')</span>');
+    await sleep(360); if (!alive(tok)) return finish();
+
+    // verdict
+    setPhase("verdict");
+    var jr = $("#judgeReckn");
+    if (d.pass) {
+      jr.setAttribute("data-state", "pass");
+      $("#recknVerdict").textContent = "REPRODUCED";
+      var rb = $("#recknBadge"); rb.hidden = false; rb.textContent = "predicate holds";
+      $("#recknSub").textContent = "Expected 1024, replay produced 1024. The claim is true.";
+      await logLine("verdict", 'RESULT_EQUALS: expected 1024, got <span class="txt good">1024</span> → <span class="txt good em">REPRODUCED</span>. Both judges agree.');
+    } else {
+      jr.setAttribute("data-state", "fail");
+      var rb2 = $("#recknBadge"); rb2.hidden = false; rb2.textContent = "predicate broken";
+      $("#recknVerdict").textContent = "FAILED";
+      $("#recknSub").textContent = "Expected 1024, replay produced 6. The claim is a lie.";
+      await logLine("verdict", 'RESULT_EQUALS: expected 1024, got <span class="txt bad">6</span> → <span class="txt bad em">FAILED</span>. Claim not reproduced.');
+      // overrule the opinion judge — the hero beat
+      jo.setAttribute("data-overruled", "true");
+      $("#opinionSub").textContent = "Overruled by re-execution — it would have paid the scammer.";
+      await logLine("opinion", 'Opinion Judge <span class="txt bad em">OVERRULED</span> — its APPROVE would have paid a scammer 1,000 USDC.');
+    }
+    await sleep(300); if (!alive(tok)) return finish();
+
+    // trace
+    var trace = $("#traceVal");
+    trace.textContent = d.trace;
+    trace.className = "val";
+    await logLine("verdict", 'verdict trace <span class="hash">' + d.trace + '</span> signed.');
+    await sleep(300); if (!alive(tok)) return finish();
+
+    // resolve tx
+    setPhase("resolving"); setTx("pending", "resolve() pending");
+    await logLine("tx", 'resolve() submitted to escrow.vault — <span class="txt warn">pending</span> <span class="spin" aria-hidden="true"></span>');
+    await sleep(reduced() ? 40 : 850); if (!alive(tok)) return finish();
+
+    // move the money
+    var toAcct = d.pass ? "seller" : "buyer";
+    var fb = $("#flowbar");
+    fb.classList.add(d.pass ? "to-seller" : "to-buyer");
+    fb.querySelector("i").style.width = "100%";
+    $("#flowFrom").textContent = "escrow → " + (d.pass ? "seller" : "buyer");
+    $("#flowTo").textContent = d.pass ? "release" : "refund";
+    $("#acctEscrow").classList.add("flash-out");
+    $("#" + (d.pass ? "acctSeller" : "acctBuyer")).classList.add("flash-in");
+    $("#escrowState").textContent = "settled";
+
+    await Promise.all([
+      animateNumber("escrow", 0, reduced() ? 10 : 700),
+      animateNumber(toAcct, 1000, reduced() ? 10 : 700)
+    ]);
+    if (!alive(tok)) return finish();
+
+    var confBlock = headBlock;
+    setTx("confirmed", "confirmed · #" + fmt(confBlock));
+    await logLine("tx", 'confirmed in block <span class="hash">#' + fmt(confBlock) + '</span> — escrow → <span class="txt ' + (d.pass ? "good" : "bad") + ' em">' + (d.pass ? "seller (RELEASE)" : "buyer (REFUND)") + '</span>.');
+    setPhase(d.pass ? "released" : "refunded");
+
+    // banner
+    var b = $("#banner");
+    b.setAttribute("data-outcome", d.pass ? "release" : "refund");
+    $("#bannerEyebrow").textContent = d.pass ? "reproduced — escrow released" : "not reproduced — escrow refunded";
+    $("#bannerHeadline").textContent = d.pass
+      ? "RELEASE 1,000 USDC to the seller"
+      : "REFUND 1,000 USDC to the buyer";
+    $("#bannerDetail").textContent = d.pass
+      ? "Both judges agreed — and the one that mattered proved it. trace " + d.trace.slice(0, 18) + "…"
+      : "The opinion judge approved the lie. Re-execution refunded the buyer. trace " + d.trace.slice(0, 18) + "…";
+    $("#bannerAmt").innerHTML = '1,000<span class="u" style="font-size:14px;color:var(--fg-faint)"> USDC</span>';
+    $("#bannerTo").textContent = d.pass ? "→ seller agent" : "→ buyer";
+
+    finish();
+  }
+
+  function finish() {
+    stopHead();
+    $("#metaBar").classList.remove("live");
+    $("#runBtn").removeAttribute("disabled");
+  }
+
+  // ---------- wiring ----------
+  var segBtns = document.querySelectorAll(".seg [data-mode]");
+  Array.prototype.forEach.call(segBtns, function (btn) {
+    btn.addEventListener("click", function () {
+      mode = btn.getAttribute("data-mode");
+      Array.prototype.forEach.call(segBtns, function (b) {
+        b.setAttribute("aria-pressed", b === btn ? "true" : "false");
+      });
+      runToken++;      // cancel any in-flight run
+      stopHead();
+      resetBoard();
+      $("#runBtn").removeAttribute("disabled");
+      $("#bannerHeadline").textContent = mode === "false"
+        ? "False claim loaded — the hero run."
+        : "Honest delivery loaded.";
+      $("#bannerEyebrow").textContent = "ready";
+      $("#bannerDetail").textContent = "Press ▶ run it to resolve on-chain.";
+      // keep the pre-run prompt line in the log
+      logEl.innerHTML = '<span class="ln"><span class="txt em">press </span>▶ run it<span class="txt em"> to watch dispute #4821 resolve on-chain.</span></span>';
+    });
+  });
+
+  $("#runBtn").addEventListener("click", function () { run(); });
+
+  // initial expected value reflects default mode
+  $("#expectedVal").textContent = DATA[mode].expected;
+})();
+</script>
+</body>
+</html>

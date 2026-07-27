@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reckn — Reproduce, or refund</title>
+<style>
+/*
+  Reckn — palette
+  --void   #090b11  near-black, blue-biased ground
+  --slate  #141a26  raised surface
+  --ink    #e9eef7  primary text (cool white)
+  --mute   #7f8ba6  secondary text
+  --teal   #3fc9bf  reproduced / Reckn accent (cool, not acid)
+  --gold   #e4ad55  money (USDC)
+  --rose   #ff5d73  failed / refund
+*/
+:root{
+  --void:#090b11; --slate:#141a26; --slate-2:#0f1420;
+  --ink:#e9eef7; --mute:#7f8ba6; --line:#242c3d;
+  --teal:#3fc9bf; --teal-dim:#1d5b58;
+  --gold:#e4ad55; --gold-dim:#5a4622;
+  --rose:#ff5d73; --rose-dim:#5c2230;
+  --bg:var(--void); --fg:var(--ink); --panel:var(--slate); --panel-2:var(--slate-2);
+  --hair:var(--line); --sub:var(--mute);
+  --shadow:0 24px 60px -20px rgba(0,0,0,.7);
+  --radius:14px;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+:root[data-theme="light"]{
+  --bg:#eef1f6; --fg:#111725; --panel:#ffffff; --panel-2:#f4f6fb;
+  --hair:#d8deea; --sub:#5b6577;
+  --teal:#0f9d92; --teal-dim:#bfeae6;
+  --gold:#b07a1e; --gold-dim:#f0e0c0;
+  --rose:#d63a58; --rose-dim:#f7d3da;
+  --shadow:0 24px 50px -24px rgba(20,30,60,.35);
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme]){
+    --bg:#eef1f6; --fg:#111725; --panel:#ffffff; --panel-2:#f4f6fb;
+    --hair:#d8deea; --sub:#5b6577;
+    --teal:#0f9d92; --gold:#b07a1e; --rose:#d63a58;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:
+    radial-gradient(1200px 600px at 50% -10%, color-mix(in srgb, var(--teal) 8%, transparent), transparent 60%),
+    var(--bg);
+  color:var(--fg);
+  font-family:var(--sans);
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+  min-height:100vh;
+}
+.wrap{max-width:1080px;margin:0 auto;padding:28px 20px 64px}
+.mono{font-family:var(--mono)}
+.nums{font-variant-numeric:tabular-nums}
+a{color:inherit}
+button{font-family:inherit}
+
+/* ---------- header ---------- */
+header.top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+.brand{display:flex;align-items:baseline;gap:14px;min-width:0}
+.logo{display:inline-flex;align-items:center;gap:10px;font-weight:680;font-size:22px;letter-spacing:-.02em}
+.logo .glyph{width:26px;height:26px;flex:none}
+.tagline{color:var(--sub);font-size:13.5px;letter-spacing:.01em}
+.tagline b{color:var(--fg);font-weight:600}
+.controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+
+/* segmented scenario switch */
+.seg{display:inline-flex;background:var(--panel-2);border:1px solid var(--hair);border-radius:999px;padding:3px}
+.seg button{
+  appearance:none;border:0;background:transparent;color:var(--sub);
+  padding:8px 16px;border-radius:999px;font-size:13px;font-weight:560;cursor:pointer;
+  letter-spacing:.01em;transition:color .18s;
+}
+.seg button[aria-pressed="true"]{color:var(--void);background:var(--fg)}
+:root[data-theme="light"] .seg button[aria-pressed="true"]{color:#fff}
+.seg button.false[aria-pressed="true"]{background:var(--rose);color:#fff}
+.seg button:focus-visible,.iconbtn:focus-visible,.replay:focus-visible,.txrow:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+
+.iconbtn{
+  appearance:none;background:var(--panel-2);border:1px solid var(--hair);color:var(--fg);
+  width:40px;height:40px;border-radius:11px;cursor:pointer;display:grid;place-items:center;
+}
+.replay{
+  appearance:none;display:inline-flex;align-items:center;gap:8px;
+  background:var(--fg);color:var(--bg);border:0;border-radius:11px;
+  padding:0 18px;height:40px;font-weight:620;font-size:13.5px;cursor:pointer;letter-spacing:.01em;
+}
+.replay svg{width:15px;height:15px}
+.replay:active{transform:translateY(1px)}
+
+/* ---------- stage ---------- */
+.stage{
+  position:relative;background:linear-gradient(180deg,var(--panel),var(--panel-2));
+  border:1px solid var(--hair);border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:14px 16px 8px;margin-bottom:16px;overflow:hidden;
+}
+.stage-head{display:flex;justify-content:space-between;align-items:center;padding:4px 6px 10px;flex-wrap:wrap;gap:8px}
+.eyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--sub);font-weight:640}
+.eyebrow .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--teal);margin-right:7px;vertical-align:middle}
+.same-input{font-size:11.5px;color:var(--sub);letter-spacing:.04em}
+.same-input b{color:var(--fg)}
+
+svg.scene{display:block;width:100%;height:auto}
+.node-label{font-family:var(--sans);font-size:13px;font-weight:600;fill:var(--fg)}
+.node-sub{font-family:var(--mono);font-size:10px;fill:var(--sub);letter-spacing:.02em}
+.node-box{fill:var(--panel-2);stroke:var(--hair);stroke-width:1.5}
+.wire{stroke:var(--hair);stroke-width:2;fill:none}
+.flow{stroke-width:2.5;fill:none;stroke-linecap:round;opacity:0;transition:opacity .25s}
+.flow.on{opacity:1}
+.pulse{transform-box:fill-box;transform-origin:center}
+.pulse.hit{animation:nodePulse .5s cubic-bezier(.2,.9,.2,1)}
+@keyframes nodePulse{0%{transform:scale(1)}35%{transform:scale(1.09)}100%{transform:scale(1)}}
+
+/* coin */
+#coin{opacity:0;transition:opacity .3s}
+#coin.on{opacity:1}
+.coin-face{fill:var(--gold);stroke:color-mix(in srgb,var(--gold) 60%,#000);stroke-width:1.5}
+.coin-txt{font-family:var(--mono);font-size:10.5px;font-weight:700;fill:#1a1206;text-anchor:middle}
+
+/* claim bubble (DOM overlay on stage) */
+.overlay{position:absolute;pointer-events:none}
+.claim{
+  top:12%;right:4%;max-width:230px;background:var(--panel);border:1px solid var(--hair);
+  border-radius:12px 12px 4px 12px;padding:10px 12px;box-shadow:var(--shadow);
+  opacity:0;transform:translateY(8px) scale(.96);transition:opacity .35s,transform .35s;pointer-events:none;
+}
+.claim.show{opacity:1;transform:none}
+.claim .who{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);font-weight:640;margin-bottom:3px}
+.claim .msg{font-size:12.5px;color:var(--fg)}
+.claim .msg .mono{font-size:11.5px}
+
+/* verdict stamp */
+.stamp{
+  position:absolute;left:50%;top:46%;transform:translate(-50%,-50%) scale(2.4);
+  opacity:0;pointer-events:none;
+  border:3px solid var(--teal);color:var(--teal);border-radius:12px;
+  padding:8px 20px;font-weight:800;letter-spacing:.14em;font-size:26px;text-transform:uppercase;
+  background:color-mix(in srgb,var(--panel) 78%,transparent);backdrop-filter:blur(2px);
+}
+.stamp.fail{border-color:var(--rose);color:var(--rose)}
+.stamp.land{opacity:1}
+
+/* ---------- comparison row ---------- */
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+.judge{
+  background:var(--panel);border:1px solid var(--hair);border-radius:var(--radius);padding:16px 18px;position:relative;overflow:hidden;
+}
+.judge .rail{position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--hair)}
+.judge.reckn .rail{background:var(--teal)}
+.judge h3{margin:0 0 2px;font-size:14px;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
+.judge .kind{font-size:11px;color:var(--sub);margin-bottom:14px}
+.judge .verdict{font-family:var(--mono);font-size:18px;font-weight:700;letter-spacing:-.01em;display:flex;align-items:center;gap:9px;min-height:24px}
+.judge .verdict .ico{width:18px;height:18px;flex:none}
+.judge .note{font-size:12px;color:var(--sub);margin-top:6px;min-height:16px}
+.tag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:6px;vertical-align:middle}
+.tag.wrong{background:var(--rose-dim);color:var(--rose)}
+.tag.right{background:var(--teal-dim);color:var(--teal)}
+:root[data-theme="light"] .tag.right{color:#0b6b63}
+.v-ok{color:var(--teal)} .v-bad{color:var(--rose)} .v-idle{color:var(--sub)}
+.judge .verdict.enter{animation:vEnter .4s cubic-bezier(.2,.8,.2,1)}
+@keyframes vEnter{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ---------- meter ---------- */
+.meter-card{background:var(--panel);border:1px solid var(--hair);border-radius:var(--radius);padding:16px 18px;margin-bottom:16px}
+.meter-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;flex-wrap:wrap;gap:6px}
+.meter-top .lab{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--sub);font-weight:640}
+.meter-top .predicate{font-family:var(--mono);font-size:11.5px;color:var(--sub)}
+.meter-top .predicate b{color:var(--fg)}
+.track{position:relative;height:34px;background:var(--panel-2);border:1px solid var(--hair);border-radius:9px;overflow:hidden}
+.fill{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:8px 0 0 8px;
+  background:linear-gradient(90deg,color-mix(in srgb,var(--teal) 55%,transparent),var(--teal));
+  transition:width 1s cubic-bezier(.65,0,.35,1),background .3s;}
+.fill.bad{background:linear-gradient(90deg,color-mix(in srgb,var(--rose) 55%,transparent),var(--rose))}
+.claim-mark{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--gold);left:97.5%;transition:left .4s}
+.claim-mark::after{content:"claimed 1024";position:absolute;top:-17px;right:0;font-family:var(--mono);font-size:10px;color:var(--gold);white-space:nowrap}
+.meter-legend{display:flex;justify-content:space-between;margin-top:10px;font-family:var(--mono);font-size:11.5px;color:var(--sub)}
+.meter-legend .actual{color:var(--fg)}
+.meter-legend .actual.bad{color:var(--rose)}
+.meter-legend .actual.ok{color:var(--teal)}
+
+/* ---------- receipt ---------- */
+.receipt{
+  background:linear-gradient(180deg,var(--panel),var(--panel-2));
+  border:1px solid var(--hair);border-radius:var(--radius);box-shadow:var(--shadow);
+  overflow:hidden;opacity:.35;transform:translateY(14px);transition:opacity .5s,transform .5s;
+}
+.receipt.settled{opacity:1;transform:none}
+.rcpt-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 18px;border-bottom:1px solid var(--hair);flex-wrap:wrap}
+.rcpt-status{display:inline-flex;align-items:center;gap:9px;font-size:13px;font-weight:640}
+.rcpt-status .beacon{width:9px;height:9px;border-radius:50%;background:var(--sub)}
+.receipt.settled .rcpt-status .beacon{background:var(--teal);box-shadow:0 0 0 0 color-mix(in srgb,var(--teal) 70%,transparent);animation:beacon 2.2s ease-out infinite}
+.receipt.settled.refund .rcpt-status .beacon{background:var(--rose);animation-name:beaconR}
+@keyframes beacon{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--teal) 60%,transparent)}100%{box-shadow:0 0 0 8px transparent}}
+@keyframes beaconR{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--rose) 60%,transparent)}100%{box-shadow:0 0 0 8px transparent}}
+.rcpt-chain{font-family:var(--mono);font-size:11px;color:var(--sub)}
+.txrow{
+  display:flex;align-items:center;gap:12px;padding:13px 18px;border-bottom:1px solid var(--hair);
+  text-decoration:none;color:inherit;cursor:pointer;transition:background .15s;
+}
+.txrow:hover{background:var(--panel-2)}
+.txrow .method{font-family:var(--mono);font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;background:var(--panel-2);border:1px solid var(--hair);color:var(--fg);flex:none}
+.txrow .hash{font-family:var(--mono);font-size:12.5px;color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}
+.txrow .ext{color:var(--sub);font-size:11px;display:inline-flex;align-items:center;gap:5px;flex:none}
+.txrow .ext svg{width:12px;height:12px}
+.rcpt-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--hair)}
+.cell{background:var(--panel);padding:12px 18px}
+.cell .k{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);font-weight:620;margin-bottom:4px}
+.cell .val{font-family:var(--mono);font-size:12.5px;color:var(--fg);word-break:break-all}
+.cell .val.amt{font-size:15px;font-weight:700}
+.cell .val.amt.rel{color:var(--teal)} .cell .val.amt.ref{color:var(--rose)}
+.flowline{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px}
+.flowline .arrow{color:var(--sub)}
+.flowline .to.buyer{color:var(--rose)} .flowline .to.seller{color:var(--teal)}
+.rcpt-foot{padding:11px 18px;font-family:var(--mono);font-size:11px;color:var(--sub);display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px}
+.rcpt-foot .evt{color:var(--fg)}
+
+/* ---------- footer proof strip ---------- */
+.proof{display:flex;flex-wrap:wrap;gap:10px 26px;margin-top:22px;padding-top:18px;border-top:1px solid var(--hair);font-size:12px;color:var(--sub)}
+.proof div{display:flex;flex-direction:column;gap:2px}
+.proof .pk{font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-weight:640}
+.proof .pv{font-family:var(--mono);color:var(--fg);font-size:12px}
+.footnote{margin-top:14px;font-size:11.5px;color:var(--sub);line-height:1.55}
+
+@media (max-width:720px){
+  .compare{grid-template-columns:1fr}
+  .rcpt-grid{grid-template-columns:1fr}
+  .stamp{font-size:20px}
+  .claim{max-width:180px}
+  .logo{font-size:20px}
+}
+@media (prefers-reduced-motion: reduce){
+  *{transition-duration:.001s !important;animation-duration:.001s !important}
+  .fill{transition:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <span class="logo">
+        <svg class="glyph" viewBox="0 0 32 32" aria-hidden="true">
+          <rect x="2" y="2" width="28" height="28" rx="8" fill="none" stroke="var(--teal)" stroke-width="2"/>
+          <path d="M10 22 V10 h6 a4 4 0 0 1 0 8 h-6 M15 18 l6 4" fill="none" stroke="var(--teal)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Reckn
+      </span>
+      <span class="tagline"><b>Reproduce, or refund.</b> &nbsp;Escrow judged by re-execution, not opinion.</span>
+    </div>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Scenario">
+        <button id="btn-honest" type="button" aria-pressed="false">Honest</button>
+        <button id="btn-false" class="false" type="button" aria-pressed="true">False claim</button>
+      </div>
+      <button class="replay" id="replay" type="button">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Replay
+      </button>
+      <button class="iconbtn" id="theme" type="button" aria-label="Toggle light and dark theme" title="Toggle theme">
+        <svg id="theme-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true"><path d="M21 12.8A8 8 0 1 1 11.2 3a6.2 6.2 0 0 0 9.8 9.8Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- STAGE -->
+  <section class="stage" aria-label="Dispute settlement animation">
+    <div class="stage-head">
+      <span class="eyebrow"><span class="dot"></span>Escrowed dispute · x402 / EIP-3009</span>
+      <span class="same-input">Same dispute, judged two ways · <b id="scenario-name">FALSE CLAIM</b></span>
+    </div>
+
+    <svg class="scene" viewBox="0 0 1000 340" role="img" aria-label="1,000 USDC escrow flowing from buyer to seller or back to buyer">
+      <!-- wires -->
+      <path class="wire" d="M220,210 H420" />
+      <path class="wire" d="M580,210 H780" />
+      <!-- flow paths (money travel) -->
+      <path id="path-release" class="flow" stroke="var(--teal)" d="M500,150 C640,150 720,180 800,205" />
+      <path id="path-refund"  class="flow" stroke="var(--rose)" d="M500,150 C360,150 280,180 200,205" />
+
+      <!-- Buyer node -->
+      <g class="pulse" id="node-buyer">
+        <rect class="node-box" x="60" y="170" width="160" height="80" rx="14"/>
+        <text class="node-label" x="140" y="205" text-anchor="middle">Buyer</text>
+        <text class="node-sub"   x="140" y="224" text-anchor="middle">agent · payer</text>
+      </g>
+
+      <!-- Escrow node (top center, holds pot) -->
+      <g id="node-escrow">
+        <rect class="node-box" x="410" y="70" width="180" height="70" rx="14"/>
+        <text class="node-label" x="500" y="100" text-anchor="middle">Reckn Escrow</text>
+        <text class="node-sub"   x="500" y="119" text-anchor="middle">1,000 USDC held</text>
+      </g>
+
+      <!-- Seller node -->
+      <g class="pulse" id="node-seller">
+        <rect class="node-box" x="780" y="170" width="160" height="80" rx="14"/>
+        <text class="node-label" x="860" y="205" text-anchor="middle">Seller agent</text>
+        <text class="node-sub"   x="860" y="224" text-anchor="middle">delivery + claim</text>
+      </g>
+
+      <!-- traveling coin/pot -->
+      <g id="coin" transform="translate(500,150)">
+        <circle class="coin-face" cx="0" cy="0" r="26"/>
+        <circle cx="0" cy="0" r="20" fill="none" stroke="color-mix(in srgb,var(--gold) 70%,#000)" stroke-width="1" opacity=".6"/>
+        <text class="coin-txt" x="0" y="-1">1000</text>
+        <text class="coin-txt" x="0" y="10" style="font-size:6.5px">USDC</text>
+      </g>
+    </svg>
+
+    <!-- claim bubble -->
+    <div class="overlay claim" id="claim">
+      <div class="who">Seller claims</div>
+      <div class="msg" id="claim-msg">"1024 USDC out ✅ — please release." <span class="mono"></span></div>
+    </div>
+
+    <!-- verdict stamp -->
+    <div class="stamp fail" id="stamp">Failed</div>
+  </section>
+
+  <!-- COMPARISON -->
+  <div class="compare">
+    <div class="judge opinion">
+      <span class="rail"></span>
+      <h3>Opinion Judge</h3>
+      <div class="kind">LLM reads the seller's written claim</div>
+      <div class="verdict v-idle" id="op-verdict">—</div>
+      <div class="note" id="op-note">Awaiting claim…</div>
+    </div>
+    <div class="judge reckn">
+      <span class="rail"></span>
+      <h3>Reckn · re-execution</h3>
+      <div class="kind">Replays the seller's actual on-chain plan (revm)</div>
+      <div class="verdict v-idle" id="rk-verdict">—</div>
+      <div class="note" id="rk-note">Awaiting replay…</div>
+    </div>
+  </div>
+
+  <!-- METER -->
+  <div class="meter-card">
+    <div class="meter-top">
+      <span class="lab">Re-executed output vs claim</span>
+      <span class="predicate mono">predicate <b>RESULT_EQUALS</b> · expected <b>swap-out=1024 USDC @ 0.31% slippage</b></span>
+    </div>
+    <div class="track">
+      <div class="fill bad" id="fill"></div>
+      <div class="claim-mark" id="claim-mark"></div>
+    </div>
+    <div class="meter-legend">
+      <span>0 USDC</span>
+      <span class="actual bad" id="actual-read">actual (replay): — USDC</span>
+      <span>1024 USDC</span>
+    </div>
+  </div>
+
+  <!-- RECEIPT -->
+  <section class="receipt refund" id="receipt" aria-label="On-chain settlement receipt">
+    <div class="rcpt-head">
+      <span class="rcpt-status"><span class="beacon"></span><span id="rcpt-status-text">Settled on-chain</span></span>
+      <span class="rcpt-chain mono">chain 31337 · anvil</span>
+    </div>
+    <a class="txrow" id="txrow" href="#" target="_self" aria-label="Inspect resolve transaction on explorer">
+      <span class="method">resolve()</span>
+      <span class="hash" id="tx-hash">0x…</span>
+      <span class="ext">view on explorer
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+    </a>
+    <div class="rcpt-grid">
+      <div class="cell">
+        <div class="k">Block</div>
+        <div class="val nums">21,000,000</div>
+      </div>
+      <div class="cell">
+        <div class="k">Amount moved</div>
+        <div class="val amt ref nums" id="rcpt-amount">1,000 USDC</div>
+      </div>
+      <div class="cell">
+        <div class="k">Value flow</div>
+        <div class="val">
+          <span class="flowline"><span>Escrow</span><span class="arrow">→</span><span class="to buyer" id="rcpt-to">Buyer</span></span>
+        </div>
+      </div>
+      <div class="cell">
+        <div class="k">Outcome</div>
+        <div class="val" id="rcpt-outcome">REFUND — claim not reproduced</div>
+      </div>
+    </div>
+    <div class="rcpt-foot">
+      <span>event <span class="evt">VerdictCommitted</span> · trace</span>
+      <span class="mono" id="rcpt-trace">0x…</span>
+    </div>
+  </section>
+
+  <!-- PROOF STRIP -->
+  <div class="proof">
+    <div><span class="pk">Engine</span><span class="pv">Rust re-execution · revm</span></div>
+    <div><span class="pk">Funded predicate</span><span class="pv">RESULT_EQUALS</span></div>
+    <div><span class="pk">Settlement</span><span class="pv">on-chain resolve()</span></div>
+    <div><span class="pk">Escrow rail</span><span class="pv">x402 / EIP-3009</span></div>
+  </div>
+  <p class="footnote">
+    Verdicts are the real output of Reckn's re-execution engine; settlement is a real <span class="mono">resolve()</span> transaction (chain id 31337 / local anvil in this demo — the same flow targets a public testnet). Opinion Judge is a generic LLM stand-in.
+  </p>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---- scenario data (verbatim) ---- */
+  var SCEN = {
+    honest: {
+      name:"HONEST",
+      claimHtml:'"1024 USDC out ✅ — please release."',
+      actual:1024, slippage:"0.31%",
+      op:{v:"APPROVE",cls:"v-ok",note:"Claim reads as delivered — approves release."},
+      rk:{v:"REPRODUCED",cls:"v-ok",note:"Replay matches predicate exactly."},
+      stamp:"Reproduced", stampFail:false,
+      action:"release", to:"Seller", toClass:"seller",
+      outcome:"RELEASE — claim reproduced",
+      statusText:"Settled on-chain · released",
+      tx:"0x8f3a1d6c04b7e59f2a8c31d0b74e9f6152a8d3c7e0b41f96a2d5c8e7b3f01a94",
+      trace:"0x71ce9c5f338669b974dce7e7660f2f7a121c71ed961269d976ecb095e6c1dd25",
+      agree:true
+    },
+    false: {
+      name:"FALSE CLAIM",
+      claimHtml:'"1024 USDC out ✅ — please release."',
+      actual:6, slippage:"98.7%",
+      op:{v:"APPROVE",cls:"v-bad",note:"Trusts the words — pays the scammer.", wrong:true},
+      rk:{v:"FAILED",cls:"v-bad",note:"Replay shows 6 USDC, not 1024.", right:true},
+      stamp:"Failed", stampFail:true,
+      action:"refund", to:"Buyer", toClass:"buyer",
+      outcome:"REFUND — claim not reproduced",
+      statusText:"Settled on-chain · refunded",
+      tx:"0x2e7b91f4a0c6d3852b7e1f9c04a8d6532e9b1c7f403a86d5c1e9b7f2a4d0c68a",
+      trace:"0x2bf9692fe585295592983bf9cec62592dd32e97f3e00bd888e8a765dc8f28fd8",
+      agree:false
+    }
+  };
+
+  var $ = function(id){ return document.getElementById(id); };
+  var els = {
+    scenName:$("scenario-name"), claim:$("claim"), claimMsg:$("claim-msg"),
+    stamp:$("stamp"), coin:$("coin"),
+    pathRelease:$("path-release"), pathRefund:$("path-refund"),
+    nodeSeller:$("node-seller"), nodeBuyer:$("node-buyer"),
+    opV:$("op-verdict"), opN:$("op-note"), rkV:$("rk-verdict"), rkN:$("rk-note"),
+    fill:$("fill"), actual:$("actual-read"), claimMark:$("claim-mark"),
+    receipt:$("receipt"), txHash:$("tx-hash"), rcptAmount:$("rcpt-amount"),
+    rcptTo:$("rcpt-to"), rcptOutcome:$("rcpt-outcome"), rcptTrace:$("rcpt-trace"),
+    rcptStatus:$("rcpt-status-text"),
+    btnHonest:$("btn-honest"), btnFalse:$("btn-false"), replay:$("replay")
+  };
+
+  var runId = 0;
+  var current = "false";
+
+  function checkV(cls, ok, bad){
+    var el = cls === "op" ? els.opV : els.rkV;
+    el.classList.remove("v-ok","v-bad","v-idle");
+  }
+
+  var okIco = '<svg class="ico" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M8 12.5l2.5 2.5L16 9" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var badIco = '<svg class="ico" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M9 9l6 6M15 9l-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
+
+  function easeInOutCubic(t){ return t<0.5 ? 4*t*t*t : 1-Math.pow(-2*t+2,3)/2; }
+
+  function tween(duration, ease, onUpdate){
+    return new Promise(function(resolve){
+      if(reduced){ onUpdate(1); resolve(); return; }
+      var my = runId, start = null;
+      function frame(now){
+        if(my !== runId){ resolve(); return; }
+        if(start === null) start = now;
+        var t = Math.min(1,(now-start)/duration);
+        onUpdate(ease ? ease(t) : t);
+        if(t < 1) requestAnimationFrame(frame); else resolve();
+      }
+      requestAnimationFrame(frame);
+    });
+  }
+  function wait(ms){
+    return new Promise(function(resolve){
+      var my = runId;
+      setTimeout(function(){ resolve(); }, reduced ? 0 : ms);
+    });
+  }
+  function alive(){ return true; }
+
+  function resetVisuals(s){
+    els.scenName.textContent = s.name;
+    // claim
+    els.claim.classList.remove("show");
+    els.claimMsg.innerHTML = s.claimHtml;
+    // stamp
+    els.stamp.classList.remove("land","fail");
+    els.stamp.textContent = s.stamp;
+    if(s.stampFail) els.stamp.classList.add("fail");
+    // coin home
+    els.coin.classList.remove("on");
+    els.coin.setAttribute("transform","translate(500,150)");
+    // flows off
+    els.pathRelease.classList.remove("on");
+    els.pathRefund.classList.remove("on");
+    els.nodeSeller.classList.remove("hit");
+    els.nodeBuyer.classList.remove("hit");
+    // judges idle
+    els.opV.className = "verdict v-idle"; els.opV.textContent = "—"; els.opN.textContent = "Awaiting claim…";
+    els.rkV.className = "verdict v-idle"; els.rkV.textContent = "—"; els.rkN.textContent = "Awaiting replay…";
+    // meter
+    els.fill.style.width = "0%";
+    els.fill.classList.toggle("bad", s.stampFail);
+    els.actual.className = "actual " + (s.stampFail ? "bad":"ok");
+    els.actual.textContent = "actual (replay): — USDC";
+    // receipt
+    els.receipt.classList.remove("settled");
+    els.receipt.classList.toggle("refund", s.action === "refund");
+  }
+
+  function setVerdict(el, note, verdict, cls, ico, tag){
+    el.className = "verdict enter " + cls;
+    el.innerHTML = ico + '<span>' + verdict + '</span>' + (tag||"");
+    // retrigger animation
+    void el.offsetWidth;
+    el.classList.add("enter");
+    note.textContent = "";
+  }
+
+  function coinAlong(pathEl, t){
+    var len = pathEl.getTotalLength();
+    var p = pathEl.getPointAtLength(t*len);
+    els.coin.setAttribute("transform","translate("+p.x+","+p.y+")");
+  }
+
+  function fillReceipt(s){
+    els.txHash.textContent = s.tx;
+    els.rcptTrace.textContent = s.trace;
+    els.rcptAmount.textContent = "1,000 USDC";
+    els.rcptAmount.className = "val amt nums " + (s.action==="refund"?"ref":"rel");
+    els.rcptTo.textContent = s.to;
+    els.rcptTo.className = "to " + s.toClass;
+    els.rcptOutcome.textContent = s.outcome;
+    els.rcptStatus.textContent = s.statusText;
+  }
+
+  async function run(key){
+    runId++;
+    var my = runId;
+    current = key;
+    var s = SCEN[key];
+    resetVisuals(s);
+    fillReceipt(s); // pre-fill text; card stays dim until settled
+
+    await wait(320);
+    if(my!==runId) return;
+
+    // 1) coin appears, seller emits claim
+    els.coin.classList.add("on");
+    els.claim.classList.add("show");
+    await wait(reduced?0:820);
+    if(my!==runId) return;
+
+    // 2) Opinion judge reads claim -> APPROVE
+    els.opN.textContent = s.op.note;
+    var opTag = s.op.wrong ? ' <span class="tag wrong">robbed</span>' : "";
+    setVerdict(els.opV, els.opN, s.op.v, s.op.cls, s.op.v==="APPROVE"?okIco:badIco, opTag);
+    els.opV.innerHTML = (s.op.cls==="v-bad"? okIco : okIco) + '<span>'+s.op.v+'</span>'+opTag;
+    els.opV.className = "verdict enter " + (s.op.wrong ? "v-bad":"v-ok");
+    els.opN.textContent = s.op.note;
+    await wait(reduced?0:900);
+    if(my!==runId) return;
+
+    // 3) Reckn replays -> meter fills to actual, verdict + stamp
+    els.rkN.textContent = "Replaying on-chain plan…";
+    // meter: use CSS transition width
+    var pct = Math.max(0.6,(s.actual/1024)*100);
+    els.fill.style.width = pct.toFixed(1) + "%";
+    // count-up actual
+    var target = s.actual;
+    await tween(900, easeInOutCubic, function(t){
+      var v = Math.round(target*t);
+      els.actual.textContent = "actual (replay): " + String(v).padStart(4,"0") + " USDC · " + s.slippage + " slip";
+    });
+    els.actual.textContent = "actual (replay): " + String(target).padStart(4,"0") + " USDC · " + s.slippage + " slip";
+    if(my!==runId) return;
+
+    var rkTag = s.rk.right ? ' <span class="tag right">caught it</span>' : (s.agree? ' <span class="tag right">match</span>':"");
+    els.rkV.innerHTML = (s.stampFail?badIco:okIco) + '<span>'+s.rk.v+'</span>' + rkTag;
+    els.rkV.className = "verdict enter " + s.rk.cls;
+    els.rkN.textContent = s.rk.note;
+
+    // verdict stamp lands (weighty)
+    await tween(reduced?1:420, function(t){ // easeOutBack-ish
+      var c1=1.70158, c3=c1+1;
+      return 1 + c3*Math.pow(t-1,3) + c1*Math.pow(t-1,2);
+    }, function(t){
+      var scale = 2.4 + (1-2.4)*t;
+      els.stamp.style.opacity = Math.min(1,t*1.6);
+      els.stamp.style.transform = "translate(-50%,-50%) scale("+scale.toFixed(3)+")";
+    });
+    els.stamp.classList.add("land");
+    els.stamp.style.opacity = ""; els.stamp.style.transform = "";
+    await wait(reduced?0:520);
+    if(my!==runId) return;
+
+    // 4) money moves — release to seller OR snap back to buyer
+    var pathEl = s.action==="release" ? els.pathRelease : els.pathRefund;
+    pathEl.classList.add("on");
+    var dur = s.action==="refund" ? 780 : 1050; // refund snaps faster
+    var ease = s.action==="refund"
+      ? function(t){ return 1-Math.pow(1-t,4); }   // fast decisive snap
+      : easeInOutCubic;
+    await tween(dur, ease, function(t){ coinAlong(pathEl, t); });
+    if(my!==runId) return;
+    // land pulse on destination node
+    var node = s.action==="release" ? els.nodeSeller : els.nodeBuyer;
+    node.classList.remove("hit"); void node.offsetWidth; node.classList.add("hit");
+    els.coin.classList.remove("on");
+    await wait(reduced?0:360);
+    if(my!==runId) return;
+
+    // 5) settle into on-chain receipt
+    els.receipt.classList.add("settled");
+  }
+
+  /* ---- controls ---- */
+  function selectScenario(key){
+    els.btnHonest.setAttribute("aria-pressed", String(key==="honest"));
+    els.btnFalse.setAttribute("aria-pressed", String(key==="false"));
+    run(key);
+  }
+  els.btnHonest.addEventListener("click", function(){ selectScenario("honest"); });
+  els.btnFalse.addEventListener("click", function(){ selectScenario("false"); });
+  els.replay.addEventListener("click", function(){ run(current); });
+
+  /* ---- theme toggle ---- */
+  var root = document.documentElement;
+  var themeBtn = $("theme");
+  function currentTheme(){
+    if(root.getAttribute("data-theme")) return root.getAttribute("data-theme");
+    return window.matchMedia("(prefers-color-scheme: light)").matches ? "light":"dark";
+  }
+  themeBtn.addEventListener("click", function(){
+    var next = currentTheme()==="dark" ? "light":"dark";
+    root.setAttribute("data-theme", next);
+  });
+
+  /* ---- autoplay the false-claim hero on load ---- */
+  window.addEventListener("load", function(){
+    // small delay so layout is stable for path measurement
+    setTimeout(function(){ selectScenario("false"); }, 250);
+  });
+})();
+</script>
+</body>
+</html>

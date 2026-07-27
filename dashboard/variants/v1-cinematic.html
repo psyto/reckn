@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reckn — Reproduce, or refund</title>
+<style>
+  /* ============================================================
+     RECKN — cinematic fintech money-shot
+     Palette (dark, blue-biased ink; one confident accent = gold money)
+       --ink      #0a0d13   page (near-black, slight blue)
+       --panel    #12171f   raised surface
+       --panel-2  #171d27   deeper card
+       --line     #26303e   hairline borders
+       --text     #e8edf4   primary text
+       --muted    #8a96a8   secondary text
+       --gold     #f4b53f   money / USDC (the single accent)
+       --mint     #46d6a3   reproduced / release (pass)
+       --rose     #ff5567   failed / refund (fail)
+     ============================================================ */
+  :root{
+    --ink:#0a0d13; --panel:#12171f; --panel-2:#171d27; --line:#26303e;
+    --text:#e8edf4; --muted:#8a96a8; --faint:#5c6778;
+    --gold:#f4b53f; --gold-dim:#7a5e21;
+    --mint:#46d6a3; --mint-dim:#1f5344;
+    --rose:#ff5567; --rose-dim:#5a2530;
+    --sans: system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono: ui-monospace,"SF Mono","SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace;
+    --r: 14px; --r-sm: 10px;
+    --ease: cubic-bezier(.4,.14,.2,1);
+    --snap: cubic-bezier(.16,1.24,.3,1);
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  html{ -webkit-text-size-adjust:100%; }
+  body{
+    background:
+      radial-gradient(120% 90% at 78% -10%, #17202c 0%, rgba(23,32,44,0) 55%),
+      radial-gradient(90% 70% at 10% 110%, #12161f 0%, rgba(18,22,31,0) 60%),
+      var(--ink);
+    color:var(--text);
+    font-family:var(--sans);
+    font-size:16px; line-height:1.5;
+    letter-spacing:.01em;
+    min-height:100vh;
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{ max-width:1080px; margin:0 auto; padding:34px 22px 60px; }
+
+  a{ color:inherit; }
+  :focus-visible{ outline:2px solid var(--gold); outline-offset:3px; border-radius:6px; }
+
+  /* ---------- header ---------- */
+  header.top{ display:flex; flex-wrap:wrap; align-items:flex-end; gap:18px 26px; margin-bottom:26px; }
+  .brand{ display:flex; align-items:center; gap:13px; }
+  .mark{ width:40px; height:40px; flex:0 0 auto; }
+  .wordmark{ font-size:26px; font-weight:650; letter-spacing:-.01em; line-height:1; }
+  .tagline{ font-family:var(--mono); font-size:12.5px; color:var(--gold); letter-spacing:.06em; text-transform:uppercase; margin-top:6px; }
+  .lede{ color:var(--muted); font-size:14.5px; max-width:46ch; margin-left:auto; text-align:right; }
+  .lede b{ color:var(--text); font-weight:600; }
+  @media(max-width:680px){ .lede{ margin-left:0; text-align:left; } }
+
+  /* ---------- controls ---------- */
+  .controls{ display:flex; flex-wrap:wrap; align-items:center; gap:14px; margin-bottom:20px; }
+  .seg{ display:inline-flex; padding:4px; background:var(--panel); border:1px solid var(--line); border-radius:12px; gap:3px; }
+  .seg button{
+    font-family:var(--sans); font-size:13.5px; font-weight:560; color:var(--muted);
+    background:transparent; border:0; padding:9px 16px; border-radius:9px; cursor:pointer;
+    transition:color .2s var(--ease), background .2s var(--ease); letter-spacing:.01em;
+  }
+  .seg button:hover{ color:var(--text); }
+  .seg button[aria-pressed="true"]{ color:var(--ink); background:var(--text); }
+  .seg button.honest[aria-pressed="true"]{ background:var(--mint); }
+  .seg button.false[aria-pressed="true"]{ background:var(--rose); color:#fff; }
+
+  .btn{
+    font-family:var(--sans); font-size:13.5px; font-weight:560; color:var(--text);
+    background:var(--panel); border:1px solid var(--line); padding:10px 18px; border-radius:10px;
+    cursor:pointer; display:inline-flex; align-items:center; gap:9px;
+    transition:border-color .2s var(--ease), background .2s var(--ease), transform .1s var(--ease);
+  }
+  .btn:hover{ border-color:var(--gold); background:var(--panel-2); }
+  .btn:active{ transform:translateY(1px); }
+  .btn svg{ width:15px; height:15px; }
+  .rm-toggle{ margin-left:auto; display:inline-flex; align-items:center; gap:8px; color:var(--muted); font-size:12.5px; font-family:var(--mono); cursor:pointer; user-select:none; }
+  .rm-toggle input{ accent-color:var(--gold); width:15px; height:15px; }
+  @media(max-width:680px){ .rm-toggle{ margin-left:0; } }
+
+  /* ---------- stage ---------- */
+  .stage-shell{
+    position:relative; border:1px solid var(--line); border-radius:var(--r);
+    background:linear-gradient(180deg, #10141c 0%, #0d1119 100%);
+    box-shadow:0 24px 60px -30px rgba(0,0,0,.85), inset 0 1px 0 rgba(255,255,255,.02);
+    overflow:hidden;
+  }
+  .stage-shell.shake{ animation:shake .5s var(--ease); }
+  @keyframes shake{
+    0%,100%{ transform:translateX(0); }
+    12%{ transform:translateX(-9px); } 28%{ transform:translateX(8px); }
+    44%{ transform:translateX(-6px); } 60%{ transform:translateX(5px); }
+    76%{ transform:translateX(-3px); } 88%{ transform:translateX(2px); }
+  }
+  .stage-glow{ position:absolute; inset:0; pointer-events:none; opacity:0; transition:opacity .5s var(--ease); }
+  .stage-glow.mint{ background:radial-gradient(80% 60% at 84% 50%, rgba(70,214,163,.16), transparent 60%); }
+  .stage-glow.rose{ background:radial-gradient(80% 60% at 16% 50%, rgba(255,85,103,.20), transparent 60%); }
+  .stage-glow.on{ opacity:1; }
+
+  #stage{
+    position:relative; height:290px; display:flex; align-items:center; justify-content:space-between;
+    padding:0 46px;
+  }
+  @media(max-width:680px){ #stage{ height:250px; padding:0 20px; } }
+
+  svg.track{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+  .track .rail{ stroke:var(--line); stroke-width:2; fill:none; stroke-dasharray:2 8; stroke-linecap:round; }
+
+  .node{ position:relative; z-index:2; width:130px; text-align:center; }
+  .node .disc{
+    width:78px; height:78px; margin:0 auto 12px; border-radius:20px;
+    background:var(--panel-2); border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.03), 0 12px 26px -16px rgba(0,0,0,.9);
+    transition:border-color .3s var(--ease), box-shadow .3s var(--ease);
+  }
+  .node .disc svg{ width:34px; height:34px; }
+  .node.lit-mint .disc{ border-color:var(--mint); box-shadow:0 0 0 3px rgba(70,214,163,.12), 0 12px 26px -16px rgba(0,0,0,.9); }
+  .node.lit-rose .disc{ border-color:var(--rose); box-shadow:0 0 0 3px rgba(255,85,103,.14), 0 12px 26px -16px rgba(0,0,0,.9); }
+  .node.lit-gold .disc{ border-color:var(--gold); box-shadow:0 0 0 3px rgba(244,181,63,.14), 0 12px 26px -16px rgba(0,0,0,.9); }
+  .node .role{ font-size:13px; font-weight:600; letter-spacing:.01em; }
+  .node .sub{ font-family:var(--mono); font-size:10.5px; color:var(--faint); letter-spacing:.04em; text-transform:uppercase; margin-top:3px; }
+
+  /* escrow vault (center) */
+  .vault{ position:relative; z-index:2; width:150px; text-align:center; }
+  .vault .box{
+    width:120px; height:120px; margin:0 auto; border-radius:22px;
+    background:linear-gradient(180deg,#1a222e,#141a24);
+    border:1px solid var(--line);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.04), 0 18px 40px -22px #000;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+    transition:border-color .3s var(--ease);
+  }
+  .vault .box .lbl{ font-family:var(--mono); font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--faint); }
+  .vault .box .amt{ font-size:15px; font-weight:640; letter-spacing:-.01em; }
+  .vault .cap{ font-family:var(--mono); font-size:10.5px; color:var(--faint); letter-spacing:.05em; text-transform:uppercase; margin-top:11px; }
+
+  /* the money pot */
+  .pot, .ghost{
+    position:absolute; top:0; left:0; z-index:5;
+    width:92px; height:56px; margin-left:-46px; margin-top:-28px;
+    border-radius:13px;
+    display:flex; align-items:center; justify-content:center; gap:7px;
+    font-family:var(--mono); font-weight:640; font-size:14px; letter-spacing:-.01em;
+    will-change:transform; pointer-events:none;
+  }
+  .pot{
+    background:linear-gradient(180deg,#fbd379,#f4b53f);
+    color:#3a2a05; border:1px solid #ffdd8f;
+    box-shadow:0 0 0 1px rgba(244,181,63,.35), 0 14px 30px -8px rgba(244,181,63,.5), inset 0 1px 0 rgba(255,255,255,.5);
+  }
+  .pot .coin{ width:16px; height:16px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#fff3d0,#c98c11); box-shadow:inset 0 0 0 1px rgba(0,0,0,.15); flex:0 0 auto; }
+  .pot.snap-flash{ animation:snapflash .45s var(--ease); }
+  @keyframes snapflash{ 0%{ filter:brightness(2.2); } 100%{ filter:brightness(1); } }
+
+  /* ghost decoy = the wrong payment the opinion judge would send */
+  .ghost{
+    background:transparent; color:var(--rose);
+    border:1.5px dashed var(--rose);
+    box-shadow:0 0 24px -6px rgba(255,85,103,.4);
+    opacity:0;
+  }
+  .ghost .x{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:20px; opacity:0; transition:opacity .2s var(--ease); }
+  .ghost.crossed .x{ opacity:1; }
+
+  /* verdict stamp overlay */
+  .stamp{
+    position:absolute; left:50%; top:50%; z-index:8;
+    transform:translate(-50%,-50%) scale(1.6) rotate(-8deg);
+    font-family:var(--mono); font-weight:700; font-size:30px; letter-spacing:.06em;
+    padding:10px 20px; border-radius:12px; text-transform:uppercase;
+    opacity:0; pointer-events:none; white-space:nowrap;
+  }
+  .stamp.reproduced{ color:var(--mint); border:3px solid var(--mint); background:rgba(70,214,163,.06); box-shadow:0 0 40px -6px rgba(70,214,163,.4); }
+  .stamp.failed{ color:var(--rose); border:3px solid var(--rose); background:rgba(255,85,103,.07); box-shadow:0 0 44px -6px rgba(255,85,103,.5); }
+  .stamp.show{ opacity:1; transform:translate(-50%,-50%) scale(1) rotate(-8deg); transition:opacity .18s var(--ease), transform .32s var(--snap); }
+
+  /* seller claim banner */
+  .claim{
+    position:absolute; left:50%; top:20px; z-index:7; transform:translateX(-50%);
+    background:var(--panel-2); border:1px solid var(--line); border-left:3px solid var(--gold);
+    border-radius:10px; padding:9px 14px; font-size:12.5px; color:var(--muted);
+    max-width:min(88%,420px); opacity:0; transition:opacity .3s var(--ease), transform .3s var(--ease);
+    box-shadow:0 14px 30px -18px #000;
+  }
+  .claim.show{ opacity:1; }
+  .claim b{ color:var(--text); font-weight:600; }
+  .claim .quote{ font-family:var(--mono); color:var(--gold); }
+
+  /* ---------- judges ---------- */
+  .grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:18px; }
+  @media(max-width:680px){ .grid{ grid-template-columns:1fr; } }
+  .judge{
+    border:1px solid var(--line); border-radius:var(--r); background:var(--panel);
+    padding:18px; position:relative; overflow:hidden;
+    transition:border-color .3s var(--ease);
+  }
+  .judge::before{ content:""; position:absolute; inset:0 0 auto 0; height:3px; background:var(--line); transition:background .3s var(--ease); }
+  .judge.pass::before{ background:var(--mint); } .judge.pass{ border-color:var(--mint-dim); }
+  .judge.fail::before{ background:var(--rose); } .judge.fail{ border-color:var(--rose-dim); }
+  .judge.wrong::before{ background:var(--rose); } .judge.wrong{ border-color:var(--rose-dim); }
+  .judge .jhead{ display:flex; align-items:center; gap:10px; margin-bottom:4px; }
+  .judge .jname{ font-size:14.5px; font-weight:640; }
+  .judge .jkind{ font-family:var(--mono); font-size:10px; color:var(--faint); letter-spacing:.08em; text-transform:uppercase; }
+  .judge .jdesc{ color:var(--muted); font-size:12.5px; min-height:34px; margin:6px 0 14px; }
+  .judge .verdict{
+    display:inline-flex; align-items:center; gap:8px; font-family:var(--mono); font-weight:660;
+    font-size:13px; letter-spacing:.02em; padding:7px 12px; border-radius:8px;
+    background:var(--panel-2); color:var(--muted); border:1px solid var(--line);
+    transition:all .3s var(--ease);
+  }
+  .judge .verdict .dot{ width:8px; height:8px; border-radius:50%; background:var(--faint); transition:background .3s var(--ease); }
+  .judge.pass .verdict{ color:var(--mint); border-color:var(--mint-dim); background:rgba(70,214,163,.07); }
+  .judge.pass .verdict .dot{ background:var(--mint); }
+  .judge.fail .verdict{ color:var(--rose); border-color:var(--rose-dim); background:rgba(255,85,103,.07); }
+  .judge.fail .verdict .dot{ background:var(--rose); }
+  .judge.wrong .verdict{ color:var(--rose); border-color:var(--rose-dim); background:rgba(255,85,103,.07); }
+  .judge.wrong .verdict .dot{ background:var(--rose); }
+  .judge .flag{
+    position:absolute; top:16px; right:16px; font-family:var(--mono); font-size:10px; font-weight:700;
+    letter-spacing:.1em; text-transform:uppercase; color:var(--rose);
+    border:1px solid var(--rose-dim); background:rgba(255,85,103,.08); padding:3px 8px; border-radius:6px;
+    opacity:0; transition:opacity .3s var(--ease);
+  }
+  .judge.wrong .flag{ opacity:1; }
+  .judge .thinking{ font-family:var(--mono); font-size:11px; color:var(--gold); opacity:0; transition:opacity .2s var(--ease); }
+  .judge .thinking.on{ opacity:1; }
+  .judge .thinking .d{ animation:blink 1s infinite; }
+  .judge .thinking .d:nth-child(2){ animation-delay:.2s; } .judge .thinking .d:nth-child(3){ animation-delay:.4s; }
+  @keyframes blink{ 0%,100%{ opacity:.25; } 50%{ opacity:1; } }
+
+  /* ---------- re-execution meter ---------- */
+  .reexec{ border:1px solid var(--line); border-radius:var(--r); background:var(--panel); padding:18px 20px; margin-top:16px; }
+  .reexec .rtop{ display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+  .reexec .rtitle{ font-size:13px; font-weight:640; }
+  .reexec .rtitle .sub{ font-family:var(--mono); font-size:11px; color:var(--faint); font-weight:400; letter-spacing:.03em; margin-left:8px; }
+  .reexec .readout{ font-family:var(--mono); font-size:13px; color:var(--muted); }
+  .reexec .readout b{ color:var(--text); }
+  .meter{ position:relative; height:26px; border-radius:8px; background:var(--panel-2); border:1px solid var(--line); overflow:hidden; }
+  .meter .fill{ position:absolute; inset:0 auto 0 0; width:0%; border-radius:7px 0 0 7px;
+    background:linear-gradient(90deg,var(--mint-dim),var(--mint)); transition:width 1.1s var(--ease); }
+  .meter .fill.bad{ background:linear-gradient(90deg,var(--rose-dim),var(--rose)); }
+  .meter .expected{ position:absolute; top:-6px; bottom:-6px; left:100%; width:2px; background:var(--gold); transform:translateX(-2px); }
+  .meter .exlabel{ position:absolute; right:8px; top:50%; transform:translateY(-50%); font-family:var(--mono); font-size:10px; color:var(--faint); letter-spacing:.05em; }
+  .reexec .mlabels{ display:flex; justify-content:space-between; font-family:var(--mono); font-size:10.5px; color:var(--faint); margin-top:7px; letter-spacing:.03em; }
+
+  /* ---------- caption / status ---------- */
+  .caption{
+    display:flex; align-items:center; gap:12px; margin-top:18px; min-height:26px;
+    font-size:15px; font-weight:520;
+  }
+  .caption .pip{ width:9px; height:9px; border-radius:50%; background:var(--faint); flex:0 0 auto; transition:background .3s var(--ease); }
+  .caption.mint .pip{ background:var(--mint); box-shadow:0 0 12px var(--mint); }
+  .caption.rose .pip{ background:var(--rose); box-shadow:0 0 12px var(--rose); }
+  .caption.mint{ color:var(--mint); } .caption.rose{ color:var(--rose); }
+
+  /* ---------- receipts (secondary, expandable) ---------- */
+  details.receipts{ margin-top:20px; border:1px solid var(--line); border-radius:var(--r); background:var(--panel); overflow:hidden; }
+  details.receipts > summary{
+    list-style:none; cursor:pointer; padding:14px 18px; display:flex; align-items:center; gap:12px;
+    font-family:var(--mono); font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted);
+    transition:color .2s var(--ease);
+  }
+  details.receipts > summary:hover{ color:var(--text); }
+  details.receipts > summary::-webkit-details-marker{ display:none; }
+  details.receipts > summary .chev{ margin-left:auto; transition:transform .25s var(--ease); }
+  details.receipts[open] > summary .chev{ transform:rotate(90deg); }
+  .receipts .settled{ display:inline-flex; align-items:center; gap:6px; color:var(--mint); }
+  .receipts .settled .dot{ width:7px; height:7px; border-radius:50%; background:var(--mint); box-shadow:0 0 8px var(--mint); }
+  .rbody{ border-top:1px solid var(--line); padding:6px 18px 16px; }
+  .rrow{ display:grid; grid-template-columns:170px 1fr; gap:10px 18px; padding:11px 0; border-bottom:1px solid rgba(38,48,62,.5); align-items:baseline; }
+  .rrow:last-child{ border-bottom:0; }
+  .rrow .k{ font-family:var(--mono); font-size:11px; color:var(--faint); letter-spacing:.05em; text-transform:uppercase; }
+  .rrow .v{ font-family:var(--mono); font-size:12.5px; color:var(--text); word-break:break-all; }
+  .rrow .v .tag{ display:inline-block; padding:2px 7px; border-radius:5px; font-size:10.5px; border:1px solid var(--line); color:var(--muted); margin-left:2px; }
+  .rrow .v .hash{ color:var(--gold); }
+  @media(max-width:520px){ .rrow{ grid-template-columns:1fr; gap:4px; } }
+
+  footer.foot{ margin-top:28px; color:var(--faint); font-size:12px; font-family:var(--mono); letter-spacing:.03em; display:flex; flex-wrap:wrap; gap:6px 14px; align-items:center; }
+  footer.foot .sep{ opacity:.4; }
+
+  .sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:.001ms !important; transition-duration:.001ms !important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <div class="brand">
+        <svg class="mark" viewBox="0 0 40 40" aria-hidden="true">
+          <rect x="1.5" y="1.5" width="37" height="37" rx="10" fill="#12171f" stroke="#26303e"/>
+          <path d="M11 28V12h8.2c3.4 0 5.6 1.9 5.6 5 0 2.3-1.3 3.9-3.4 4.6L26 28h-4.3l-3.1-5.6H15V28h-4z" fill="#f4b53f"/>
+          <path d="M15 15.4v4.2h3.6c1.5 0 2.4-.8 2.4-2.1 0-1.3-.9-2.1-2.4-2.1H15z" fill="#12171f"/>
+          <circle cx="29.5" cy="13" r="3" fill="none" stroke="#46d6a3" stroke-width="1.6"/>
+          <path d="M28.2 13l.9.9 1.8-1.9" stroke="#46d6a3" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div>
+          <div class="wordmark">Reckn</div>
+          <div class="tagline">Reproduce, or refund</div>
+        </div>
+      </div>
+    </div>
+    <p class="lede">Escrow for agent-to-agent payments. A disputed delivery is settled by <b>deterministic re-execution</b> — replaying the seller's actual on-chain plan — not by an opinion.</p>
+  </header>
+
+  <div class="controls" role="group" aria-label="Scenario controls">
+    <div class="seg" role="group" aria-label="Choose delivery">
+      <button type="button" class="honest" id="btnHonest" aria-pressed="false">Honest delivery</button>
+      <button type="button" class="false" id="btnFalse" aria-pressed="true">False claim</button>
+    </div>
+    <button type="button" class="btn" id="btnReplay">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12a8 8 0 108-8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 4v5h5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Replay
+    </button>
+    <label class="rm-toggle"><input type="checkbox" id="rmToggle"> instant mode</label>
+  </div>
+
+  <!-- ===================== STAGE ===================== -->
+  <section class="stage-shell" id="shell" aria-label="Money-shot animation">
+    <div class="stage-glow mint" id="glowMint"></div>
+    <div class="stage-glow rose" id="glowRose"></div>
+
+    <div id="stage">
+      <svg class="track" viewBox="0 0 1000 290" preserveAspectRatio="none" aria-hidden="true">
+        <path class="rail" d="M120 145 H460"/>
+        <path class="rail" d="M540 145 H880"/>
+      </svg>
+
+      <!-- Buyer -->
+      <div class="node" id="nBuyer">
+        <div class="disc">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="4" stroke="#e8edf4" stroke-width="1.7"/><path d="M4.5 20c0-3.6 3.4-6 7.5-6s7.5 2.4 7.5 6" stroke="#e8edf4" stroke-width="1.7" stroke-linecap="round"/></svg>
+        </div>
+        <div class="role">Buyer agent</div>
+        <div class="sub">payer</div>
+      </div>
+
+      <!-- Escrow vault -->
+      <div class="vault" id="nEscrow">
+        <div class="box">
+          <div class="lbl">In escrow</div>
+          <div class="amt">1,000 USDC</div>
+          <div class="lbl" style="color:var(--gold-dim)">x402 · EIP-3009</div>
+        </div>
+        <div class="cap">held pending verdict</div>
+      </div>
+
+      <!-- Seller -->
+      <div class="node" id="nSeller">
+        <div class="disc">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="7" width="17" height="12" rx="2.5" stroke="#e8edf4" stroke-width="1.7"/><path d="M8 7V5.5A2.5 2.5 0 0110.5 3h3A2.5 2.5 0 0116 5.5V7" stroke="#e8edf4" stroke-width="1.7"/></svg>
+        </div>
+        <div class="role">Seller agent</div>
+        <div class="sub">delivers swap</div>
+      </div>
+
+      <!-- claim banner -->
+      <div class="claim" id="claim" role="status">
+        <b>Seller claims:</b> <span class="quote">“1024 USDC out ✅ — please release.”</span>
+      </div>
+
+      <!-- moving money -->
+      <div class="pot" id="pot"><span class="coin"></span>1,000</div>
+      <div class="ghost" id="ghost"><span class="x">✕</span>1,000</div>
+
+      <!-- verdict stamps -->
+      <div class="stamp reproduced" id="stampGood">Reproduced</div>
+      <div class="stamp failed" id="stampBad">Failed</div>
+    </div>
+  </section>
+
+  <!-- caption / status -->
+  <p class="caption" id="caption" role="status" aria-live="polite"><span class="pip"></span><span id="captionText">Press Replay to run the dispute.</span></p>
+
+  <!-- ===================== JUDGES ===================== -->
+  <div class="grid">
+    <article class="judge" id="jOpinion">
+      <span class="flag">robbed</span>
+      <div class="jhead">
+        <div>
+          <div class="jname">Opinion Judge</div>
+          <div class="jkind">LLM · reads the claim</div>
+        </div>
+      </div>
+      <p class="jdesc">Takes the seller's word. Reads the message, forms an opinion, and approves. It never checks what actually executed.</p>
+      <span class="verdict" id="vOpinion"><span class="dot"></span><span id="vOpinionText">Awaiting dispute</span></span>
+      <span class="thinking" id="tOpinion">reading claim<span class="d">.</span><span class="d">.</span><span class="d">.</span></span>
+    </article>
+
+    <article class="judge" id="jReckn">
+      <div class="jhead">
+        <div>
+          <div class="jname">Reckn Re-execution</div>
+          <div class="jkind">revm · replays the plan</div>
+        </div>
+      </div>
+      <p class="jdesc">Ignores the claim. Replays the seller's actual plan against the committed pre-state and compares the real output to the funded predicate.</p>
+      <span class="verdict" id="vReckn"><span class="dot"></span><span id="vRecknText">Awaiting dispute</span></span>
+      <span class="thinking" id="tReckn">re-executing<span class="d">.</span><span class="d">.</span><span class="d">.</span></span>
+    </article>
+  </div>
+
+  <!-- ===================== RE-EXEC METER ===================== -->
+  <section class="reexec" aria-label="Re-execution output vs funded predicate">
+    <div class="rtop">
+      <div class="rtitle">Actual swap output <span class="sub">RESULT_EQUALS · expected swap-out = 1024 USDC @ 0.31% slippage</span></div>
+      <div class="readout" id="readout"><b id="roVal">—</b> <span id="roNote"></span></div>
+    </div>
+    <div class="meter">
+      <div class="fill" id="mFill"></div>
+      <div class="expected"></div>
+      <div class="exlabel">expected 1024</div>
+    </div>
+    <div class="mlabels"><span>0 USDC</span><span>replayed against committed pre-state</span><span>1024 USDC</span></div>
+  </section>
+
+  <!-- ===================== RECEIPTS ===================== -->
+  <details class="receipts">
+    <summary>
+      Verification receipt
+      <span class="chev" aria-hidden="true">
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="none"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+    </summary>
+    <div class="rbody">
+      <div class="rrow"><span class="k">Predicate</span><span class="v">RESULT_EQUALS <span class="tag">funded on-chain</span></span></div>
+      <div class="rrow"><span class="k">Expected output</span><span class="v">swap-out=1024USDC@0.31pct-slippage</span></div>
+      <div class="rrow"><span class="k">Replayed output</span><span class="v" id="rActual">—</span></div>
+      <div class="rrow"><span class="k">Engine</span><span class="v">Reckn re-execution · Rust / revm · deterministic</span></div>
+      <div class="rrow"><span class="k">Trace hash</span><span class="v"><span class="hash" id="rHash">—</span></span></div>
+      <div class="rrow"><span class="k">Settlement</span><span class="v" id="rSettle"><span class="settled"><span class="dot"></span>settled on-chain</span></span></div>
+    </div>
+  </details>
+
+  <footer class="foot">
+    <span>Reckn</span><span class="sep">/</span>
+    <span>Reproduce, or refund.</span><span class="sep">/</span>
+    <span>“Opinion Judge” is a generic stand-in for a claim-reading LLM.</span>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var $ = function(id){ return document.getElementById(id); };
+  var systemRM = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+  var el = {
+    shell:$("shell"), stage:document.getElementById("stage"),
+    pot:$("pot"), ghost:$("ghost"),
+    nBuyer:$("nBuyer"), nEscrow:$("nEscrow"), nSeller:$("nSeller"),
+    stampGood:$("stampGood"), stampBad:$("stampBad"),
+    claim:$("claim"),
+    glowMint:$("glowMint"), glowRose:$("glowRose"),
+    jOpinion:$("jOpinion"), jReckn:$("jReckn"),
+    vOpinion:$("vOpinion"), vOpinionText:$("vOpinionText"), tOpinion:$("tOpinion"),
+    vReckn:$("vReckn"), vRecknText:$("vRecknText"), tReckn:$("tReckn"),
+    mFill:$("mFill"), roVal:$("roVal"), roNote:$("roNote"),
+    caption:$("caption"), captionText:$("captionText"),
+    rActual:$("rActual"), rHash:$("rHash"), rSettle:$("rSettle"),
+    btnHonest:$("btnHonest"), btnFalse:$("btnFalse"), btnReplay:$("btnReplay"),
+    rmToggle:$("rmToggle")
+  };
+
+  var HASH = {
+    honest:"0x71ce9c5f338669b974dce7e7660f2f7a121c71ed961269d976ecb095e6c1dd25",
+    "false":"0x2bf9692fe585295592983bf9cec62592dd32e97f3e00bd888e8a765dc8f28fd8"
+  };
+
+  var mode = "false";           // "honest" | "false"
+  var runId = 0;                // cancels stale sequences
+  var reduced = function(){ return el.rmToggle.checked || systemRM.matches; };
+
+  /* ---- cancellable sleep ---- */
+  function wait(ms, id){
+    return new Promise(function(res){
+      if(reduced()) ms = Math.min(ms, 0);
+      setTimeout(function(){ res(id === runId); }, ms);
+    });
+  }
+
+  /* ---- anchor geometry (recomputed each move → responsive) ---- */
+  function centerOf(node){
+    var s = el.stage.getBoundingClientRect();
+    var r = node.getBoundingClientRect();
+    return { x:(r.left + r.width/2) - s.left, y:(r.top + r.height/2) - s.top };
+  }
+  var anchorOf = {};   // remembers each element's current logical node → survives resize
+  function place(elm, node){
+    var c = centerOf(node);
+    anchorOf[elm.id] = node;
+    elm.style.transform = "translate(" + c.x + "px," + c.y + "px)";
+  }
+  function moveTo(elm, node, dur, ease){
+    var c = centerOf(node);
+    anchorOf[elm.id] = node;
+    if(reduced()){ elm.style.transition="none"; elm.style.transform="translate("+c.x+"px,"+c.y+"px)"; return Promise.resolve(); }
+    elm.style.transition = "transform " + dur + "ms " + (ease || "var(--ease)");
+    // force reflow so a new transition always fires
+    void elm.offsetWidth;
+    elm.style.transform = "translate(" + c.x + "px," + c.y + "px)";
+    return new Promise(function(res){ setTimeout(res, dur); });
+  }
+
+  /* ---- number count-up ---- */
+  function countTo(elm, from, to, dur, suffix){
+    suffix = suffix || "";
+    if(reduced()){ elm.textContent = to + suffix; return Promise.resolve(); }
+    var t0 = null;
+    return new Promise(function(res){
+      function step(t){
+        if(t0===null) t0=t;
+        var p = Math.min((t-t0)/dur, 1);
+        var e = 1 - Math.pow(1-p, 3);
+        elm.textContent = Math.round(from + (to-from)*e) + suffix;
+        if(p<1) requestAnimationFrame(step); else res();
+      }
+      requestAnimationFrame(step);
+    });
+  }
+
+  /* ---- reset everything to neutral ---- */
+  function reset(){
+    place(el.pot, el.nBuyer);
+    place(el.ghost, el.nBuyer);
+    el.ghost.style.opacity = "0";
+    el.ghost.classList.remove("crossed");
+    el.pot.classList.remove("snap-flash");
+    el.stampGood.classList.remove("show");
+    el.stampBad.classList.remove("show");
+    el.claim.classList.remove("show");
+    el.glowMint.classList.remove("on");
+    el.glowRose.classList.remove("on");
+    ["nBuyer","nEscrow","nSeller"].forEach(function(k){ el[k].className = el[k].className.replace(/\s*lit-(mint|rose|gold)/g,""); });
+    el.jOpinion.className = "judge"; el.jReckn.className = "judge";
+    el.vOpinionText.textContent = "Awaiting dispute"; el.vRecknText.textContent = "Awaiting dispute";
+    el.tOpinion.classList.remove("on"); el.tReckn.classList.remove("on");
+    el.mFill.style.width = "0%"; el.mFill.classList.remove("bad");
+    el.roVal.textContent = "—"; el.roNote.textContent = "";
+    el.caption.className = "caption";
+    el.rActual.textContent = "—";
+    el.rHash.textContent = "—";
+  }
+
+  function setCaption(text, tone){
+    el.captionText.textContent = text;
+    el.caption.className = "caption" + (tone ? " " + tone : "");
+  }
+
+  /* ============ SEQUENCES ============ */
+
+  async function runHonest(id){
+    reset();
+    setCaption("Buyer funds 1,000 USDC into escrow.", null);
+    el.nBuyer.className += " lit-gold";
+    if(!(await wait(350,id))) return;
+
+    // pot travels to escrow
+    el.nEscrow.className += " lit-gold";
+    await moveTo(el.pot, el.nEscrow, 780, "var(--ease)");
+    if(id!==runId) return;
+    el.nBuyer.className = el.nBuyer.className.replace(/\s*lit-gold/,"");
+    setCaption("Dispute opened. Both judges review the delivery.", null);
+    if(!(await wait(300,id))) return;
+
+    // both think
+    el.tOpinion.classList.add("on"); el.tReckn.classList.add("on");
+    el.roNote.textContent = "replaying plan…";
+    // meter fills to full, count 0->1024
+    el.mFill.style.width = "100%";
+    await countTo(el.roVal, 0, 1024, 950, " USDC");
+    if(id!==runId) return;
+    el.tOpinion.classList.remove("on"); el.tReckn.classList.remove("on");
+    el.roNote.textContent = "@ 0.31% slippage";
+
+    // verdicts — both agree
+    el.jOpinion.className = "judge pass"; el.vOpinionText.textContent = "Approve";
+    el.jReckn.className = "judge pass"; el.vRecknText.textContent = "Reproduced";
+    el.rActual.textContent = "swap-out=1024USDC@0.31pct-slippage";
+    el.rHash.textContent = HASH.honest;
+    el.stampGood.classList.add("show");
+    el.glowMint.classList.add("on");
+    el.nEscrow.className = el.nEscrow.className.replace(/\s*lit-gold/,"") + " lit-mint";
+    if(!(await wait(650,id))) return;
+
+    // release to seller
+    setCaption("Output reproduced. Release 1,000 USDC to seller.", "mint");
+    el.stampGood.classList.remove("show");
+    el.nSeller.className += " lit-mint";
+    await moveTo(el.pot, el.nSeller, 720, "var(--ease)");
+    if(id!==runId) return;
+  }
+
+  async function runFalse(id){
+    reset();
+    setCaption("Buyer funds 1,000 USDC into escrow.", null);
+    el.nBuyer.className += " lit-gold";
+    if(!(await wait(350,id))) return;
+
+    el.nEscrow.className += " lit-gold";
+    await moveTo(el.pot, el.nEscrow, 780, "var(--ease)");
+    if(id!==runId) return;
+    el.nBuyer.className = el.nBuyer.className.replace(/\s*lit-gold/,"");
+
+    // seller claim
+    el.claim.classList.add("show");
+    setCaption("Seller claims success and asks for release.", null);
+    if(!(await wait(750,id))) return;
+
+    // opinion judge reads the claim and approves — believing the lie
+    el.tOpinion.classList.add("on");
+    if(!(await wait(650,id))) return;
+    el.tOpinion.classList.remove("on");
+    el.jOpinion.className = "judge wrong"; el.vOpinionText.textContent = "Approve — pays the claim";
+    setCaption("Opinion Judge believes the claim — and would pay the scammer.", "rose");
+
+    // ghost/decoy payment starts sliding to seller (the wrong outcome)
+    place(el.ghost, el.nEscrow);
+    el.ghost.style.transition = "opacity .25s var(--ease)";
+    el.ghost.style.opacity = "1";
+    moveTo(el.ghost, el.nSeller, 900, "var(--ease)");
+    if(!(await wait(360,id))) return;
+
+    // meanwhile Reckn re-executes the real plan
+    el.tReckn.classList.add("on");
+    el.roNote.textContent = "re-executing plan against pre-state…";
+    if(!(await wait(620,id))) return;
+
+    // the truth: only 6 USDC out
+    el.mFill.classList.add("bad");
+    el.mFill.style.width = "0.6%";
+    await countTo(el.roVal, 1024, 6, 900, " USDC");
+    if(id!==runId) return;
+    el.roNote.textContent = "@ 98.7% slippage — expected 1024";
+    el.tReckn.classList.remove("on");
+    el.jReckn.className = "judge fail"; el.vRecknText.textContent = "Failed — not reproduced";
+    el.rActual.textContent = "swap-out=0006USDC@98.7pct-slippage";
+    el.rHash.textContent = HASH["false"];
+    if(!(await wait(240,id))) return;
+
+    // SNAP: verdict slams, screen shakes, ghost payment is yanked / crossed, real pot recoils to buyer
+    setCaption("6 USDC — not 1024. Predicate failed. Refund the buyer.", "rose");
+    el.stampBad.classList.add("show");
+    el.glowRose.classList.add("on");
+    el.shell.classList.remove("shake"); void el.shell.offsetWidth; el.shell.classList.add("shake");
+
+    // cross out and retract the wrong payment
+    el.ghost.classList.add("crossed");
+    moveTo(el.ghost, el.nEscrow, 260, "var(--snap)");
+
+    // snap the real money back to the buyer with overshoot
+    el.pot.classList.add("snap-flash");
+    el.nSeller.className = el.nSeller.className.replace(/\s*lit-(mint|rose)/g,"");
+    el.nBuyer.className += " lit-mint";
+    await moveTo(el.pot, el.nBuyer, 520, "var(--snap)");
+    if(id!==runId) return;
+    el.ghost.style.opacity = "0";
+    el.nEscrow.className = el.nEscrow.className.replace(/\s*lit-gold/,"") + " lit-rose";
+    if(!(await wait(500,id))) return;
+    el.stampBad.classList.remove("show");
+    setCaption("1,000 USDC refunded to buyer. Scam blocked by re-execution.", "mint");
+  }
+
+  function run(){
+    runId++;
+    var id = runId;
+    el.shell.classList.remove("shake");
+    if(mode === "honest") runHonest(id); else runFalse(id);
+  }
+
+  /* ---- controls ---- */
+  function setMode(m){
+    mode = m;
+    el.btnHonest.setAttribute("aria-pressed", m==="honest" ? "true":"false");
+    el.btnFalse.setAttribute("aria-pressed", m==="false" ? "true":"false");
+    run();
+  }
+  el.btnHonest.addEventListener("click", function(){ setMode("honest"); });
+  el.btnFalse.addEventListener("click", function(){ setMode("false"); });
+  el.btnReplay.addEventListener("click", run);
+  el.rmToggle.addEventListener("change", function(){ runId++; reset(); setCaption("Instant mode — press Replay to see the verdict.", null); });
+
+  /* ---- keep pot/ghost anchored to their logical node on resize ---- */
+  var rt;
+  window.addEventListener("resize", function(){
+    clearTimeout(rt);
+    rt = setTimeout(function(){
+      [el.pot, el.ghost].forEach(function(m){
+        var node = anchorOf[m.id];
+        if(!node) return;
+        var c = centerOf(node);
+        m.style.transition = "none";
+        m.style.transform = "translate(" + c.x + "px," + c.y + "px)";
+      });
+    }, 100);
+  });
+
+  /* ---- boot: autoplay the hero (false claim) ---- */
+  reset();
+  place(el.pot, el.nBuyer);
+  // small delay so layout settles before first measure
+  setTimeout(function(){ place(el.pot, el.nBuyer); run(); }, 260);
+
+})();
+</script>
+</body>
+</html>
