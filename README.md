@@ -112,7 +112,10 @@ packages/protocol/          # canonical cross-VM codecs — started
   REPLAY_RECORD_V1.md       #   ReplayRecordV1 TLV spec (trace_hash source)
   golden/                   #   cross-language conformance vectors
 dashboard/                  # LLM-judge vs replay money-shot — implemented
-  index.html                #   self-contained split-screen, real engine data
+  index.html                #   cinematic money-shot: money moves, live keeper
+                            #   console + ledger, on-chain resolve receipt
+  variants/                 #   design exploration (v1–v5); v5 is promoted above
+  media/reckn-moneyshot.gif #   README hero animation
 keeper/                     # resolver keeper — replay, EIP-712 signature, live chain shell
   src/lib.rs                #   verified core: build + EIP-712-sign VerdictCommitment
   src/main.rs               #   chain shell (subscribe / fetch / submit) — stub
@@ -145,8 +148,8 @@ remains is judge-legibility integrations and production content publication.
   `ReputationEvidence(agent, reproduced, dealId, traceHash, backendId)` — a pure
   projection that never changes settlement. Unlike AgentRankr's self-reported,
   sybil-gameable feedback, the seller-agent's reputation is **earned by a
-  reproducible verdict**: anyone can re-derive `traceHash`. Surfaced in the
-  dashboard.
+  reproducible verdict**: anyone can re-derive `traceHash`. Emitted on-chain and
+  asserted by contract tests.
 - **Re-execution backend (EVM V1):** revm 38 replay implemented in
   [`reexec-evm/`](reexec-evm) — deterministic CALL replay with `RESULT_EQUALS` /
   `POSTSTATE_EQUALS` predicates. Honest delivery → `Reproduced`; a seller's false
@@ -155,10 +158,12 @@ remains is judge-legibility integrations and production content publication.
   witness is an operational error, not a verdict. Replay ignores tx-validity
   ceremony (base-fee / nonce) so honest deliveries reproduce against real blocks;
   balance for `value` is still enforced. `cargo test`: **6 passing**.
-- **Money-shot dashboard:** [`dashboard/`](dashboard) — a self-contained
-  split-screen (opinion judge vs re-execution) driven by real `reexec-evm` output.
-  Same dispute: the opinion judge releases escrow to a false claim; Reckn replays
-  the actual plan and refunds the buyer.
+- **Money-shot dashboard:** [`dashboard/`](dashboard) — a self-contained,
+  animated money-shot driven by real `reexec-evm` output: the escrow pot moves, a
+  live `reckn-keeper` console + ledger stream the resolve, and the outcome lands on
+  an on-chain `resolve()` receipt. Same dispute — the opinion judge releases escrow
+  to a false claim; Reckn replays the actual plan and refunds the buyer. Live:
+  <https://claude.ai/code/artifact/88a370e4-bfeb-480c-af14-015661e6e6f7>.
 - **Keeper (chain shell + settlement signature):** [`keeper/`](keeper) — maps a reproducible
   replay to the `VerdictCommitment` and EIP-712-signs it. The digest is
   cross-checked against the contract in both Rust and Foundry (a shared golden),

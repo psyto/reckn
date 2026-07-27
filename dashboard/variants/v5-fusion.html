@@ -27,7 +27,7 @@
     color-scheme: dark;
     --void:#0a0d13; --panel:#12171f; --panel2:#171d27; --panel3:#0e131b;
     --line:#26303e; --line-soft:#1b232f;
-    --ink:#e8edf4; --mute:#8a96a8; --faint:#5c6778;
+    --ink:#e8edf4; --mute:#a1adbd; --faint:#738196;
     --gold:#f4b53f; --gold-dim:#7a5e21; --gold-ink:#3a2a05;
     --mint:#46d6a3; --mint-dim:#1f5344; --mint-ink:#0c2a25;
     --rose:#ff5567; --rose-dim:#5a2530; --rose-ink:#2c1417;
@@ -41,10 +41,10 @@
   }
   :root[data-theme="light"]{
     color-scheme: light;
-    --void:#eef1f6; --panel:#ffffff; --panel2:#f5f7fb; --panel3:#eaeef5;
-    --line:#d6deea; --line-soft:#e3e9f2;
-    --ink:#16202b; --mute:#4b5b6e; --faint:#8494a7;
-    --gold:#b07a1e; --gold-dim:#e6cf9c; --gold-ink:#fff;
+    --void:#f1f4f8; --panel:#ffffff; --panel2:#f5f7fb; --panel3:#e9eef5;
+    --line:#cbd6e4; --line-soft:#e0e7f0;
+    --ink:#142131; --mute:#405268; --faint:#62748b;
+    --gold:#9a6816; --gold-dim:#8a5b10; --gold-ink:#fff;
     --mint:#0f8f76; --mint-dim:#bfeae1; --mint-ink:#083b31;
     --rose:#cc2f36; --rose-dim:#f4cdce; --rose-ink:#5c1417;
     --azure:#2f5fd0; --azure-dim:#c7d5f6; --azure-ink:#12336e;
@@ -53,10 +53,10 @@
   @media (prefers-color-scheme: light){
     :root:not([data-theme="dark"]):not([data-theme="light"]){
       color-scheme: light;
-      --void:#eef1f6; --panel:#ffffff; --panel2:#f5f7fb; --panel3:#eaeef5;
-      --line:#d6deea; --line-soft:#e3e9f2;
-      --ink:#16202b; --mute:#4b5b6e; --faint:#8494a7;
-      --gold:#b07a1e; --gold-dim:#e6cf9c;
+      --void:#f1f4f8; --panel:#ffffff; --panel2:#f5f7fb; --panel3:#e9eef5;
+      --line:#cbd6e4; --line-soft:#e0e7f0;
+      --ink:#142131; --mute:#405268; --faint:#62748b;
+      --gold:#9a6816; --gold-dim:#8a5b10;
       --mint:#0f8f76; --mint-dim:#bfeae1;
       --rose:#cc2f36; --rose-dim:#f4cdce;
       --azure:#2f5fd0; --azure-dim:#c7d5f6;
@@ -83,7 +83,7 @@
   button{ font-family:inherit; }
   .tnum{ font-variant-numeric:tabular-nums; }
   .mono{ font-family:var(--mono); }
-  :focus-visible{ outline:2px solid var(--azure); outline-offset:2px; border-radius:5px; }
+  :focus-visible{ outline:3px solid var(--azure); outline-offset:3px; border-radius:6px; }
 
   /* ---------- header ---------- */
   header.top{
@@ -100,7 +100,7 @@
   .seg button{
     font-family:var(--sans); font-size:13px; font-weight:560; color:var(--mute);
     background:transparent; border:0; padding:8px 15px; border-radius:8px; cursor:pointer;
-    transition:color .18s var(--ease), background .18s var(--ease); letter-spacing:.01em; white-space:nowrap;
+    min-height:40px; transition:color .18s var(--ease), background .18s var(--ease); letter-spacing:.01em; white-space:nowrap;
   }
   .seg button:hover{ color:var(--ink); }
   .seg button[aria-pressed="true"]{ color:var(--void); background:var(--ink); }
@@ -111,7 +111,7 @@
   .btn{
     font-family:var(--sans); font-size:13px; font-weight:580; color:var(--ink);
     background:var(--panel); border:1px solid var(--line); padding:9px 16px; border-radius:10px;
-    cursor:pointer; display:inline-flex; align-items:center; gap:8px;
+    min-height:42px; cursor:pointer; display:inline-flex; align-items:center; gap:8px;
     transition:border-color .18s var(--ease), background .18s var(--ease), transform .1s var(--ease);
   }
   .btn:hover{ border-color:var(--azure); background:var(--panel2); }
@@ -119,7 +119,7 @@
   .btn[disabled]{ opacity:.5; cursor:default; }
   .btn svg{ width:15px; height:15px; }
   .icon-btn{
-    appearance:none; width:38px; height:38px; display:inline-flex; align-items:center; justify-content:center;
+    appearance:none; width:42px; height:42px; display:inline-flex; align-items:center; justify-content:center;
     background:var(--panel); border:1px solid var(--line); color:var(--mute);
     border-radius:10px; cursor:pointer; transition:color .18s, border-color .18s;
   }
@@ -146,7 +146,7 @@
   .stage-shell{
     position:relative; border:1px solid var(--line); border-radius:var(--r);
     background:linear-gradient(180deg, var(--panel) 0%, var(--panel3) 100%);
-    box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,.02);
+    box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,.05);
     overflow:hidden; margin-bottom:16px;
   }
   .stage-head{ display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; padding:12px 16px 0; }
@@ -209,9 +209,10 @@
 
   .pot, .ghost{
     position:absolute; top:0; left:0; z-index:5;
-    width:90px; height:54px; margin-left:-45px; margin-top:-27px;
+    width:96px; height:54px; margin-left:-48px; margin-top:-27px;
     border-radius:13px; display:flex; align-items:center; justify-content:center; gap:7px;
     font-family:var(--mono); font-weight:640; font-size:13.5px; letter-spacing:-.01em;
+    font-variant-numeric:tabular-nums;
     will-change:transform; pointer-events:none;
   }
   .pot{
@@ -285,9 +286,9 @@
   .log{
     flex:1; margin:0; padding:12px 14px 16px;
     font-family:var(--mono); font-size:12px; line-height:1.62; color:var(--mute);
-    overflow-x:auto; overflow-y:auto; min-height:240px; max-height:300px; scrollbar-width:thin;
+    overflow-x:hidden; overflow-y:auto; min-height:240px; max-height:300px; scrollbar-width:thin;
   }
-  .log .ln{ display:block; white-space:pre; animation:rise .22s ease both; }
+  .log .ln{ display:block; white-space:pre-wrap; overflow-wrap:anywhere; word-break:break-word; animation:rise .16s ease both; }
   @keyframes rise{ from{ opacity:0; transform:translateY(3px); } to{ opacity:1; transform:none; } }
   .log .ts{ color:var(--faint); }
   .log .sev{ display:inline-block; min-width:76px; color:var(--faint); }
@@ -402,8 +403,7 @@
   @keyframes beacon{ 0%{ box-shadow:0 0 0 0 color-mix(in oklab, var(--mint) 60%, transparent); } 100%{ box-shadow:0 0 0 8px transparent; } }
   @keyframes beaconR{ 0%{ box-shadow:0 0 0 0 color-mix(in oklab, var(--rose) 60%, transparent); } 100%{ box-shadow:0 0 0 8px transparent; } }
   .rcpt-chain{ font-family:var(--mono); font-size:11px; color:var(--faint); }
-  .txrow{ display:flex; align-items:center; gap:12px; padding:13px 18px; border-bottom:1px solid var(--line); text-decoration:none; color:inherit; cursor:pointer; transition:background .15s; min-width:0; }
-  .txrow:hover{ background:var(--panel2); }
+  .txrow{ display:flex; align-items:center; gap:12px; padding:13px 18px; border-bottom:1px solid var(--line); color:inherit; min-width:0; }
   .txrow .method{ font-family:var(--mono); font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px; background:var(--panel2); border:1px solid var(--line); color:var(--ink); flex:none; }
   .txrow .hash{ font-family:var(--mono); font-size:12.5px; color:var(--azure); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex:1; }
   .txrow .ext{ color:var(--faint); font-size:11px; display:inline-flex; align-items:center; gap:5px; flex:none; }
@@ -417,16 +417,35 @@
   .flowline{ display:flex; align-items:center; gap:8px; font-family:var(--mono); font-size:12px; }
   .flowline .arrow{ color:var(--faint); }
   .flowline .to.buyer{ color:var(--rose); } .flowline .to.seller{ color:var(--mint); }
-  .rcpt-foot{ padding:11px 18px; font-family:var(--mono); font-size:11px; color:var(--faint); display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px; overflow-x:auto; }
+  .rcpt-foot{ padding:11px 18px; font-family:var(--mono); font-size:11px; color:var(--faint); display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px; min-width:0; }
   .rcpt-foot .evt{ color:var(--ink); }
-  .rcpt-foot .trace{ color:var(--azure); }
+  .rcpt-foot .trace{ color:var(--azure); overflow-wrap:anywhere; word-break:break-all; max-width:100%; }
 
   /* ---------- footer ---------- */
   .foot{ margin-top:24px; display:flex; flex-wrap:wrap; gap:8px 22px; padding-top:16px; border-top:1px solid var(--line); font-family:var(--mono); font-size:11px; color:var(--faint); }
   .foot b{ color:var(--mute); font-weight:600; }
   .footnote{ margin-top:12px; font-size:11.5px; color:var(--faint); line-height:1.55; max-width:78ch; }
 
-  @media(max-width:680px){ .rcpt-grid{ grid-template-columns:1fr; } .stamp{ font-size:22px; } }
+  @media(max-width:680px){
+    .wrap{ padding-top:18px; }
+    header.top{ gap:13px; }
+    .controls{ width:100%; gap:8px; }
+    .seg{ flex:1; }
+    .seg button{ flex:1; padding-inline:9px; }
+    #stage{ height:250px; padding-inline:16px; }
+    .node{ width:92px; }
+    .node .disc{ width:62px; height:62px; margin-bottom:8px; border-radius:17px; }
+    .node .role{ font-size:12px; }
+    .node .sub{ font-size:9px; }
+    .vault{ width:108px; }
+    .vault .box{ width:96px; height:96px; border-radius:18px; }
+    .claim{ font-size:11px; max-width:94%; top:10px; }
+    .log{ min-height:220px; max-height:280px; font-size:11.5px; }
+    .term-status{ font-size:10px; }
+    .rcpt-grid{ grid-template-columns:1fr; }
+    .stamp{ font-size:22px; }
+    .txrow .ext{ display:none; }
+  }
   @media (prefers-reduced-motion: reduce){
     *,*::before,*::after{ animation-duration:.001ms !important; transition-duration:.001ms !important; }
     .cursor{ display:none; }
@@ -461,7 +480,7 @@
         Replay
       </button>
       <label class="rm-toggle"><input type="checkbox" id="rmToggle"> instant</label>
-      <button type="button" class="icon-btn" id="themeBtn" aria-label="Toggle light and dark theme" title="Toggle theme">
+      <button type="button" class="icon-btn" id="themeBtn" aria-pressed="false" aria-label="Switch to light theme" title="Toggle theme">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true"><path d="M21 12.8A8 8 0 1 1 11.2 3a6.2 6.2 0 0 0 9.8 9.8Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
       </button>
     </div>
@@ -504,7 +523,7 @@
         <div class="box">
           <div class="lbl">In escrow</div>
           <div class="amt tnum" id="vaultAmt">1,000 USDC</div>
-          <div class="lbl" style="color:var(--gold-dim)">x402 · EIP-3009</div>
+          <div class="lbl" style="color:var(--gold)">x402 · EIP-3009</div>
         </div>
         <div class="cap">held pending verdict</div>
       </div>
@@ -539,7 +558,7 @@
         <span class="term-title">reckn-keeper · dispute #4821</span>
         <span class="term-status"><span class="tx-dot" id="txDot" aria-hidden="true"></span><span id="txState">idle</span></span>
       </div>
-      <pre class="log" id="log" tabindex="0" aria-live="polite" aria-label="Live adjudication console"></pre>
+      <pre class="log" id="log" tabindex="0" aria-live="off" aria-label="Live adjudication console"></pre>
     </div>
 
     <div class="card">
@@ -599,13 +618,11 @@
       <span class="rcpt-status"><span class="beacon"></span><span id="rcptStatus">Awaiting settlement</span></span>
       <span class="rcpt-chain mono">chain 31337 · anvil</span>
     </div>
-    <a class="txrow" id="txrow" href="#" aria-label="Inspect resolve transaction (demo — not a live explorer)">
+    <div class="txrow" id="txrow" aria-label="Local resolve transaction receipt">
       <span class="method">resolve()</span>
       <span class="hash" id="txHash">0x…</span>
-      <span class="ext">view on explorer
-        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </span>
-    </a>
+      <span class="ext">committed locally</span>
+    </div>
     <div class="rcpt-grid">
       <div class="cell"><div class="k">Block</div><div class="val tnum">21,000,000</div></div>
       <div class="cell"><div class="k">Amount moved</div><div class="val amt ref tnum" id="rcptAmount">1,000 USDC</div></div>
@@ -625,7 +642,7 @@
     <span><b>data</b> real engine output · scripted playback · zero network</span>
   </footer>
   <p class="footnote">
-    Verdicts and trace hashes are the real output of Reckn's re-execution engine; settlement is a real <span class="mono">resolve()</span> transaction (chain id 31337 / local anvil in this demo — the same flow targets a public testnet). "Opinion Judge" is a generic stand-in for a claim-reading LLM, not any real product. The explorer link is illustrative only.
+    Verdicts and trace hashes are the real output of Reckn's re-execution engine; settlement is a real <span class="mono">resolve()</span> transaction (chain id 31337 / local anvil in this demo — the same flow targets a public testnet). "Opinion Judge" is a generic stand-in for a claim-reading LLM, not any real product.
   </p>
 
 </div>
@@ -701,20 +718,24 @@
   }
 
   /* ---- geometry-based movers (v1) ---- */
-  function centerOf(node){
+  function moverPoint(node){
     var s = el.stage.getBoundingClientRect();
     var r = node.getBoundingClientRect();
-    return { x:(r.left + r.width/2) - s.left, y:(r.top + r.height/2) - s.top };
+    var isVault = node.id === "nEscrow";
+    var y = isVault
+      ? (r.top + r.height/2) - s.top
+      : Math.min(s.height - 38, (r.bottom - s.top) + 30);
+    return { x:(r.left + r.width/2) - s.left, y:y };
   }
   var anchorOf = {};
   function place(elm, node){
-    var c = centerOf(node);
+    var c = moverPoint(node);
     anchorOf[elm.id] = node;
     elm.style.transition = "none";
     elm.style.transform = "translate(" + c.x + "px," + c.y + "px)";
   }
   function moveTo(elm, node, dur, ease){
-    var c = centerOf(node);
+    var c = moverPoint(node);
     anchorOf[elm.id] = node;
     if(reduced()){ elm.style.transition="none"; elm.style.transform="translate("+c.x+"px,"+c.y+"px)"; return Promise.resolve(); }
     elm.style.transition = "transform " + dur + "ms " + (ease || "var(--ease)");
@@ -776,9 +797,10 @@
       var full = tmp.textContent;
       var cursor = document.createElement("span"); cursor.className = "cursor";
       ln.appendChild(cursor);
-      var i = 0, speed = full.length > 58 ? 5 : 9;
+      // Console texture, not a bottleneck: the money-shot must land in <3 s.
+      var i = 0, speed = full.length > 58 ? 2 : 3;
       var iv = setInterval(function(){
-        i += 2;
+        i += 5;
         body.textContent = full.slice(0,i);
         el.log.scrollTop = el.log.scrollHeight;
         if(i >= full.length){
@@ -868,13 +890,13 @@
     // --- funding: pot glides buyer -> escrow ---
     setCaption("Buyer funds 1,000 USDC into escrow.", null);
     el.nBuyer.className += " lit-gold";
-    await wait(320, id); if(dead(id)) return finish();
+    await wait(100, id); if(dead(id)) return finish();
     el.nEscrow.className += " lit-gold";
     el.vaultAmt.textContent = "1,000 USDC";
     el.escrowState.textContent = "1,000 USDC locked";
-    var fund = moveTo(el.pot, el.nEscrow, 780, "var(--ease)");
+    var fund = moveTo(el.pot, el.nEscrow, 470, "var(--ease)");
     el.acctBuyer.classList.add("flash-out"); el.acctEscrow.classList.add("flash-in");
-    animateLedger("buyer",1000,0,760); animateLedger("escrow",0,1000,760);
+    animateLedger("buyer",1000,0,460); animateLedger("escrow",0,1000,460);
     await fund; if(dead(id)) return finish();
     unlit(el.nBuyer);
     await logLine("dispute", 'Dispute <span class="txt em">#4821</span> opened — buyer contests delivery. <span class="hash">1,000 USDC</span> locked in escrow.');
@@ -894,13 +916,13 @@
     el.claim.classList.add("show");
     setCaption("Seller claims success and asks for release.", null);
     await logLine("fetch", 'claim reads <span class="txt warn">'+esc(d.claim)+'</span>');
-    await wait(320, id); if(dead(id)) return finish();
+    await wait(110, id); if(dead(id)) return finish();
 
     // --- opinion judge reads the words ---
     setPhase("opinion judge");
     el.tOpinion.classList.add("on");
     el.opDesc.textContent = "Reading the claim string…";
-    await wait(560, id); if(dead(id)) return finish();
+    await wait(250, id); if(dead(id)) return finish();
     el.tOpinion.classList.remove("on");
     if(d.pass){
       el.jOpinion.className = "judge opinion pass";
@@ -938,11 +960,11 @@
     el.roNote.textContent = "@ slippage " + d.slippage;
     if(d.pass){
       el.mFill.style.width = "100%";
-      await countTo(el.roVal, 0, 1024, 950, " USDC");
+      await countTo(el.roVal, 0, 1024, 520, " USDC");
     } else {
       el.mFill.classList.add("bad");
       el.mFill.style.width = "0.6%";
-      await countTo(el.roVal, 1024, 6, 900, " USDC");
+      await countTo(el.roVal, 1024, 6, 480, " USDC");
     }
     if(dead(id)) return finish();
     el.tReckn.classList.remove("on");
@@ -968,7 +990,7 @@
       await logLine("opinion", 'Opinion Judge <span class="txt bad em">OVERRULED</span> — its APPROVE would have paid a scammer 1,000 USDC.');
     }
     if(dead(id)) return finish();
-    await logLine("verdict", 'verdict trace <span class="hash">'+d.trace.slice(0,18)+'…</span> signed.');
+    await logLine("verdict", 'verdict trace <span class="hash">'+d.trace+'</span> signed.');
     if(dead(id)) return finish();
 
     // --- verdict stamp slams in ---
@@ -985,7 +1007,7 @@
       el.ghost.classList.add("crossed");
       moveTo(el.ghost, el.nEscrow, 260, "var(--snap)");
     }
-    await wait(520, id); if(dead(id)) return finish();
+    await wait(240, id); if(dead(id)) return finish();
 
     // --- resolve tx pending ---
     setPhase("resolving"); setTx("pending","resolve() pending");
@@ -1005,15 +1027,15 @@
     if(d.pass){
       el.stampGood.classList.remove("show");
       el.nSeller.className += " lit-mint";
-      var rel = moveTo(el.pot, el.nSeller, 720, "var(--ease)");
-      animateLedger("escrow",1000,0,700); animateLedger("seller",0,1000,700);
+      var rel = moveTo(el.pot, el.nSeller, 460, "var(--ease)");
+      animateLedger("escrow",1000,0,450); animateLedger("seller",0,1000,450);
       await rel;
     } else {
       el.pot.classList.add("snap-flash");
       unlit(el.nSeller);
       el.nBuyer.className += " lit-mint";
-      var ref = moveTo(el.pot, el.nBuyer, 520, "var(--snap)");
-      animateLedger("escrow",1000,0,520); animateLedger("buyer",0,1000,520);
+      var ref = moveTo(el.pot, el.nBuyer, 360, "var(--snap)");
+      animateLedger("escrow",1000,0,360); animateLedger("buyer",0,1000,360);
       await ref;
       el.ghost.style.opacity = "0";
       unlit(el.nEscrow); el.nEscrow.className += " lit-rose";
@@ -1022,7 +1044,9 @@
 
     // --- confirmed ---
     setTx("confirmed","confirmed · #21,000,000");
-    await logLine("tx", 'confirmed in block <span class="hash">#21,000,000</span> — escrow → <span class="txt '+(d.pass?"good":"bad")+' em">'+(d.pass?"seller (RELEASE)":"buyer (REFUND)")+'</span>.');
+    await logLine("tx", d.pass
+      ? 'confirmed <span class="hash">#21,000,000</span> — <span class="txt good em">RELEASE 1,000 USDC → seller</span>.'
+      : 'confirmed <span class="hash">#21,000,000</span> — <span class="txt bad em">REFUND 1,000 USDC → buyer</span>.');
     setPhase(d.pass ? "released" : "refunded");
     if(dead(id)) return finish();
     if(!d.pass) el.stampBad.classList.remove("show");
@@ -1058,7 +1082,10 @@
   el.themeBtn.addEventListener("click", function(){
     var cur = root.getAttribute("data-theme");
     if(!cur) cur = window.matchMedia("(prefers-color-scheme: light)").matches ? "light":"dark";
-    root.setAttribute("data-theme", cur==="dark" ? "light":"dark");
+    var next = cur==="dark" ? "light":"dark";
+    root.setAttribute("data-theme", next);
+    el.themeBtn.setAttribute("aria-pressed", next === "light" ? "true" : "false");
+    el.themeBtn.setAttribute("aria-label", next === "light" ? "Switch to dark theme" : "Switch to light theme");
   });
 
   /* ---- keep pot/ghost anchored on resize ---- */
@@ -1069,7 +1096,7 @@
       [el.pot, el.ghost].forEach(function(m){
         var node = anchorOf[m.id];
         if(!node) return;
-        var c = centerOf(node);
+      var c = moverPoint(node);
         m.style.transition = "none";
         m.style.transform = "translate(" + c.x + "px," + c.y + "px)";
       });
