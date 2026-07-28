@@ -74,14 +74,25 @@ engine underneath is VM-specific. The exact types and invariants are in
   envelope are reused; only the replay engine changed — both backends emit
   byte-identical records against the shared golden.
 
-## Act 3 — cross-VM binder (research-grade)
+## Act 3 — cross-VM binder
 
 - An agent pays on chain A for a deliverable executed on chain B; the dispute is
-  routed to the correct VM backend for re-execution.
-- Directly the XVM binder / verifier-league thesis (probatio-cross-vm).
-- Real added complexity: settlement finality across chains, where escrow lives
-  vs where execution happens, cross-chain propagation of the verdict. Deliberately
-  deferred — but "connect," not "rebuild," if the waist above holds.
+  routed to the correct VM backend for re-execution. Directly the XVM binder /
+  verifier-league thesis (probatio-cross-vm).
+- Routing spine: **done** — [`binder/`](../binder) (`reckn-binder`). A
+  `ReexecBackend` trait both VMs implement; `BackendRouter` verifies the committed
+  content hashes, routes a dispute to the backend named by its committed
+  `backend_id`/version (fails closed on unknown/ambiguous — never the wrong VM),
+  and returns a `VerdictEnvelopeV1` carrying the shared `ReplayRecordV1`. A backend
+  that answers for a different VM than routed is rejected. Because the record codec
+  is shared, an EVM verdict and a Solana verdict are literally one type — which is
+  why the binder is thin. 4 tests.
+- Remaining (frame-thick): the per-VM backend adapters (deserialize each VM's
+  anchor/plan/predicate and call `reexec-evm` / `reexec-svm` behind the trait), and
+  the cross-chain settlement around routing — settlement finality on both chains,
+  where escrow lives vs where execution happens, cross-chain propagation of the
+  verdict, and double-settlement rules. "Connect," not "rebuild," now that the waist
+  and both slices hold.
 
 ## Boundaries to keep clean from day 1
 

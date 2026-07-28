@@ -116,6 +116,8 @@ escrow-svm/                 # Solana settlement half (Pinocchio) — implemented
 reckn-svm-keeper/           # Solana keeper: replay -> Ed25519-sign -> resolve
   src/lib.rs                #   + keyless verify
   tests/full_loop.rs        #   fund->challenge->keeper->resolve->verify (LiteSVM)
+binder/                     # cross-VM binder — routing spine (reckn-binder)
+  src/lib.rs                #   route a dispute by committed backendId -> verdict
 packages/protocol/          # canonical cross-VM codecs (specs + golden vectors)
   REPLAY_RECORD_V1.md       #   ReplayRecordV1 TLV spec (trace_hash source)
   golden/                   #   cross-language conformance vectors
@@ -208,6 +210,14 @@ layer, cross-VM, and production content publication.
   full-loop test: content SHA-256 → fund → deliver → challenge → replay → the
   keeper's `[ed25519, resolve]` accepted on-chain → honest releases the seller /
   false claim refunds the buyer → keyless `verify` agrees.
+- **Cross-VM binder (routing spine):** [`binder/`](binder) — a `ReexecBackend`
+  trait both VMs implement and a `BackendRouter` that verifies the committed
+  content hashes and routes a dispute to the backend named by its committed
+  `backend_id` (fails closed on unknown/ambiguous — never the wrong VM), returning
+  a `VerdictEnvelopeV1` carrying the shared `ReplayRecordV1`. Because the record
+  codec is shared, an EVM verdict and a Solana verdict are literally one type. The
+  per-VM adapters and the cross-chain settlement around routing are the remaining
+  frame-thick step. `cargo test`: **4 passing**.
 - **Money-shot dashboard:** [`dashboard/`](dashboard) — a self-contained,
   animated money-shot driven by real `reexec-evm` output: the escrow pot moves, a
   live `reckn-keeper` console + ledger stream the resolve, and the outcome lands on

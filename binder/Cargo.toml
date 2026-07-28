@@ -1,0 +1,12 @@
+[package]
+name = "reckn-binder"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Reckn cross-VM binder: routes a dispute to the re-execution backend named by its committed backendId and returns a VM-neutral verdict envelope. The record codec is shared, so EVM and Solana verdicts are one type."
+
+[dependencies]
+# The canonical VM-neutral verdict record every backend emits.
+reckn-record = { path = "../packages/protocol-rs" }
+alloy-primitives = "1"
+sha2 = "0.10"
