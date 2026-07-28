@@ -74,9 +74,10 @@ ReexecBackend.verdict(specHash, prestateAnchor)
   -> { verdict: Reproduced | Failed, traceHash, prestateRoot }
 ```
 
-- **EVM backend** (this repo, first) — revm/reth fork replay
-- **Solana backend** (later) — LiteSVM / SBF replay
-- **cross-VM binder** (third act) — routes a dispute to the right VM backend
+- **EVM backend** — revm replay (implemented)
+- **Solana backend** — LiteSVM / SBF replay (implemented)
+- **cross-VM binder** — one router dispatches a dispute to the right VM backend
+  (implemented: a single `BackendRouter` re-executes both VMs, proven by test)
 
 `verdict(specHash, prestateAnchor)` is shorthand; the runnable interface also
 takes the committed spec/delivery/anchor bytes, so consensus never depends on a
@@ -107,7 +108,10 @@ contracts/                  # EVM V1 settlement half (Foundry) — implemented
   test/                     #   forge tests
 reexec-evm/                 # EVM re-execution backend (revm 38) — implemented
   src/lib.rs                #   deterministic CALL replay + predicate verdict
+                            #   (testkit feature: valid MPT witness fixtures, cfg-gated)
   examples/moneyshot.rs     #   emits real engine output for the dashboard
+reckn-evm-content/          # shared canonical EVM content codec — implemented
+  src/lib.rs                #   the keeper's & binder adapter's ONE decoder (no drift)
 reexec-svm/                 # Solana re-execution backend (LiteSVM) — implemented
   src/lib.rs                #   deterministic tx replay → the SAME ReplayRecordV1
 escrow-svm/                 # Solana settlement half (Pinocchio) — implemented
@@ -116,8 +120,10 @@ escrow-svm/                 # Solana settlement half (Pinocchio) — implemented
 reckn-svm-keeper/           # Solana keeper: replay -> Ed25519-sign -> resolve
   src/lib.rs                #   + keyless verify
   tests/full_loop.rs        #   fund->challenge->keeper->resolve->verify (LiteSVM)
-binder/                     # cross-VM binder — routing spine (reckn-binder)
+binder/                     # cross-VM binder — one router, both VMs (reckn-binder)
   src/lib.rs                #   route a dispute by committed backendId -> verdict
+  src/adapters.rs           #   EvmBackend + SvmBackend (content-addressed replay)
+  tests/router_two_vms.rs   #   one router re-executes EVM + SVM, fails closed
 packages/protocol/          # canonical cross-VM codecs (specs + golden vectors)
   REPLAY_RECORD_V1.md       #   ReplayRecordV1 TLV spec (trace_hash source)
   golden/                   #   cross-language conformance vectors
@@ -140,13 +146,16 @@ Planned (not yet in the tree): `mcp-server` and the rest of
 ## Status
 
 The whole dispute → verdict → settlement → **re-verification** slice exists, runs
-live on a real node, and is tested: a funded escrow, a deterministic re-execution
-backend that binds its prestate to a committed state root, the canonical verdict
-record, the settlement signature the contract provably accepts, a keyless
-third-party re-verifier that reproduces the on-chain verdict from public inputs,
-ERC-8004 reputation evidence, and a money-shot dashboard on real engine output.
-What remains is judge-legibility integrations (Arc / x402 / MCP), a challenge/bond
-layer, cross-VM, and production content publication.
+live on a real node, and is tested — on **both** VMs, behind **one** router: a
+funded escrow, a deterministic re-execution backend that binds its prestate to a
+committed state root, the canonical verdict record, the settlement signature the
+contract provably accepts, a keyless third-party re-verifier that reproduces the
+on-chain verdict from public inputs, ERC-8004 reputation evidence, and a money-shot
+dashboard on real engine output. The cross-VM binder now re-executes an EVM and a
+Solana dispute through a single `BackendRouter`, each returning the same verdict
+type. What remains is judge-legibility integrations (Arc / x402 / MCP), a
+challenge/bond layer, the cross-chain settlement around routing, and production
+content publication.
 
 - **Protocol:** locked — [`docs/protocol-architecture.md`](docs/protocol-architecture.md)
   (VM-neutral verdict envelope, committed spec/delivery/anchor codecs, EVM V1
@@ -210,14 +219,27 @@ layer, cross-VM, and production content publication.
   full-loop test: content SHA-256 → fund → deliver → challenge → replay → the
   keeper's `[ed25519, resolve]` accepted on-chain → honest releases the seller /
   false claim refunds the buyer → keyless `verify` agrees.
-- **Cross-VM binder (routing spine):** [`binder/`](binder) — a `ReexecBackend`
-  trait both VMs implement and a `BackendRouter` that verifies the committed
-  content hashes and routes a dispute to the backend named by its committed
-  `backend_id` (fails closed on unknown/ambiguous — never the wrong VM), returning
-  a `VerdictEnvelopeV1` carrying the shared `ReplayRecordV1`. Because the record
-  codec is shared, an EVM verdict and a Solana verdict are literally one type. The
-  per-VM adapters and the cross-chain settlement around routing are the remaining
-  frame-thick step. `cargo test`: **4 passing**.
+- **Cross-VM binder (one router, both VMs):** [`binder/`](binder) — a `ReexecBackend`
+  trait both VMs implement, an `EvmBackend` + `SvmBackend` adapter pair, and a
+  `BackendRouter` that verifies the committed content hashes and routes a dispute to
+  the backend named by its committed `backend_id` (fails closed on unknown/ambiguous
+  — never the wrong VM), returning a `VerdictEnvelopeV1` carrying the shared
+  `ReplayRecordV1`. Because the record codec is shared, an EVM verdict and a Solana
+  verdict are literally one type. Every extra replay input — the EVM proof-carrying
+  witness, the SVM snapshot + runtime profile — is pulled only through a
+  content-addressed `BackendArtifactResolver` (SHA-256 re-verified, never live RPC);
+  a missing or tampered artifact is an operational `BackendError`, never a verdict.
+  **Proven by a single-router integration test** ([`tests/router_two_vms.rs`](binder/tests/router_two_vms.rs)):
+  one `BackendRouter` with both adapters registered re-executes four disputes through
+  one `route()` — EVM honest → `Reproduced`, EVM false → `Failed`, SVM honest →
+  `Reproduced`, SVM false → `Failed`, all the same `VerdictEnvelopeV1` — while a
+  mismatched `backend_id` is `UnknownBackend` and a missing/tampered artifact fails
+  closed. Its EVM fixtures use the exact valid-MPT-witness builder from `reexec-evm`
+  (exposed via a cfg-gated `testkit` feature so the production crate is unchanged and
+  the test cannot drift onto a weaker witness). `cargo test`: **6 passing**. The
+  cross-chain settlement *around* routing (finality on both chains, verdict
+  propagation, double-settle rules) is the remaining frame-thick step —
+  [`docs/cross-chain-settlement.md`](docs/cross-chain-settlement.md).
 - **Money-shot dashboard:** [`dashboard/`](dashboard) — a self-contained,
   animated money-shot driven by real `reexec-evm` output: the escrow pot moves, a
   live `reckn-keeper` console + ledger stream the resolve, and the outcome lands on
@@ -227,11 +249,17 @@ layer, cross-VM, and production content publication.
 - **Keeper (chain shell + settlement signature):** [`keeper/`](keeper) — maps a reproducible
   replay to the `VerdictCommitment` and EIP-712-signs it. The digest is
   cross-checked against the contract in both Rust and Foundry (a shared golden),
-  so a keeper signature is provably accepted by `resolve()`. Its HTTP shell polls
-  `Disputed`, SHA-256-checks content-store bytes before parsing, collects an
-  access-list-derived MPT witness, replays, and submits `resolve()`. The included
+  so a keeper signature is provably accepted by `resolve()`. It decodes all EVM
+  content through the shared [`reckn-evm-content`](reckn-evm-content) codec (no
+  drift with the binder adapter). The **witness is committed, not RPC-built at
+  dispute time**: the seller publishes a proof-carrying witness with
+  `reckn-keeper witness … --write <store>` and the delivery commits its SHA-256
+  (`witnessContentHash`); `once` / `verify` then resolve that committed witness by
+  hash and MPT-verify it against `anchor.state_root` before replay — they never
+  replay a live RPC witness. Its HTTP shell polls `Disputed`, SHA-256-checks
+  content-store bytes before parsing, replays, and submits `resolve()`. The included
   anvil E2E proves false claim → `Failed` → refund. `cargo test` + `forge test`:
-  **keeper 3, contracts 22**.
+  **keeper 2, contracts 22**.
 - **Independent re-verification (the trust property, executable):**
   `reckn-keeper verify <rpc> <escrow> <content-store> <dealId>` — a **keyless**
   third party reads the resolver's on-chain `VerdictCommitted` and re-derives the
@@ -240,8 +268,8 @@ layer, cross-VM, and production content publication.
   LLM verdict cannot offer: **don't trust the resolver — reproduce its verdict
   yourself.** The anvil E2E runs it as a final step and fails on any mismatch.
 - **Next:** Arc / x402 integration, a challenge/bond layer (turn the checkable
-  verdict into slashable fraud proofs), and cross-VM (a Solana backend behind the
-  same verdict envelope).
+  verdict into slashable fraud proofs), and the cross-chain settlement around the
+  binder (finality on both chains + verdict propagation + double-settle rules).
 
 ## Try it (one command)
 
@@ -254,16 +282,18 @@ bash scripts/anvil-e2e.sh
 Prerequisites: [Foundry](https://getfoundry.sh) (`anvil`, `forge`, `cast`), Rust
 (`cargo`), and `jq`. The script needs no arguments and cleans up after itself.
 
-It spins up `anvil`, deploys the escrow / registry / a mock USDC, then funds a
-deal, delivers a seller plan, and files a dispute. The keeper picks up the
-`Disputed` event, fetches the committed spec/delivery/anchor from a content store
-(hash-checked before parsing), builds a **proof-verified** prestate witness
-(`eth_createAccessList` + `eth_getProof`, bound to the block's `state_root`),
-**re-executes the seller's plan** — here a real `balanceOf` SLOAD whose output
-can't satisfy the funded predicate — signs the `Failed` verdict, and submits
-`resolve()`. Finally, a **keyless independent re-verifier** reads the on-chain
-verdict back and reproduces it from public inputs alone — proving the resolver
-couldn't have lied. Expected final lines:
+It spins up `anvil`, deploys the escrow / registry / a mock USDC, then has the
+**seller publish a proof-verified prestate witness** to a content store
+(`reckn-keeper witness … --write`, bound to the block's `state_root`) and commit
+its SHA-256 into the delivery. It funds a deal, delivers that seller plan, and
+files a dispute. The keeper picks up the `Disputed` event, fetches the committed
+spec / delivery / anchor / **witness** from the content store (each hash-checked
+before parsing), MPT-verifies the witness against the anchor, **re-executes the
+seller's plan** — here a real `balanceOf` SLOAD whose output can't satisfy the
+funded predicate — signs the `Failed` verdict, and submits `resolve()`. Finally, a
+**keyless independent re-verifier** reads the on-chain verdict back and reproduces
+it from public inputs alone — proving the resolver couldn't have lied. Expected
+final lines:
 
 ```
 PASS: re-execution returned Failed and refunded buyer; deal=0x…
@@ -283,11 +313,14 @@ Each component is self-contained; there is no top-level build.
 # settlement contracts (Foundry) — 22 tests (incl. end-to-end on real engine output)
 cd contracts && forge install foundry-rs/forge-std --no-git && forge test
 
-# re-execution engine (revm 38, MPT-verified prestate) — 6 tests
+# re-execution engine (revm 38, MPT-verified prestate) — 5 tests
 cd reexec-evm && cargo test
 
-# keeper signature + content-store guard — 3 tests
+# keeper signature + content-store guard — 2 tests
 cd keeper && cargo test
+
+# cross-VM binder: one router re-executes EVM + SVM, fails closed — 6 tests
+cd binder && cargo test
 
 # one-command local chain demo: false claim → re-execution Failed → buyer refund
 cd .. && bash scripts/anvil-e2e.sh

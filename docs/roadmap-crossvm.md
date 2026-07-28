@@ -74,7 +74,7 @@ engine underneath is VM-specific. The exact types and invariants are in
   envelope are reused; only the replay engine changed — both backends emit
   byte-identical records against the shared golden.
 
-## Act 3 — cross-VM binder
+## Act 3 — cross-VM binder (routing + both adapters shipped; cross-chain settlement remaining)
 
 - An agent pays on chain A for a deliverable executed on chain B; the dispute is
   routed to the correct VM backend for re-execution. Directly the XVM binder /
@@ -86,16 +86,33 @@ engine underneath is VM-specific. The exact types and invariants are in
   and returns a `VerdictEnvelopeV1` carrying the shared `ReplayRecordV1`. A backend
   that answers for a different VM than routed is rejected. Because the record codec
   is shared, an EVM verdict and a Solana verdict are literally one type — which is
-  why the binder is thin. 4 tests.
+  why the binder is thin.
 - Artifact resolution: **done** — a `BackendArtifactResolver` closes the gap that
   the three request blobs don't carry EVM's proof-carrying witness or SVM's
   snapshot / runtime-profile. An adapter pulls those by the hash it reads out of its
   verified spec/anchor; the resolver returns bytes only if they hash to it and never
   falls back to live RPC. So "only verified committed content reaches replay" holds
   for *every* replay input, not just the three blobs.
-- Remaining (frame-thick): the per-VM backend adapters (deserialize each VM's
-  anchor/plan/predicate, pull artifacts via the resolver, call `reexec-evm` /
-  `reexec-svm` behind the trait), and the cross-chain settlement — designed
+- Per-VM adapters: **done** — [`binder/src/adapters.rs`](../binder/src/adapters.rs).
+  `EvmBackend` decodes its spec/delivery/anchor through the shared
+  [`reckn-evm-content`](../reckn-evm-content) codec, checks the spec's committed
+  backend/anchor claims against the request, pulls the proof-carrying witness by
+  `delivery.witnessContentHash` through the resolver, and calls `reexec-evm`.
+  `SvmBackend` is symmetric: it decodes the `Stored*` spec/delivery/anchor, pulls
+  the snapshot (by `anchor.snapshot_archive_hash`) and runtime profile (by
+  `spec.runtimeProfileContentHash`) through the resolver, and calls `reexec-svm`.
+  Both map any operational failure to `BackendError`, never a verdict, and return
+  the same `VerdictEnvelopeV1`.
+- Single-router proof: **done** —
+  [`binder/tests/router_two_vms.rs`](../binder/tests/router_two_vms.rs). One
+  `BackendRouter` with both adapters registered re-executes four disputes through a
+  single `route()`: EVM honest → `Reproduced`, EVM false → `Failed`, SVM honest →
+  `Reproduced`, SVM false → `Failed` — every verdict the same `VerdictEnvelopeV1`.
+  A mismatched `backend_id` is `UnknownBackend`; a missing SVM snapshot or a tampered
+  EVM witness is a fail-closed `Backend` error. The EVM fixtures reuse `reexec-evm`'s
+  exact valid-MPT-witness builder via a cfg-gated `testkit` feature (production API
+  unchanged, single fixture source, no drift). 6 tests.
+- Remaining (frame-thick): the cross-chain settlement *around* routing — designed
   fail-closed in [`docs/cross-chain-settlement.md`](cross-chain-settlement.md):
   two separate clocks, a `RemoteVerdictPending` stage gated on a B finality proof,
   an A-side challenge window, a `(B domain, B settlement id, traceHash)`
