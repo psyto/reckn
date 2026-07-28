@@ -9,13 +9,30 @@
 //! comparable and reproducible under one VM-neutral envelope — the foundation the
 //! cross-VM binder will stand on.
 //!
-//! Prestate authenticity (V1): Solana has no EVM-style Merkle-Patricia proof of
-//! an account against a single state root. V1 binds the snapshot to
-//! `anchor.state_commitment` with a plain canonical hash of the whole snapshot —
-//! self-consistent and tamper-evident, but it trusts that the published snapshot
-//! is the block's state. The production story (Solana accounts/bank-hash or a
-//! light client) is the flagged hardening, exactly as `verify_witness_against_root`
-//! is on the EVM side.
+//! ## Trust tier — read before using a verdict
+//!
+//! This scaffold is **authenticity tier V1: "same published snapshot → same
+//! result"**. A `Reproduced` here means *anyone with this exact snapshot re-runs
+//! the plan and gets this verdict* — it is NOT proof the snapshot was Solana's
+//! real state, and it MUST NOT be an automatic escrow-release basis. Solana has
+//! no EVM-style Merkle-Patricia proof of an account against a single state root;
+//! reaching auto-resolve needs V2 (a finalized-checkpoint-authenticated full Bank
+//! snapshot whose protocol accounts/bank hash is recomputed). See
+//! `docs/roadmap-crossvm.md` Act 2.
+//!
+//! Known V1 gaps (flagged for the frame-thick hardening, not yet fixed here):
+//! - [`snapshot_commitment`] hashes accounts but NOT `programs` or `rent_epoch`,
+//!   so a seller-supplied ELF is not bound to the anchor.
+//! - `LiteSVM::new()` loads *unseeded* accounts as default/zero, so this is NOT a
+//!   closed world: an unwitnessed read does not trap. The ambient feature set,
+//!   sysvars, builtins, and standard program cache are also implicit inputs, and
+//!   `anchor.slot` does not constrain the runtime `Clock`.
+//! - `replay` runs with `sigverify` OFF, which on Solana forges *authority* (the
+//!   signer bit programs observe) — unlike EVM base-fee/nonce, this is unsound for
+//!   settlement. V2 must commit signed transaction bytes and verify signatures.
+//!
+//! In short: reproducible, but not yet authentic. The tests below exercise the
+//! replay/record path, not a settlement-grade trust boundary.
 
 use alloy_primitives::B256;
 use litesvm::LiteSVM;
@@ -117,10 +134,12 @@ impl ReplayOutcome {
     }
 }
 
-/// Canonical SHA-256 commitment over the whole snapshot: accounts sorted by
+/// Canonical SHA-256 commitment over the account snapshot: accounts sorted by
 /// pubkey, each folded in as `pubkey || lamports || owner || executable ||
-/// len(data) || data`. Deterministic and tamper-evident; the V1 analog of an EVM
-/// state root (see the crate docs on the production hardening).
+/// len(data) || data`. Deterministic, but V1-incomplete: it does NOT yet cover
+/// `programs`, `rent_epoch`, or the runtime profile, so it is not fully
+/// tamper-evident (see the crate-level trust-tier note). The hardened,
+/// length-prefixed, everything-covering codec is the frame-thick next step.
 pub fn snapshot_commitment(snapshot: &PrestateSnapshotV1) -> B256 {
     let mut accounts: Vec<&AccountSnapshotV1> = snapshot.accounts.iter().collect();
     accounts.sort_by_key(|a| a.pubkey.to_bytes());

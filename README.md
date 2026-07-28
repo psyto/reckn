@@ -167,13 +167,16 @@ layer, cross-VM, and production content publication.
   balance for `value` is still enforced. `cargo test`: **5 passing**.
 - **Re-execution backend (Solana / SVM):** [`reexec-svm/`](reexec-svm) — the same
   mechanism on Solana via `LiteSVM`: replay a committed transaction against a
-  committed account snapshot (bound to the anchor by a snapshot commitment;
-  tampering is an operational error, not a verdict), judge a `LamportsEquals` /
-  `ResultEquals` predicate, and emit the **identical VM-neutral `ReplayRecordV1`**
-  as the EVM backend. That shared record — one Rust codec in
-  [`packages/protocol-rs`](packages/protocol-rs), asserted against the same golden
-  as the TypeScript/Solidity vectors — is the foundation the cross-VM binder will
-  stand on. `cargo test`: **4 passing** (reckn-record: 1).
+  committed account snapshot, judge a `LamportsEquals` / `ResultEquals` predicate,
+  and emit the **identical VM-neutral `ReplayRecordV1`** as the EVM backend. That
+  shared record — one Rust codec in [`packages/protocol-rs`](packages/protocol-rs),
+  asserted against the same golden as the TS/Solidity vectors — proves the
+  VM-neutral waist across a second VM and is the foundation the cross-VM binder
+  will stand on. **Trust tier V1 = reproducibility only** ("same published snapshot
+  → same result"), **not** prestate authenticity, so it is *not* an auto-resolve
+  basis yet; Solana has no native per-account proof, so auto-resolve needs a
+  checkpoint-authenticated snapshot (V2). `cargo test`: **4 passing**
+  (reckn-record: 1).
 - **Money-shot dashboard:** [`dashboard/`](dashboard) — a self-contained,
   animated money-shot driven by real `reexec-evm` output: the escrow pot moves, a
   live `reckn-keeper` console + ledger stream the resolve, and the outcome lands on

@@ -25,18 +25,28 @@ engine underneath is VM-specific. The exact types and invariants are in
   drives fund → deliver → challenge → keeper resolve → **keyless re-verification**
   of the on-chain verdict.
 
-## Act 2 — Solana port (backend shipped)
+## Act 2 — Solana port (replay backend shipped; authenticity V1 only)
 
-- Backend: **done** — [`reexec-svm/`](../reexec-svm) replays a committed
+- Replay backend: **done** — [`reexec-svm/`](../reexec-svm) replays a committed
   transaction against a committed account snapshot with `LiteSVM`, judges a
   predicate, and emits the **same** `ReplayRecordV1` as EVM (via the shared
-  `reckn-record` codec). Prestate authenticity is a snapshot commitment (V1);
-  the Solana accounts/bank-hash proof is the flagged hardening.
-- Remaining: a Pinocchio escrow program (same state machine), an SVM keeper +
-  keyless re-verifier, and an SVM end-to-end — mirroring the EVM side.
+  `reckn-record` codec). This proves the VM-neutral waist across a second VM.
+- **Authenticity tier V1 only — NOT an auto-resolve basis.** V1 binds the snapshot
+  to the anchor by a plain hash: it proves "same published snapshot → same
+  result," not that the snapshot was Solana's real state. Solana has no native
+  per-account Merkle proof (a bank hash is not a sparse inclusion proof; a light
+  client only proves a slot is finalized, not an account's value). Auto-resolve
+  needs **V2**: a finalized-checkpoint-authenticated full Bank snapshot restored
+  Agave-compatibly, its protocol accounts/bank hash recomputed, witnesses derived
+  from it — plus `sigverify` on (Solana's signer bit is authority), a closed-world
+  account-load trap (LiteSVM defaults unseeded accounts today), and a runtime
+  profile pinned in the anchor. This asymmetry with EVM's MPT is deliberate and
+  surfaced, not hidden.
+- Remaining: the V2 authenticity core (frame-thick), then a Pinocchio escrow
+  program, an SVM keeper + keyless re-verifier, and an SVM end-to-end.
 - Migration, not rewrite: the escrow state machine, predicate type, and verdict
-  envelope are reused; only the replay engine changed. Proven by both backends
-  emitting byte-identical records against the shared golden.
+  envelope are reused; only the replay engine changed — both backends emit
+  byte-identical records against the shared golden.
 
 ## Act 3 — cross-VM binder (research-grade)
 
