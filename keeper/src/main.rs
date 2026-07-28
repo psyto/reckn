@@ -21,6 +21,7 @@ use reckn_reexec_evm::{
     replay, verify_witness_against_root, AccountWitness, EvmAnchorV1, EvmCallPlanV1, PredicateV1,
     PrestateWitnessV1, ReexecCommitmentsV1, StorageWitnessV1,
 };
+use reckn_evm_content::{AnchorV11Json, DeliveryV11, SpecV11Json, WitnessJson, canonical_json, hash};
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use std::{
@@ -93,118 +94,6 @@ impl FileContentStore {
     fn load_json<T: for<'de> Deserialize<'de>>(&self, expected: B256) -> Result<T> {
         let bytes = self.load_checked(expected)?;
         serde_json::from_slice(&bytes).context("committed content is not valid V1.1 JSON")
-    }
-}
-
-/// The delivery bytes are seller supplied and are only committed at `deliver`.
-/// The funded spec remains the authority for the predicate and anchor hash.
-#[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct DeliveryV11 {
-    caller: Address,
-    target: Address,
-    calldata: Bytes,
-    value: U256,
-    gas_limit: u64,
-}
-
-impl From<DeliveryV11> for EvmCallPlanV1 {
-    fn from(value: DeliveryV11) -> Self {
-        Self {
-            caller: value.caller,
-            target: value.target,
-            calldata: value.calldata,
-            value: value.value,
-            gas_limit: value.gas_limit,
-        }
-    }
-}
-
-/// Exact JSON codec for the EVM anchor content object.  `specId` is intentionally
-/// a constrained protocol string rather than accepting arbitrary revm variants.
-#[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct AnchorV11Json {
-    chain_id: u64,
-    block_number: u64,
-    block_hash: B256,
-    state_root: B256,
-    timestamp: u64,
-    base_fee: u64,
-    block_gas_limit: u64,
-    coinbase: Address,
-    prevrandao: B256,
-    spec_id: String,
-}
-
-impl TryFrom<AnchorV11Json> for EvmAnchorV1 {
-    type Error = anyhow::Error;
-
-    fn try_from(value: AnchorV11Json) -> Result<Self> {
-        // One frozen V1 execution profile. Adding a hardfork is a backend
-        // version change, not an unannounced interpretation change.
-        if value.spec_id != "CANCUN" {
-            bail!("unsupported V1.1 EVM specId: {}", value.spec_id);
-        }
-        Ok(Self {
-            chain_id: value.chain_id,
-            block_number: value.block_number,
-            block_hash: value.block_hash,
-            state_root: value.state_root,
-            timestamp: value.timestamp,
-            base_fee: value.base_fee,
-            block_gas_limit: value.block_gas_limit,
-            coinbase: value.coinbase,
-            prevrandao: value.prevrandao,
-            spec_id: revm::primitives::hardfork::SpecId::CANCUN,
-        })
-    }
-}
-
-#[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct SpecV11Json {
-    backend_id: B256,
-    backend_version_hash: B256,
-    prestate_anchor_hash: B256,
-    predicate: PredicateJson,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-#[serde(tag = "kind", rename_all = "SCREAMING_SNAKE_CASE", deny_unknown_fields)]
-enum PredicateJson {
-    ResultEquals {
-        #[serde(rename = "expectedResultHash")]
-        expected_result_hash: B256,
-    },
-    PostStateEquals {
-        checks: Vec<StorageCheckJson>,
-    },
-}
-
-#[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct StorageCheckJson {
-    address: Address,
-    slot: U256,
-    expected: U256,
-}
-
-impl From<PredicateJson> for PredicateV1 {
-    fn from(value: PredicateJson) -> Self {
-        match value {
-            PredicateJson::ResultEquals {
-                expected_result_hash,
-            } => Self::ResultEquals {
-                expected_result_hash,
-            },
-            PredicateJson::PostStateEquals { checks } => Self::PostStateEquals {
-                checks: checks
-                    .into_iter()
-                    .map(|check| (check.address, check.slot, check.expected))
-                    .collect(),
-            },
-        }
     }
 }
 
@@ -317,7 +206,7 @@ where
 /// the two can never drift: the thing the keeper signs is exactly the thing
 /// anyone else re-derives.
 async fn recompute_verdict<P>(
-    read_provider: &P,
+    _read_provider: &P,
     chain_id: u64,
     store: &FileContentStore,
     terms: &DealTerms,
@@ -341,16 +230,22 @@ where
     }
     let anchor: EvmAnchorV1 = store
         .load_json::<AnchorV11Json>(terms.prestate_anchor_hash)?
-        .try_into()?;
+        .try_into()
+        .map_err(anyhow::Error::msg)?;
     if anchor.chain_id != chain_id {
         bail!(
             "anchor chainId {} differs from connected chain {chain_id}",
             anchor.chain_id
         );
     }
-    let plan: EvmCallPlanV1 = store.load_json::<DeliveryV11>(terms.delivery_hash)?.into();
+    let delivery: DeliveryV11 = store.load_json(terms.delivery_hash)?;
+    let witness_hash = delivery.require_witness().map_err(anyhow::Error::msg)?;
+    let plan: EvmCallPlanV1 = delivery.into();
     let predicate = PredicateV1::from(spec.predicate);
-    let witness = build_transitive_witness(read_provider, &anchor, &plan).await?;
+    // The resolver never feeds an RPC-created witness into settlement replay.
+    // Seller-published, delivery-committed bytes are re-hashed by the store,
+    // then replay verifies their MPT proofs against anchor.state_root.
+    let witness: PrestateWitnessV1 = store.load_json::<WitnessJson>(witness_hash)?.into();
     let replay = replay(
         &anchor,
         &witness,
@@ -587,7 +482,7 @@ async fn main() -> Result<()> {
     let mut args = std::env::args().skip(1);
     let Some(command) = args.next() else {
         eprintln!(
-            "usage:\n  reckn-keeper witness <rpc-url> <content-store> <anchor-hash> <delivery-hash>\n\
+            "usage:\n  reckn-keeper witness <rpc-url> <content-store> <anchor-hash> <delivery-hash> [--write <store>]\n\
               reckn-keeper once|watch <rpc-url> <escrow> <content-store> <resolver-private-key>\n\
               reckn-keeper verify <rpc-url> <escrow> <content-store> <deal-id>\n\
              content files are <sha256-without-0x>.json and are checked before parsing.\n\
@@ -601,13 +496,18 @@ async fn main() -> Result<()> {
             let store = FileContentStore::new(args.next().context("missing content-store")?);
             let anchor_hash: B256 = args.next().context("missing anchor hash")?.parse()?;
             let delivery_hash: B256 = args.next().context("missing delivery hash")?.parse()?;
-            if args.next().is_some() {
-                bail!("too many arguments");
-            }
+            let write = match args.next().as_deref() { None => None, Some("--write") => Some(PathBuf::from(args.next().context("missing --write store")?)), Some(_) => bail!("expected --write <store>") };
+            if args.next().is_some() { bail!("too many arguments"); }
             let provider = alloy::providers::ProviderBuilder::new().connect_http(rpc_url.parse()?);
-            let anchor: EvmAnchorV1 = store.load_json::<AnchorV11Json>(anchor_hash)?.try_into()?;
+            let anchor: EvmAnchorV1 = store.load_json::<AnchorV11Json>(anchor_hash)?.try_into().map_err(anyhow::Error::msg)?;
             let plan: EvmCallPlanV1 = store.load_json::<DeliveryV11>(delivery_hash)?.into();
             let witness = build_transitive_witness(&provider, &anchor, &plan).await?;
+            if let Some(dir) = write {
+                let bytes = canonical_json(&WitnessJson::from(witness.clone()))?;
+                let witness_hash = hash(&bytes);
+                fs::write(dir.join(format!("{witness_hash:x}.json")), bytes)?;
+                println!("witnessContentHash={witness_hash:#x}");
+            }
             println!(
                 "witness verified: {} accounts at block {} ({:#x})",
                 witness.accounts.len(),

@@ -3237,6 +3237,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "reckn-evm-content"
+version = "0.1.0"
+dependencies = [
+ "alloy-primitives",
+ "reckn-reexec-evm",
+ "revm",
+ "serde",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
 name = "reckn-keeper"
 version = "0.1.0"
 dependencies = [
@@ -3245,6 +3257,7 @@ dependencies = [
  "alloy-signer",
  "alloy-signer-local",
  "anyhow",
+ "reckn-evm-content",
  "reckn-reexec-evm",
  "revm",
  "serde",

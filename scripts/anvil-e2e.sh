@@ -79,8 +79,19 @@ printf %s "$anchor" >"$store/${anchor_hash#0x}.json"
 # prove the mapping slot. The buyer-funded predicate intentionally expects an
 # impossible return hash; seller's implicit claim is therefore disproved.
 calldata=$(cast calldata 'balanceOf(address)' "$buyer")
-delivery=$(jq -cn --arg caller "$buyer" --arg target "$token" --arg calldata "$calldata" \
+# Seller first publishes the proof-carrying witness for a staging plan.  The
+# final delivery then commits its SHA-256, so once/verify never replay a live
+# RPC witness.
+delivery_draft=$(jq -cn --arg caller "$buyer" --arg target "$token" --arg calldata "$calldata" \
   '{caller:$caller,target:$target,calldata:$calldata,value:"0x0",gasLimit:200000}')
+delivery_draft_hash=$(printf %s "$delivery_draft" | shasum -a 256 | awk '{print "0x" $1}')
+printf %s "$delivery_draft" >"$store/${delivery_draft_hash#0x}.json"
+witness_out=$(cargo run --quiet --manifest-path "$root/keeper/Cargo.toml" -- \
+  witness "$rpc_url" "$store" "$anchor_hash" "$delivery_draft_hash" --write "$store")
+witness_hash=$(awk -F= '/^witnessContentHash=/{print $2}' <<<"$witness_out")
+[[ "$witness_hash" =~ ^0x[0-9a-fA-F]{64}$ ]]
+delivery=$(jq -cn --arg caller "$buyer" --arg target "$token" --arg calldata "$calldata" --arg witness "$witness_hash" \
+  '{caller:$caller,target:$target,calldata:$calldata,value:"0x0",gasLimit:200000,witnessContentHash:$witness}')
 delivery_hash=$(printf %s "$delivery" | shasum -a 256 | awk '{print "0x" $1}')
 printf %s "$delivery" >"$store/${delivery_hash#0x}.json"
 spec=$(jq -cn --arg anchor "$anchor_hash" --arg backendId "$backend_id" --arg backendVersionHash "$backend_ver" \

@@ -7,6 +7,7 @@ description = "Reckn resolver keeper: watch Disputed, re-execute, sign the EIP-7
 
 [dependencies]
 reckn-reexec-evm = { path = "../reexec-evm" }
+reckn-evm-content = { path = "../reckn-evm-content" }
 # alloy-primitives resolves to the same 1.6.x revm 38 uses, so B256/Address types
 # unify with the engine's public API (no conversion boundary).
 alloy-primitives = "1"

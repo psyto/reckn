@@ -23,6 +23,8 @@ use alloy_primitives::B256;
 use reckn_record::ReplayRecordV1;
 use sha2::{Digest, Sha256};
 
+pub mod adapters;
+
 pub type BackendId = B256;
 pub type ContentHash = B256;
 
@@ -121,13 +123,23 @@ where
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum RouterError {
     /// A committed content blob does not hash to its committed hash.
-    ContentHashMismatch { field: &'static str, expected: ContentHash, got: ContentHash },
+    ContentHashMismatch {
+        field: &'static str,
+        expected: ContentHash,
+        got: ContentHash,
+    },
     /// No registered backend matches the deal's committed `(backend_id, version)`.
-    UnknownBackend { backend_id: BackendId, backend_version_hash: ContentHash },
+    UnknownBackend {
+        backend_id: BackendId,
+        backend_version_hash: ContentHash,
+    },
     /// Two backends registered the same `(id, version)`.
     AmbiguousBackend { backend_id: BackendId },
     /// The backend returned a record for a different VM than it was asked for.
-    BackendIdentityMismatch { asked: BackendId, returned: BackendId },
+    BackendIdentityMismatch {
+        asked: BackendId,
+        returned: BackendId,
+    },
     /// The chosen backend reported an operational (non-verdict) error.
     Backend(BackendError),
 }
@@ -140,7 +152,9 @@ pub struct BackendRouter {
 
 impl BackendRouter {
     pub fn new() -> Self {
-        Self { backends: Vec::new() }
+        Self {
+            backends: Vec::new(),
+        }
     }
 
     pub fn register(&mut self, backend: Box<dyn ReexecBackend>) {
@@ -157,12 +171,15 @@ impl BackendRouter {
     ) -> Result<VerdictEnvelopeV1, RouterError> {
         check_hash("spec", &request.spec, request.spec_hash)?;
         check_hash("delivery", &request.delivery, request.delivery_hash)?;
-        check_hash("prestate_anchor", &request.prestate_anchor, request.prestate_anchor_hash)?;
+        check_hash(
+            "prestate_anchor",
+            &request.prestate_anchor,
+            request.prestate_anchor_hash,
+        )?;
 
-        let mut matches = self
-            .backends
-            .iter()
-            .filter(|b| b.id() == request.backend_id && b.version() == request.backend_version_hash);
+        let mut matches = self.backends.iter().filter(|b| {
+            b.id() == request.backend_id && b.version() == request.backend_version_hash
+        });
         let backend = matches.next().ok_or(RouterError::UnknownBackend {
             backend_id: request.backend_id,
             backend_version_hash: request.backend_version_hash,
@@ -194,7 +211,11 @@ fn sha256(bytes: &[u8]) -> B256 {
 fn check_hash(field: &'static str, bytes: &[u8], expected: ContentHash) -> Result<(), RouterError> {
     let got = sha256(bytes);
     if got != expected {
-        return Err(RouterError::ContentHashMismatch { field, expected, got });
+        return Err(RouterError::ContentHashMismatch {
+            field,
+            expected,
+            got,
+        });
     }
     Ok(())
 }
@@ -250,8 +271,16 @@ mod tests {
 
     fn router() -> BackendRouter {
         let mut r = BackendRouter::new();
-        r.register(Box::new(MockBackend { id: EVM_ID, version: V1, outcome: 1 }));
-        r.register(Box::new(MockBackend { id: SVM_ID, version: V1, outcome: 2 }));
+        r.register(Box::new(MockBackend {
+            id: EVM_ID,
+            version: V1,
+            outcome: 1,
+        }));
+        r.register(Box::new(MockBackend {
+            id: SVM_ID,
+            version: V1,
+            outcome: 2,
+        }));
         r
     }
 
@@ -297,10 +326,14 @@ mod tests {
     #[test]
     fn unknown_backend_is_not_routed_to_the_wrong_vm() {
         let r = router();
-        let err = r.route(&request(B256::repeat_byte(0xab), V1), &no_artifacts()).unwrap_err();
+        let err = r
+            .route(&request(B256::repeat_byte(0xab), V1), &no_artifacts())
+            .unwrap_err();
         assert!(matches!(err, RouterError::UnknownBackend { .. }));
         // A registered id but the wrong version also fails closed.
-        let err = r.route(&request(EVM_ID, B256::repeat_byte(0x02)), &no_artifacts()).unwrap_err();
+        let err = r
+            .route(&request(EVM_ID, B256::repeat_byte(0x02)), &no_artifacts())
+            .unwrap_err();
         assert!(matches!(err, RouterError::UnknownBackend { .. }));
     }
 
@@ -342,7 +375,11 @@ mod tests {
                     B256::ZERO,
                 );
                 let trace_hash = record.trace_hash();
-                Ok(VerdictEnvelopeV1 { deal_id: request.deal_id, record, trace_hash })
+                Ok(VerdictEnvelopeV1 {
+                    deal_id: request.deal_id,
+                    record,
+                    trace_hash,
+                })
             }
         }
         let mut r = BackendRouter::new();
@@ -373,13 +410,20 @@ mod tests {
                 // A missing/mismatched artifact is a BackendError, not a verdict.
                 let _witness = artifacts.resolve(self.art_hash)?;
                 let record = ReplayRecordV1::new(
-                    &ReexecCommitmentsV1 { backend_id: EVM_ID, ..Default::default() },
+                    &ReexecCommitmentsV1 {
+                        backend_id: EVM_ID,
+                        ..Default::default()
+                    },
                     B256::ZERO,
                     1,
                     B256::ZERO,
                 );
                 let trace_hash = record.trace_hash();
-                Ok(VerdictEnvelopeV1 { deal_id: request.deal_id, record, trace_hash })
+                Ok(VerdictEnvelopeV1 {
+                    deal_id: request.deal_id,
+                    record,
+                    trace_hash,
+                })
             }
         }
 
@@ -389,8 +433,9 @@ mod tests {
         r.register(Box::new(ArtifactBackend { art_hash }));
 
         // present and content-addressed -> replay proceeds.
-        let good =
-            VerifyingArtifactStore::new(move |h| (h == art_hash).then(|| b"witness-bytes".to_vec()));
+        let good = VerifyingArtifactStore::new(move |h| {
+            (h == art_hash).then(|| b"witness-bytes".to_vec())
+        });
         assert!(r.route(&request(EVM_ID, V1), &good).is_ok());
 
         // unavailable -> operational, never a verdict.
