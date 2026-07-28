@@ -57,12 +57,65 @@ pub struct VerdictEnvelopeV1 {
 pub trait ReexecBackend {
     fn id(&self) -> BackendId;
     fn version(&self) -> ContentHash;
-    fn verdict(&self, request: &ReexecRequestV1) -> Result<VerdictEnvelopeV1, BackendError>;
+    /// Deserialize the request's opaque bytes, pull any extra committed artifacts
+    /// through `artifacts` (content-addressed, never live RPC), replay, and return
+    /// the shared record.
+    fn verdict(
+        &self,
+        request: &ReexecRequestV1,
+        artifacts: &dyn BackendArtifactResolver,
+    ) -> Result<VerdictEnvelopeV1, BackendError>;
 }
 
 /// A backend-side failure that is not a buyer/seller verdict.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BackendError(pub String);
+
+/// Content-addressed access to the *extra* replay material an adapter needs but
+/// the three request blobs do not carry: EVM's proof-carrying witness, SVM's
+/// snapshot and runtime-profile objects, and so on. The adapter asks by the hash
+/// it read out of its (verified) spec/anchor; the resolver returns bytes **only**
+/// if they hash to that value, and never falls back to live RPC / latest / any
+/// uncommitted source. A missing or mismatched artifact is a `BackendError`
+/// (operational), never a verdict — so the binder's "only verified committed
+/// content reaches replay" guarantee extends to every replay input, not just the
+/// three blobs. This is the safe realization of the `ReexecRequestV2` extension.
+pub trait BackendArtifactResolver {
+    /// Return bytes `b` with `SHA-256(b) == hash`, or a `BackendError`.
+    fn resolve(&self, hash: ContentHash) -> Result<Vec<u8>, BackendError>;
+}
+
+/// A resolver over any hash-indexed source that enforces content-addressing:
+/// whatever the source returns is re-hashed and rejected unless it matches.
+pub struct VerifyingArtifactStore<F> {
+    fetch: F,
+}
+
+impl<F> VerifyingArtifactStore<F>
+where
+    F: Fn(ContentHash) -> Option<Vec<u8>>,
+{
+    pub fn new(fetch: F) -> Self {
+        Self { fetch }
+    }
+}
+
+impl<F> BackendArtifactResolver for VerifyingArtifactStore<F>
+where
+    F: Fn(ContentHash) -> Option<Vec<u8>>,
+{
+    fn resolve(&self, hash: ContentHash) -> Result<Vec<u8>, BackendError> {
+        let bytes = (self.fetch)(hash)
+            .ok_or_else(|| BackendError(format!("artifact {hash:#x} unavailable")))?;
+        let got = sha256(&bytes);
+        if got != hash {
+            return Err(BackendError(format!(
+                "artifact hash mismatch: asked {hash:#x}, got {got:#x}"
+            )));
+        }
+        Ok(bytes)
+    }
+}
 
 /// Why the binder could not produce a routed verdict. None of these are verdicts.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -95,8 +148,13 @@ impl BackendRouter {
     }
 
     /// VM-neutral routing: verify content hashes, find the exact `(id, version)`
-    /// backend, dispatch, and confirm it answered for the VM it was asked for.
-    pub fn route(&self, request: &ReexecRequestV1) -> Result<VerdictEnvelopeV1, RouterError> {
+    /// backend, dispatch (with the content-addressed artifact resolver), and
+    /// confirm it answered for the VM it was asked for.
+    pub fn route(
+        &self,
+        request: &ReexecRequestV1,
+        artifacts: &dyn BackendArtifactResolver,
+    ) -> Result<VerdictEnvelopeV1, RouterError> {
         check_hash("spec", &request.spec, request.spec_hash)?;
         check_hash("delivery", &request.delivery, request.delivery_hash)?;
         check_hash("prestate_anchor", &request.prestate_anchor, request.prestate_anchor_hash)?;
@@ -115,7 +173,9 @@ impl BackendRouter {
             });
         }
 
-        let envelope = backend.verdict(request).map_err(RouterError::Backend)?;
+        let envelope = backend
+            .verdict(request, artifacts)
+            .map_err(RouterError::Backend)?;
         // A backend cannot answer for a VM other than the one it was routed as.
         if envelope.record.backend_id != request.backend_id {
             return Err(RouterError::BackendIdentityMismatch {
@@ -158,7 +218,11 @@ mod tests {
         fn version(&self) -> ContentHash {
             self.version
         }
-        fn verdict(&self, request: &ReexecRequestV1) -> Result<VerdictEnvelopeV1, BackendError> {
+        fn verdict(
+            &self,
+            request: &ReexecRequestV1,
+            _artifacts: &dyn BackendArtifactResolver,
+        ) -> Result<VerdictEnvelopeV1, BackendError> {
             let record = ReplayRecordV1::new(
                 &ReexecCommitmentsV1 {
                     backend_id: self.id,
@@ -191,6 +255,11 @@ mod tests {
         r
     }
 
+    // The routing tests don't need extra artifacts.
+    fn no_artifacts() -> VerifyingArtifactStore<impl Fn(ContentHash) -> Option<Vec<u8>>> {
+        VerifyingArtifactStore::new(|_| None)
+    }
+
     fn request(backend_id: BackendId, version: ContentHash) -> ReexecRequestV1 {
         let spec = b"spec-bytes".to_vec();
         let delivery = b"delivery-bytes".to_vec();
@@ -213,12 +282,12 @@ mod tests {
         let r = router();
         // Same request shape, different committed backend_id -> different VM runs it,
         // and both come back as the one VerdictEnvelopeV1 / ReplayRecordV1 type.
-        let evm = r.route(&request(EVM_ID, V1)).unwrap();
+        let evm = r.route(&request(EVM_ID, V1), &no_artifacts()).unwrap();
         assert_eq!(evm.record.backend_id, EVM_ID);
         assert_eq!(evm.record.outcome, 1);
         assert_eq!(evm.trace_hash, evm.record.trace_hash());
 
-        let svm = r.route(&request(SVM_ID, V1)).unwrap();
+        let svm = r.route(&request(SVM_ID, V1), &no_artifacts()).unwrap();
         assert_eq!(svm.record.backend_id, SVM_ID);
         assert_eq!(svm.record.outcome, 2);
         // Same deal-neutral fields, different VM -> different trace hash.
@@ -228,10 +297,10 @@ mod tests {
     #[test]
     fn unknown_backend_is_not_routed_to_the_wrong_vm() {
         let r = router();
-        let err = r.route(&request(B256::repeat_byte(0xab), V1)).unwrap_err();
+        let err = r.route(&request(B256::repeat_byte(0xab), V1), &no_artifacts()).unwrap_err();
         assert!(matches!(err, RouterError::UnknownBackend { .. }));
         // A registered id but the wrong version also fails closed.
-        let err = r.route(&request(EVM_ID, B256::repeat_byte(0x02))).unwrap_err();
+        let err = r.route(&request(EVM_ID, B256::repeat_byte(0x02)), &no_artifacts()).unwrap_err();
         assert!(matches!(err, RouterError::UnknownBackend { .. }));
     }
 
@@ -240,7 +309,7 @@ mod tests {
         let r = router();
         let mut req = request(EVM_ID, V1);
         req.spec.push(0xff); // bytes no longer match spec_hash
-        let err = r.route(&req).unwrap_err();
+        let err = r.route(&req, &no_artifacts()).unwrap_err();
         assert!(matches!(
             err,
             RouterError::ContentHashMismatch { field: "spec", .. }
@@ -258,7 +327,11 @@ mod tests {
             fn version(&self) -> ContentHash {
                 V1
             }
-            fn verdict(&self, request: &ReexecRequestV1) -> Result<VerdictEnvelopeV1, BackendError> {
+            fn verdict(
+                &self,
+                request: &ReexecRequestV1,
+                _artifacts: &dyn BackendArtifactResolver,
+            ) -> Result<VerdictEnvelopeV1, BackendError> {
                 let record = ReplayRecordV1::new(
                     &ReexecCommitmentsV1 {
                         backend_id: SVM_ID, // <- lies about its VM
@@ -274,7 +347,59 @@ mod tests {
         }
         let mut r = BackendRouter::new();
         r.register(Box::new(LiarBackend));
-        let err = r.route(&request(EVM_ID, V1)).unwrap_err();
+        let err = r.route(&request(EVM_ID, V1), &no_artifacts()).unwrap_err();
         assert!(matches!(err, RouterError::BackendIdentityMismatch { .. }));
+    }
+
+    #[test]
+    fn extra_artifacts_reach_replay_only_when_content_addressed() {
+        // A backend that needs an extra committed artifact (the EVM witness / SVM
+        // snapshot) and resolves it by a hash it read out of its verified spec.
+        struct ArtifactBackend {
+            art_hash: ContentHash,
+        }
+        impl ReexecBackend for ArtifactBackend {
+            fn id(&self) -> BackendId {
+                EVM_ID
+            }
+            fn version(&self) -> ContentHash {
+                V1
+            }
+            fn verdict(
+                &self,
+                request: &ReexecRequestV1,
+                artifacts: &dyn BackendArtifactResolver,
+            ) -> Result<VerdictEnvelopeV1, BackendError> {
+                // A missing/mismatched artifact is a BackendError, not a verdict.
+                let _witness = artifacts.resolve(self.art_hash)?;
+                let record = ReplayRecordV1::new(
+                    &ReexecCommitmentsV1 { backend_id: EVM_ID, ..Default::default() },
+                    B256::ZERO,
+                    1,
+                    B256::ZERO,
+                );
+                let trace_hash = record.trace_hash();
+                Ok(VerdictEnvelopeV1 { deal_id: request.deal_id, record, trace_hash })
+            }
+        }
+
+        let art = b"witness-bytes".to_vec();
+        let art_hash = sha256(&art);
+        let mut r = BackendRouter::new();
+        r.register(Box::new(ArtifactBackend { art_hash }));
+
+        // present and content-addressed -> replay proceeds.
+        let good =
+            VerifyingArtifactStore::new(move |h| (h == art_hash).then(|| b"witness-bytes".to_vec()));
+        assert!(r.route(&request(EVM_ID, V1), &good).is_ok());
+
+        // unavailable -> operational, never a verdict.
+        let err = r.route(&request(EVM_ID, V1), &no_artifacts()).unwrap_err();
+        assert!(matches!(err, RouterError::Backend(_)));
+
+        // wrong bytes for the committed hash -> rejected by the verifying store.
+        let bad = VerifyingArtifactStore::new(|_| Some(b"tampered".to_vec()));
+        let err = r.route(&request(EVM_ID, V1), &bad).unwrap_err();
+        assert!(matches!(err, RouterError::Backend(_)));
     }
 }

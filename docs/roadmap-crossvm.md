@@ -87,12 +87,21 @@ engine underneath is VM-specific. The exact types and invariants are in
   that answers for a different VM than routed is rejected. Because the record codec
   is shared, an EVM verdict and a Solana verdict are literally one type — which is
   why the binder is thin. 4 tests.
+- Artifact resolution: **done** — a `BackendArtifactResolver` closes the gap that
+  the three request blobs don't carry EVM's proof-carrying witness or SVM's
+  snapshot / runtime-profile. An adapter pulls those by the hash it reads out of its
+  verified spec/anchor; the resolver returns bytes only if they hash to it and never
+  falls back to live RPC. So "only verified committed content reaches replay" holds
+  for *every* replay input, not just the three blobs.
 - Remaining (frame-thick): the per-VM backend adapters (deserialize each VM's
-  anchor/plan/predicate and call `reexec-evm` / `reexec-svm` behind the trait), and
-  the cross-chain settlement around routing — settlement finality on both chains,
-  where escrow lives vs where execution happens, cross-chain propagation of the
-  verdict, and double-settlement rules. "Connect," not "rebuild," now that the waist
-  and both slices hold.
+  anchor/plan/predicate, pull artifacts via the resolver, call `reexec-evm` /
+  `reexec-svm` behind the trait), and the cross-chain settlement — designed
+  fail-closed in [`docs/cross-chain-settlement.md`](cross-chain-settlement.md):
+  two separate clocks, a `RemoteVerdictPending` stage gated on a B finality proof,
+  an A-side challenge window, a `(B domain, B settlement id, traceHash)`
+  double-settlement key, and C1 `timeout_refund` if no valid remote verdict arrives.
+  A remote verdict never releases immediately. Minimal cut first: same-chain
+  cross-VM (no remote message trusted). "Connect," not "rebuild."
 
 ## Boundaries to keep clean from day 1
 
