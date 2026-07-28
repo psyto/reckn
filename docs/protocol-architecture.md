@@ -286,7 +286,7 @@ not alternate settlement paths.
 
 ## Surface-first implementation order
 
-> Progress: (1) done — `contracts/`, 22 tests (incl. cross-language digest pin,
+> Progress: (1) done — `contracts/`, 23 tests (incl. cross-language digest pin,
 > ERC-8004 `ReputationEvidence`, and end-to-end settlement on real engine output).
 > (2) done — `reexec-evm/`, revm 38 with offline MPT verification and real-anchor
 > (base-fee/nonce) support, 6 tests; canonical `ReplayRecordV1` in

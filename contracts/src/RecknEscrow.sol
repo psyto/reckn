@@ -109,6 +109,15 @@ contract RecknEscrow {
     ///         (the canonical ReplayRecordV1 digest) can be re-derived by anyone.
     ///         Emission is a pure projection — it never infers quality and never
     ///         affects settlement.
+    ///
+    ///         Two shapes, distinguished by `verdictTraceHash`:
+    ///         - a resolved verdict: `reproduced` is the verdict, `verdictTraceHash`
+    ///           is the (non-zero) canonical trace anyone can re-derive;
+    ///         - a dispute that timed out with no verdict: `reproduced = false` and
+    ///           `verdictTraceHash = 0`. The seller owns delivery/replay evidence
+    ///           (§C1), so withholding it does not let a seller dodge the negative
+    ///           signal by forcing a timeout — the zero trace marks it as
+    ///           evidence-withheld rather than a reproduced `Failed`.
     event ReputationEvidence(
         address indexed agent,
         bool reproduced,
@@ -336,6 +345,11 @@ contract RecknEscrow {
         if (d.state != DealState.Disputed) revert BadState();
         if (block.timestamp <= d.resolveDeadline) revert DeadlineNotReached();
         d.state = DealState.Resolved;
+        // A withholding seller cannot dodge the negative reputation signal by
+        // forcing a timeout instead of a `Failed` verdict: emit evidence-withheld
+        // (reproduced = false, zero trace) before refunding the buyer. Zero trace
+        // distinguishes this from a reproduced `Failed`. Pure projection.
+        emit ReputationEvidence(d.seller, false, id, bytes32(0), d.backendId);
         _pay(d, id, d.buyer, 2);
     }
 

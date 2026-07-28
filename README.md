@@ -46,6 +46,15 @@ The crux: **at escrow-funding time the deal is bound to a re-executable predicat
 back to a conventional judge — out of scope here, but the adjudicator boundary is
 cut so such a judge is just another pluggable backend.
 
+Replay is deterministic because it runs against a **committed prestate**
+(`prestateAnchor`), not the live mempool — so ordering, front-running, and MEV of
+the *original* execution are irrelevant to the re-run. The flip side is the scope
+line: a deliverable whose correctness depends on live-chain ordering not captured
+by the committed anchor is **not in the decidable lane**, and block-context that a
+single committed prestate can't reproduce (e.g. `BLOCKHASH` of a connected header)
+is trapped as an operational error rather than silently guessed. The predicate
+must be checkable against `prestate + plan` alone.
+
 ## State machine (Clawback-derived)
 
 ```
@@ -167,13 +176,16 @@ content publication.
   against the keeper, an ERC-8004-style `ReputationEvidence` projection (below),
   and end-to-end tests that settle on the **real engine output** (the
   `moneyshot.json` hashes) and assert `VerdictCommitted` carries the actual
-  `traceHash`. `forge test`: **22 passing**.
+  `traceHash`. `forge test`: **23 passing**.
 - **Reputation (ERC-8004 style):** on every verdict the escrow emits
   `ReputationEvidence(agent, reproduced, dealId, traceHash, backendId)` — a pure
   projection that never changes settlement. Unlike AgentRankr's self-reported,
   sybil-gameable feedback, the seller-agent's reputation is **earned by a
-  reproducible verdict**: anyone can re-derive `traceHash`. Emitted on-chain and
-  asserted by contract tests.
+  reproducible verdict**: anyone can re-derive `traceHash`. A dispute that times
+  out with no verdict *also* emits a negative signal (`reproduced = false`, **zero
+  trace**), so a seller cannot dodge the mark by withholding delivery/replay
+  evidence to force a timeout; the zero trace distinguishes it from a reproduced
+  `Failed`. Emitted on-chain and asserted by contract tests.
 - **Re-execution backend (EVM V1):** revm 38 replay implemented in
   [`reexec-evm/`](reexec-evm) — deterministic CALL replay with `RESULT_EQUALS` /
   `POSTSTATE_EQUALS` predicates. Honest delivery → `Reproduced`; a seller's false
@@ -259,7 +271,7 @@ content publication.
   replay a live RPC witness. Its HTTP shell polls `Disputed`, SHA-256-checks
   content-store bytes before parsing, replays, and submits `resolve()`. The included
   anvil E2E proves false claim → `Failed` → refund. `cargo test` + `forge test`:
-  **keeper 2, contracts 22**.
+  **keeper 2, contracts 23**.
 - **Independent re-verification (the trust property, executable):**
   `reckn-keeper verify <rpc> <escrow> <content-store> <dealId>` — a **keyless**
   third party reads the resolver's on-chain `VerdictCommitted` and re-derives the
@@ -310,7 +322,7 @@ closed-world replay → verdict → settlement`.
 Each component is self-contained; there is no top-level build.
 
 ```bash
-# settlement contracts (Foundry) — 22 tests (incl. end-to-end on real engine output)
+# settlement contracts (Foundry) — 23 tests (incl. end-to-end on real engine output)
 cd contracts && forge install foundry-rs/forge-std --no-git && forge test
 
 # re-execution engine (revm 38, MPT-verified prestate) — 5 tests

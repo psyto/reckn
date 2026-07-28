@@ -151,6 +151,22 @@ contract RecknEscrowTest is Test {
         escrow.timeoutRefund(id);
     }
 
+    /// A seller who withholds delivery/replay evidence to force a timeout cannot
+    /// dodge the negative reputation signal: the timeout emits evidence-withheld
+    /// (reproduced = false, zero trace) distinguishable from a reproduced Failed.
+    function test_timeoutRefund_emits_evidence_withheld() public {
+        bytes32 id = _fund("s5b");
+        vm.prank(seller);
+        escrow.deliver(id, DELIVERY_HASH, CHALLENGE_W);
+        vm.prank(buyer);
+        escrow.challenge(id, RESOLVE_W);
+
+        vm.warp(block.timestamp + RESOLVE_W + 1);
+        vm.expectEmit(true, true, false, true, address(escrow));
+        emit ReputationEvidence(seller, false, id, bytes32(0), BACKEND_ID);
+        escrow.timeoutRefund(id);
+    }
+
     // --- settlement-authority guards ---
 
     function test_resolve_rejects_unknown_resolver() public {
