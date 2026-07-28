@@ -114,7 +114,8 @@ escrow-svm/                 # Solana settlement half (Pinocchio) — implemented
   src/lib.rs                #   4-state escrow; Ed25519-attested resolve; timeout
   tests/e2e.rs             #   LiteSVM tx-level e2e
 reckn-svm-keeper/           # Solana keeper: replay -> Ed25519-sign -> resolve
-  src/lib.rs                #   + keyless verify; core done, full-loop e2e pending
+  src/lib.rs                #   + keyless verify
+  tests/full_loop.rs        #   fund->challenge->keeper->resolve->verify (LiteSVM)
 packages/protocol/          # canonical cross-VM codecs (specs + golden vectors)
   REPLAY_RECORD_V1.md       #   ReplayRecordV1 TLV spec (trace_hash source)
   golden/                   #   cross-language conformance vectors
@@ -203,8 +204,10 @@ layer, cross-VM, and production content publication.
   adjacency the program's introspection requires — using the escrow's own
   `verdict_message` + the canonical Ed25519 helper, i.e. byte-identical to the
   shape `escrow-svm`'s passing e2e already accepts. A keyless `verify` re-derives
-  the on-chain verdict from public inputs. Core + tests done; the full
-  fund → challenge → keeper → resolve → verify integration loop is the last step.
+  the on-chain verdict from public inputs. Proven end-to-end by a LiteSVM
+  full-loop test: content SHA-256 → fund → deliver → challenge → replay → the
+  keeper's `[ed25519, resolve]` accepted on-chain → honest releases the seller /
+  false claim refunds the buyer → keyless `verify` agrees.
 - **Money-shot dashboard:** [`dashboard/`](dashboard) — a self-contained,
   animated money-shot driven by real `reexec-evm` output: the escrow pot moves, a
   live `reckn-keeper` console + ledger stream the resolve, and the outcome lands on

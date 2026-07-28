@@ -60,8 +60,16 @@ engine underneath is VM-specific. The exact types and invariants are in
   `ReputationEvidence` is logged. LiteSVM tx-level e2e (release / refund / forged
   signature / swapped anchor / operational outcome / timeout / double-resolve /
   token conservation) is green.
-- Remaining: the checkpoint → snapshot Bank verifier (frame-thick), an SVM keeper +
-  keyless re-verifier, and a full SVM end-to-end wiring the program to `reexec-svm`.
+- Keeper + end-to-end: **done** — [`reckn-svm-keeper/`](../reckn-svm-keeper) mirrors
+  the EVM keeper (content-store SHA-256 check → replay → build the escrow's
+  `VerdictCommitment` → emit the `[ed25519(current-ix), resolve]` the program
+  accepts → keyless `verify`). A LiteSVM full-loop test drives content SHA-256 →
+  fund → deliver → challenge → replay → on-chain resolve → payout → keyless verify,
+  for both an honest release and a false-claim refund. The SVM slice now mirrors
+  the EVM slice, both emitting the same `ReplayRecordV1`.
+- Remaining for full auto-resolve: the checkpoint → snapshot Bank verifier
+  (frame-thick) — the authenticity piece — plus a durable content-availability
+  story. The demo runs at the reproducibility tier (committed snapshot).
 - Migration, not rewrite: the escrow state machine, predicate type, and verdict
   envelope are reused; only the replay engine changed — both backends emit
   byte-identical records against the shared golden.
