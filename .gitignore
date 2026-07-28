@@ -2,6 +2,7 @@
 node_modules/
 # rust
 target/
+**/target/
 # foundry
 out/
 cache/

@@ -51,9 +51,17 @@ engine underneath is VM-specific. The exact types and invariants are in
   `UnsupportedEnvironmentDependency` until the full checkpoint runtime is
   reconstructed. Both are deliberate cuts, surfaced not hidden. This asymmetry with
   EVM's MPT is the nature of Solana (no native per-account proof).
-- Remaining: the checkpoint → snapshot Bank verifier (frame-thick), then a
-  Pinocchio escrow program, an SVM keeper + keyless re-verifier, and an SVM
-  end-to-end.
+- Escrow program: **done** — [`escrow-svm/`](../escrow-svm), a Pinocchio program
+  mirroring `RecknEscrow.sol` (Held → Delivered → Disputed → Resolved, Token-2022
+  vault, resolver/backend/profile allowlist). `resolve` verifies the verdict by
+  strict introspection of a preceding native Ed25519 instruction over a
+  domain-separated `genesis‖program_id‖deal_id‖VerdictCommitment` message; an
+  operational outcome can never settle, only `timeout_refund` favors the buyer;
+  `ReputationEvidence` is logged. LiteSVM tx-level e2e (release / refund / forged
+  signature / swapped anchor / operational outcome / timeout / double-resolve /
+  token conservation) is green.
+- Remaining: the checkpoint → snapshot Bank verifier (frame-thick), an SVM keeper +
+  keyless re-verifier, and a full SVM end-to-end wiring the program to `reexec-svm`.
 - Migration, not rewrite: the escrow state machine, predicate type, and verdict
   envelope are reused; only the replay engine changed — both backends emit
   byte-identical records against the shared golden.

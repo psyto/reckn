@@ -110,6 +110,9 @@ reexec-evm/                 # EVM re-execution backend (revm 38) — implemented
   examples/moneyshot.rs     #   emits real engine output for the dashboard
 reexec-svm/                 # Solana re-execution backend (LiteSVM) — implemented
   src/lib.rs                #   deterministic tx replay → the SAME ReplayRecordV1
+escrow-svm/                 # Solana settlement half (Pinocchio) — implemented
+  src/lib.rs                #   4-state escrow; Ed25519-attested resolve; timeout
+  tests/e2e.rs             #   LiteSVM tx-level e2e
 packages/protocol/          # canonical cross-VM codecs (specs + golden vectors)
   REPLAY_RECORD_V1.md       #   ReplayRecordV1 TLV spec (trace_hash source)
   golden/                   #   cross-language conformance vectors
@@ -182,6 +185,15 @@ layer, cross-VM, and production content publication.
   separate, unbuilt piece, and the closed runtime currently permits only the System
   builtin (custom SBF is `UnsupportedEnvironmentDependency`). `cargo test`:
   **13 passing** (reckn-record: 1).
+- **Settlement contract (Solana / SVM):** [`escrow-svm/`](escrow-svm) — a Pinocchio
+  program mirroring the EVM escrow: the same four-state machine, a Token-2022 vault,
+  and a `resolve` that verifies the resolver's verdict by strict introspection of a
+  preceding native **Ed25519** instruction over a domain-separated
+  `genesis‖program_id‖deal_id‖VerdictCommitment` message. An operational outcome can
+  never settle — only `timeout_refund` favors the buyer — and `ReputationEvidence`
+  is logged. LiteSVM tx-level e2e (release / refund / forged signature / swapped
+  anchor / operational outcome / timeout / double-resolve / conservation):
+  **3 passing** via `cargo build-sbf`.
 - **Money-shot dashboard:** [`dashboard/`](dashboard) — a self-contained,
   animated money-shot driven by real `reexec-evm` output: the escrow pot moves, a
   live `reckn-keeper` console + ledger stream the resolve, and the outcome lands on
