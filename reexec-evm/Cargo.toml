@@ -15,9 +15,9 @@ name = "reckn_reexec_evm"
 # whether a plan satisfies a predicate, not whether a real fee-paying tx is valid,
 # so base-fee gating must be off (a committed real block always has base_fee > 0).
 revm = { version = "38", features = ["optional_no_base_fee"] }
-# Cross-VM canonical hashing is SHA-256 (see docs/protocol-architecture.md and
-# packages/protocol/REPLAY_RECORD_V1.md), distinct from EVM-native keccak256.
-sha2 = "0.10"
+# The canonical VM-neutral verdict record (SHA-256 TLV) is shared with every other
+# backend so EVM and Solana produce byte-identical records / trace hashes.
+reckn-record = { path = "../packages/protocol-rs" }
 # Offline Ethereum MPT proof verification. 0.9.5 resolves against the already
 # pinned alloy-primitives 1.6.1 used by revm 38; `ethereum` provides TrieAccount.
 alloy-trie = { version = "0.9.5", features = ["ethereum"] }

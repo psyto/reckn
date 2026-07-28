@@ -3254,13 +3254,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "reckn-record"
+version = "0.1.0"
+dependencies = [
+ "alloy-primitives",
+ "sha2",
+]
+
+[[package]]
 name = "reckn-reexec-evm"
 version = "0.1.0"
 dependencies = [
  "alloy-rlp",
  "alloy-trie",
+ "reckn-record",
  "revm",
- "sha2",
 ]
 
 [[package]]

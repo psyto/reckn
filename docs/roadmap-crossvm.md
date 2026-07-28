@@ -25,14 +25,18 @@ engine underneath is VM-specific. The exact types and invariants are in
   drives fund → deliver → challenge → keeper resolve → **keyless re-verification**
   of the on-chain verdict.
 
-## Act 2 — Solana port (straightforward)
+## Act 2 — Solana port (backend shipped)
 
-- Backend: LiteSVM / SBF replay against pinned account state — the re-exec core
-  already exists in the portfolio (Custos F1–F6, Redde, solinv).
-- Escrow: Anchor / Pinocchio program. Payment: x402-on-Solana (Solana is a
-  natural fit for micropayments).
-- Migration, not rewrite: reuse the escrow state machine, spec predicate type,
-  and verdict envelope; swap the backend.
+- Backend: **done** — [`reexec-svm/`](../reexec-svm) replays a committed
+  transaction against a committed account snapshot with `LiteSVM`, judges a
+  predicate, and emits the **same** `ReplayRecordV1` as EVM (via the shared
+  `reckn-record` codec). Prestate authenticity is a snapshot commitment (V1);
+  the Solana accounts/bank-hash proof is the flagged hardening.
+- Remaining: a Pinocchio escrow program (same state machine), an SVM keeper +
+  keyless re-verifier, and an SVM end-to-end — mirroring the EVM side.
+- Migration, not rewrite: the escrow state machine, predicate type, and verdict
+  envelope are reused; only the replay engine changed. Proven by both backends
+  emitting byte-identical records against the shared golden.
 
 ## Act 3 — cross-VM binder (research-grade)
 

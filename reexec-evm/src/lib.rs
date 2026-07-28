@@ -28,7 +28,6 @@ use revm::primitives::hardfork::SpecId;
 use revm::primitives::{keccak256, Address, Bytes, TxKind, B256, U256};
 use revm::state::{AccountInfo, Bytecode};
 use revm::{Context, ExecuteEvm, MainBuilder, MainContext};
-use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::fmt;
 
@@ -96,89 +95,16 @@ pub struct EvmCallPlanV1 {
     pub gas_limit: u64,
 }
 
-/// The commitment hashes that bind a replay to a specific deal. These come from
-/// the protocol/escrow layer (hashes of the canonical spec/delivery/anchor bytes
-/// and the backend identity); the re-execution engine treats them as opaque
-/// 32-byte content and folds them into the canonical [`ReplayRecordV1`].
-#[derive(Clone, Debug, Default)]
-pub struct ReexecCommitmentsV1 {
-    pub backend_id: B256,
-    pub backend_version_hash: B256,
-    pub spec_hash: B256,
-    pub delivery_hash: B256,
-    pub prestate_anchor_hash: B256,
-}
+// The canonical VM-neutral record + commitments live in the shared `reckn-record`
+// crate, so this EVM backend and the Solana backend emit byte-identical records
+// and trace hashes. Re-exported for this crate's public API.
+pub use reckn_record::{ReexecCommitmentsV1, ReplayRecordV1};
 
-/// Canonical, VM-neutral record of an adjudicated replay. `trace_hash` is its
-/// SHA-256 digest. The encoding is specified in
-/// `packages/protocol/REPLAY_RECORD_V1.md`; this struct is the reference Rust
-/// implementation and must match that spec and the golden vectors.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ReplayRecordV1 {
-    pub protocol_version: u64,
-    pub backend_id: B256,
-    pub backend_version_hash: B256,
-    pub spec_hash: B256,
-    pub delivery_hash: B256,
-    pub prestate_anchor_hash: B256,
-    pub prestate_root: B256,
-    /// 1 = Reproduced, 2 = Failed (matches the ReexecVerdict enum).
-    pub outcome: u8,
-    /// SHA-256 ContentHash of the normalized backend result. For EVM V1 this is
-    /// `SHA-256("reckn/v1/" || "evm-return-data" || returnData)`, distinct from
-    /// the keccak digest used by `ResultEquals` inside the EVM predicate.
-    pub result_hash: B256,
-}
-
-impl ReplayRecordV1 {
-    /// TLV bytes: entries with strictly ascending 1-byte tags, 1-byte length
-    /// (all V1 values ≤ 32 bytes), minimal-big-endian unsigned integers.
-    pub fn canonical_bytes(&self) -> Vec<u8> {
-        fn tlv(out: &mut Vec<u8>, tag: u8, value: &[u8]) {
-            out.push(tag);
-            out.push(value.len() as u8);
-            out.extend_from_slice(value);
-        }
-        fn minimal_be(v: u64) -> Vec<u8> {
-            if v == 0 {
-                return Vec::new();
-            }
-            let bytes = v.to_be_bytes();
-            let first = bytes.iter().position(|&b| b != 0).unwrap();
-            bytes[first..].to_vec()
-        }
-        let mut o = Vec::new();
-        tlv(&mut o, 0x01, &minimal_be(self.protocol_version));
-        tlv(&mut o, 0x02, self.backend_id.as_slice());
-        tlv(&mut o, 0x03, self.backend_version_hash.as_slice());
-        tlv(&mut o, 0x04, self.spec_hash.as_slice());
-        tlv(&mut o, 0x05, self.delivery_hash.as_slice());
-        tlv(&mut o, 0x06, self.prestate_anchor_hash.as_slice());
-        tlv(&mut o, 0x07, self.prestate_root.as_slice());
-        tlv(&mut o, 0x08, &minimal_be(self.outcome as u64));
-        tlv(&mut o, 0x09, self.result_hash.as_slice());
-        o
-    }
-
-    /// `SHA-256("reckn/v1/" || "replay-record" || canonicalBytes)`.
-    pub fn trace_hash(&self) -> B256 {
-        let mut h = Sha256::new();
-        h.update(b"reckn/v1/");
-        h.update(b"replay-record");
-        h.update(self.canonical_bytes());
-        B256::from_slice(&h.finalize())
-    }
-}
-
-/// Cross-VM `ContentHash` representation of an EVM CALL result. The EVM-native
-/// keccak digest remains an internal predicate input; it is not overloaded as
-/// the envelope's SHA-256 content commitment.
+/// EVM `result_hash`: the cross-VM SHA-256 content hash of the CALL return data,
+/// namespaced `"evm-return-data"`. The EVM-native keccak digest stays an internal
+/// predicate input and is never overloaded as this commitment.
 pub fn evm_result_content_hash(return_data: &[u8]) -> B256 {
-    let mut h = Sha256::new();
-    h.update(b"reckn/v1/");
-    h.update(b"evm-return-data");
-    h.update(return_data);
-    B256::from_slice(&h.finalize())
+    reckn_record::result_content_hash(b"evm-return-data", return_data)
 }
 
 /// The buyer-funded predicate. Fixed at funding; the seller cannot change it.
@@ -984,50 +910,8 @@ mod tests {
         );
     }
 
-    /// Golden vector for the canonical ReplayRecordV1 codec. The expected
-    /// `trace_hash` was computed independently (Python `hashlib.sha256`), so this
-    /// asserts the Rust reference impl matches real SHA-256 and the spec in
-    /// `packages/protocol/REPLAY_RECORD_V1.md` / `golden/replay-record-v1.json`.
-    #[test]
-    fn golden_replay_record_v1() {
-        let rec = ReplayRecordV1 {
-            protocol_version: 1,
-            backend_id: B256::from([0x01; 32]),
-            backend_version_hash: B256::from([0x02; 32]),
-            spec_hash: B256::from([0x03; 32]),
-            delivery_hash: B256::from([0x04; 32]),
-            prestate_anchor_hash: B256::from([0x05; 32]),
-            prestate_root: B256::from([0x06; 32]),
-            outcome: 1,
-            result_hash: B256::from([0x07; 32]),
-        };
-
-        let mut expected = vec![0x01u8, 0x01, 0x01];
-        for (tag, val) in [
-            (0x02u8, 0x01u8),
-            (0x03, 0x02),
-            (0x04, 0x03),
-            (0x05, 0x04),
-            (0x06, 0x05),
-            (0x07, 0x06),
-        ] {
-            expected.push(tag);
-            expected.push(0x20);
-            expected.extend_from_slice(&[val; 32]);
-        }
-        expected.extend_from_slice(&[0x08, 0x01, 0x01]);
-        expected.push(0x09);
-        expected.push(0x20);
-        expected.extend_from_slice(&[0x07; 32]);
-
-        assert_eq!(rec.canonical_bytes(), expected, "canonical TLV bytes");
-        assert_eq!(rec.canonical_bytes().len(), 244);
-        assert_eq!(
-            format!("{:x}", rec.trace_hash()),
-            "94b20b2330662638857fb412dc648f84c183e8e214431bd25f8915452258d33e",
-            "trace_hash must match independent SHA-256",
-        );
-    }
+    // The ReplayRecordV1 golden vector now lives with the shared codec in the
+    // `reckn-record` crate (so EVM and Solana assert the same bytes/hash).
 
     #[test]
     fn replay_is_deterministic() {

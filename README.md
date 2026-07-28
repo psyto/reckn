@@ -105,12 +105,16 @@ contracts/                  # EVM V1 settlement half (Foundry) — implemented
   src/libraries/VerdictHash.sol
   src/interfaces/IUSDC3009.sol
   test/                     #   forge tests
-reexec-evm/                 # EVM V1 re-execution backend (revm 38) — implemented
+reexec-evm/                 # EVM re-execution backend (revm 38) — implemented
   src/lib.rs                #   deterministic CALL replay + predicate verdict
   examples/moneyshot.rs     #   emits real engine output for the dashboard
-packages/protocol/          # canonical cross-VM codecs — started
+reexec-svm/                 # Solana re-execution backend (LiteSVM) — implemented
+  src/lib.rs                #   deterministic tx replay → the SAME ReplayRecordV1
+packages/protocol/          # canonical cross-VM codecs (specs + golden vectors)
   REPLAY_RECORD_V1.md       #   ReplayRecordV1 TLV spec (trace_hash source)
   golden/                   #   cross-language conformance vectors
+packages/protocol-rs/       # reckn-record: the shared Rust record codec both
+                            #   backends emit, so EVM and SVM trace hashes match
 dashboard/                  # LLM-judge vs replay money-shot — implemented
   index.html                #   cinematic money-shot: money moves, live keeper
                             #   console + ledger, on-chain resolve receipt
@@ -160,7 +164,16 @@ layer, cross-VM, and production content publication.
   the closed replay witness to `anchor.state_root`; proof failure or a missing
   witness is an operational error, not a verdict. Replay ignores tx-validity
   ceremony (base-fee / nonce) so honest deliveries reproduce against real blocks;
-  balance for `value` is still enforced. `cargo test`: **6 passing**.
+  balance for `value` is still enforced. `cargo test`: **5 passing**.
+- **Re-execution backend (Solana / SVM):** [`reexec-svm/`](reexec-svm) — the same
+  mechanism on Solana via `LiteSVM`: replay a committed transaction against a
+  committed account snapshot (bound to the anchor by a snapshot commitment;
+  tampering is an operational error, not a verdict), judge a `LamportsEquals` /
+  `ResultEquals` predicate, and emit the **identical VM-neutral `ReplayRecordV1`**
+  as the EVM backend. That shared record — one Rust codec in
+  [`packages/protocol-rs`](packages/protocol-rs), asserted against the same golden
+  as the TypeScript/Solidity vectors — is the foundation the cross-VM binder will
+  stand on. `cargo test`: **4 passing** (reckn-record: 1).
 - **Money-shot dashboard:** [`dashboard/`](dashboard) — a self-contained,
   animated money-shot driven by real `reexec-evm` output: the escrow pot moves, a
   live `reckn-keeper` console + ledger stream the resolve, and the outcome lands on

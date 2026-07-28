@@ -1,0 +1,12 @@
+[package]
+name = "reckn-record"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Canonical, VM-neutral Reckn verdict record (ReplayRecordV1) shared by every re-execution backend so EVM and Solana produce byte-identical records and trace hashes."
+
+[dependencies]
+# 32-byte content hashes are VM-neutral; alloy-primitives gives us B256 across
+# backends. SHA-256 is the cross-VM canonical hash (distinct from EVM keccak).
+alloy-primitives = "1"
+sha2 = "0.10"
