@@ -8,6 +8,11 @@ description = "Reckn EVM V1 re-execution backend: deterministic revm replay of a
 [lib]
 name = "reckn_reexec_evm"
 
+[features]
+# Offline, deterministic fixture builders for downstream integration tests.  The
+# production crate does not expose this module unless the feature is opted into.
+testkit = []
+
 [dependencies]
 # Pinned to the version used across the psyto Reth lab (telos) so primitives and
 # EVM semantics stay consistent with the rest of the toolchain.

@@ -579,8 +579,11 @@ fn read_post_slot(
     U256::ZERO
 }
 
-#[cfg(test)]
-mod tests {
+/// Deterministic, offline MPT fixtures shared by integration tests.  This is
+/// deliberately feature-gated so the production API stays limited to replay
+/// and verification primitives.
+#[cfg(any(test, feature = "testkit"))]
+pub mod testkit {
     use super::*;
     use alloy_trie::proof::ProofRetainer;
     use alloy_trie::{HashBuilder, EMPTY_ROOT_HASH};
@@ -590,13 +593,13 @@ mod tests {
     // "seller claims their output satisfies the predicate" with no external
     // contract: 36 5f 5f 37 36 5f f3
     //   CALLDATASIZE PUSH0 PUSH0 CALLDATACOPY CALLDATASIZE PUSH0 RETURN
-    const IDENTITY_RUNTIME: [u8; 7] = [0x36, 0x5f, 0x5f, 0x37, 0x36, 0x5f, 0xf3];
+    pub const IDENTITY_RUNTIME: [u8; 7] = [0x36, 0x5f, 0x5f, 0x37, 0x36, 0x5f, 0xf3];
 
-    fn addr(b: u8) -> Address {
+    pub fn addr(b: u8) -> Address {
         Address::from([b; 20])
     }
 
-    fn anchor(state_root: B256) -> EvmAnchorV1 {
+    pub fn anchor(state_root: B256) -> EvmAnchorV1 {
         EvmAnchorV1 {
             chain_id: 1,
             block_number: 21_000_000,
@@ -611,7 +614,7 @@ mod tests {
         }
     }
 
-    fn commitments() -> ReexecCommitmentsV1 {
+    pub fn commitments() -> ReexecCommitmentsV1 {
         ReexecCommitmentsV1 {
             backend_id: B256::from([0xb0; 32]),
             backend_version_hash: B256::from([0xb1; 32]),
@@ -623,7 +626,7 @@ mod tests {
 
     /// Construct offline MPT fixtures in the test only. The verification path
     /// consumes the resulting raw nodes exactly as an eth_getProof witness does.
-    fn trie_with_proofs(entries: Vec<(B256, Vec<u8>)>) -> (B256, HashMap<B256, Vec<Bytes>>) {
+    pub fn trie_with_proofs(entries: Vec<(B256, Vec<u8>)>) -> (B256, HashMap<B256, Vec<Bytes>>) {
         let mut entries = entries;
         entries.sort_unstable_by_key(|(key, _)| *key);
         let targets: Vec<Nibbles> = entries
@@ -652,14 +655,14 @@ mod tests {
         (root, proofs)
     }
 
-    fn anchored_identity_witness(
+    pub fn anchored_identity_witness(
         caller: Address,
         target: Address,
     ) -> (EvmAnchorV1, PrestateWitnessV1) {
         anchored_identity_witness_with(caller, target, 0)
     }
 
-    fn anchored_identity_witness_with(
+    pub fn anchored_identity_witness_with(
         caller: Address,
         target: Address,
         caller_nonce: u64,
@@ -742,6 +745,12 @@ mod tests {
         };
         (anchor(state_root), witness)
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::testkit::*;
 
     #[test]
     fn honest_delivery_reproduces() {

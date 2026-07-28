@@ -2,9 +2,8 @@
 //!
 //! Runs the real reexec-evm engine over two deliveries against one funded
 //! predicate and emits a JSON the dashboard renders:
-//!   - honest  : seller's plan yields the agreed output  -> Reproduced -> release
-//!   - cheating : seller *claims* success but the plan yields a bad output
-//!                -> Failed(ResultMismatch) -> refund
+//!   - honest   : seller's plan yields the agreed output -> Reproduced -> release
+//!   - cheating : seller *claims* success but yields a bad output -> Failed -> refund
 //!
 //! An opinion-based "LLM judge" reads the persuasive `seller_claim` and approves
 //! both. Re-execution ignores the claim and replays the plan, catching the fraud.
