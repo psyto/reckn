@@ -1,60 +1,55 @@
-//! Reckn Solana (SVM) re-execution backend.
+//! Reckn SVM V2 re-execution backend.
 //!
-//! The Solana analog of `reexec-evm`: given a committed anchor (a slot + a
-//! state commitment), a committed account snapshot, a seller-supplied
-//! transaction, and a buyer-funded predicate, it deterministically replays the
-//! transaction with `LiteSVM` and returns a reproducible verdict. Crucially it
-//! emits the **same** canonical [`ReplayRecordV1`] as the EVM backend (from the
-//! shared `reckn-record` crate), so a Solana verdict and an EVM verdict are
-//! comparable and reproducible under one VM-neutral envelope — the foundation the
-//! cross-VM binder will stand on.
-//!
-//! ## Trust tier — read before using a verdict
-//!
-//! This scaffold is **authenticity tier V1: "same published snapshot → same
-//! result"**. A `Reproduced` here means *anyone with this exact snapshot re-runs
-//! the plan and gets this verdict* — it is NOT proof the snapshot was Solana's
-//! real state, and it MUST NOT be an automatic escrow-release basis. Solana has
-//! no EVM-style Merkle-Patricia proof of an account against a single state root;
-//! reaching auto-resolve needs V2 (a finalized-checkpoint-authenticated full Bank
-//! snapshot whose protocol accounts/bank hash is recomputed). See
-//! `docs/roadmap-crossvm.md` Act 2.
-//!
-//! Known V1 gaps (flagged for the frame-thick hardening, not yet fixed here):
-//! - [`snapshot_commitment`] hashes accounts but NOT `programs` or `rent_epoch`,
-//!   so a seller-supplied ELF is not bound to the anchor.
-//! - `LiteSVM::new()` loads *unseeded* accounts as default/zero, so this is NOT a
-//!   closed world: an unwitnessed read does not trap. The ambient feature set,
-//!   sysvars, builtins, and standard program cache are also implicit inputs, and
-//!   `anchor.slot` does not constrain the runtime `Clock`.
-//! - `replay` runs with `sigverify` OFF, which on Solana forges *authority* (the
-//!   signer bit programs observe) — unlike EVM base-fee/nonce, this is unsound for
-//!   settlement. V2 must commit signed transaction bytes and verify signatures.
-//!
-//! In short: reproducible, but not yet authentic. The tests below exercise the
-//! replay/record path, not a settlement-grade trust boundary.
+//! A verdict is emitted only after every replay input is committed: a signed
+//! transaction, a canonical prestate snapshot, and the LiteSVM runtime profile.
+//! The anchor also carries the finalized-checkpoint fields required by the
+//! production verifier. This crate validates the replay-side boundary; a Bank
+//! snapshot verifier is responsible for deriving this snapshot from the anchor's
+//! `bank_hash` and `snapshot_archive_hash` before it reaches this API.
 
 use alloy_primitives::B256;
-use litesvm::LiteSVM;
+use litesvm::{AccountLoadPolicy, LiteSVM};
 use reckn_record::{result_content_hash, ReexecCommitmentsV1, ReplayRecordV1};
 use sha2::{Digest, Sha256};
 use solana_account::Account;
 use solana_pubkey::Pubkey;
 use solana_transaction::Transaction;
+use std::collections::BTreeSet;
+use std::str::FromStr;
 
 const SVM_RETURN_TAG: &[u8] = b"svm-return-data";
+const SNAPSHOT_CODEC_TAG: &[u8] = b"reckn/svm/prestate";
+const RUNTIME_PROFILE_TAG: &[u8] = b"reckn/svm/runtime-profile";
+const SNAPSHOT_FORMAT_V2: u16 = 2;
+const LITESVM_RUNTIME_ID: &[u8] = b"litesvm/0.13.1/reckn-closed-world/1";
 
-/// Committed block environment: a slot and a 32-byte commitment the snapshot must
-/// hash to. (`state_commitment` is the SVM analog of the EVM `state_root`.)
+/// A V2 anchor. `state_commitment` is the canonical commitment to the compact
+/// replay witness; the other fields bind that witness to the checkpoint from
+/// which an external Bank-snapshot verifier derived it.
+#[derive(Clone, Debug)]
+pub struct SvmAnchorV2 {
+    pub state_commitment: B256,
+    pub cluster_genesis_hash: B256,
+    pub slot: u64,
+    pub blockhash: B256,
+    pub bank_hash: B256,
+    pub runtime_profile_hash: B256,
+    pub snapshot_archive_hash: B256,
+    pub snapshot_format_version: u16,
+}
+
+/// The legacy V1 anchor is intentionally not accepted by [`replay`]. It cannot
+/// carry the checkpoint or runtime commitments needed for settlement-grade SVM
+/// replay.
 #[derive(Clone, Debug)]
 pub struct SvmAnchorV1 {
     pub slot: u64,
     pub state_commitment: B256,
 }
 
-/// One committed account in the prestate.
+/// One account derived from a checkpoint-authenticated snapshot.
 #[derive(Clone, Debug)]
-pub struct AccountSnapshotV1 {
+pub struct AccountSnapshotV2 {
     pub pubkey: Pubkey,
     pub lamports: u64,
     pub owner: Pubkey,
@@ -63,33 +58,58 @@ pub struct AccountSnapshotV1 {
     pub data: Vec<u8>,
 }
 
-/// The committed prestate. V1 trusts these bytes but binds them to the anchor.
+/// A compact, checkpoint-derived replay witness. Program bytes are deliberately
+/// absent: program images are derived from Program/ProgramData accounts here,
+/// never accepted from the seller.
 #[derive(Clone, Debug, Default)]
-pub struct PrestateSnapshotV1 {
-    pub accounts: Vec<AccountSnapshotV1>,
-    /// Loadable BPF programs `(program_id, elf)` the transaction invokes. The
-    /// builtin System program is always available and need not be listed.
-    pub programs: Vec<(Pubkey, Vec<u8>)>,
+pub struct PrestateSnapshotV2 {
+    pub accounts: Vec<AccountSnapshotV2>,
 }
 
-/// A fully specified, committed transaction supplied by the seller.
+/// Compatibility names for the account and snapshot data types. The snapshot
+/// no longer has a seller-supplied `programs` field.
+pub type PrestateSnapshotV1 = PrestateSnapshotV2;
+pub type AccountSnapshotV1 = AccountSnapshotV2;
+
+/// The explicit subset of LiteSVM's otherwise ambient runtime that a plan may
+/// invoke without a snapshot account. The V2 default permits only the System
+/// builtin. All other program accounts must be checkpoint-derived.
 #[derive(Clone, Debug)]
-pub struct SvmPlanV1 {
+pub struct RuntimeProfileV1 {
+    pub allowed_ambient_programs: Vec<Pubkey>,
+}
+
+impl Default for RuntimeProfileV1 {
+    fn default() -> Self {
+        Self {
+            allowed_ambient_programs: vec![system_program_id()],
+        }
+    }
+}
+
+/// A signed, seller-supplied transaction. Its canonical transaction bytes,
+/// including signatures and recent blockhash, belong to `deliveryHash`.
+#[derive(Clone, Debug)]
+pub struct SvmPlanV2 {
     pub transaction: Transaction,
 }
+
+pub type SvmPlanV1 = SvmPlanV2;
 
 /// The buyer-funded predicate. Fixed at funding; the seller cannot change it.
 #[derive(Clone, Debug)]
 pub enum PredicateV1 {
     /// `SHA-256("reckn/v1/" || "svm-return-data" || returnData)` equals this.
     ResultEquals { expected_result_hash: B256 },
-    /// The account's post-replay lamports must equal `expected` (post-state check).
+    /// The named post-state account must still exist and have these lamports.
     LamportsEquals { account: Pubkey, expected: u64 },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum FailReason {
-    /// The transaction failed (revert/error).
+    /// The signed transaction did not verify against its message signers.
+    InvalidAuthorization,
+    /// The authenticated transaction failed during SVM execution.
     Execution,
     ResultMismatch,
     LamportsMismatch {
@@ -105,17 +125,60 @@ pub enum Verdict {
     Failed(FailReason),
 }
 
-/// Not a buyer/seller verdict — the backend lacks an authentic, complete prestate.
+/// A missing, unauthentic, or unsupported replay input. These errors never
+/// produce a resolver signature or a buyer/seller verdict.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum OperationalError {
-    /// The snapshot does not hash to the committed `anchor.state_commitment`.
-    PrestateCommitmentMismatch { expected: B256, got: B256 },
-    /// The predicate references an account absent from the committed snapshot.
-    MissingPredicateAccount { account: Pubkey },
-    /// Seeding a committed account into the VM failed.
-    AccountLoad,
-    /// Loading a committed program into the VM failed.
-    ProgramLoad,
+    UnsupportedSnapshotFormat {
+        got: u16,
+    },
+    PrestateCommitmentMismatch {
+        expected: B256,
+        got: B256,
+    },
+    RuntimeProfileMismatch {
+        expected: B256,
+        got: B256,
+    },
+    BlockhashMismatch {
+        expected: B256,
+        got: B256,
+    },
+    DuplicateAccount {
+        pubkey: Pubkey,
+    },
+    DuplicateProgram {
+        program_id: Pubkey,
+    },
+    /// A message account was not in the snapshot or the explicit ambient
+    /// profile. This is reported before LiteSVM can synthesize a default.
+    ImplicitAccountLoad {
+        account: Pubkey,
+    },
+    /// Defensive final-line error from the patched LiteSVM loader.
+    ImplicitAccountLoadDuringExecution,
+    MissingPredicateAccount {
+        account: Pubkey,
+    },
+    MissingPoststateAccount {
+        account: Pubkey,
+    },
+    UnsupportedEnvironmentDependency {
+        dependency: &'static str,
+    },
+    ProgramImageUnavailable {
+        program_id: Pubkey,
+    },
+    ProgramDataMissing {
+        program_id: Pubkey,
+        programdata: Pubkey,
+    },
+    ProgramLoad {
+        program_id: Pubkey,
+    },
+    AccountLoad {
+        account: Pubkey,
+    },
 }
 
 #[derive(Clone, Debug)]
@@ -134,127 +197,425 @@ impl ReplayOutcome {
     }
 }
 
-/// Canonical SHA-256 commitment over the account snapshot: accounts sorted by
-/// pubkey, each folded in as `pubkey || lamports || owner || executable ||
-/// len(data) || data`. Deterministic, but V1-incomplete: it does NOT yet cover
-/// `programs`, `rent_epoch`, or the runtime profile, so it is not fully
-/// tamper-evident (see the crate-level trust-tier note). The hardened,
-/// length-prefixed, everything-covering codec is the frame-thick next step.
-pub fn snapshot_commitment(snapshot: &PrestateSnapshotV1) -> B256 {
-    let mut accounts: Vec<&AccountSnapshotV1> = snapshot.accounts.iter().collect();
-    accounts.sort_by_key(|a| a.pubkey.to_bytes());
-    let mut h = Sha256::new();
-    h.update(b"reckn/v1/svm-prestate");
-    for a in accounts {
-        h.update(a.pubkey.to_bytes());
-        h.update(a.lamports.to_be_bytes());
-        h.update(a.owner.to_bytes());
-        h.update([a.executable as u8]);
-        h.update((a.data.len() as u64).to_be_bytes());
-        h.update(&a.data);
-    }
-    B256::from_slice(&h.finalize())
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ProgramImageV2 {
+    pub program_id: Pubkey,
+    pub elf: Vec<u8>,
 }
 
-/// Deterministically replay `plan` against `snapshot` under `anchor`, then judge
-/// it with `predicate`, emitting the shared canonical record.
+/// Hashes the explicit LiteSVM profile. A profile change is a replay-input
+/// change, not an implementation detail.
+pub fn runtime_profile_hash(profile: &RuntimeProfileV1) -> Result<B256, OperationalError> {
+    let mut programs = profile.allowed_ambient_programs.clone();
+    programs.sort_by_key(|id| id.to_bytes());
+    for pair in programs.windows(2) {
+        if pair[0] == pair[1] {
+            return Err(OperationalError::DuplicateProgram {
+                program_id: pair[0],
+            });
+        }
+    }
+    // `LiteSVM::new()` also preloads several SPL programs. Treating those as a
+    // caller-selectable allowlist would merely move the old ambient-code trust
+    // bug into the profile. Until their account/loader state is reconstructed,
+    // the System builtin is the only permitted ambient executable.
+    if programs
+        .iter()
+        .any(|program| *program != system_program_id())
+    {
+        return Err(OperationalError::UnsupportedEnvironmentDependency {
+            dependency: "unverified ambient program",
+        });
+    }
+
+    let mut h = Sha256::new();
+    hash_bytes(&mut h, RUNTIME_PROFILE_TAG);
+    hash_u16(&mut h, 1);
+    hash_bytes(&mut h, LITESVM_RUNTIME_ID);
+    hash_u64(&mut h, programs.len() as u64);
+    for program in programs {
+        hash_bytes(&mut h, &program.to_bytes());
+    }
+    Ok(B256::from_slice(&h.finalize()))
+}
+
+/// Versioned, length-prefixed commitment over every compact replay input:
+/// account identity/content (including rent epoch), the set of executable
+/// Program/ProgramData accounts, and the complete runtime profile hash.
+pub fn snapshot_commitment(
+    snapshot: &PrestateSnapshotV2,
+    profile: &RuntimeProfileV1,
+) -> Result<B256, OperationalError> {
+    let profile_hash = runtime_profile_hash(profile)?;
+    let mut accounts: Vec<&AccountSnapshotV2> = snapshot.accounts.iter().collect();
+    accounts.sort_by_key(|account| account.pubkey.to_bytes());
+    for pair in accounts.windows(2) {
+        if pair[0].pubkey == pair[1].pubkey {
+            return Err(OperationalError::DuplicateAccount {
+                pubkey: pair[0].pubkey,
+            });
+        }
+    }
+
+    let mut h = Sha256::new();
+    hash_bytes(&mut h, SNAPSHOT_CODEC_TAG);
+    hash_u16(&mut h, SNAPSHOT_FORMAT_V2);
+    hash_bytes(&mut h, profile_hash.as_slice());
+    hash_u64(&mut h, accounts.len() as u64);
+    for account in accounts {
+        hash_bytes(&mut h, &account.pubkey.to_bytes());
+        hash_u64(&mut h, account.lamports);
+        hash_bytes(&mut h, &account.owner.to_bytes());
+        hash_bool(&mut h, account.executable);
+        hash_u64(&mut h, account.rent_epoch);
+        hash_bytes(&mut h, &account.data);
+    }
+    Ok(B256::from_slice(&h.finalize()))
+}
+
+/// Derives executable code from checkpoint-derived loader accounts. There is no
+/// seller-controlled `(program_id, elf)` input in V2.
+pub fn derive_program_images(
+    snapshot: &PrestateSnapshotV2,
+    plan: &SvmPlanV2,
+    profile: &RuntimeProfileV1,
+) -> Result<Vec<ProgramImageV2>, OperationalError> {
+    let mut program_ids = BTreeSet::new();
+    for instruction in &plan.transaction.message.instructions {
+        let index = instruction.program_id_index as usize;
+        let program_id = *plan
+            .transaction
+            .message
+            .account_keys
+            .get(index)
+            .ok_or(OperationalError::ImplicitAccountLoadDuringExecution)?;
+        if !profile.allowed_ambient_programs.contains(&program_id) {
+            // The same program may legitimately appear in several instructions;
+            // the set is an execution dependency set, not a program witness.
+            program_ids.insert(program_id);
+        }
+    }
+
+    let mut images = Vec::with_capacity(program_ids.len());
+    for program_id in program_ids {
+        let program = snapshot
+            .accounts
+            .iter()
+            .find(|account| account.pubkey == program_id)
+            .ok_or(OperationalError::ProgramImageUnavailable { program_id })?;
+        if !program.executable {
+            return Err(OperationalError::ProgramImageUnavailable { program_id });
+        }
+
+        let elf = if is_legacy_bpf_loader(&program.owner) {
+            program.data.clone()
+        } else if program.owner == upgradeable_loader_id() {
+            let programdata = parse_upgradeable_program_account(program)
+                .ok_or(OperationalError::ProgramImageUnavailable { program_id })?;
+            let programdata_account = snapshot
+                .accounts
+                .iter()
+                .find(|account| account.pubkey == programdata)
+                .ok_or(OperationalError::ProgramDataMissing {
+                    program_id,
+                    programdata,
+                })?;
+            if programdata_account.owner != upgradeable_loader_id()
+                || programdata_account.data.len() < 45
+                || programdata_account.data[..4] != 3u32.to_le_bytes()
+            {
+                return Err(OperationalError::ProgramDataMissing {
+                    program_id,
+                    programdata,
+                });
+            }
+            programdata_account.data[45..].to_vec()
+        } else {
+            return Err(OperationalError::ProgramImageUnavailable { program_id });
+        };
+        images.push(ProgramImageV2 { program_id, elf });
+    }
+    Ok(images)
+}
+
+/// Deterministically replay a signed transaction against a closed compact
+/// witness. Checkpoint validation is deliberately upstream: callers must only
+/// construct `snapshot` from a verified V2 Bank snapshot.
 pub fn replay(
-    anchor: &SvmAnchorV1,
-    snapshot: &PrestateSnapshotV1,
-    plan: &SvmPlanV1,
+    anchor: &SvmAnchorV2,
+    snapshot: &PrestateSnapshotV2,
+    profile: &RuntimeProfileV1,
+    plan: &SvmPlanV2,
     predicate: &PredicateV1,
     commitments: &ReexecCommitmentsV1,
 ) -> Result<ReplayOutcome, OperationalError> {
-    // 1. Bind the snapshot to the committed anchor (prestate authenticity, V1).
-    let got = snapshot_commitment(snapshot);
+    if anchor.snapshot_format_version != SNAPSHOT_FORMAT_V2 {
+        return Err(OperationalError::UnsupportedSnapshotFormat {
+            got: anchor.snapshot_format_version,
+        });
+    }
+    let profile_hash = runtime_profile_hash(profile)?;
+    if profile_hash != anchor.runtime_profile_hash {
+        return Err(OperationalError::RuntimeProfileMismatch {
+            expected: anchor.runtime_profile_hash,
+            got: profile_hash,
+        });
+    }
+    let got = snapshot_commitment(snapshot, profile)?;
     if got != anchor.state_commitment {
         return Err(OperationalError::PrestateCommitmentMismatch {
             expected: anchor.state_commitment,
             got,
         });
     }
+    let plan_blockhash = B256::from_slice(plan.transaction.message.recent_blockhash.as_ref());
+    if plan_blockhash != anchor.blockhash {
+        return Err(OperationalError::BlockhashMismatch {
+            expected: anchor.blockhash,
+            got: plan_blockhash,
+        });
+    }
 
-    // Predicate accounts must be part of the committed prestate.
+    reject_unsupported_environment_dependencies(plan)?;
+    ensure_closed_message_accounts(snapshot, profile, plan)?;
     if let PredicateV1::LamportsEquals { account, .. } = predicate {
-        if !snapshot.accounts.iter().any(|a| &a.pubkey == account) {
+        if !snapshot
+            .accounts
+            .iter()
+            .any(|entry| entry.pubkey == *account)
+        {
             return Err(OperationalError::MissingPredicateAccount { account: *account });
         }
     }
 
-    // 2. Build a VM seeded only from the committed snapshot. Re-execution judges
-    //    whether the plan produces the funded predicate, not whether it is a valid
-    //    fee-paying, correctly-blockhashed transaction — so signature and blockhash
-    //    checks are off (the SVM analog of ignoring EVM base-fee/nonce).
+    // Signer bits are authority in the SVM. Unlike a blockhash liveness check,
+    // this validation is part of the adjudicated transaction semantics.
+    if plan.transaction.verify().is_err() {
+        return Ok(outcome(
+            anchor,
+            commitments,
+            Verdict::Failed(FailReason::InvalidAuthorization),
+            Vec::new(),
+        ));
+    }
+
+    let images = derive_program_images(snapshot, plan, profile)?;
+    // The closed profile currently permits only the System builtin. This makes
+    // direct Clock/Rent/sysvar syscalls impossible until the checkpoint runtime
+    // environment is reconstructed rather than inherited from LiteSVM::new().
+    if !images.is_empty() {
+        return Err(OperationalError::UnsupportedEnvironmentDependency {
+            dependency: "custom SBF program",
+        });
+    }
+
     let mut svm = LiteSVM::new()
-        .with_sigverify(false)
-        .with_blockhash_check(false);
-    for a in &snapshot.accounts {
-        let account = Account {
-            lamports: a.lamports,
-            data: a.data.clone(),
-            owner: a.owner,
-            executable: a.executable,
-            rent_epoch: a.rent_epoch,
-        };
-        svm.set_account(a.pubkey, account)
-            .map_err(|_| OperationalError::AccountLoad)?;
-    }
-    for (program_id, elf) in &snapshot.programs {
-        svm.add_program(*program_id, elf)
-            .map_err(|_| OperationalError::ProgramLoad)?;
+        .with_sigverify(true)
+        // The message blockhash is bound to `anchor.blockhash`, but replay is not
+        // a mempool-admissibility test, so age/liveness remains disabled.
+        .with_blockhash_check(false)
+        .with_account_load_policy(AccountLoadPolicy::RejectUnseeded);
+
+    for account in &snapshot.accounts {
+        // Custom executable accounts are rejected above. Avoid populating an
+        // ambient cache from unused executable accounts.
+        if account.executable {
+            continue;
+        }
+        svm.set_account(
+            account.pubkey,
+            Account {
+                lamports: account.lamports,
+                data: account.data.clone(),
+                owner: account.owner,
+                executable: account.executable,
+                rent_epoch: account.rent_epoch,
+            },
+        )
+        .map_err(|_| OperationalError::AccountLoad {
+            account: account.pubkey,
+        })?;
     }
 
-    // 3. Execute exactly the committed transaction.
-    let (return_data, exec_ok) = match svm.send_transaction(plan.transaction.clone()) {
-        Ok(meta) => (meta.return_data.data, true),
-        Err(_) => (Vec::new(), false),
-    };
-    let result_hash = result_content_hash(SVM_RETURN_TAG, &return_data);
-
-    // 4. Judge.
-    let verdict = if !exec_ok {
-        Verdict::Failed(FailReason::Execution)
-    } else {
-        match predicate {
-            PredicateV1::ResultEquals {
-                expected_result_hash,
-            } => {
-                if result_hash == *expected_result_hash {
-                    Verdict::Reproduced
-                } else {
-                    Verdict::Failed(FailReason::ResultMismatch)
-                }
+    let return_data = match svm.send_transaction(plan.transaction.clone()) {
+        Ok(meta) => meta.return_data.data,
+        Err(failure) => {
+            if matches!(
+                failure.err,
+                solana_transaction_error::TransactionError::AccountNotFound
+            ) {
+                return Err(OperationalError::ImplicitAccountLoadDuringExecution);
             }
-            PredicateV1::LamportsEquals { account, expected } => {
-                let got = svm.get_account(account).map(|a| a.lamports).unwrap_or(0);
-                if got == *expected {
-                    Verdict::Reproduced
-                } else {
-                    Verdict::Failed(FailReason::LamportsMismatch {
-                        account: *account,
-                        got,
-                        expected: *expected,
-                    })
-                }
-            }
+            return Ok(outcome(
+                anchor,
+                commitments,
+                Verdict::Failed(FailReason::Execution),
+                Vec::new(),
+            ));
         }
     };
 
+    let result_hash = result_content_hash(SVM_RETURN_TAG, &return_data);
+    let verdict = match predicate {
+        PredicateV1::ResultEquals {
+            expected_result_hash,
+        } => {
+            if result_hash == *expected_result_hash {
+                Verdict::Reproduced
+            } else {
+                Verdict::Failed(FailReason::ResultMismatch)
+            }
+        }
+        PredicateV1::LamportsEquals { account, expected } => {
+            let poststate = svm
+                .get_account(account)
+                .ok_or(OperationalError::MissingPoststateAccount { account: *account })?;
+            if poststate.lamports == *expected {
+                Verdict::Reproduced
+            } else {
+                Verdict::Failed(FailReason::LamportsMismatch {
+                    account: *account,
+                    got: poststate.lamports,
+                    expected: *expected,
+                })
+            }
+        }
+    };
+    Ok(outcome(anchor, commitments, verdict, return_data))
+}
+
+fn outcome(
+    anchor: &SvmAnchorV2,
+    commitments: &ReexecCommitmentsV1,
+    verdict: Verdict,
+    return_data: Vec<u8>,
+) -> ReplayOutcome {
+    let result_hash = result_content_hash(SVM_RETURN_TAG, &return_data);
     let outcome_code = match verdict {
         Verdict::Reproduced => 1u8,
         Verdict::Failed(_) => 2u8,
     };
-    let record = ReplayRecordV1::new(commitments, anchor.state_commitment, outcome_code, result_hash);
+    let record = ReplayRecordV1::new(
+        commitments,
+        anchor.state_commitment,
+        outcome_code,
+        result_hash,
+    );
     let trace_hash = record.trace_hash();
-
-    Ok(ReplayOutcome {
+    ReplayOutcome {
         verdict,
         result_hash,
         prestate_root: anchor.state_commitment,
         trace_hash,
         record,
         return_data,
-    })
+    }
+}
+
+fn ensure_closed_message_accounts(
+    snapshot: &PrestateSnapshotV2,
+    profile: &RuntimeProfileV1,
+    plan: &SvmPlanV2,
+) -> Result<(), OperationalError> {
+    for account in &plan.transaction.message.account_keys {
+        if snapshot
+            .accounts
+            .iter()
+            .any(|entry| entry.pubkey == *account)
+            || profile.allowed_ambient_programs.contains(account)
+        {
+            continue;
+        }
+        return Err(OperationalError::ImplicitAccountLoad { account: *account });
+    }
+    Ok(())
+}
+
+fn reject_unsupported_environment_dependencies(plan: &SvmPlanV2) -> Result<(), OperationalError> {
+    if plan
+        .transaction
+        .message
+        .account_keys
+        .iter()
+        .any(is_known_sysvar)
+    {
+        return Err(OperationalError::UnsupportedEnvironmentDependency {
+            dependency: "sysvar account",
+        });
+    }
+    for instruction in &plan.transaction.message.instructions {
+        let program = plan.transaction.message.account_keys[instruction.program_id_index as usize];
+        // SystemInstruction::AdvanceNonceAccount is discriminant 4 (little
+        // endian); durable nonce needs a connected blockhash/sysvar witness.
+        if program == system_program_id()
+            && instruction.data.len() >= 4
+            && instruction.data[..4] == 4u32.to_le_bytes()
+        {
+            return Err(OperationalError::UnsupportedEnvironmentDependency {
+                dependency: "durable nonce",
+            });
+        }
+    }
+    Ok(())
+}
+
+fn parse_upgradeable_program_account(account: &AccountSnapshotV2) -> Option<Pubkey> {
+    if account.data.len() != 36 || account.data[..4] != 2u32.to_le_bytes() {
+        return None;
+    }
+    let mut bytes = [0u8; 32];
+    bytes.copy_from_slice(&account.data[4..36]);
+    Some(Pubkey::new_from_array(bytes))
+}
+
+fn is_legacy_bpf_loader(owner: &Pubkey) -> bool {
+    *owner == parse_pubkey("BPFLoader2111111111111111111111111111111111")
+        || *owner == parse_pubkey("BPFLoader1111111111111111111111111111111111")
+}
+
+fn upgradeable_loader_id() -> Pubkey {
+    parse_pubkey("BPFLoaderUpgradeab1e11111111111111111111111")
+}
+
+fn system_program_id() -> Pubkey {
+    Pubkey::default()
+}
+
+fn is_known_sysvar(id: &Pubkey) -> bool {
+    [
+        "SysvarC1ock11111111111111111111111111111111",
+        "SysvarEpochSchedu1e111111111111111111111111",
+        "SysvarFees111111111111111111111111111111111",
+        "Sysvar1nstructions1111111111111111111111111",
+        "SysvarRecentB1ockHashes11111111111111111111",
+        "SysvarRent111111111111111111111111111111111",
+        "SysvarS1otHashes111111111111111111111111111",
+        "SysvarS1otHistory11111111111111111111111111",
+        "SysvarStakeHistory1111111111111111111111111",
+    ]
+    .iter()
+    .any(|value| *id == parse_pubkey(value))
+}
+
+fn parse_pubkey(value: &str) -> Pubkey {
+    Pubkey::from_str(value).expect("static Solana program/sysvar id is valid")
+}
+
+fn hash_u16(hasher: &mut Sha256, value: u16) {
+    hasher.update(value.to_be_bytes());
+}
+
+fn hash_u64(hasher: &mut Sha256, value: u64) {
+    hasher.update(value.to_be_bytes());
+}
+
+fn hash_bool(hasher: &mut Sha256, value: bool) {
+    hasher.update([u8::from(value)]);
+}
+
+fn hash_bytes(hasher: &mut Sha256, value: &[u8]) {
+    hash_u64(hasher, value.len() as u64);
+    hasher.update(value);
 }
 
 #[cfg(test)]
@@ -264,11 +625,10 @@ mod tests {
     use solana_keypair::Keypair;
     use solana_signer::Signer;
 
-    // The System program id is the all-zero pubkey; it is a LiteSVM builtin.
     const SYSTEM_PROGRAM: Pubkey = Pubkey::new_from_array([0u8; 32]);
 
     fn system_transfer(from: &Pubkey, to: &Pubkey, lamports: u64) -> Instruction {
-        let mut data = vec![2u8, 0, 0, 0]; // SystemInstruction::Transfer discriminant
+        let mut data = 2u32.to_le_bytes().to_vec();
         data.extend_from_slice(&lamports.to_le_bytes());
         Instruction {
             program_id: SYSTEM_PROGRAM,
@@ -277,8 +637,18 @@ mod tests {
         }
     }
 
-    fn eoa(pubkey: Pubkey, lamports: u64) -> AccountSnapshotV1 {
-        AccountSnapshotV1 {
+    fn system_assign(account: &Pubkey) -> Instruction {
+        let mut data = 1u32.to_le_bytes().to_vec();
+        data.extend_from_slice(SYSTEM_PROGRAM.as_ref());
+        Instruction {
+            program_id: SYSTEM_PROGRAM,
+            accounts: vec![AccountMeta::new(*account, true)],
+            data,
+        }
+    }
+
+    fn account(pubkey: Pubkey, lamports: u64) -> AccountSnapshotV2 {
+        AccountSnapshotV2 {
             pubkey,
             lamports,
             owner: SYSTEM_PROGRAM,
@@ -290,7 +660,7 @@ mod tests {
 
     fn commitments() -> ReexecCommitmentsV1 {
         ReexecCommitmentsV1 {
-            backend_id: B256::from([0x5b; 32]), // 'svm'-ish
+            backend_id: B256::from([0x5b; 32]),
             backend_version_hash: B256::from([0x51; 32]),
             spec_hash: B256::from([0x5c; 32]),
             delivery_hash: B256::from([0xde; 32]),
@@ -298,80 +668,124 @@ mod tests {
         }
     }
 
-    /// Build the (snapshot, anchor, from-keypair, to-pubkey) fixture: a funded
-    /// payer and an empty recipient, committed and bound to the anchor.
-    fn fixture() -> (PrestateSnapshotV1, SvmAnchorV1, Keypair, Pubkey) {
-        let from = Keypair::new();
-        let to = Pubkey::new_unique();
-        let snapshot = PrestateSnapshotV1 {
-            accounts: vec![
-                eoa(from.pubkey(), 1_000_000_000), // 1 SOL payer
-                eoa(to, 0),
-            ],
-            programs: vec![],
-        };
-        let anchor = SvmAnchorV1 {
+    fn anchor(snapshot: &PrestateSnapshotV2, profile: &RuntimeProfileV1) -> SvmAnchorV2 {
+        SvmAnchorV2 {
+            state_commitment: snapshot_commitment(snapshot, profile).unwrap(),
+            cluster_genesis_hash: B256::from([0x11; 32]),
             slot: 250_000_000,
-            state_commitment: snapshot_commitment(&snapshot),
-        };
-        (snapshot, anchor, from, to)
+            blockhash: B256::ZERO,
+            bank_hash: B256::from([0x22; 32]),
+            runtime_profile_hash: runtime_profile_hash(profile).unwrap(),
+            snapshot_archive_hash: B256::from([0x33; 32]),
+            snapshot_format_version: SNAPSHOT_FORMAT_V2,
+        }
     }
 
-    fn transfer_plan(from: &Keypair, to: &Pubkey, lamports: u64) -> SvmPlanV1 {
-        let ix = system_transfer(&from.pubkey(), to, lamports);
-        // sigverify/blockhash are off in replay, so any well-formed tx executes.
-        let tx = Transaction::new_with_payer(&[ix], Some(&from.pubkey()));
-        SvmPlanV1 { transaction: tx }
+    fn signed_plan(from: &Keypair, instructions: &[Instruction]) -> SvmPlanV2 {
+        let mut transaction = Transaction::new_with_payer(instructions, Some(&from.pubkey()));
+        transaction.sign(&[from], Default::default());
+        SvmPlanV2 { transaction }
+    }
+
+    fn fixture() -> (
+        PrestateSnapshotV2,
+        RuntimeProfileV1,
+        SvmAnchorV2,
+        Keypair,
+        Pubkey,
+    ) {
+        let from = Keypair::new();
+        let to = Pubkey::new_unique();
+        let snapshot = PrestateSnapshotV2 {
+            accounts: vec![account(from.pubkey(), 1_000_000_000), account(to, 1)],
+        };
+        let profile = RuntimeProfileV1::default();
+        let anchor = anchor(&snapshot, &profile);
+        (snapshot, profile, anchor, from, to)
     }
 
     #[test]
     fn honest_delivery_reproduces() {
-        let (snapshot, anchor, from, to) = fixture();
-        // Buyer funds: "the recipient must hold exactly 2,000,000 lamports".
-        let predicate = PredicateV1::LamportsEquals {
-            account: to,
-            expected: 2_000_000,
-        };
-        // Honest seller: a plan that actually transfers 2,000,000.
-        let plan = transfer_plan(&from, &to, 2_000_000);
-        let out = replay(&anchor, &snapshot, &plan, &predicate, &commitments()).unwrap();
-        assert!(out.reproduced(), "honest plan should reproduce: {:?}", out.verdict);
+        let (snapshot, profile, anchor, from, to) = fixture();
+        let plan = signed_plan(&from, &[system_transfer(&from.pubkey(), &to, 2_000_000)]);
+        let out = replay(
+            &anchor,
+            &snapshot,
+            &profile,
+            &plan,
+            &PredicateV1::LamportsEquals {
+                account: to,
+                expected: 2_000_001,
+            },
+            &commitments(),
+        )
+        .unwrap();
+        assert!(out.reproduced());
         assert_eq!(out.prestate_root, anchor.state_commitment);
     }
 
     #[test]
     fn false_claim_fails_and_refunds() {
-        let (snapshot, anchor, from, to) = fixture();
-        // Same funded predicate: recipient must end with 2,000,000.
-        let predicate = PredicateV1::LamportsEquals {
-            account: to,
-            expected: 2_000_000,
-        };
-        // Cheating seller: claims success but the plan only transfers 1,500,000.
-        let plan = transfer_plan(&from, &to, 1_500_000);
-        let out = replay(&anchor, &snapshot, &plan, &predicate, &commitments()).unwrap();
-        assert_eq!(
-            out.verdict,
-            Verdict::Failed(FailReason::LamportsMismatch {
+        let (snapshot, profile, anchor, from, to) = fixture();
+        let plan = signed_plan(&from, &[system_transfer(&from.pubkey(), &to, 1_500_000)]);
+        let out = replay(
+            &anchor,
+            &snapshot,
+            &profile,
+            &plan,
+            &PredicateV1::LamportsEquals {
                 account: to,
-                got: 1_500_000,
-                expected: 2_000_000,
-            }),
-            "false claim must fail -> refund",
-        );
+                expected: 2_000_001,
+            },
+            &commitments(),
+        )
+        .unwrap();
+        assert!(matches!(
+            out.verdict,
+            Verdict::Failed(FailReason::LamportsMismatch { .. })
+        ));
     }
 
     #[test]
     fn tampered_snapshot_is_operational() {
-        let (mut snapshot, anchor, from, to) = fixture();
-        // Attacker inflates the payer's balance after the anchor was committed.
+        let (mut snapshot, profile, anchor, from, to) = fixture();
         snapshot.accounts[0].lamports += 1;
-        let predicate = PredicateV1::LamportsEquals {
-            account: to,
-            expected: 2_000_000,
-        };
-        let plan = transfer_plan(&from, &to, 2_000_000);
-        let err = replay(&anchor, &snapshot, &plan, &predicate, &commitments()).unwrap_err();
+        let plan = signed_plan(&from, &[system_transfer(&from.pubkey(), &to, 1)]);
+        let err = replay(
+            &anchor,
+            &snapshot,
+            &profile,
+            &plan,
+            &PredicateV1::LamportsEquals {
+                account: to,
+                expected: 2,
+            },
+            &commitments(),
+        )
+        .unwrap_err();
+        assert!(matches!(
+            err,
+            OperationalError::PrestateCommitmentMismatch { .. }
+        ));
+    }
+
+    #[test]
+    fn rent_epoch_is_committed_not_metadata_outside_the_hash() {
+        let (mut snapshot, profile, anchor, from, to) = fixture();
+        snapshot.accounts[0].rent_epoch = 0;
+        let plan = signed_plan(&from, &[system_transfer(&from.pubkey(), &to, 1)]);
+        let err = replay(
+            &anchor,
+            &snapshot,
+            &profile,
+            &plan,
+            &PredicateV1::LamportsEquals {
+                account: to,
+                expected: 2,
+            },
+            &commitments(),
+        )
+        .unwrap_err();
         assert!(matches!(
             err,
             OperationalError::PrestateCommitmentMismatch { .. }
@@ -380,17 +794,239 @@ mod tests {
 
     #[test]
     fn replay_is_deterministic_and_shares_the_evm_record() {
-        let (snapshot, anchor, from, to) = fixture();
+        let (snapshot, profile, anchor, from, to) = fixture();
+        let plan = signed_plan(&from, &[system_transfer(&from.pubkey(), &to, 2_000_000)]);
         let predicate = PredicateV1::LamportsEquals {
             account: to,
-            expected: 2_000_000,
+            expected: 2_000_001,
         };
-        let plan = transfer_plan(&from, &to, 2_000_000);
-        let a = replay(&anchor, &snapshot, &plan, &predicate, &commitments()).unwrap();
-        let b = replay(&anchor, &snapshot, &plan, &predicate, &commitments()).unwrap();
+        let a = replay(
+            &anchor,
+            &snapshot,
+            &profile,
+            &plan,
+            &predicate,
+            &commitments(),
+        )
+        .unwrap();
+        let b = replay(
+            &anchor,
+            &snapshot,
+            &profile,
+            &plan,
+            &predicate,
+            &commitments(),
+        )
+        .unwrap();
         assert_eq!(a.trace_hash, b.trace_hash);
-        // The record is the shared VM-neutral ReplayRecordV1: its trace hash is the
-        // SHA-256 of the same canonical TLV the EVM backend emits.
         assert_eq!(a.record.trace_hash(), a.trace_hash);
+    }
+
+    #[test]
+    fn omitted_message_account_is_operational_before_default_account_exists() {
+        let (mut snapshot, profile, _anchor, from, to) = fixture();
+        snapshot.accounts.retain(|entry| entry.pubkey != to);
+        let anchor = anchor(&snapshot, &profile);
+        let plan = signed_plan(&from, &[system_transfer(&from.pubkey(), &to, 1)]);
+        let err = replay(
+            &anchor,
+            &snapshot,
+            &profile,
+            &plan,
+            &PredicateV1::ResultEquals {
+                expected_result_hash: B256::ZERO,
+            },
+            &commitments(),
+        )
+        .unwrap_err();
+        assert_eq!(err, OperationalError::ImplicitAccountLoad { account: to });
+    }
+
+    #[test]
+    fn tampered_program_image_is_bound_by_snapshot_commitment() {
+        let (mut snapshot, profile, _anchor, _, _) = fixture();
+        let program_id = Pubkey::new_unique();
+        snapshot.accounts.push(AccountSnapshotV2 {
+            pubkey: program_id,
+            lamports: 1,
+            owner: parse_pubkey("BPFLoader2111111111111111111111111111111111"),
+            executable: true,
+            rent_epoch: u64::MAX,
+            data: vec![0x7f, b'E', b'L', b'F'],
+        });
+        let anchor = anchor(&snapshot, &profile);
+        snapshot.accounts.last_mut().unwrap().data.push(0x01);
+        let from = Keypair::new();
+        let plan = signed_plan(&from, &[system_transfer(&from.pubkey(), &from.pubkey(), 0)]);
+        let err = replay(
+            &anchor,
+            &snapshot,
+            &profile,
+            &plan,
+            &PredicateV1::ResultEquals {
+                expected_result_hash: B256::ZERO,
+            },
+            &commitments(),
+        )
+        .unwrap_err();
+        assert!(matches!(
+            err,
+            OperationalError::PrestateCommitmentMismatch { .. }
+        ));
+    }
+
+    #[test]
+    fn fake_signature_is_a_failed_authorization_not_a_reproduced_replay() {
+        let (snapshot, profile, anchor, from, to) = fixture();
+        let transaction = Transaction::new_with_payer(
+            &[system_transfer(&from.pubkey(), &to, 1)],
+            Some(&from.pubkey()),
+        );
+        let out = replay(
+            &anchor,
+            &snapshot,
+            &profile,
+            &SvmPlanV2 { transaction },
+            &PredicateV1::LamportsEquals {
+                account: to,
+                expected: 2,
+            },
+            &commitments(),
+        )
+        .unwrap();
+        assert_eq!(
+            out.verdict,
+            Verdict::Failed(FailReason::InvalidAuthorization)
+        );
+    }
+
+    #[test]
+    fn sysvar_dependency_is_operational_until_runtime_reconstruction_exists() {
+        let (snapshot, profile, anchor, from, to) = fixture();
+        let mut instruction = system_transfer(&from.pubkey(), &to, 1);
+        instruction.accounts.push(AccountMeta::new_readonly(
+            parse_pubkey("SysvarC1ock11111111111111111111111111111111"),
+            false,
+        ));
+        let plan = signed_plan(&from, &[instruction]);
+        let err = replay(
+            &anchor,
+            &snapshot,
+            &profile,
+            &plan,
+            &PredicateV1::LamportsEquals {
+                account: to,
+                expected: 2,
+            },
+            &commitments(),
+        )
+        .unwrap_err();
+        assert_eq!(
+            err,
+            OperationalError::UnsupportedEnvironmentDependency {
+                dependency: "sysvar account"
+            }
+        );
+    }
+
+    #[test]
+    fn absent_poststate_is_operational_not_zero_lamports() {
+        let (mut snapshot, profile, _anchor, from, to) = fixture();
+        snapshot
+            .accounts
+            .iter_mut()
+            .find(|entry| entry.pubkey == to)
+            .unwrap()
+            .lamports = 0;
+        let anchor = anchor(&snapshot, &profile);
+        let plan = signed_plan(&from, &[system_assign(&from.pubkey())]);
+        let err = replay(
+            &anchor,
+            &snapshot,
+            &profile,
+            &plan,
+            &PredicateV1::LamportsEquals {
+                account: to,
+                expected: 0,
+            },
+            &commitments(),
+        )
+        .unwrap_err();
+        assert_eq!(
+            err,
+            OperationalError::MissingPoststateAccount { account: to }
+        );
+    }
+
+    #[test]
+    fn duplicate_accounts_and_runtime_programs_are_rejected() {
+        let (mut snapshot, mut profile, _anchor, _, _) = fixture();
+        snapshot.accounts.push(snapshot.accounts[0].clone());
+        assert!(matches!(
+            snapshot_commitment(&snapshot, &profile),
+            Err(OperationalError::DuplicateAccount { .. })
+        ));
+        profile.allowed_ambient_programs.push(SYSTEM_PROGRAM);
+        assert!(matches!(
+            runtime_profile_hash(&profile),
+            Err(OperationalError::DuplicateProgram { .. })
+        ));
+    }
+
+    #[test]
+    fn derives_upgradeable_program_elf_from_programdata_not_seller_input() {
+        let (mut snapshot, profile, _anchor, payer, _) = fixture();
+        let program_id = Pubkey::new_unique();
+        let programdata_id = Pubkey::new_unique();
+        let mut program_data = 2u32.to_le_bytes().to_vec();
+        program_data.extend_from_slice(programdata_id.as_ref());
+        snapshot.accounts.push(AccountSnapshotV2 {
+            pubkey: program_id,
+            lamports: 1,
+            owner: upgradeable_loader_id(),
+            executable: true,
+            rent_epoch: u64::MAX,
+            data: program_data,
+        });
+        let elf = vec![0x7f, b'E', b'L', b'F', 0x01];
+        let mut programdata = 3u32.to_le_bytes().to_vec();
+        // `UpgradeableLoaderState::ProgramData` metadata is 45 bytes. The
+        // parser only needs the discriminant; reserve the canonical metadata
+        // extent before appending the ELF.
+        programdata.resize(45, 0);
+        programdata.extend_from_slice(&elf);
+        snapshot.accounts.push(AccountSnapshotV2 {
+            pubkey: programdata_id,
+            lamports: 1,
+            owner: upgradeable_loader_id(),
+            executable: false,
+            rent_epoch: u64::MAX,
+            data: programdata,
+        });
+        let plan = signed_plan(
+            &payer,
+            &[Instruction {
+                program_id,
+                accounts: vec![],
+                data: vec![],
+            }],
+        );
+        assert_eq!(
+            derive_program_images(&snapshot, &plan, &profile).unwrap(),
+            vec![ProgramImageV2 { program_id, elf }]
+        );
+    }
+
+    #[test]
+    fn non_system_ambient_program_is_rejected_not_inherited_from_litesvm() {
+        let profile = RuntimeProfileV1 {
+            allowed_ambient_programs: vec![system_program_id(), Pubkey::new_unique()],
+        };
+        assert_eq!(
+            runtime_profile_hash(&profile),
+            Err(OperationalError::UnsupportedEnvironmentDependency {
+                dependency: "unverified ambient program"
+            })
+        );
     }
 }

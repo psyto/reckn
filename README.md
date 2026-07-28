@@ -166,17 +166,22 @@ layer, cross-VM, and production content publication.
   ceremony (base-fee / nonce) so honest deliveries reproduce against real blocks;
   balance for `value` is still enforced. `cargo test`: **5 passing**.
 - **Re-execution backend (Solana / SVM):** [`reexec-svm/`](reexec-svm) — the same
-  mechanism on Solana via `LiteSVM`: replay a committed transaction against a
-  committed account snapshot, judge a `LamportsEquals` / `ResultEquals` predicate,
-  and emit the **identical VM-neutral `ReplayRecordV1`** as the EVM backend. That
-  shared record — one Rust codec in [`packages/protocol-rs`](packages/protocol-rs),
-  asserted against the same golden as the TS/Solidity vectors — proves the
-  VM-neutral waist across a second VM and is the foundation the cross-VM binder
-  will stand on. **Trust tier V1 = reproducibility only** ("same published snapshot
-  → same result"), **not** prestate authenticity, so it is *not* an auto-resolve
-  basis yet; Solana has no native per-account proof, so auto-resolve needs a
-  checkpoint-authenticated snapshot (V2). `cargo test`: **4 passing**
-  (reckn-record: 1).
+  mechanism on Solana via `LiteSVM`, replaying a committed **signed** transaction
+  against a committed account snapshot and emitting the **identical VM-neutral
+  `ReplayRecordV1`** as the EVM backend. That shared record — one Rust codec in
+  [`packages/protocol-rs`](packages/protocol-rs), asserted against the same golden
+  as the TS/Solidity vectors — proves the VM-neutral waist across a second VM and
+  is the foundation the cross-VM binder will stand on. The **replay boundary is
+  settlement-grade (V2)**: signatures verified (a forged signer → `Failed`), the
+  snapshot commitment covers accounts + `rent_epoch` + Program/ProgramData +
+  runtime profile, ELF derived from ProgramData not the seller, and a closed-world
+  account-load trap (a small vendored LiteSVM fork) makes any unwitnessed read an
+  operational error, never a phantom-default `Reproduced`. It is honestly *not* an
+  auto-resolve basis on its own yet: snapshot **authenticity** (deriving the
+  snapshot from the checkpoint's `bank_hash` via an Agave-compatible verifier) is a
+  separate, unbuilt piece, and the closed runtime currently permits only the System
+  builtin (custom SBF is `UnsupportedEnvironmentDependency`). `cargo test`:
+  **13 passing** (reckn-record: 1).
 - **Money-shot dashboard:** [`dashboard/`](dashboard) — a self-contained,
   animated money-shot driven by real `reexec-evm` output: the escrow pot moves, a
   live `reckn-keeper` console + ledger stream the resolve, and the outcome lands on

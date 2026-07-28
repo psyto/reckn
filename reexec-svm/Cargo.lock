@@ -1916,8 +1916,6 @@ dependencies = [
 [[package]]
 name = "litesvm"
 version = "0.13.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1e00083aad2a7aa9d6900454604f7776da40be57304e5119f09222a1e9b105a"
 dependencies = [
  "agave-feature-set",
  "agave-reserved-account-keys",
@@ -2521,6 +2519,7 @@ dependencies = [
  "solana-pubkey 3.0.0",
  "solana-signer",
  "solana-transaction",
+ "solana-transaction-error",
 ]
 
 [[package]]

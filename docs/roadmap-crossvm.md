@@ -31,19 +31,29 @@ engine underneath is VM-specific. The exact types and invariants are in
   transaction against a committed account snapshot with `LiteSVM`, judges a
   predicate, and emits the **same** `ReplayRecordV1` as EVM (via the shared
   `reckn-record` codec). This proves the VM-neutral waist across a second VM.
-- **Authenticity tier V1 only — NOT an auto-resolve basis.** V1 binds the snapshot
-  to the anchor by a plain hash: it proves "same published snapshot → same
-  result," not that the snapshot was Solana's real state. Solana has no native
-  per-account Merkle proof (a bank hash is not a sparse inclusion proof; a light
-  client only proves a slot is finalized, not an account's value). Auto-resolve
-  needs **V2**: a finalized-checkpoint-authenticated full Bank snapshot restored
-  Agave-compatibly, its protocol accounts/bank hash recomputed, witnesses derived
-  from it — plus `sigverify` on (Solana's signer bit is authority), a closed-world
-  account-load trap (LiteSVM defaults unseeded accounts today), and a runtime
-  profile pinned in the anchor. This asymmetry with EVM's MPT is deliberate and
-  surfaced, not hidden.
-- Remaining: the V2 authenticity core (frame-thick), then a Pinocchio escrow
-  program, an SVM keeper + keyless re-verifier, and an SVM end-to-end.
+- **Replay boundary hardened to V2 (settlement-grade).** `SvmAnchorV2` carries the
+  checkpoint fields (`cluster_genesis_hash`, `slot`, `blockhash`, `bank_hash`,
+  `runtime_profile_hash`, `snapshot_archive_hash`, format version). Given an
+  authentic snapshot, the replay is now sound: signatures are verified (Solana's
+  signer bit is authority → a forged signer is `Failed(InvalidAuthorization)`); the
+  snapshot commitment covers accounts + `rent_epoch` + Program/ProgramData + the
+  runtime profile; program ELF is derived from ProgramData, never the seller; and
+  a **closed-world account-load trap** (a small vendored LiteSVM fork,
+  `AccountLoadPolicy::RejectUnseeded`) makes any unwitnessed read an operational
+  error instead of a phantom default. Sysvar / durable-nonce / missing-account /
+  poststate-disappearance are all operational, never a verdict. 13 regression tests
+  cover the false-`Reproduced` vectors.
+- **Still not auto-resolve on its own**, for two honest reasons: (a) snapshot
+  *authenticity* — deriving the committed snapshot from the checkpoint's
+  `bank_hash` / `snapshot_archive_hash` via an Agave-compatible Bank-snapshot
+  verifier — is external to this crate and not yet built; (b) the closed runtime
+  profile currently permits only the System builtin, so custom-SBF plans are
+  `UnsupportedEnvironmentDependency` until the full checkpoint runtime is
+  reconstructed. Both are deliberate cuts, surfaced not hidden. This asymmetry with
+  EVM's MPT is the nature of Solana (no native per-account proof).
+- Remaining: the checkpoint → snapshot Bank verifier (frame-thick), then a
+  Pinocchio escrow program, an SVM keeper + keyless re-verifier, and an SVM
+  end-to-end.
 - Migration, not rewrite: the escrow state machine, predicate type, and verdict
   envelope are reused; only the replay engine changed — both backends emit
   byte-identical records against the shared golden.
