@@ -105,6 +105,7 @@ orchestration · MCP control plane · Circle Arc settlement.
 ## Repository layout
 
 ```text
+SUBMISSION.md               # pitch surface: submission copy, demo-video script, checklist
 docs/
   protocol-architecture.md  # converged EVM-first protocol (the source of truth)
   roadmap-crossvm.md        # EVM → Solana → cross-VM extension roadmap
