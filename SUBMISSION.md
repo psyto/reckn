@@ -127,10 +127,12 @@ positioned; if it stalls, the verdict still reproduces anywhere.
 
 ---
 
-## Demo video script (target 75s)
+## Demo video script (VO upgrade — the silent cut already exists)
 
-> Record the artifact (already animated) + a terminal running `anvil-e2e.sh`.
-> Screen only, tight VO. The hero is the *disagreement*, then the *keyless recheck*.
+> The 35s carded cut (`dashboard/media/reckn-demo-full.mp4`) already realizes this
+> arc and needs no audio. Use the script below only if you want to record a voiced
+> version: screen only, tight VO, the hero is the *disagreement* then the *keyless
+> recheck*.
 
 1. **(0–10s) The hook.** *"Agent payments settle disputes with a trusted judge — an
    LLM in a black box. If you disagree with its verdict, you can't check it."* Show
