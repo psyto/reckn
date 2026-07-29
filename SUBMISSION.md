@@ -57,6 +57,10 @@ deal.prestateAnchorHash → checked anchor → state_root
    → keyless re-verification (reproduce the verdict with no resolver key)
 ```
 
+- **Funded by the payment itself.** A buyer agent's **x402 / EIP-3009** authorization
+  is consumed *as* the escrow funding: one signed authorization both pays and opens
+  the disputable escrow, binding the deal to the re-executable predicate (no deposit
+  step). See [`docs/x402-payments.md`](docs/x402-payments.md).
 - **Committed inputs, no live RPC in the verdict path.** Spec/delivery/anchor are
   content-addressed; the seller publishes a proof-carrying witness whose SHA-256 the
   delivery commits. Replay resolves it by hash and MPT-verifies it against the
@@ -95,7 +99,8 @@ is a set of **supported targets, not a dependency**. If a rail wins, Reckn is
 positioned; if it stalls, the verdict still reproduces anywhere.
 
 - **Sponsor targets (supported, not bet on):** Circle **Arc — Best Agentic Economy**
-  (one settlement target) · **x402 / EIP-3009** payments (EVM escrow) · **ERC-8004**
+  (one settlement target) · **x402 / EIP-3009** payments (EVM escrow;
+  [`docs/x402-payments.md`](docs/x402-payments.md)) · **ERC-8004**
   reputation (implemented) · Chainlink CRE / MCP as swappable orchestration.
 - **The dual-VM build is the proof of agnosticism** — Solana is not scope creep, it
   shows the adjudicator outlives any single stack. Frame it as *one engine, any
