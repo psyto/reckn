@@ -19,6 +19,8 @@ adjudicator** — a TEE'd LLM, self-reported feedback, or an unaudited loop. Rec
 replaces that with re-execution: on a dispute it pins the pre-state, **replays the
 disputed work**, and checks the predicate the deal was funded against. The verdict
 commits a trace hash anyone can independently reproduce — no resolver key required.
+The trust root is **chain- and rail-agnostic** — proven on both EVM and Solana
+behind one router — so it outlives any single payment stack.
 
 ## The problem
 
@@ -84,12 +86,20 @@ live and tested — on **both** VMs, behind **one** router.
   slice runs at the reproducibility tier. Cross-chain settlement is designed
   fail-closed (`docs/cross-chain-settlement.md`) but not yet implemented.
 
-## Target track & sponsor stack
+## Positioning & sponsor targets
 
-- **Circle Arc — Best Agentic Economy.**
-- Judge-legible stack: **ERC-8004** identity/reputation · **x402 / EIP-3009**
-  payments · Chainlink CRE (or the included keeper) orchestration · MCP control
-  plane · Circle **Arc** settlement.
+Lead with the thesis, not a stack: **Reckn is the trustless adjudicator for any
+agent-payment rail.** The trust root (re-execution) is chain- and rail-agnostic —
+demonstrated on both EVM and Solana behind one router — so the agent-payment stack
+is a set of **supported targets, not a dependency**. If a rail wins, Reckn is
+positioned; if it stalls, the verdict still reproduces anywhere.
+
+- **Sponsor targets (supported, not bet on):** Circle **Arc — Best Agentic Economy**
+  (one settlement target) · **x402 / EIP-3009** payments (EVM escrow) · **ERC-8004**
+  reputation (implemented) · Chainlink CRE / MCP as swappable orchestration.
+- **The dual-VM build is the proof of agnosticism** — Solana is not scope creep, it
+  shows the adjudicator outlives any single stack. Frame it as *one engine, any
+  chain, any rail.*
 
 ## Demo links
 

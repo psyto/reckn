@@ -103,11 +103,26 @@ underneath differs. See
 versioned interface, predicate profile, trust boundary, and EVM-first plan; see
 [`docs/roadmap-crossvm.md`](docs/roadmap-crossvm.md) for the extension roadmap.
 
-## Target
+## Positioning — the trustless adjudicator for any agent-payment rail
 
-Circle **Arc — Best Agentic Economy** track. Adopted stack for judge-legibility:
-ERC-8004 identity/reputation · x402/EIP-3009 payments · Chainlink CRE (or keeper)
-orchestration · MCP control plane · Circle Arc settlement.
+Reckn's trust root is **re-execution**, which depends on neither a specific chain
+nor a specific payment rail. The adjudicator is **VM-neutral** (proven on both EVM
+and Solana behind one router) and **rail-agnostic**: *how* the escrow was funded —
+x402 / EIP-3009 on EVM, Token-2022 on Solana, or any future rail — never touches
+*how* a dispute is decided. **One re-execution engine, any chain, any rail.**
+
+So the emerging agent-payment stack is a set of **supported targets, not a
+dependency**. The reference implementation funds via x402 / EIP-3009, settles on
+EVM (Circle **Arc** is one target — *Best Agentic Economy*) and on Solana, and
+slots behind Chainlink CRE / MCP as thin, swappable adapters. Reckn does not bet on
+any one of them: if a rail wins, it is already positioned; if a rail stalls, the
+verdict still reproduces anywhere. The dual-VM implementation is the proof — Solana
+is not scope creep, it is the demonstration that the adjudicator outlives any single
+stack.
+
+Adopted, judge-legible pieces: **ERC-8004** reputation (implemented) · **x402 /
+EIP-3009** payments (EVM escrow) · **Circle Arc** as one settlement target ·
+Chainlink CRE / MCP as swappable orchestration.
 
 ## Repository layout
 

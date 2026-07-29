@@ -20,7 +20,8 @@ engine underneath is VM-specific. The exact types and invariants are in
 
 - Backend: revm replay with offline MPT-verified prestate.
 - Single chain. Escrow, payment (EIP-3009), execution, and settlement all on one
-  EVM chain (target: Circle Arc; the E2E runs on anvil).
+  EVM chain — any EVM chain; Circle Arc is one supported target, not a dependency.
+  The E2E runs on anvil and points at any RPC.
 - The whole product is provable end-to-end here — and is: `scripts/anvil-e2e.sh`
   drives fund → deliver → challenge → keeper resolve → **keyless re-verification**
   of the on-chain verdict.
