@@ -38,6 +38,7 @@ const TOKEN_ACCOUNT_LEN: usize = 165;
 const MINT_DECIMALS_OFFSET: usize = 44;
 const ED25519_CURRENT_IX: u16 = u16::MAX;
 const VERDICT_DOMAIN: &[u8] = b"reckn/svm/verdict/v1";
+const EVIDENCE_DOMAIN: &[u8] = b"reckn-evidence/v1";
 
 pub mod ix {
     pub const INITIALIZE_RESOLVER_CONFIG: u8 = 0;
@@ -477,15 +478,15 @@ fn resolve(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> Progra
     )?;
     // Reputation evidence is an append-only event projection. It is deliberately
     // not read by settlement and no operational-error code can reach this path.
-    let evidence_slot = Clock::get()?.slot.to_le_bytes();
-    msg!("ReputationEvidence");
-    pinocchio::log::sol_log_data(&[
-        b"reckn-evidence/v1",
-        &[commitment.outcome],
+    emit_reputation_evidence(
+        &deal.seller,
+        deal_ai.key(),
+        commitment.outcome,
         &commitment.trace_hash,
+        &deal.backend_id,
         &config.resolver,
-        &evidence_slot,
-    ]);
+        Clock::get()?.slot,
+    );
     msg!("RecknSettled");
     Ok(())
 }
@@ -515,6 +516,20 @@ fn timeout_refund(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResul
         Seed::from(&bump),
     ];
     let signer = Signer::from(&seeds);
+    // C1: a seller cannot avoid the negative reputation projection simply by
+    // withholding replay material until the dispute expires. `FAILED` plus a
+    // zero trace is evidence-withheld, not a reproduced Failed verdict.
+    // No resolver/config account is available on this permissionless path, so
+    // the resolver field is the all-zero sentinel rather than an inferred key.
+    emit_reputation_evidence(
+        &deal.seller,
+        deal_ai.key(),
+        outcome::FAILED,
+        &[0; 32],
+        &deal.backend_id,
+        &[0; 32],
+        Clock::get()?.slot,
+    );
     cpi_transfer_checked(
         vault,
         mint,
@@ -526,6 +541,37 @@ fn timeout_refund(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResul
     )?;
     msg!("RecknTimeoutRefund");
     Ok(())
+}
+
+/// Emit ERC-8004-style seller reputation evidence without participating in
+/// settlement. `reckn-evidence/v1` fields are, in order:
+/// `(domain, seller_agent, outcome, deal_id, trace_hash, backend_id, resolver,
+/// settlement_slot)`. A normal resolve has a non-zero trace and the registered
+/// resolver. A C1 timeout uses `outcome::FAILED`, a zero trace, and a zero
+/// resolver sentinel; consumers must classify that shape as
+/// *evidence-withheld*, not a replay-produced `Failed` verdict.
+fn emit_reputation_evidence(
+    seller: &[u8; 32],
+    deal_id: &Pubkey,
+    evidence_outcome: u8,
+    trace_hash: &[u8; 32],
+    backend_id: &[u8; 32],
+    resolver: &[u8; 32],
+    slot: u64,
+) {
+    let evidence_outcome = [evidence_outcome];
+    let evidence_slot = slot.to_le_bytes();
+    msg!("ReputationEvidence");
+    pinocchio::log::sol_log_data(&[
+        EVIDENCE_DOMAIN,
+        seller,
+        &evidence_outcome,
+        deal_id.as_ref(),
+        trace_hash,
+        backend_id,
+        resolver,
+        &evidence_slot,
+    ]);
 }
 
 fn read_config(

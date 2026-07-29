@@ -23,8 +23,11 @@ trace hash. The program additionally compares every committed deal field and
 the ResolverConfig allowlist before transferring SPL Token-2022 funds.
 
 `Reproduced` transfers the entire vault to the seller; `Failed` transfers it to
-the buyer. An emitted `ReputationEvidence` log records the outcome, trace hash,
-resolver, and settlement slot without affecting the transfer decision.
+the buyer. An emitted `ReputationEvidence` log records the seller agent,
+outcome, deal id, trace hash, backend id, resolver, and settlement slot without
+affecting the transfer decision. A C1 timeout emits the same projection before
+the buyer refund with `outcome=Failed`, `trace_hash=0`, and `resolver=0`: this is
+**evidence-withheld**, not a replay-produced `Failed` verdict.
 
 The vault is a pre-created initialized Token-2022 account whose authority is
 the deal PDA. This keeps `fund` deterministic and lets callers choose an ATA

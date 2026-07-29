@@ -1,4 +1,5 @@
 use {
+    base64::{engine::general_purpose::STANDARD as BASE64, Engine},
     ed25519_dalek::{Signer as DalekSigner, SigningKey},
     litesvm::LiteSVM,
     reckn_escrow_svm::{
@@ -86,8 +87,15 @@ fn failed_refunds_buyer_and_bad_ed25519_cannot_settle() {
     assert_eq!(env.deal_state(), state::DISPUTED);
     assert_eq!(env.token_amount(env.vault), AMOUNT);
 
-    let receipt = env.resolve(&commitment, false);
-    assert!(receipt.is_ok(), "{receipt:?}");
+    let logs = env
+        .resolve_logs(&commitment, false)
+        .expect("failed resolves");
+    let evidence = evidence_fields(&logs);
+    assert_eq!(evidence[2], [outcome::FAILED]);
+    assert_eq!(
+        evidence[4], [17; 32],
+        "resolved Failed carries its reproducible non-zero trace"
+    );
     assert_eq!(env.token_amount(env.source), AMOUNT);
     assert_eq!(env.token_amount(env.vault), 0);
     assert_eq!(env.token_amount(env.seller_destination), 0);
@@ -110,6 +118,31 @@ fn only_timeout_refund_can_finish_without_a_verdict() {
     assert_eq!(env.token_amount(env.source), AMOUNT);
     assert_eq!(env.token_amount(env.vault), 0);
     assert_eq!(env.total_tokens(), AMOUNT);
+}
+
+#[test]
+fn timeout_refund_emits_seller_attributed_evidence_withheld_before_refund() {
+    let mut env = Env::new();
+    env.initialize_and_dispute();
+    env.svm.warp_to_slot(RESOLVE_BY + 1);
+    env.svm.expire_blockhash();
+    let logs = env.timeout_logs().expect("timeout refund succeeds");
+    let fields = evidence_fields(&logs);
+
+    assert_eq!(fields[0], b"reckn-evidence/v1");
+    assert_eq!(fields[1], env.seller_bytes, "seller is the evidence agent");
+    assert_eq!(fields[2], [outcome::FAILED]);
+    assert_eq!(fields[3], *env.deal.as_array());
+    assert_eq!(fields[4], [0; 32], "zero trace marks evidence-withheld");
+    assert_eq!(fields[5], [11; 32], "backend comes only from the deal");
+    assert_eq!(fields[6], [0; 32], "timeout has no resolver authority");
+    assert_eq!(
+        u64::from_le_bytes(fields[7].as_slice().try_into().unwrap()),
+        RESOLVE_BY + 1
+    );
+    assert_eq!(env.deal_state(), state::RESOLVED);
+    assert_eq!(env.token_amount(env.source), AMOUNT);
+    assert_eq!(env.token_amount(env.vault), 0);
 }
 
 impl Env {
@@ -250,6 +283,15 @@ impl Env {
         commitment: &VerdictCommitment,
         sign_wrong_message: bool,
     ) -> Result<(), String> {
+        self.resolve_logs(commitment, sign_wrong_message)
+            .map(|_| ())
+    }
+
+    fn resolve_logs(
+        &mut self,
+        commitment: &VerdictCommitment,
+        sign_wrong_message: bool,
+    ) -> Result<Vec<String>, String> {
         let config = ResolverConfig {
             bump: 0,
             _pad: [0; 7],
@@ -295,11 +337,15 @@ impl Env {
                 AccountMeta::new_readonly(instructions::id(), false),
             ],
         );
-        self.send_buyer(vec![ed, resolve])
+        self.send_buyer_logs(vec![ed, resolve])
     }
 
     fn timeout(&mut self) -> Result<(), String> {
-        self.send_buyer(vec![program_ix(
+        self.timeout_logs().map(|_| ())
+    }
+
+    fn timeout_logs(&mut self) -> Result<Vec<String>, String> {
+        self.send_buyer_logs(vec![program_ix(
             vec![ix::TIMEOUT_REFUND],
             vec![
                 AccountMeta::new(self.deal, false),
@@ -312,6 +358,10 @@ impl Env {
     }
 
     fn send_buyer(&mut self, ixs: Vec<Instruction>) -> Result<(), String> {
+        self.send_buyer_logs(ixs).map(|_| ())
+    }
+
+    fn send_buyer_logs(&mut self, ixs: Vec<Instruction>) -> Result<Vec<String>, String> {
         let transaction = Transaction::new_signed_with_payer(
             &ixs,
             Some(&self.buyer.pubkey()),
@@ -320,7 +370,7 @@ impl Env {
         );
         self.svm
             .send_transaction(transaction)
-            .map(|_| ())
+            .map(|metadata| metadata.logs)
             .map_err(|failure| format!("{:?}: {}", failure.err, failure.meta.pretty_logs()))
     }
 
@@ -352,6 +402,17 @@ impl Env {
     fn deal_state(&self) -> u8 {
         self.svm.get_account(&self.deal).unwrap().data[1]
     }
+}
+
+fn evidence_fields(logs: &[String]) -> Vec<Vec<u8>> {
+    let line = logs
+        .iter()
+        .find(|line| line.starts_with("Program data: "))
+        .unwrap_or_else(|| panic!("ReputationEvidence sol_log_data: {logs:?}"));
+    let data = line.strip_prefix("Program data: ").unwrap();
+    data.split_whitespace()
+        .map(|field| BASE64.decode(field).expect("base64 evidence field"))
+        .collect()
 }
 
 fn initialize_config_ix(admin: Address, config: Address, resolver: [u8; 32]) -> Instruction {

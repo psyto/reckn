@@ -217,9 +217,12 @@ content publication.
   preceding native **Ed25519** instruction over a domain-separated
   `genesis‖program_id‖deal_id‖VerdictCommitment` message. An operational outcome can
   never settle — only `timeout_refund` favors the buyer — and `ReputationEvidence`
-  is logged. LiteSVM tx-level e2e (release / refund / forged signature / swapped
-  anchor / operational outcome / timeout / double-resolve / conservation):
-  **3 passing** via `cargo build-sbf`.
+  is logged (a dispute that times out emits a seller-attributed **evidence-withheld**
+  signal — `FAILED` outcome with a zero trace and zero resolver — mirroring the EVM
+  escrow, so withholding replay material cannot dodge the negative mark). LiteSVM
+  tx-level e2e (release / refund / forged signature / swapped anchor / operational
+  outcome / timeout evidence-withheld / double-resolve / conservation):
+  **4 passing** via `cargo build-sbf`.
 - **Keeper (Solana):** [`reckn-svm-keeper/`](reckn-svm-keeper) — the SVM analog of
   the EVM keeper: SHA-256-check the content store, match it to the on-chain deal,
   replay via `reexec-svm` (an operational error is never signed), build the
