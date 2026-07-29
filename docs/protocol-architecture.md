@@ -183,6 +183,19 @@ and can publish the evidence at delivery time. The funding implementation must
 add raw spec/anchor publication (or a checked content-store registration) before
 claiming production-grade independent reproduction; hashes alone are insufficient.
 
+Note the timeout refunds the **buyer**, so a seller who withholds replay material
+is never paid — withholding is not a way to recover funds. To also deny the
+withholding seller a *reputation* dodge, the timeout emits a negative
+`ReputationEvidence` (evidence-withheld: `reproduced = false`, zero trace),
+distinct from a reproduced `Failed`; see the reputation hooks below. This holds
+*because there is no seller bond today*. A future challenge/bond layer changes the
+incentive: once a seller stakes value that a `Failed` verdict slashes, withholding
+to force a timeout could dodge the slash. So a bond and a **data-availability
+forfeiture rule** (a timeout after delivery must forfeit the seller's stake, not
+merely refund the buyer, and/or delivery must pin evidence to a durable DA layer)
+are a single co-designed change, never a bond alone. Tracked as a post-MVP
+economic cut-line, not an input to the deterministic core.
+
 ### V1.1 demo content-store binding
 
 The anvil keeper uses a deliberately small file content store as the transport:
@@ -276,7 +289,8 @@ is buyer-only in `Delivered` before deadline and emits full `Disputed` terms.
 EIP-712 signature over every `VerdictCommitment` field, ensure it matches the
 deal, emit `VerdictCommitted`, then atomically release on `Reproduced` or refund
 on `Failed`. `timeoutRefund()` is callable by anyone after `resolveDeadline` if
-no verdict was posted; it applies the data-availability policy above.
+no verdict was posted; it applies the data-availability policy above and emits the
+evidence-withheld reputation signal before refunding.
 
 Never sign `traceHash` alone, let a resolver pick a fresh anchor, or permit a
 second resolution. Backend id and exact version are part of the deal/signature;
@@ -289,15 +303,19 @@ not alternate settlement paths.
 > Progress: (1) done — `contracts/`, 23 tests (incl. cross-language digest pin,
 > ERC-8004 `ReputationEvidence`, and end-to-end settlement on real engine output).
 > (2) done — `reexec-evm/`, revm 38 with offline MPT verification and real-anchor
-> (base-fee/nonce) support, 6 tests; canonical `ReplayRecordV1` in
+> (base-fee/nonce) support, 5 tests; canonical `ReplayRecordV1` in
 > `packages/protocol/`. (3) done — `keeper/` builds and EIP-712-signs the verdict
-> `resolve()` accepts (shared-golden cross-check), plus the live HTTP shell
-> (`once`/`watch`: content store SHA-256-checked, transitive `eth_getProof` witness,
-> replay, submit) and a **keyless independent re-verifier** (`verify`: re-derives a
-> settled verdict from public inputs and asserts it matches on-chain). `scripts/
-> anvil-e2e.sh` runs the whole loop incl. re-verification. (4) done — `dashboard/`
-> (v5), real engine output. (5) partial — ERC-8004 reputation done; Arc / x402 /
-> MCP remain. Next big swings: a challenge/bond layer and a Solana backend.
+> `resolve()` accepts (shared-golden cross-check), plus the live HTTP shell — now on
+> a **committed** witness: the seller publishes it (`witness --write`) and the
+> delivery commits its hash; `once`/`verify` resolve it by hash and MPT-verify before
+> replay, decoding all content through the shared `reckn-evm-content` codec — and a
+> **keyless independent re-verifier** (`verify`: re-derives a settled verdict from
+> public inputs and asserts it matches on-chain). `scripts/anvil-e2e.sh` runs the
+> whole loop incl. re-verification. (4) done — `dashboard/` (v5), real engine output.
+> (5) partial — ERC-8004 reputation done (incl. evidence-withheld on timeout, both
+> VMs); Arc / x402 / MCP remain. Solana backend + cross-VM binder (one router, both
+> VMs) also done. Next big swings: a challenge/bond layer co-designed with DA
+> forfeiture, and the cross-chain settlement around the binder.
 
 1. Build the four-state contract, EIP-3009 adapter, events, deadlines, mock
    resolver, and transition/conservation/signature tests.
@@ -353,7 +371,12 @@ A future challenge bond is an anti-griefing cut-line, not an input to replay.
 It must be fixed in the funded spec, escrowed separately, and have an explicit
 outcome policy (for example, return on `Failed`, transfer on `Reproduced`, and a
 timeout rule). It must never alter the predicate or let a resolver price an
-opinion.
+opinion. Critically, it must ship **together with a data-availability forfeiture
+rule** — a post-delivery timeout must forfeit the seller's stake (and/or delivery
+must pin evidence to a durable DA layer), not merely refund the buyer. A bond
+added alone would open the incentive the current bondless design does not have: a
+seller could withhold replay material to force a timeout and dodge the slash a
+`Failed` verdict would apply. Bond and DA-forfeiture are one change.
 
 After resolution, emit or index a canonical ERC-8004 reputation-evidence
 projection keyed by `dealId` and the full `verdictHash`. It may record outcome,
@@ -366,6 +389,12 @@ coupling identity/reputation into the deterministic core.
 projection that never touches settlement (tested for both outcomes). The
 differentiator vs self-reported feedback (e.g. AgentRankr) is that the evidence
 is a re-derivable verdict, not an opinion: `reckn-keeper verify` reproduces it.
+A dispute that times out with no verdict *also* emits a negative,
+evidence-withheld signal (`reproduced = false`, **zero trace**), so a seller
+cannot dodge the mark by withholding replay material to force a timeout; the zero
+trace distinguishes it from a reproduced `Failed`. The Solana escrow
+(`escrow-svm`) mirrors this through one shared, seller-attributed evidence emitter
+on both its `resolve` and `timeout_refund` paths.
 
 An immutable predicate is funded against an immutable snapshot. A dispute
 replays exact work, commits reproducible evidence, and releases or refunds:

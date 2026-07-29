@@ -2052,6 +2052,7 @@ dependencies = [
 name = "reckn-escrow-svm"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "bytemuck",
  "ed25519-dalek 2.2.0",
  "litesvm",
