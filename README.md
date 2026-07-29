@@ -19,6 +19,10 @@ thing live on a local chain: [`bash scripts/anvil-e2e.sh`](#try-it-one-command).
 
 ![Reckn money-shot — the same dispute: the opinion judge reads the seller's claim and approves; re-execution replays the actual plan, sees the real output, and refunds the buyer.](dashboard/media/reckn-moneyshot.gif)
 
+**▶ Demo video (screen recording):** [`dashboard/media/reckn-demo.mp4`](dashboard/media/reckn-demo.mp4)
+— the same dispute judged two ways: false claim → re-execution refunds the buyer;
+honest delivery → reproduced, released to the seller; false again, driven home.
+
 ## Why
 
 This is the "correct version" of a pattern that keeps winning agent-economy
