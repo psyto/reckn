@@ -106,10 +106,12 @@ positioned; if it stalls, the verdict still reproduces anywhere.
 - **▶ Live money-shot (clickable):** https://claude.ai/code/artifact/88a370e4-bfeb-480c-af14-015661e6e6f7
   — the same dispute, judged by an opinion LLM vs deterministic re-execution. Toggle
   *Honest delivery* / *False claim* and watch them disagree.
-- **Demo video (full):** [`dashboard/media/reckn-demo-full.mp4`](dashboard/media/reckn-demo-full.mp4)
-  — money-shot judged two ways (false → refund, honest → release) **plus the live
-  `anvil-e2e.sh` terminal run** (pin anchor → publish witness → re-execute → refund →
-  keyless re-verify). Recorded headless via Puppeteer/Chromium + a real Foundry run.
+- **Demo video (full, 35s, self-explanatory — no audio needed):**
+  [`dashboard/media/reckn-demo-full.mp4`](dashboard/media/reckn-demo-full.mp4) — title
+  cards frame it: hook (a trusted judge you can't check) → money-shot judged two ways
+  (false → refund, honest → release) → **live `anvil-e2e.sh` terminal run** (pin anchor
+  → publish witness → re-execute → refund → keyless re-verify) → close (*one engine,
+  any chain, any rail*). Recorded headless via Puppeteer/Chromium + a real Foundry run.
   Component clips: `reckn-demo.mp4` (dashboard), `reckn-e2e.mp4` (terminal).
 - **One-command local proof:** `bash scripts/anvil-e2e.sh` — funds a deal, delivers
   a false plan, disputes it, and the keeper's re-execution refunds the buyer, then a
