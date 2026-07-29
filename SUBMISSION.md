@@ -103,7 +103,9 @@ live and tested — on **both** VMs, behind **one** router.
   Component clips: `reckn-demo.mp4` (dashboard), `reckn-e2e.mp4` (terminal).
 - **One-command local proof:** `bash scripts/anvil-e2e.sh` — funds a deal, delivers
   a false plan, disputes it, and the keeper's re-execution refunds the buyer, then a
-  keyless re-verifier reproduces the on-chain verdict.
+  keyless re-verifier reproduces the on-chain verdict. The run **narrates each phase
+  in plain language** (real addresses/hashes shown underneath), so a judge can follow
+  it without knowing the internals.
 - **Repo:** https://github.com/psyto/reckn
 
 ---

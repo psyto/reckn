@@ -151,6 +151,8 @@ dashboard/                  # LLM-judge vs replay money-shot — implemented
                             #   console + ledger, on-chain resolve receipt
   variants/                 #   design exploration (v1–v5); v5 is promoted above
   media/reckn-moneyshot.gif #   README hero animation
+  media/reckn-demo-full.mp4 #   full demo: money-shot + live anvil-e2e terminal run
+  media/reckn-demo.mp4      #   dashboard-only clip; media/reckn-e2e.mp4 = terminal clip
 keeper/                     # resolver keeper — replay, EIP-712 signature, live chain shell
   src/lib.rs                #   verified core: build + EIP-712-sign VerdictCommitment
   src/main.rs               #   live shell: once/watch (resolve) + verify (keyless recheck)
@@ -315,11 +317,21 @@ before parsing), MPT-verifies the witness against the anchor, **re-executes the
 seller's plan** — here a real `balanceOf` SLOAD whose output can't satisfy the
 funded predicate — signs the `Failed` verdict, and submits `resolve()`. Finally, a
 **keyless independent re-verifier** reads the on-chain verdict back and reproduces
-it from public inputs alone — proving the resolver couldn't have lied. Expected
-final lines:
+it from public inputs alone — proving the resolver couldn't have lied.
+
+The run **narrates each phase in plain language** (with the real addresses, hashes,
+and deal id shown underneath), so it reads as a story even if you don't know the
+internals:
 
 ```
+▶ Setting up: an escrow and a test USDC on a fresh local chain
+▶ Freezing the exact chain state the work will be judged against
+▶ Seller attaches tamper-proof evidence of the state it ran against
+▶ Buyer pays 1,000 USDC into escrow for the promised result
+▶ Seller delivers a wrong result but claims success; buyer disputes it
+▶ Reckn replays the actual work and checks it against the promise
 PASS: re-execution returned Failed and refunded buyer; deal=0x…
+▶ Anyone can reproduce this verdict themselves — no trust in the keeper
 VERIFIED — resolver verdict reproduced from public inputs with no resolver key. …
 PASS: independent re-verification reproduced the on-chain verdict.
 ```
