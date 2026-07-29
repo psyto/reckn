@@ -96,9 +96,11 @@ live and tested — on **both** VMs, behind **one** router.
 - **▶ Live money-shot (clickable):** https://claude.ai/code/artifact/88a370e4-bfeb-480c-af14-015661e6e6f7
   — the same dispute, judged by an opinion LLM vs deterministic re-execution. Toggle
   *Honest delivery* / *False claim* and watch them disagree.
-- **Demo video (screen recording of the money-shot):**
-  [`dashboard/media/reckn-demo.mp4`](dashboard/media/reckn-demo.mp4) — false claim →
-  refund, honest → release, false again. Recorded headless via Puppeteer/Chromium.
+- **Demo video (full):** [`dashboard/media/reckn-demo-full.mp4`](dashboard/media/reckn-demo-full.mp4)
+  — money-shot judged two ways (false → refund, honest → release) **plus the live
+  `anvil-e2e.sh` terminal run** (pin anchor → publish witness → re-execute → refund →
+  keyless re-verify). Recorded headless via Puppeteer/Chromium + a real Foundry run.
+  Component clips: `reckn-demo.mp4` (dashboard), `reckn-e2e.mp4` (terminal).
 - **One-command local proof:** `bash scripts/anvil-e2e.sh` — funds a deal, delivers
   a false plan, disputes it, and the keeper's re-execution refunds the buyer, then a
   keyless re-verifier reproduces the on-chain verdict.
@@ -139,9 +141,9 @@ live and tested — on **both** VMs, behind **one** router.
       (only the owner can do this from claude.ai; the link is private until then).
 - [ ] **Repo public:** flip `psyto/reckn` from private to public
       (`gh repo edit psyto/reckn --visibility public`). One-way-ish — do at submission.
-- [x] **Demo video** — money-shot screen recording at `dashboard/media/reckn-demo.mp4`
-      (Puppeteer/Chromium). Optional upgrade: add the `anvil-e2e.sh` terminal beat and
-      VO per the script above, then upload and link in the form.
+- [x] **Demo video** — full cut at `dashboard/media/reckn-demo-full.mp4` (money-shot +
+      live `anvil-e2e.sh` terminal), Puppeteer/Chromium. Optional upgrade: add VO per
+      the script above, then upload and link in the form.
 - [ ] **Submission form**: one-liner, elevator pitch, how-it-works, track (Arc — Best
       Agentic Economy), sponsor tech (ERC-8004, x402/EIP-3009, Arc), repo + artifact
       + video links.

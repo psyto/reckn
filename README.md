@@ -19,9 +19,12 @@ thing live on a local chain: [`bash scripts/anvil-e2e.sh`](#try-it-one-command).
 
 ![Reckn money-shot — the same dispute: the opinion judge reads the seller's claim and approves; re-execution replays the actual plan, sees the real output, and refunds the buyer.](dashboard/media/reckn-moneyshot.gif)
 
-**▶ Demo video (screen recording):** [`dashboard/media/reckn-demo.mp4`](dashboard/media/reckn-demo.mp4)
-— the same dispute judged two ways: false claim → re-execution refunds the buyer;
-honest delivery → reproduced, released to the seller; false again, driven home.
+**▶ Demo video:** [`dashboard/media/reckn-demo-full.mp4`](dashboard/media/reckn-demo-full.mp4)
+— the money-shot judged two ways (false → refund, honest → release), then the
+**live `anvil-e2e.sh` run** on a real chain: pin the anchor, publish the witness,
+re-execute, refund, and reproduce the verdict keyless. Component clips:
+[`reckn-demo.mp4`](dashboard/media/reckn-demo.mp4) (dashboard),
+[`reckn-e2e.mp4`](dashboard/media/reckn-e2e.mp4) (terminal).
 
 ## Why
 
