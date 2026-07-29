@@ -45,7 +45,7 @@ deploy() {
   forge create --broadcast --rpc-url "$rpc_url" --private-key "$buyer_pk" "$@" \
     | awk '/Deployed to:/ {print $3}'
 }
-say "starting anvil and deploying escrow, resolver registry, and a mock USDC"
+say "Setting up: an escrow and a test USDC on a fresh local chain"
 registry=$(deploy src/ResolverRegistry.sol:ResolverRegistry --constructor-args "$buyer")
 escrow=$(deploy src/RecknEscrow.sol:RecknEscrow --constructor-args "$registry")
 token=$(deploy test/mocks/MockUSDC3009.sol:MockUSDC3009)
@@ -64,7 +64,7 @@ cast send --rpc-url "$rpc_url" --private-key "$buyer_pk" "$token" \
 # This is the committed prestate. Later escrow transactions do not affect the
 # replayed historic state. `blockHash` is committed for V1.1; the plan below
 # never executes BLOCKHASH, whose connected-header verification is deferred.
-say "pinning the prestate anchor (block state_root is the committed world)"
+say "Freezing the exact chain state the work will be judged against"
 block=$(cast block latest --rpc-url "$rpc_url" --json)
 block_number=$(cast to-dec "$(jq -r .number <<<"$block")")
 anchor=$(jq -cn \
@@ -92,7 +92,7 @@ delivery_draft=$(jq -cn --arg caller "$buyer" --arg target "$token" --arg callda
   '{caller:$caller,target:$target,calldata:$calldata,value:"0x0",gasLimit:200000}')
 delivery_draft_hash=$(printf %s "$delivery_draft" | shasum -a 256 | awk '{print "0x" $1}')
 printf %s "$delivery_draft" >"$store/${delivery_draft_hash#0x}.json"
-say "seller publishes the proof-carrying witness; delivery will commit its hash"
+say "Seller attaches tamper-proof evidence of the state it ran against"
 witness_out=$(cargo run --quiet --manifest-path "$root/keeper/Cargo.toml" -- \
   witness "$rpc_url" "$store" "$anchor_hash" "$delivery_draft_hash" --write "$store")
 witness_hash=$(awk -F= '/^witnessContentHash=/{print $2}' <<<"$witness_out")
@@ -119,16 +119,16 @@ fund_receipt=$(cast receipt --rpc-url "$rpc_url" "$(jq -r .transactionHash <<<"$
 funded_topic=$(cast keccak 'Funded(bytes32,address,address,address,uint256,bytes32,bytes32,bytes32,bytes32,uint64)')
 deal_id=$(jq -r --arg topic "$funded_topic" '.logs[] | select(.topics[0] == $topic) | .topics[1]' <<<"$fund_receipt")
 [[ "$deal_id" != "null" && -n "$deal_id" ]]
-say "buyer funds the deal (EIP-3009), bound to spec + anchor"
+say "Buyer pays 1,000 USDC into escrow for the promised result"
 printf '  deal %s\n' "$deal_id"
 
-say "seller delivers a false plan; buyer challenges -> Disputed"
+say "Seller delivers a wrong result but claims success; buyer disputes it"
 cast send --rpc-url "$rpc_url" --private-key "$seller_pk" "$escrow" \
   'deliver(bytes32,bytes32,uint64)' "$deal_id" "$delivery_hash" 3600 >/dev/null
 cast send --rpc-url "$rpc_url" --private-key "$buyer_pk" "$escrow" \
   'challenge(bytes32,uint64)' "$deal_id" 3600 >/dev/null
 
-say "keeper: fetch committed inputs -> MPT-verify witness -> re-execute -> resolve()"
+say "Reckn replays the actual work and checks it against the promise"
 cargo run --quiet --manifest-path "$root/keeper/Cargo.toml" -- \
   once "$rpc_url" "$escrow" "$store" "$resolver_pk"
 
@@ -141,7 +141,7 @@ echo "PASS: re-execution returned Failed and refunded buyer; deal=$deal_id"
 # on-chain verdict from public inputs alone (content store + re-execution) — no
 # resolver key. This is the trust property made executable: don't trust the
 # resolver, reproduce its verdict yourself. A mismatch here fails the script.
-say "keyless re-verify: reproduce the verdict from public inputs, no resolver key"
+say "Anyone can reproduce this verdict themselves — no trust in the keeper"
 cargo run --quiet --manifest-path "$root/keeper/Cargo.toml" -- \
   verify "$rpc_url" "$escrow" "$store" "$deal_id"
 echo "PASS: independent re-verification reproduced the on-chain verdict."
