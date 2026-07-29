@@ -121,8 +121,9 @@ is not scope creep, it is the demonstration that the adjudicator outlives any si
 stack.
 
 Adopted, judge-legible pieces: **ERC-8004** reputation (implemented) · **x402 /
-EIP-3009** payments (EVM escrow) · **Circle Arc** as one settlement target ·
-Chainlink CRE / MCP as swappable orchestration.
+EIP-3009** payments (EVM escrow — a buyer agent's x402 authorization *is* the escrow
+funding; see [`docs/x402-payments.md`](docs/x402-payments.md)) · **Circle Arc** as one
+settlement target · Chainlink CRE / MCP as swappable orchestration.
 
 ## Repository layout
 
@@ -131,6 +132,7 @@ SUBMISSION.md               # pitch surface: submission copy, demo-video script,
 docs/
   protocol-architecture.md  # converged EVM-first protocol (the source of truth)
   roadmap-crossvm.md        # EVM → Solana → cross-VM extension roadmap
+  x402-payments.md          # how a buyer agent's x402/EIP-3009 payment funds the escrow
   architecture-brief.md     # original frame-thick task brief (historical)
 contracts/                  # EVM V1 settlement half (Foundry) — implemented
   src/RecknEscrow.sol       #   four-state escrow + timeout escape hatches
