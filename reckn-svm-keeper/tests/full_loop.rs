@@ -28,13 +28,53 @@ use {
 const PROGRAM_ID: Address = Address::new_from_array([0x52; 32]);
 const AMOUNT: u64 = 1_000_000;
 const DECIMALS: u8 = 6;
+// The replay's transfer destination. It starts at 1 lamport, so a `transfer`
+// of N settles it at N + 1 — the value every predicate below is written against.
+const REPLAY_TO: [u8; 32] = [5; 32];
 
 #[test]
-fn keeper_full_loop_honest_releases_false_claim_refunds_and_keyless_verify_agrees() {
-    for (transfer, expected, seller_paid) in
-        [(2_000_000, 2_000_001, true), (1_500_000, 2_000_001, false)]
-    {
-        let mut env = Env::new(transfer, expected);
+fn keeper_full_loop_equality_and_bound_predicates_release_refund_and_keyless_verify_agree() {
+    for (transfer, predicate, seller_paid) in [
+        // Exact equality: the destination must hold precisely `expected`.
+        (
+            2_000_000,
+            StoredPredicateV1::LamportsEquals {
+                account: REPLAY_TO,
+                expected: 2_000_001,
+            },
+            true,
+        ),
+        (
+            1_500_000,
+            StoredPredicateV1::LamportsEquals {
+                account: REPLAY_TO,
+                expected: 2_000_001,
+            },
+            false,
+        ),
+        // Funded envelope "received >= minOut" (the swap slippage bound): an
+        // honest fill clears the floor and releases; a short fill refunds. Same
+        // escrow loop, same keyless verify — only the funded predicate differs.
+        (
+            2_000_000,
+            StoredPredicateV1::LamportsBounded {
+                account: REPLAY_TO,
+                min: 2_000_000,
+                max: u64::MAX,
+            },
+            true,
+        ),
+        (
+            1_500_000,
+            StoredPredicateV1::LamportsBounded {
+                account: REPLAY_TO,
+                min: 2_000_000,
+                max: u64::MAX,
+            },
+            false,
+        ),
+    ] {
+        let mut env = Env::new(transfer, predicate);
         env.fund_deliver_challenge();
         let disputed = env.deal();
 
@@ -101,14 +141,14 @@ struct Env {
     profile: [u8; 32],
 }
 impl Env {
-    fn new(transfer: u64, expected: u64) -> Self {
+    fn new(transfer: u64, predicate: StoredPredicateV1) -> Self {
         let dir = tempdir().unwrap().keep();
         let store = FileContentStore::new(&dir);
         let buyer = Keypair::new_from_array([1; 32]);
         let seller = Keypair::new_from_array([2; 32]);
         let resolver = SigningKey::from_bytes(&[3; 32]);
         let agent = Keypair::new_from_array([4; 32]);
-        let replay_to = Address::new_from_array([5; 32]);
+        let replay_to = Address::new_from_array(REPLAY_TO);
         let mut plan = Transaction::new_with_payer(
             &[system_transfer(agent.pubkey(), replay_to, transfer)],
             Some(&agent.pubkey()),
@@ -161,10 +201,7 @@ impl Env {
             backend_version_hash: version,
             anchor_hash: bytes(anchor_hash),
             runtime_profile_content_hash: bytes(profile_hash),
-            predicate: StoredPredicateV1::LamportsEquals {
-                account: *replay_to.as_array(),
-                expected,
-            },
+            predicate,
         };
         let spec_hash = put(&dir, &spec);
         let delivery_hash = put(

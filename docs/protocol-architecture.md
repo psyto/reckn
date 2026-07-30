@@ -126,7 +126,8 @@ retrieval hint.
 ```ts
 type PredicateCommitmentV1 =
   | { kind: "RESULT_EQUALS"; expectedResultHash: ContentHash }
-  | { kind: "POSTSTATE_EQUALS"; assertionProgramHash: ContentHash };
+  | { kind: "POSTSTATE_EQUALS"; assertionProgramHash: ContentHash }
+  | { kind: "POSTSTATE_BOUNDED"; checks: { address; slot; min; max }[] };
 
 type SpecV1 = {
   protocolVersion: 1;
@@ -224,6 +225,11 @@ environment. `EvmActionSpecV1` permits only:
 
 * `RESULT_EQUALS`: `keccak256(returnData)` is the expected hash.
 * `POSTSTATE_EQUALS`: ordered `(address, storageSlot, expectedWord)` checks.
+* `POSTSTATE_BOUNDED`: ordered `(address, storageSlot, min, max)` checks, each
+  asserting the post-state word lies in the inclusive range `[min, max]`. This
+  is the funded envelope behind "swap output ≥ minOut" (`max = MAX`) and
+  "≤ cap" (`min = 0`); equality is the degenerate `min == max`. The SVM backend
+  mirrors it as `LamportsBounded { account, min, max }`.
 
 Funding commits the **plan schema**, anchor, and predicate—not a seller plan.
 The seller supplies the concrete, schema-valid `EvmCallPlanV1` and claimed result
@@ -303,7 +309,7 @@ not alternate settlement paths.
 > Progress: (1) done — `contracts/`, 23 tests (incl. cross-language digest pin,
 > ERC-8004 `ReputationEvidence`, and end-to-end settlement on real engine output).
 > (2) done — `reexec-evm/`, revm 38 with offline MPT verification and real-anchor
-> (base-fee/nonce) support, 5 tests; canonical `ReplayRecordV1` in
+> (base-fee/nonce) support, 7 tests; canonical `ReplayRecordV1` in
 > `packages/protocol/`. (3) done — `keeper/` builds and EIP-712-signs the verdict
 > `resolve()` accepts (shared-golden cross-check), plus the live HTTP shell — now on
 > a **committed** witness: the seller publishes it (`witness --write`) and the

@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
-# Reckn V1.1 money-shot: a seller commits a plan that does not satisfy the
-# funded predicate; proof-verified re-execution returns Failed and refunds the
-# buyer.  No BLOCKHASH opcode is used.
+# Reckn V1.1 money-shot, two acts over the same frozen state:
+#   Act I  — exact-match predicate: a seller's plan does not satisfy it, so
+#            proof-verified re-execution returns Failed and REFUNDS the buyer.
+#   Act II — bound predicate (the flagship "swap at ≤X slippage"): the buyer
+#            funds "output balance ≥ minOut"; an honest fill clears the floor,
+#            reproduces, and is RELEASED to the seller.
+# No BLOCKHASH opcode is used.
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
@@ -175,3 +179,61 @@ say "Anyone can reproduce this verdict themselves — no trust in the keeper"
 cargo run --quiet --manifest-path "$root/keeper/Cargo.toml" -- \
   verify "$rpc_url" "$escrow" "$store" "$deal_id"
 echo "PASS: independent re-verification reproduced the on-chain verdict."
+
+# ── Act II: the honest, released deal on a BOUND predicate ────────────────────
+# Act I proved the refund path with an exact-match predicate. The flagship claim
+# ("executed this swap at ≤X slippage") is an *inequality*, not equality, so it
+# needs the bound predicate: the buyer funds "the output-balance slot must end at
+# ≥ minOut", and an honest fill that clears the floor is RELEASED to the seller.
+# The plan and witness are reused from Act I — the same proven balanceOf slot —
+# so only the funded predicate changes. Frozen balanceOf[buyer] is 1,000,000; the
+# buyer's slippage floor is 900,000, so 1,000,000 ≥ 900,000 reproduces and pays.
+say "Act II: buyer funds a slippage bound — output balance must end ≥ minOut"
+balance_slot=$(cast index address "$buyer" 0)          # balanceOf[buyer] @ slot 0
+min_out=$(cast to-hex 900000)                           # the buyer's max-slippage floor
+u256_max=0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+spec_b=$(jq -cn --arg anchor "$anchor_hash" --arg backendId "$backend_id" --arg backendVersionHash "$backend_ver" \
+  --arg token "$token" --arg slot "$balance_slot" --arg min "$min_out" --arg max "$u256_max" \
+  '{backendId:$backendId,backendVersionHash:$backendVersionHash,prestateAnchorHash:$anchor,predicate:{kind:"POST_STATE_BOUNDED",checks:[{address:$token,slot:$slot,min:$min,max:$max}]}}')
+spec_b_hash=$(printf %s "$spec_b" | shasum -a 256 | awk '{print "0x" $1}')
+printf %s "$spec_b" >"$store/${spec_b_hash#0x}.json"
+
+salt_b=0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+deal_b=$(cast call --rpc-url "$rpc_url" "$escrow" \
+  'computeDealId(bytes32,address,address,address,uint256,bytes32,bytes32,bytes32,bytes32)(bytes32)' \
+  "$salt_b" "$buyer" "$seller" "$token" 1000000 "$spec_b_hash" "$anchor_hash" "$backend_id" "$backend_ver")
+auth_nonce_b=$(cast call --rpc-url "$rpc_url" "$escrow" \
+  'fundingNonce(bytes32,uint64)(bytes32)' "$deal_b" "$deliver_window")
+auth_struct_b=$(cast keccak "$(cast abi-encode \
+  'f(bytes32,address,address,uint256,uint256,uint256,bytes32)' \
+  "$auth_typehash" "$buyer" "$escrow" 1000000 "$valid_after" "$valid_before" "$auth_nonce_b")")
+auth_digest_b=$(cast keccak "$(cast concat-hex 0x1901 "$domain_sep" "$auth_struct_b")")
+auth_sig_b=$(cast wallet sign --no-hash --private-key "$buyer_pk" "$auth_digest_b")
+auth_r_b=0x${auth_sig_b:2:64}
+auth_s_b=0x${auth_sig_b:66:64}
+auth_v_b=$(cast to-dec "0x${auth_sig_b:130:2}")
+
+cast send --rpc-url "$rpc_url" --private-key "$facilitator_pk" "$escrow" \
+  'fundWithAuthorization(bytes32,address,address,address,uint256,bytes32,bytes32,bytes32,bytes32,uint64,uint256,uint256,bytes32,uint8,bytes32,bytes32)' \
+  "$salt_b" "$buyer" "$seller" "$token" 1000000 "$spec_b_hash" "$anchor_hash" "$backend_id" "$backend_ver" \
+  "$deliver_window" "$valid_after" "$valid_before" "$auth_nonce_b" "$auth_v_b" "$auth_r_b" "$auth_s_b" >/dev/null
+
+say "Seller delivers a fill that clears the floor; buyer disputes to force the check"
+cast send --rpc-url "$rpc_url" --private-key "$seller_pk" "$escrow" \
+  'deliver(bytes32,bytes32,uint64)' "$deal_b" "$delivery_hash" 3600 >/dev/null
+cast send --rpc-url "$rpc_url" --private-key "$buyer_pk" "$escrow" \
+  'challenge(bytes32,uint64)' "$deal_b" 3600 >/dev/null
+
+say "Reckn replays the work: output ≥ minOut reproduces, so the seller is paid"
+cargo run --quiet --manifest-path "$root/keeper/Cargo.toml" -- \
+  once "$rpc_url" "$escrow" "$store" "$resolver_pk"
+
+seller_balance=$(cast call --rpc-url "$rpc_url" "$token" 'balanceOf(address)(uint256)' "$seller")
+escrow_balance_b=$(cast call --rpc-url "$rpc_url" "$token" 'balanceOf(address)(uint256)' "$escrow")
+[[ "$seller_balance" == "1000000" && "$escrow_balance_b" == "0" ]]
+echo "PASS: bound predicate reproduced (output ≥ minOut); seller released; deal=$deal_b"
+
+say "Anyone can reproduce the released verdict too — same public inputs, no key"
+cargo run --quiet --manifest-path "$root/keeper/Cargo.toml" -- \
+  verify "$rpc_url" "$escrow" "$store" "$deal_b"
+echo "PASS: independent re-verification reproduced the RELEASE verdict."
