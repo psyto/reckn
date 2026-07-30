@@ -135,6 +135,7 @@ fn main() {
         coinbase,
         prevrandao: B256::from([0x22; 32]),
         spec_id: SpecId::CANCUN,
+        block_header: None,
     };
     let commitments = ReexecCommitmentsV1 {
         backend_id: keccak256(b"reckn/backend/evm"),
