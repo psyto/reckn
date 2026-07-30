@@ -83,6 +83,13 @@ impl ReexecBackend for SvmBackend {
                     expected,
                 }
             }
+            StoredPredicateV1::LamportsBounded { account, min, max } => {
+                SvmPredicate::LamportsBounded {
+                    account: pubkey(account),
+                    min,
+                    max,
+                }
+            }
         };
         let out = svm_replay(
             &SvmAnchorV2 {
