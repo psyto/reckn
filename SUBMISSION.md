@@ -60,7 +60,12 @@ deal.prestateAnchorHash → checked anchor → state_root
 - **Funded by the payment itself.** A buyer agent's **x402 / EIP-3009** authorization
   is consumed *as* the escrow funding: one signed authorization both pays and opens
   the disputable escrow, binding the deal to the re-executable predicate (no deposit
-  step). See [`docs/x402-payments.md`](docs/x402-payments.md).
+  step). The signature is **really verified** (EIP-712, the way USDC's FiatTokenV2
+  does), and a **third-party facilitator relays it** — the buyer never sends the
+  funding tx. The authorization's nonce is bound to the exact deal, so relaying is
+  tamper-evident: no facilitator can redirect the payment or alter a term.
+  `scripts/anvil-e2e.sh` funds this way (buyer signs, a separate account relays).
+  See [`docs/x402-payments.md`](docs/x402-payments.md).
 - **Committed inputs, no live RPC in the verdict path.** Spec/delivery/anchor are
   content-addressed; the seller publishes a proof-carrying witness whose SHA-256 the
   delivery commits. Replay resolves it by hash and MPT-verifies it against the
@@ -76,7 +81,7 @@ live and tested — on **both** VMs, behind **one** router.
 
 | Layer | EVM | Solana (SVM) |
 |---|---|---|
-| Settlement contract | `contracts/` (Solidity) — 23 tests | `escrow-svm/` (Pinocchio) — 4 LiteSVM e2e |
+| Settlement contract | `contracts/` (Solidity) — 28 tests (incl. verified EIP-3009 funding) | `escrow-svm/` (Pinocchio) — 4 LiteSVM e2e |
 | Re-execution backend | `reexec-evm/` (revm 38, offline MPT) — 5 tests | `reexec-svm/` (LiteSVM V2, closed-world) — 13 tests |
 | Keeper + keyless verify | `keeper/` (EIP-712) — 2 tests + `anvil-e2e.sh` | `reckn-svm-keeper/` (Ed25519) — full-loop |
 | Shared verdict record | `packages/protocol-rs` (`ReplayRecordV1`) — one type both VMs emit | ← same |
@@ -169,5 +174,5 @@ positioned; if it stalls, the verdict still reproduces anywhere.
       Agentic Economy), sponsor tech (ERC-8004, x402/EIP-3009, Arc), repo + artifact
       + video links.
 - [ ] **`bash scripts/anvil-e2e.sh` green** on a clean clone (Foundry + Rust + jq).
-- [ ] Test tally current in README (contracts 23, reexec-evm 5, reexec-svm 13,
+- [ ] Test tally current in README (contracts 28, reexec-evm 5, reexec-svm 13,
       binder 6, keeper 2, escrow-svm 4, evm-content 3, record 1).

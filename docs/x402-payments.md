@@ -27,29 +27,51 @@ Reckn:                 the SAME authorization  ------------------->  RecknEscrow
                                                                      -> state = Held
 ```
 
-`RecknEscrow.fundWithAuthorization` takes the EIP-3009 fields (`validAfter`,
-`validBefore`, `authNonce`, `v/r/s`) and calls
+`RecknEscrow.fundWithAuthorization` takes the buyer (`from`) plus the EIP-3009 fields
+(`validAfter`, `validBefore`, `authNonce`, `v/r/s`) and calls
 `IUSDC3009(paymentToken).receiveWithAuthorization(...)` — the exact call an x402
 facilitator makes to settle — but instead of a plain transfer it lands the value in
 the escrow and atomically binds the deal to the re-executable predicate. One signed
 authorization both *pays* and *opens the disputable escrow*.
 
+- **The buyer signs; anyone submits.** `from` (the buyer) is an explicit parameter
+  distinct from `msg.sender`, and `receiveWithAuthorization`'s "receive" variant only
+  requires the payee (`to`) to be the caller. So a third-party **facilitator** relays
+  the buyer's signed authorization on-chain — the gasless, pull-style property x402
+  depends on — while the token, not the escrow, proves the buyer authorized the pull.
+- **One signature binds the terms, not just the payment.** The `authNonce` the buyer
+  signs is required to equal `fundingNonce(dealId, deliverWindow)` — a hash that
+  commits (via `dealId`) to seller, token, amount, spec, anchor, and backend. A
+  relayer that alters *any* funded term recomputes a different expected nonce, so the
+  transaction reverts either on the escrow's `BadNonce` check or, if the relayer forges
+  a matching nonce, on the token's signature check (the buyer never signed that
+  authorization). Relaying is therefore tamper-evident: the facilitator holds no
+  discretion over who gets paid or what the deal is.
 - No `approve` + `transferFrom` dance, no deposit step: the x402 payment and the
   escrow open are a single signed authorization.
 - `to` is fixed to the escrow contract, so a stray authorization cannot be redirected.
-- The `authNonce` is the EIP-3009 nonce; replay is rejected by the token.
+- The `authNonce` is the EIP-3009 nonce; cross-deal replay is impossible (the nonce is
+  1:1 with the deal) and same-deal replay is rejected by both the escrow (`DealExists`)
+  and the token's per-authorizer nonce set.
 
 ## Implemented vs adapter (honest split)
 
 - **Implemented — the settlement leg that matters for trust.** The escrow consumes a
-  real EIP-3009 `receiveWithAuthorization` (see `contracts/src/RecknEscrow.sol`,
-  `contracts/src/interfaces/IUSDC3009.sol`, and the mock USDC exercised end-to-end by
-  `scripts/anvil-e2e.sh`). This is the on-chain half x402 relies on.
+  **verified** EIP-3009 `receiveWithAuthorization`: the buyer's off-chain EIP-712
+  signature is checked against the token's domain and the `ReceiveWithAuthorization`
+  typehash, with `validAfter`/`validBefore` window and per-authorizer nonce enforced
+  (see `contracts/src/RecknEscrow.sol`, `contracts/src/interfaces/IUSDC3009.sol`, and
+  `contracts/test/mocks/MockUSDC3009.sol`, which verifies signatures the way USDC's
+  FiatTokenV2 does). `scripts/anvil-e2e.sh` funds end-to-end by having the buyer sign a
+  real authorization that a **separate facilitator account** relays — proving the
+  relay path, not just the accounting. Covered by the escrow test suite:
+  facilitator-relays-buyer-signature, tampered-term (nonce) and tampered-amount
+  (signature) rejection, wrong-signer, and expired-authorization.
 - **Adapter — the HTTP handshake.** The `402` response, the payment-offer negotiation,
-  and the facilitator that relays the signed payload are **off-chain plumbing**. They
-  are a thin, swappable adapter in front of `fundWithAuthorization`, deliberately out
-  of the trust core: they choose *how the authorization arrives*, never *how a dispute
-  is decided*.
+  and the transport that carries the signed payload to the facilitator are **off-chain
+  plumbing**. They are a thin, swappable adapter in front of `fundWithAuthorization`,
+  deliberately out of the trust core: they choose *how the authorization arrives*,
+  never *how a dispute is decided*.
 
 ## Why this is rail-agnostic
 

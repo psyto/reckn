@@ -139,6 +139,11 @@ contract RecknEscrow {
     error CommitmentMismatch();
     error BadSignature();
     error ZeroWindow();
+    error BadNonce();
+
+    /// @dev Domain tag that binds an EIP-3009 authorization nonce to the exact
+    ///      deal it funds. See {fundingNonce}.
+    bytes32 public constant FUND_NONCE_TAG = keccak256("Reckn.FundAuthNonce.v1");
 
     constructor(ResolverRegistry registry_) {
         registry = registry_;
@@ -153,36 +158,26 @@ contract RecknEscrow {
         );
     }
 
-    /// @notice Buyer funds a deal atomically with an EIP-3009 authorization and
-    ///         binds it to the spec's canonical commitments. Entering `Held`.
-    function fundWithAuthorization(
+    /// @notice The deterministic deal id for a set of funding terms. Pure over the
+    ///         terms plus this chain/escrow, so a buyer and a facilitator derive
+    ///         the same id off-chain before funding.
+    function computeDealId(
         bytes32 salt,
+        address buyer,
         address seller,
         address paymentToken,
         uint256 amount,
         bytes32 specHash,
         bytes32 prestateAnchorHash,
         bytes32 backendId,
-        bytes32 backendVersionHash,
-        uint64 deliverWindow,
-        // EIP-3009 authorization (buyer = from):
-        uint256 validAfter,
-        uint256 validBefore,
-        bytes32 authNonce,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external returns (bytes32 dealId) {
-        if (amount == 0) revert ZeroAmount();
-        if (seller == address(0) || seller == msg.sender) revert BadParty();
-        if (deliverWindow == 0) revert ZeroWindow();
-
-        dealId = keccak256(
+        bytes32 backendVersionHash
+    ) public view returns (bytes32) {
+        return keccak256(
             abi.encode(
                 block.chainid,
                 address(this),
                 salt,
-                msg.sender,
+                buyer,
                 seller,
                 paymentToken,
                 amount,
@@ -192,12 +187,65 @@ contract RecknEscrow {
                 backendVersionHash
             )
         );
+    }
+
+    /// @notice The EIP-3009 authorization nonce a buyer MUST sign to fund `dealId`
+    ///         for `deliverWindow`. Binding the nonce to the deal is what lets a
+    ///         single buyer signature both pay AND fix the terms: the nonce is part
+    ///         of the signed authorization, and `dealId` commits to seller, token,
+    ///         amount, spec, anchor, and backend. A relayer that alters any term
+    ///         recomputes a different expected nonce here, so either this check or
+    ///         the token's signature check reverts — the buyer's intent is
+    ///         tamper-evident even though anyone may submit the transaction.
+    function fundingNonce(bytes32 dealId, uint64 deliverWindow) public pure returns (bytes32) {
+        return keccak256(abi.encode(FUND_NONCE_TAG, dealId, deliverWindow));
+    }
+
+    /// @notice Fund a deal atomically with the buyer's EIP-3009 authorization and
+    ///         bind it to the spec's canonical commitments, entering `Held`. The
+    ///         buyer (`from`) is the payer whose off-chain signature authorizes the
+    ///         pull; `msg.sender` may be a third-party facilitator relaying it
+    ///         (x402-style), since the token's `receiveWithAuthorization` requires
+    ///         only that `to` is this escrow. The authorization's `authNonce` must
+    ///         equal {fundingNonce}, so one signature cannot be replayed against
+    ///         different terms.
+    function fundWithAuthorization(
+        bytes32 salt,
+        address from,
+        address seller,
+        address paymentToken,
+        uint256 amount,
+        bytes32 specHash,
+        bytes32 prestateAnchorHash,
+        bytes32 backendId,
+        bytes32 backendVersionHash,
+        uint64 deliverWindow,
+        // EIP-3009 authorization signed by the buyer (`from`):
+        uint256 validAfter,
+        uint256 validBefore,
+        bytes32 authNonce,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external returns (bytes32 dealId) {
+        if (amount == 0) revert ZeroAmount();
+        if (from == address(0) || seller == address(0) || seller == from) revert BadParty();
+        if (deliverWindow == 0) revert ZeroWindow();
+
+        dealId = computeDealId(
+            salt, from, seller, paymentToken, amount, specHash, prestateAnchorHash, backendId, backendVersionHash
+        );
         if (deals[dealId].state != DealState.None) revert DealExists();
+
+        // The authorization the buyer signed must be the one that funds *this*
+        // deal for *this* window. This is the term binding that makes relaying
+        // safe (see {fundingNonce}).
+        if (authNonce != fundingNonce(dealId, deliverWindow)) revert BadNonce();
 
         uint64 deliverDeadline = uint64(block.timestamp) + deliverWindow;
 
         deals[dealId] = Deal({
-            buyer: msg.sender,
+            buyer: from,
             seller: seller,
             paymentToken: paymentToken,
             amount: amount,
@@ -214,14 +262,15 @@ contract RecknEscrow {
 
         // Pull funds last (state written first; token call is the only external
         // interaction). `to` is address(this), so a stray authorization cannot
-        // be redirected.
+        // be redirected, and the buyer's signature over `from`/`value`/`nonce`
+        // is verified by the token — the facilitator holds no discretion.
         IUSDC3009(paymentToken).receiveWithAuthorization(
-            msg.sender, address(this), amount, validAfter, validBefore, authNonce, v, r, s
+            from, address(this), amount, validAfter, validBefore, authNonce, v, r, s
         );
 
         emit Funded(
             dealId,
-            msg.sender,
+            from,
             seller,
             paymentToken,
             amount,

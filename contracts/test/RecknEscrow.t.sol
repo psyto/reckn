@@ -13,8 +13,13 @@ contract RecknEscrowTest is Test {
     MockUSDC3009 token;
 
     address owner = address(0xA11CE);
-    address buyer = address(0xB0B);
+    // The buyer signs an EIP-3009 authorization off-chain, so it needs a key.
+    uint256 buyerPk = 0xB0B;
+    address buyer;
     address seller = address(0x5E11E5);
+    // A third party that relays the buyer's signed authorization on-chain. It
+    // never signs anything and is not a deal party — it only submits.
+    address facilitator = address(0xFAC117A705);
 
     uint256 resolverPk = 0xBEEF;
     address resolver;
@@ -31,6 +36,7 @@ contract RecknEscrowTest is Test {
     uint64 constant RESOLVE_W = 1 days;
 
     function setUp() public {
+        buyer = vm.addr(buyerPk);
         resolver = vm.addr(resolverPk);
         registry = new ResolverRegistry(owner);
         escrow = new RecknEscrow(registry);
@@ -46,11 +52,43 @@ contract RecknEscrowTest is Test {
 
     // --- helpers ---
 
+    /// @dev The EIP-712 digest the buyer signs for an EIP-3009 `receive`
+    ///      authorization, computed exactly as {MockUSDC3009} verifies it. `to` is
+    ///      the escrow, because the escrow is the payee that pulls the funds.
+    function _authDigest(address from, uint256 value, uint256 validAfter, uint256 validBefore, bytes32 nonce)
+        internal
+        view
+        returns (bytes32)
+    {
+        bytes32 structHash = keccak256(
+            abi.encode(
+                token.RECEIVE_WITH_AUTHORIZATION_TYPEHASH(),
+                from,
+                address(escrow),
+                value,
+                validAfter,
+                validBefore,
+                nonce
+            )
+        );
+        return keccak256(abi.encodePacked("\x19\x01", token.DOMAIN_SEPARATOR(), structHash));
+    }
+
+    /// @dev Fund the canonical deal for `salt`: the buyer signs the term-bound
+    ///      authorization, then a facilitator (not the buyer) relays it — the
+    ///      default path already exercises the x402 relay property.
     function _fund(bytes32 salt) internal returns (bytes32 id) {
-        vm.prank(buyer);
-        id = escrow.fundWithAuthorization(
-            salt, seller, address(token), AMOUNT, SPEC_HASH, ANCHOR_HASH, BACKEND_ID, BACKEND_VER, DELIVER_W,
-            0, type(uint256).max, keccak256(abi.encode("authnonce", salt)), 0, bytes32(0), bytes32(0)
+        id = escrow.computeDealId(
+            salt, buyer, seller, address(token), AMOUNT, SPEC_HASH, ANCHOR_HASH, BACKEND_ID, BACKEND_VER
+        );
+        bytes32 nonce = escrow.fundingNonce(id, DELIVER_W);
+        bytes32 digest = _authDigest(buyer, AMOUNT, 0, type(uint256).max, nonce);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(buyerPk, digest);
+
+        vm.prank(facilitator);
+        escrow.fundWithAuthorization(
+            salt, buyer, seller, address(token), AMOUNT, SPEC_HASH, ANCHOR_HASH, BACKEND_ID, BACKEND_VER, DELIVER_W,
+            0, type(uint256).max, nonce, v, r, s
         );
     }
 
@@ -248,11 +286,17 @@ contract RecknEscrowTest is Test {
     function test_duplicate_fund_reverts() public {
         _fund("dup");
         token.mint(buyer, AMOUNT);
+        // Same terms -> same dealId; the slot is occupied, so this reverts before
+        // the token is ever touched. The signature args are irrelevant here.
+        bytes32 id = escrow.computeDealId(
+            "dup", buyer, seller, address(token), AMOUNT, SPEC_HASH, ANCHOR_HASH, BACKEND_ID, BACKEND_VER
+        );
+        bytes32 dupNonce = escrow.fundingNonce(id, DELIVER_W);
         vm.expectRevert(RecknEscrow.DealExists.selector);
-        vm.prank(buyer);
+        vm.prank(facilitator);
         escrow.fundWithAuthorization(
-            "dup", seller, address(token), AMOUNT, SPEC_HASH, ANCHOR_HASH, BACKEND_ID, BACKEND_VER, DELIVER_W,
-            0, type(uint256).max, keccak256(abi.encode("authnonce", bytes32("dup2"))), 0, bytes32(0), bytes32(0)
+            "dup", buyer, seller, address(token), AMOUNT, SPEC_HASH, ANCHOR_HASH, BACKEND_ID, BACKEND_VER, DELIVER_W,
+            0, type(uint256).max, dupNonce, 0, bytes32(0), bytes32(0)
         );
     }
 
@@ -260,10 +304,106 @@ contract RecknEscrowTest is Test {
 
     function test_fund_rejects_zero_deliver_window() public {
         vm.expectRevert(RecknEscrow.ZeroWindow.selector);
-        vm.prank(buyer);
+        vm.prank(facilitator);
         escrow.fundWithAuthorization(
-            "zw", seller, address(token), AMOUNT, SPEC_HASH, ANCHOR_HASH, BACKEND_ID, BACKEND_VER, 0,
+            "zw", buyer, seller, address(token), AMOUNT, SPEC_HASH, ANCHOR_HASH, BACKEND_ID, BACKEND_VER, 0,
             0, type(uint256).max, keccak256("zw-auth"), 0, bytes32(0), bytes32(0)
+        );
+    }
+
+    // --- x402 / EIP-3009: one buyer signature both pays and opens the escrow ---
+
+    function test_fund_facilitator_relays_buyer_signature() public {
+        assertEq(token.balanceOf(buyer), AMOUNT, "buyer starts funded");
+        // Relayed by the facilitator inside _fund (msg.sender != buyer).
+        bytes32 id = _fund("relay");
+
+        RecknEscrow.Deal memory d = escrow.getDeal(id);
+        assertEq(d.buyer, buyer, "deal bound to the signer, not the relayer");
+        assertEq(uint8(d.state), uint8(RecknEscrow.DealState.Held), "held");
+        assertEq(token.balanceOf(buyer), 0, "funds pulled from the buyer");
+        assertEq(token.balanceOf(address(escrow)), AMOUNT, "escrow holds the pot");
+        assertEq(token.balanceOf(facilitator), 0, "relayer never touches funds");
+    }
+
+    /// A relayer that keeps the buyer's signed nonce but swaps a term (here the
+    /// seller) recomputes a different dealId, so the bound nonce no longer matches.
+    function test_fund_rejects_tampered_term_via_nonce() public {
+        bytes32 id = escrow.computeDealId(
+            "tamper", buyer, seller, address(token), AMOUNT, SPEC_HASH, ANCHOR_HASH, BACKEND_ID, BACKEND_VER
+        );
+        bytes32 nonce = escrow.fundingNonce(id, DELIVER_W);
+        bytes32 digest = _authDigest(buyer, AMOUNT, 0, type(uint256).max, nonce);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(buyerPk, digest);
+
+        address otherSeller = address(0xBAD5E11E5);
+        vm.expectRevert(RecknEscrow.BadNonce.selector);
+        vm.prank(facilitator);
+        escrow.fundWithAuthorization(
+            "tamper", buyer, otherSeller, address(token), AMOUNT, SPEC_HASH, ANCHOR_HASH, BACKEND_ID, BACKEND_VER,
+            DELIVER_W, 0, type(uint256).max, nonce, v, r, s
+        );
+    }
+
+    /// A relayer that instead forges a matching nonce for the tampered terms gets
+    /// past the escrow's nonce check, but the token rejects the buyer's signature
+    /// because it was never signed over the new amount.
+    function test_fund_rejects_tampered_amount_via_token_signature() public {
+        // Buyer signs for AMOUNT against the honest deal.
+        bytes32 id = escrow.computeDealId(
+            "amt", buyer, seller, address(token), AMOUNT, SPEC_HASH, ANCHOR_HASH, BACKEND_ID, BACKEND_VER
+        );
+        bytes32 nonce = escrow.fundingNonce(id, DELIVER_W);
+        bytes32 digest = _authDigest(buyer, AMOUNT, 0, type(uint256).max, nonce);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(buyerPk, digest);
+
+        // Relayer inflates the amount and recomputes a matching bound nonce.
+        uint256 tampered = AMOUNT + 1;
+        token.mint(buyer, 1);
+        bytes32 id2 = escrow.computeDealId(
+            "amt", buyer, seller, address(token), tampered, SPEC_HASH, ANCHOR_HASH, BACKEND_ID, BACKEND_VER
+        );
+        bytes32 nonce2 = escrow.fundingNonce(id2, DELIVER_W);
+        vm.expectRevert("3009: bad signature");
+        vm.prank(facilitator);
+        escrow.fundWithAuthorization(
+            "amt", buyer, seller, address(token), tampered, SPEC_HASH, ANCHOR_HASH, BACKEND_ID, BACKEND_VER,
+            DELIVER_W, 0, type(uint256).max, nonce2, v, r, s
+        );
+    }
+
+    function test_fund_rejects_wrong_signer() public {
+        bytes32 id = escrow.computeDealId(
+            "wrong", buyer, seller, address(token), AMOUNT, SPEC_HASH, ANCHOR_HASH, BACKEND_ID, BACKEND_VER
+        );
+        bytes32 nonce = escrow.fundingNonce(id, DELIVER_W);
+        bytes32 digest = _authDigest(buyer, AMOUNT, 0, type(uint256).max, nonce);
+        // Signed by the resolver, not the buyer.
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(resolverPk, digest);
+
+        vm.expectRevert("3009: bad signature");
+        vm.prank(facilitator);
+        escrow.fundWithAuthorization(
+            "wrong", buyer, seller, address(token), AMOUNT, SPEC_HASH, ANCHOR_HASH, BACKEND_ID, BACKEND_VER,
+            DELIVER_W, 0, type(uint256).max, nonce, v, r, s
+        );
+    }
+
+    function test_fund_rejects_expired_authorization() public {
+        vm.warp(1000);
+        bytes32 id = escrow.computeDealId(
+            "exp", buyer, seller, address(token), AMOUNT, SPEC_HASH, ANCHOR_HASH, BACKEND_ID, BACKEND_VER
+        );
+        bytes32 nonce = escrow.fundingNonce(id, DELIVER_W);
+        // Signed with a validBefore already in the past.
+        bytes32 digest = _authDigest(buyer, AMOUNT, 0, 500, nonce);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(buyerPk, digest);
+
+        vm.expectRevert("3009: auth expired");
+        vm.prank(facilitator);
+        escrow.fundWithAuthorization(
+            "exp", buyer, seller, address(token), AMOUNT, SPEC_HASH, ANCHOR_HASH, BACKEND_ID, BACKEND_VER,
+            DELIVER_W, 0, 500, nonce, v, r, s
         );
     }
 

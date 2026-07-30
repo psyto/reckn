@@ -303,7 +303,7 @@ content publication.
   replay a live RPC witness. Its HTTP shell polls `Disputed`, SHA-256-checks
   content-store bytes before parsing, replays, and submits `resolve()`. The included
   anvil E2E proves false claim → `Failed` → refund. `cargo test` + `forge test`:
-  **keeper 2, contracts 23**.
+  **keeper 2, contracts 28**.
 - **Independent re-verification (the trust property, executable):**
   `reckn-keeper verify <rpc> <escrow> <content-store> <dealId>` — a **keyless**
   third party reads the resolver's on-chain `VerdictCommitted` and re-derives the
@@ -364,7 +364,7 @@ closed-world replay → verdict → settlement`.
 Each component is self-contained; there is no top-level build.
 
 ```bash
-# settlement contracts (Foundry) — 23 tests (incl. end-to-end on real engine output)
+# settlement contracts (Foundry) — 28 tests (incl. verified EIP-3009 funding + end-to-end on real engine output)
 cd contracts && forge install foundry-rs/forge-std --no-git && forge test
 
 # re-execution engine (revm 38, MPT-verified prestate) — 5 tests

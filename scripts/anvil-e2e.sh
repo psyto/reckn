@@ -25,9 +25,13 @@ mnemonic='test test test test test test test test test test test junk'
 buyer_pk=$(cast wallet private-key "$mnemonic" 0)
 seller_pk=$(cast wallet private-key "$mnemonic" 1)
 resolver_pk=$(cast wallet private-key "$mnemonic" 2)
+# The facilitator only relays the buyer's signed x402/EIP-3009 authorization; it
+# is not a deal party and never holds the funds.
+facilitator_pk=$(cast wallet private-key "$mnemonic" 3)
 buyer=$(cast wallet address --private-key "$buyer_pk")
 seller=$(cast wallet address --private-key "$seller_pk")
 resolver=$(cast wallet address --private-key "$resolver_pk")
+facilitator=$(cast wallet address --private-key "$facilitator_pk")
 
 anvil --port 8545 --mnemonic "$mnemonic" --silent >"$store/anvil.log" 2>&1 &
 anvil_pid=$!
@@ -108,19 +112,45 @@ spec_hash=$(printf %s "$spec" | shasum -a 256 | awk '{print "0x" $1}')
 printf %s "$spec" >"$store/${spec_hash#0x}.json"
 
 salt=0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-auth_nonce=0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-fund_tx=$(cast send --rpc-url "$rpc_url" --private-key "$buyer_pk" --json "$escrow" \
-  'fundWithAuthorization(bytes32,address,address,uint256,bytes32,bytes32,bytes32,bytes32,uint64,uint256,uint256,bytes32,uint8,bytes32,bytes32)' \
-  "$salt" "$seller" "$token" 1000000 "$spec_hash" "$anchor_hash" "$backend_id" "$backend_ver" \
-  3600 0 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff "$auth_nonce" 0 \
-  0x0000000000000000000000000000000000000000000000000000000000000000 \
-  0x0000000000000000000000000000000000000000000000000000000000000000)
+deliver_window=3600
+valid_after=0
+valid_before=0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+# One buyer signature both pays and opens the escrow. The EIP-3009 authorization
+# nonce is bound to the exact deal (dealId + deliver window), so the facilitator
+# that relays it cannot redirect the payment or change any funded term — a
+# tampered term reverts either on the escrow's nonce check or the token's
+# signature check.
+deal_id=$(cast call --rpc-url "$rpc_url" "$escrow" \
+  'computeDealId(bytes32,address,address,address,uint256,bytes32,bytes32,bytes32,bytes32)(bytes32)' \
+  "$salt" "$buyer" "$seller" "$token" 1000000 "$spec_hash" "$anchor_hash" "$backend_id" "$backend_ver")
+auth_nonce=$(cast call --rpc-url "$rpc_url" "$escrow" \
+  'fundingNonce(bytes32,uint64)(bytes32)' "$deal_id" "$deliver_window")
+
+# Build and sign the EIP-712 ReceiveWithAuthorization digest the way the token
+# (and real USDC) verifies it. `to` is the escrow, the payee that pulls funds.
+domain_sep=$(cast call --rpc-url "$rpc_url" "$token" 'DOMAIN_SEPARATOR()(bytes32)')
+auth_typehash=$(cast call --rpc-url "$rpc_url" "$token" 'RECEIVE_WITH_AUTHORIZATION_TYPEHASH()(bytes32)')
+auth_struct=$(cast keccak "$(cast abi-encode \
+  'f(bytes32,address,address,uint256,uint256,uint256,bytes32)' \
+  "$auth_typehash" "$buyer" "$escrow" 1000000 "$valid_after" "$valid_before" "$auth_nonce")")
+auth_digest=$(cast keccak "$(cast concat-hex 0x1901 "$domain_sep" "$auth_struct")")
+auth_sig=$(cast wallet sign --no-hash --private-key "$buyer_pk" "$auth_digest")
+auth_r=0x${auth_sig:2:64}
+auth_s=0x${auth_sig:66:64}
+auth_v=$(cast to-dec "0x${auth_sig:130:2}")
+
+say "Buyer signs one x402/EIP-3009 authorization; a facilitator relays it on-chain"
+fund_tx=$(cast send --rpc-url "$rpc_url" --private-key "$facilitator_pk" --json "$escrow" \
+  'fundWithAuthorization(bytes32,address,address,address,uint256,bytes32,bytes32,bytes32,bytes32,uint64,uint256,uint256,bytes32,uint8,bytes32,bytes32)' \
+  "$salt" "$buyer" "$seller" "$token" 1000000 "$spec_hash" "$anchor_hash" "$backend_id" "$backend_ver" \
+  "$deliver_window" "$valid_after" "$valid_before" "$auth_nonce" "$auth_v" "$auth_r" "$auth_s")
 fund_receipt=$(cast receipt --rpc-url "$rpc_url" "$(jq -r .transactionHash <<<"$fund_tx")" --json)
 funded_topic=$(cast keccak 'Funded(bytes32,address,address,address,uint256,bytes32,bytes32,bytes32,bytes32,uint64)')
-deal_id=$(jq -r --arg topic "$funded_topic" '.logs[] | select(.topics[0] == $topic) | .topics[1]' <<<"$fund_receipt")
-[[ "$deal_id" != "null" && -n "$deal_id" ]]
-say "Buyer pays 1,000 USDC into escrow for the promised result"
-printf '  deal %s\n' "$deal_id"
+funded_deal=$(jq -r --arg topic "$funded_topic" '.logs[] | select(.topics[0] == $topic) | .topics[1]' <<<"$fund_receipt")
+# The event's dealId must match the one the buyer's nonce was bound to.
+[[ "$funded_deal" != "null" && -n "$funded_deal" && "$funded_deal" == "$deal_id" ]]
+say "Buyer pays 1,000 USDC into escrow for the promised result (relayed, not self-sent)"
+printf '  deal        %s\n  facilitator %s (relayer, not a party)\n' "$deal_id" "$facilitator"
 
 say "Seller delivers a wrong result but claims success; buyer disputes it"
 cast send --rpc-url "$rpc_url" --private-key "$seller_pk" "$escrow" \
