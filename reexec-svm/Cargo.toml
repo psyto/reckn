@@ -21,3 +21,5 @@ solana-signer = "3"
 reckn-record = { path = "../packages/protocol-rs" }
 alloy-primitives = "1"
 sha2 = "0.10"
+solana-lattice-hash = { version = "4.1.2", features = ["agave-unstable-api"] }
+blake3 = "1.8.5"

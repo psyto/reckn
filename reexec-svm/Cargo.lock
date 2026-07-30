@@ -2509,12 +2509,14 @@ name = "reckn-reexec-svm"
 version = "0.1.0"
 dependencies = [
  "alloy-primitives",
+ "blake3",
  "litesvm",
  "reckn-record",
  "sha2 0.10.9",
  "solana-account",
  "solana-instruction",
  "solana-keypair",
+ "solana-lattice-hash",
  "solana-message",
  "solana-pubkey 3.0.0",
  "solana-signer",
@@ -3471,6 +3473,18 @@ dependencies = [
  "solana-sdk-ids",
  "solana-sdk-macro",
  "solana-sysvar-id",
+]
+
+[[package]]
+name = "solana-lattice-hash"
+version = "4.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e4dc0c380275da3d140f6027966ee35e0d647af735042c5cf8d4f58bb6fa99ac"
+dependencies = [
+ "base64 0.22.1",
+ "blake3",
+ "bs58",
+ "bytemuck",
 ]
 
 [[package]]
