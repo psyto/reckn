@@ -91,31 +91,35 @@ prestate (just the accounts a transaction touches), which cannot reproduce
   (tampered/absent compact account, wrong archive commitment, an archive that does
   not reproduce `bank_hash`) are tested in that module.
 
-## Keeper wiring (the integration point)
+## Keeper wiring (implemented)
 
-The plumbing already fits. The keeper's `load_for_disputed_deal`
-(`reckn-svm-keeper`) resolves content by hash from `FileContentStore` and already
-loads the replay snapshot **by `anchor.snapshot_archive_hash`**. The load-bearing
-wiring is: content-address the *full* snapshot by `snapshot_archive_hash`, load it,
-call `verify_prestate_authenticity(compact, full, preimage, bank_hash,
-snapshot_archive_hash)`, and reject the dispute on error before replay — mapping
-`AuthenticityError` to an operational error exactly as `BankHashMismatch` is today.
+The binding is **enforced in the dispute path**. `load_for_disputed_deal`
+(`reckn-svm-keeper`) resolves content by hash from `FileContentStore`. The anchor
+gained an optional `full_snapshot_hash`; when it is set, the keeper loads the
+`StoredFullSnapshotV1` it content-addresses (so the load *is* the archive
+commitment), then enforces `verify_accounts_against_bank_hash(full, preimage,
+bank_hash)` and `verify_prestate_subset(compact, full)` **before any replay**,
+returning `KeeperError::SnapshotAuthenticity` on failure — no signed verdict, just
+like `Operational`. Because `replay_disputed` and the keyless `verify` both go
+through this load, both the resolver and an independent verifier reject an
+unauthentic prestate. When `full_snapshot_hash` is zero the check is skipped
+(back-compat), and authenticity rests on an external binding.
 
 ## Remaining stages
 
-1. **Agave archive ingestion** — produce a [`FullSnapshotV1`] from a real Agave
-   snapshot archive (the `.tar.zst` account-vec format) so the full snapshot in
-   the binding is sourced from a validator snapshot rather than reconstructed.
-   This is the one external dependency left; the binding it feeds is done.
-2. **Keeper store wiring** — land the `load_for_disputed_deal` change above once a
-   `FullSnapshotV1` is available to store.
-3. **Preimage sourcing** — populate `parent_bank_hash` / `signature_count` from
+1. **Agave archive ingestion** — produce a [`FullSnapshotV1`] /
+   `StoredFullSnapshotV1` from a real Agave snapshot archive (the `.tar.zst`
+   account-vec format) so the full snapshot is sourced from a validator snapshot
+   rather than reconstructed. This is the one external dependency left; the
+   binding it feeds and the keeper enforcement are done.
+2. **Preimage sourcing** — populate `parent_bank_hash` / `signature_count` from
    the block/checkpoint rather than trusting anchor input.
-4. **Feature/epoch pinning** — carry the active-feature set so the `bank_hash`
+3. **Feature/epoch pinning** — carry the active-feature set so the `bank_hash`
    rule is selected correctly across the delta-hash → lattice-hash transition.
 
-The cryptographic binding is complete and tested; what remains is ingestion and
-plumbing, not soundness.
+The cryptographic binding is complete and tested, and it is enforced in the
+dispute path; what remains is archive ingestion and preimage sourcing, not
+soundness.
 
 [`FullSnapshotV1`]: ../reexec-svm/src/authenticity.rs
 

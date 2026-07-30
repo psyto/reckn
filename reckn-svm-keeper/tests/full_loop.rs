@@ -188,6 +188,7 @@ impl Env {
             parent_bank_hash: [0; 32],
             signature_count: 0,
             snapshot_is_complete: false,
+            full_snapshot_hash: [0; 32],
             runtime_profile_hash: bytes(runtime),
             snapshot_archive_hash: bytes(snapshot_hash),
             snapshot_format_version: 2,

@@ -107,10 +107,11 @@ live and tested — on **both** VMs, behind **one** router.
   lattice hash and re-derives `bank_hash`, and `reexec-svm/src/authenticity.rs`
   binds the *compact* per-tx prestate to that verified full snapshot as a subset
   (Solana has no compact per-account proof, so this is transitive, not a Merkle
-  path). What remains is *ingesting* a real Agave snapshot archive into the full
-  snapshot and the keeper store wiring — ingestion and plumbing, not soundness
-  (`docs/svm-snapshot-authenticity.md`). Cross-chain settlement is designed
-  fail-closed (`docs/cross-chain-settlement.md`) but not yet implemented.
+  path), and the keeper *enforces* it in the dispute path
+  (`KeeperError::SnapshotAuthenticity` before any verdict). What remains is
+  *ingesting* a real Agave snapshot archive into the full snapshot — ingestion, not
+  soundness (`docs/svm-snapshot-authenticity.md`). Cross-chain settlement is
+  designed fail-closed (`docs/cross-chain-settlement.md`) but not yet implemented.
 
 ## Positioning & sponsor targets
 

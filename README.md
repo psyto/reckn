@@ -261,8 +261,11 @@ content publication.
   [`reexec-svm/src/authenticity.rs`](reexec-svm/src/authenticity.rs)'s
   `verify_prestate_authenticity` checks the full snapshot is the committed archive,
   reproduces `bank_hash`, and that every compact account is a faithful subset of
-  it — no per-account proof needed. The remaining piece is *ingesting* a real
-  Agave archive into that full snapshot; the binding logic is done and tested. See
+  it — no per-account proof needed. This is **enforced in the dispute path**: the
+  keeper's `load_for_disputed_deal` rejects an unauthentic prestate
+  (`KeeperError::SnapshotAuthenticity`) before any replay, for both the resolver
+  and the keyless verifier. The remaining piece is *ingesting* a real Agave archive
+  into that full snapshot. See
   [`docs/svm-snapshot-authenticity.md`](docs/svm-snapshot-authenticity.md). The
   closed runtime still permits only the System builtin (custom SBF is
   `UnsupportedEnvironmentDependency`). The predicate set is
