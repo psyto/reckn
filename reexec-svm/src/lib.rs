@@ -109,7 +109,17 @@ pub enum PredicateV1 {
     /// account received at least `minOut` lamports" (a slippage bound) is
     /// `(account, minOut, u64::MAX)`, and "<= cap" is `(account, 0, cap)`.
     /// Equality is the degenerate `min == max` case.
+    ///
+    /// Like the EVM `PostStateBounded`, this adjudicates a *property*, not
+    /// causation: a transaction that never moves the account still reads its
+    /// committed prestate balance. Use `LamportsDelta` for the causal claim.
     LamportsBounded { account: Pubkey, min: u64, max: u64 },
+    /// The named account's credited increase `post - pre` (saturating at 0,
+    /// `pre` = committed snapshot balance) must lie in the inclusive range
+    /// `[min, max]`. Unlike `LamportsBounded`, this adjudicates *causation*: the
+    /// transaction itself must have raised the balance, so a no-op cannot
+    /// satisfy any `min > 0`. The SVM analogue of EVM `PostStateDelta`.
+    LamportsDelta { account: Pubkey, min: u64, max: u64 },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -128,6 +138,15 @@ pub enum FailReason {
     LamportsOutOfBounds {
         account: Pubkey,
         got: u64,
+        min: u64,
+        max: u64,
+    },
+    /// A `LamportsDelta` account's `post - pre` increase fell outside `[min, max]`.
+    LamportsDeltaOutOfBounds {
+        account: Pubkey,
+        pre: u64,
+        post: u64,
+        delta: u64,
         min: u64,
         max: u64,
     },
@@ -397,6 +416,7 @@ pub fn replay(
     let predicate_account = match predicate {
         PredicateV1::LamportsEquals { account, .. } => Some(account),
         PredicateV1::LamportsBounded { account, .. } => Some(account),
+        PredicateV1::LamportsDelta { account, .. } => Some(account),
         PredicateV1::ResultEquals { .. } => None,
     };
     if let Some(account) = predicate_account {
@@ -511,6 +531,36 @@ pub fn replay(
                 Verdict::Failed(FailReason::LamportsOutOfBounds {
                     account: *account,
                     got: poststate.lamports,
+                    min: *min,
+                    max: *max,
+                })
+            }
+        }
+        PredicateV1::LamportsDelta { account, min, max } => {
+            // `pre` is the committed snapshot balance; `post` is what the
+            // authenticated transaction settled it to. The adjudicated quantity
+            // is the credited increase `post - pre` (saturating: a decrease is 0,
+            // never a wrap), so a transaction that fails to move the account
+            // cannot satisfy any `min > 0` — the causal analogue of the EVM
+            // `PostStateDelta`.
+            let pre = snapshot
+                .accounts
+                .iter()
+                .find(|entry| entry.pubkey == *account)
+                .map(|entry| entry.lamports)
+                .ok_or(OperationalError::MissingPredicateAccount { account: *account })?;
+            let poststate = svm
+                .get_account(account)
+                .ok_or(OperationalError::MissingPoststateAccount { account: *account })?;
+            let delta = poststate.lamports.saturating_sub(pre);
+            if delta >= *min && delta <= *max {
+                Verdict::Reproduced
+            } else {
+                Verdict::Failed(FailReason::LamportsDeltaOutOfBounds {
+                    account: *account,
+                    pre,
+                    post: poststate.lamports,
+                    delta,
                     min: *min,
                     max: *max,
                 })
@@ -846,6 +896,91 @@ mod tests {
         assert_eq!(
             err,
             OperationalError::MissingPredicateAccount { account: absent }
+        );
+    }
+
+    // The SVM soundness regression behind `LamportsDelta`: a bound predicate over
+    // an account the transaction never moves reads the *prestate* balance, so a
+    // cheating seller can satisfy "received >= minOut" with a no-op whenever the
+    // account already held it. The delta predicate closes this — the adjudicated
+    // quantity is the credited increase the transaction itself produced.
+    #[test]
+    fn lamports_delta_refuses_the_no_op_prestate_attack() {
+        let (snapshot, profile, anchor, from, to) = fixture(); // `to` starts at 1
+        // A no-op for `to`: the payer self-transfers 0, so `to` stays at 1.
+        let no_op = signed_plan(&from, &[system_transfer(&from.pubkey(), &from.pubkey(), 0)]);
+
+        // Under the *bound* predicate "balance >= 1", the no-op reproduces — the
+        // seller is paid for doing nothing. This is the attack delta closes.
+        let bound = PredicateV1::LamportsBounded {
+            account: to,
+            min: 1,
+            max: u64::MAX,
+        };
+        assert!(
+            replay(&anchor, &snapshot, &profile, &no_op, &bound, &commitments())
+                .unwrap()
+                .reproduced(),
+            "bound predicate is prestate-satisfiable — the gap delta closes",
+        );
+
+        // Under the *delta* predicate "credited >= 1", the no-op yields delta 0
+        // (post 1 - pre 1) and is REFUSED.
+        let delta = PredicateV1::LamportsDelta {
+            account: to,
+            min: 1,
+            max: u64::MAX,
+        };
+        assert_eq!(
+            replay(&anchor, &snapshot, &profile, &no_op, &delta, &commitments())
+                .unwrap()
+                .verdict,
+            Verdict::Failed(FailReason::LamportsDeltaOutOfBounds {
+                account: to,
+                pre: 1,
+                post: 1,
+                delta: 0,
+                min: 1,
+                max: u64::MAX,
+            }),
+            "a no-op must not satisfy a causal 'credited >= minOut'",
+        );
+    }
+
+    // The honest side: a real credit produces a real delta, adjudicated against
+    // the funded floor.
+    #[test]
+    fn lamports_delta_reproduces_for_a_real_credit_and_refunds_a_short_one() {
+        let (snapshot, profile, anchor, from, to) = fixture(); // `to` starts at 1
+        // Credit `to` 2_000_000 → post 2_000_001, a credited delta of 2_000_000.
+        let plan = signed_plan(&from, &[system_transfer(&from.pubkey(), &to, 2_000_000)]);
+
+        let ok = PredicateV1::LamportsDelta {
+            account: to,
+            min: 2_000_000,
+            max: u64::MAX,
+        };
+        let out = replay(&anchor, &snapshot, &profile, &plan, &ok, &commitments()).unwrap();
+        assert!(out.reproduced(), "credited 2_000_000 clears the floor: {:?}", out.verdict);
+
+        // A floor higher than the real credit refunds the buyer.
+        let too_high = PredicateV1::LamportsDelta {
+            account: to,
+            min: 2_000_001,
+            max: u64::MAX,
+        };
+        assert_eq!(
+            replay(&anchor, &snapshot, &profile, &plan, &too_high, &commitments())
+                .unwrap()
+                .verdict,
+            Verdict::Failed(FailReason::LamportsDeltaOutOfBounds {
+                account: to,
+                pre: 1,
+                post: 2_000_001,
+                delta: 2_000_000,
+                min: 2_000_001,
+                max: u64::MAX,
+            }),
         );
     }
 

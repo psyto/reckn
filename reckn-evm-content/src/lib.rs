@@ -89,6 +89,9 @@ pub enum PredicateJson {
     PostStateBounded {
         checks: Vec<StorageBoundJson>,
     },
+    PostStateDelta {
+        checks: Vec<StorageBoundJson>,
+    },
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -120,6 +123,12 @@ impl From<PredicateJson> for PredicateV1 {
                     .collect(),
             },
             PredicateJson::PostStateBounded { checks } => Self::PostStateBounded {
+                checks: checks
+                    .into_iter()
+                    .map(|x| (x.address, x.slot, x.min, x.max))
+                    .collect(),
+            },
+            PredicateJson::PostStateDelta { checks } => Self::PostStateDelta {
                 checks: checks
                     .into_iter()
                     .map(|x| (x.address, x.slot, x.min, x.max))
@@ -317,6 +326,31 @@ mod tests {
                 );
             }
             other => panic!("expected PostStateBounded, got {other:?}"),
+        }
+    }
+
+    /// The delta predicate is fundable end-to-end: `POST_STATE_DELTA` reuses the
+    /// bound wire shape (`min`/`max` are the delta bounds) and lowers losslessly.
+    #[test]
+    fn post_state_delta_wire_maps_into_engine_checks() {
+        let json = r#"{"kind":"POST_STATE_DELTA","checks":[{"address":"0x00000000000000000000000000000000000000bb","slot":"0x7","min":"0x64","max":"0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"}]}"#;
+        let decoded: PredicateJson = serde_json::from_str(json).unwrap();
+        let engine: PredicateV1 = decoded.into();
+        let mut want_addr = [0u8; 20];
+        want_addr[19] = 0xbb;
+        match engine {
+            PredicateV1::PostStateDelta { checks } => {
+                assert_eq!(
+                    checks,
+                    vec![(
+                        Address::from(want_addr),
+                        U256::from(7u64),
+                        U256::from(100u64),
+                        U256::MAX,
+                    )]
+                );
+            }
+            other => panic!("expected PostStateDelta, got {other:?}"),
         }
     }
 }

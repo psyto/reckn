@@ -90,6 +90,13 @@ impl ReexecBackend for SvmBackend {
                     max,
                 }
             }
+            StoredPredicateV1::LamportsDelta { account, min, max } => {
+                SvmPredicate::LamportsDelta {
+                    account: pubkey(account),
+                    min,
+                    max,
+                }
+            }
         };
         let out = svm_replay(
             &SvmAnchorV2 {

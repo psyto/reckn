@@ -127,7 +127,8 @@ retrieval hint.
 type PredicateCommitmentV1 =
   | { kind: "RESULT_EQUALS"; expectedResultHash: ContentHash }
   | { kind: "POSTSTATE_EQUALS"; assertionProgramHash: ContentHash }
-  | { kind: "POSTSTATE_BOUNDED"; checks: { address; slot; min; max }[] };
+  | { kind: "POSTSTATE_BOUNDED"; checks: { address; slot; min; max }[] }
+  | { kind: "POSTSTATE_DELTA"; checks: { address; slot; min; max }[] };
 
 type SpecV1 = {
   protocolVersion: 1;
@@ -229,7 +230,14 @@ environment. `EvmActionSpecV1` permits only:
   asserting the post-state word lies in the inclusive range `[min, max]`. This
   is the funded envelope behind "swap output ≥ minOut" (`max = MAX`) and
   "≤ cap" (`min = 0`); equality is the degenerate `min == max`. The SVM backend
-  mirrors it as `LamportsBounded { account, min, max }`.
+  mirrors it as `LamportsBounded { account, min, max }`. It adjudicates a
+  *property* of the post-state, not that the plan caused it.
+* `POSTSTATE_DELTA`: ordered `(address, storageSlot, min, max)` checks, each
+  asserting the plan's *caused* change `post − pre` (saturating at 0, `pre` = the
+  committed witness value) lies in `[min, max]`. This is the sound primitive for
+  the causal claim "this swap credited ≥ minOut" — a no-op plan yields delta 0
+  and cannot satisfy any `min > 0`, so it is not prestate-satisfiable the way a
+  bound is. The SVM backend mirrors it as `LamportsDelta { account, min, max }`.
 
 Funding commits the **plan schema**, anchor, and predicate—not a seller plan.
 The seller supplies the concrete, schema-valid `EvmCallPlanV1` and claimed result
@@ -309,7 +317,7 @@ not alternate settlement paths.
 > Progress: (1) done — `contracts/`, 23 tests (incl. cross-language digest pin,
 > ERC-8004 `ReputationEvidence`, and end-to-end settlement on real engine output).
 > (2) done — `reexec-evm/`, revm 38 with offline MPT verification and real-anchor
-> (base-fee/nonce) support, 7 tests; canonical `ReplayRecordV1` in
+> (base-fee/nonce) support, 9 tests; canonical `ReplayRecordV1` in
 > `packages/protocol/`. (3) done — `keeper/` builds and EIP-712-signs the verdict
 > `resolve()` accepts (shared-golden cross-check), plus the live HTTP shell — now on
 > a **committed** witness: the seller publishes it (`witness --write`) and the

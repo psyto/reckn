@@ -81,6 +81,7 @@ pub enum StoredPredicateV1 {
     ResultEquals { expected_result_hash: [u8; 32] },
     LamportsEquals { account: [u8; 32], expected: u64 },
     LamportsBounded { account: [u8; 32], min: u64, max: u64 },
+    LamportsDelta { account: [u8; 32], min: u64, max: u64 },
 }
 #[derive(Clone, Serialize, Deserialize)]
 pub struct StoredDeliveryV1 {
@@ -175,6 +176,11 @@ pub fn load_for_disputed_deal(
             expected,
         },
         StoredPredicateV1::LamportsBounded { account, min, max } => PredicateV1::LamportsBounded {
+            account: addr(account),
+            min,
+            max,
+        },
+        StoredPredicateV1::LamportsDelta { account, min, max } => PredicateV1::LamportsDelta {
             account: addr(account),
             min,
             max,

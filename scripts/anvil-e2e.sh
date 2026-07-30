@@ -2,9 +2,10 @@
 # Reckn V1.1 money-shot, two acts over the same frozen state:
 #   Act I  — exact-match predicate: a seller's plan does not satisfy it, so
 #            proof-verified re-execution returns Failed and REFUNDS the buyer.
-#   Act II — bound predicate (the flagship "swap at ≤X slippage"): the buyer
-#            funds "output balance ≥ minOut"; an honest fill clears the floor,
-#            reproduces, and is RELEASED to the seller.
+#   Act II — causal delta predicate (the flagship "swap at ≤X slippage"): the
+#            buyer funds "the fill must CREDIT ≥ minOut" (post−pre of the balance
+#            slot), which a no-op plan cannot fake; an honest crediting fill
+#            clears the floor, reproduces, and is RELEASED to the seller.
 # No BLOCKHASH opcode is used.
 set -euo pipefail
 
@@ -180,21 +181,42 @@ cargo run --quiet --manifest-path "$root/keeper/Cargo.toml" -- \
   verify "$rpc_url" "$escrow" "$store" "$deal_id"
 echo "PASS: independent re-verification reproduced the on-chain verdict."
 
-# ── Act II: the honest, released deal on a BOUND predicate ────────────────────
-# Act I proved the refund path with an exact-match predicate. The flagship claim
-# ("executed this swap at ≤X slippage") is an *inequality*, not equality, so it
-# needs the bound predicate: the buyer funds "the output-balance slot must end at
-# ≥ minOut", and an honest fill that clears the floor is RELEASED to the seller.
-# The plan and witness are reused from Act I — the same proven balanceOf slot —
-# so only the funded predicate changes. Frozen balanceOf[buyer] is 1,000,000; the
-# buyer's slippage floor is 900,000, so 1,000,000 ≥ 900,000 reproduces and pays.
-say "Act II: buyer funds a slippage bound — output balance must end ≥ minOut"
+# ── Act II: the honest, released deal on a CAUSAL DELTA predicate ─────────────
+# Act I proved refund with an exact match. The flagship claim ("executed this
+# swap at ≤X slippage") is *causal*: the buyer wants proof the fill CREDITED at
+# least minOut — not merely that some balance is ≥ minOut, which a no-op plan
+# could satisfy straight off the prestate. POST_STATE_DELTA adjudicates
+# `post − pre` of the output-balance slot, so only a plan that actually moves the
+# balance can clear the floor. The crediting plan here is a real state-changing
+# call (`mint` credits balanceOf[buyer]); the keeper proves the touched slot just
+# as in Act I, and re-execution measures the increase the plan itself produced.
+say "Act II: buyer funds a *causal* slippage floor — the fill must CREDIT ≥ minOut"
 balance_slot=$(cast index address "$buyer" 0)          # balanceOf[buyer] @ slot 0
-min_out=$(cast to-hex 900000)                           # the buyer's max-slippage floor
+credit=500000                                           # the fill credits this much
+min_out=$(cast to-hex 400000)                           # buyer's minOut (a strict floor)
 u256_max=0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+
+# A real crediting plan and its proof-carrying witness (an SSTORE, unlike Act I's
+# read-only balanceOf). Frozen balanceOf[buyer] is 1,000,000; the plan credits
+# +500,000, so the adjudicated delta is 500,000 ≥ the 400,000 floor.
+calldata_b=$(cast calldata 'mint(address,uint256)' "$buyer" "$credit")
+delivery_draft_b=$(jq -cn --arg caller "$buyer" --arg target "$token" --arg calldata "$calldata_b" \
+  '{caller:$caller,target:$target,calldata:$calldata,value:"0x0",gasLimit:200000}')
+delivery_draft_b_hash=$(printf %s "$delivery_draft_b" | shasum -a 256 | awk '{print "0x" $1}')
+printf %s "$delivery_draft_b" >"$store/${delivery_draft_b_hash#0x}.json"
+say "Seller attaches tamper-proof evidence for the crediting plan"
+witness_out_b=$(cargo run --quiet --manifest-path "$root/keeper/Cargo.toml" -- \
+  witness "$rpc_url" "$store" "$anchor_hash" "$delivery_draft_b_hash" --write "$store")
+witness_hash_b=$(awk -F= '/^witnessContentHash=/{print $2}' <<<"$witness_out_b")
+[[ "$witness_hash_b" =~ ^0x[0-9a-fA-F]{64}$ ]]
+delivery_b=$(jq -cn --arg caller "$buyer" --arg target "$token" --arg calldata "$calldata_b" --arg witness "$witness_hash_b" \
+  '{caller:$caller,target:$target,calldata:$calldata,value:"0x0",gasLimit:200000,witnessContentHash:$witness}')
+delivery_b_hash=$(printf %s "$delivery_b" | shasum -a 256 | awk '{print "0x" $1}')
+printf %s "$delivery_b" >"$store/${delivery_b_hash#0x}.json"
+
 spec_b=$(jq -cn --arg anchor "$anchor_hash" --arg backendId "$backend_id" --arg backendVersionHash "$backend_ver" \
   --arg token "$token" --arg slot "$balance_slot" --arg min "$min_out" --arg max "$u256_max" \
-  '{backendId:$backendId,backendVersionHash:$backendVersionHash,prestateAnchorHash:$anchor,predicate:{kind:"POST_STATE_BOUNDED",checks:[{address:$token,slot:$slot,min:$min,max:$max}]}}')
+  '{backendId:$backendId,backendVersionHash:$backendVersionHash,prestateAnchorHash:$anchor,predicate:{kind:"POST_STATE_DELTA",checks:[{address:$token,slot:$slot,min:$min,max:$max}]}}')
 spec_b_hash=$(printf %s "$spec_b" | shasum -a 256 | awk '{print "0x" $1}')
 printf %s "$spec_b" >"$store/${spec_b_hash#0x}.json"
 
@@ -218,20 +240,20 @@ cast send --rpc-url "$rpc_url" --private-key "$facilitator_pk" "$escrow" \
   "$salt_b" "$buyer" "$seller" "$token" 1000000 "$spec_b_hash" "$anchor_hash" "$backend_id" "$backend_ver" \
   "$deliver_window" "$valid_after" "$valid_before" "$auth_nonce_b" "$auth_v_b" "$auth_r_b" "$auth_s_b" >/dev/null
 
-say "Seller delivers a fill that clears the floor; buyer disputes to force the check"
+say "Seller delivers the crediting fill; buyer disputes to force the check"
 cast send --rpc-url "$rpc_url" --private-key "$seller_pk" "$escrow" \
-  'deliver(bytes32,bytes32,uint64)' "$deal_b" "$delivery_hash" 3600 >/dev/null
+  'deliver(bytes32,bytes32,uint64)' "$deal_b" "$delivery_b_hash" 3600 >/dev/null
 cast send --rpc-url "$rpc_url" --private-key "$buyer_pk" "$escrow" \
   'challenge(bytes32,uint64)' "$deal_b" 3600 >/dev/null
 
-say "Reckn replays the work: output ≥ minOut reproduces, so the seller is paid"
+say "Reckn replays the work: the plan CREDITED ≥ minOut, so the seller is paid"
 cargo run --quiet --manifest-path "$root/keeper/Cargo.toml" -- \
   once "$rpc_url" "$escrow" "$store" "$resolver_pk"
 
 seller_balance=$(cast call --rpc-url "$rpc_url" "$token" 'balanceOf(address)(uint256)' "$seller")
 escrow_balance_b=$(cast call --rpc-url "$rpc_url" "$token" 'balanceOf(address)(uint256)' "$escrow")
 [[ "$seller_balance" == "1000000" && "$escrow_balance_b" == "0" ]]
-echo "PASS: bound predicate reproduced (output ≥ minOut); seller released; deal=$deal_b"
+echo "PASS: delta predicate reproduced (credited ≥ minOut); seller released; deal=$deal_b"
 
 say "Anyone can reproduce the released verdict too — same public inputs, no key"
 cargo run --quiet --manifest-path "$root/keeper/Cargo.toml" -- \
