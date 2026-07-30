@@ -120,7 +120,25 @@ pub enum PredicateV1 {
     /// buyer's output-token balance slot is >= minOut" (a slippage bound) is
     /// `(token, balanceSlot, minOut, U256::MAX)`, and "<= cap" is `(_, _, 0,
     /// cap)`. Equality is the degenerate `min == max` case.
+    ///
+    /// This adjudicates a *property* of the post-state, not that the plan
+    /// *caused* it: a slot the plan never writes reads its committed prestate
+    /// value, so a no-op plan can satisfy a bound the buyer's prestate already
+    /// met. Use `PostStateDelta` when the claim is causal ("this plan credited
+    /// >= minOut").
     PostStateBounded { checks: Vec<(Address, U256, U256, U256)> },
+    /// Ordered post-state *delta* checks: each `(address, slot, min, max)` must
+    /// have `post - pre` (saturating at 0) in the inclusive range `[min, max]`,
+    /// where `pre` is the committed prestate value from the witness and `post`
+    /// is the value after the plan executes. Unlike `PostStateBounded`, this
+    /// adjudicates *causation*: the quantity is the increase the plan itself
+    /// produced, so a no-op plan yields delta 0 and cannot satisfy any
+    /// `min > 0`. This is the sound primitive for "this swap credited the buyer
+    /// >= minOut of the output token" — `(token, balanceSlot, minOut, MAX)` —
+    /// which no plan that fails to move the balance can forge. A balance that
+    /// *decreases* reads as delta 0 (saturating), so this measures credited
+    /// increase, not signed change.
+    PostStateDelta { checks: Vec<(Address, U256, U256, U256)> },
 }
 
 /// Why a replay did not reproduce the funded predicate. All are deterministic.
@@ -142,6 +160,16 @@ pub enum FailReason {
         address: Address,
         slot: U256,
         got: U256,
+        min: U256,
+        max: U256,
+    },
+    /// A `PostStateDelta` slot's `post - pre` increase fell outside `[min, max]`.
+    PostStateDeltaOutOfBounds {
+        address: Address,
+        slot: U256,
+        pre: U256,
+        post: U256,
+        delta: U256,
         min: U256,
         max: U256,
     },
@@ -417,28 +445,22 @@ pub fn replay(
         verify_witness_against_root(anchor, witness).map_err(OperationalError::InvalidWitness)?;
     // Every predicate-read slot must be provable from the committed witness, so
     // a missing slot is an operational error rather than a spurious `0` verdict.
-    match predicate {
+    let read_slots: Vec<(Address, U256)> = match predicate {
         PredicateV1::PostStateEquals { checks } => {
-            for (address, slot, _) in checks {
-                if !verified.has_storage(*address, *slot) {
-                    return Err(OperationalError::MissingPredicateWitness {
-                        address: *address,
-                        slot: *slot,
-                    });
-                }
-            }
+            checks.iter().map(|(a, s, _)| (*a, *s)).collect()
         }
-        PredicateV1::PostStateBounded { checks } => {
-            for (address, slot, _, _) in checks {
-                if !verified.has_storage(*address, *slot) {
-                    return Err(OperationalError::MissingPredicateWitness {
-                        address: *address,
-                        slot: *slot,
-                    });
-                }
-            }
+        // Both bound and delta read `(address, slot)`; delta additionally needs
+        // the committed prestate value, which is exactly what the witness slot
+        // provides — so the same presence check covers `pre` too.
+        PredicateV1::PostStateBounded { checks } | PredicateV1::PostStateDelta { checks } => {
+            checks.iter().map(|(a, s, _, _)| (*a, *s)).collect()
         }
-        PredicateV1::ResultEquals { .. } => {}
+        PredicateV1::ResultEquals { .. } => Vec::new(),
+    };
+    for (address, slot) in read_slots {
+        if !verified.has_storage(address, slot) {
+            return Err(OperationalError::MissingPredicateWitness { address, slot });
+        }
     }
     let db = VerifiedWitnessDb::new(verified);
 
@@ -594,7 +616,44 @@ fn judge(
             }
             Verdict::Reproduced
         }
+        PredicateV1::PostStateDelta { checks } => {
+            for (address, slot, min, max) in checks {
+                let pre = read_pre_slot(*address, *slot, witness);
+                let post = read_post_slot(*address, *slot, post_state, witness);
+                // Saturating: a decrease is 0 credited increase, not a wrap. The
+                // plan can only satisfy `min > 0` by actually raising the slot.
+                let delta = post.saturating_sub(pre);
+                if delta < *min || delta > *max {
+                    return Verdict::Failed(FailReason::PostStateDeltaOutOfBounds {
+                        address: *address,
+                        slot: *slot,
+                        pre,
+                        post,
+                        delta,
+                        min: *min,
+                        max: *max,
+                    });
+                }
+            }
+            Verdict::Reproduced
+        }
     }
+}
+
+/// Read the committed *prestate* value of a slot from the witness (the value
+/// proven against `anchor.state_root`), else zero. This is the `pre` baseline a
+/// `PostStateDelta` measures the plan's change against — never the post-state.
+fn read_pre_slot(address: Address, slot: U256, witness: &PrestateWitnessV1) -> U256 {
+    for a in &witness.accounts {
+        if a.address == address {
+            for entry in &a.storage {
+                if entry.slot == slot {
+                    return entry.value;
+                }
+            }
+        }
+    }
+    U256::ZERO
 }
 
 /// Read a storage slot after execution: prefer the changed value from the tx
@@ -639,6 +698,12 @@ pub mod testkit {
     // contract: 36 5f 5f 37 36 5f f3
     //   CALLDATASIZE PUSH0 PUSH0 CALLDATACOPY CALLDATASIZE PUSH0 RETURN
     pub const IDENTITY_RUNTIME: [u8; 7] = [0x36, 0x5f, 0x5f, 0x37, 0x36, 0x5f, 0xf3];
+
+    // Runtime bytecode that stores the first calldata word into storage slot 7,
+    // so a plan can *cause* a post-state change we can adjudicate as a delta:
+    //   PUSH0 CALLDATALOAD PUSH1 0x07 SSTORE STOP  ->  5f 35 60 07 55 00
+    // (loads calldata[0:32] as the value, pushes slot 7, SSTOREs, halts).
+    pub const SSTORE_SLOT7_RUNTIME: [u8; 6] = [0x5f, 0x35, 0x60, 0x07, 0x55, 0x00];
 
     pub fn addr(b: u8) -> Address {
         Address::from([b; 20])
@@ -712,6 +777,38 @@ pub mod testkit {
         target: Address,
         caller_nonce: u64,
     ) -> (EvmAnchorV1, PrestateWitnessV1) {
+        anchored_witness_with_code(
+            caller,
+            target,
+            caller_nonce,
+            Bytes::from_static(&IDENTITY_RUNTIME),
+        )
+    }
+
+    /// A prestate whose `target` runs the SSTORE fixture, so a plan's calldata
+    /// word is written into slot 7 — letting a test exercise a *caused* delta
+    /// (`PostStateDelta`) rather than a prestate-satisfied bound.
+    pub fn anchored_sstore_witness(
+        caller: Address,
+        target: Address,
+    ) -> (EvmAnchorV1, PrestateWitnessV1) {
+        anchored_witness_with_code(
+            caller,
+            target,
+            0,
+            Bytes::from_static(&SSTORE_SLOT7_RUNTIME),
+        )
+    }
+
+    /// Shared body behind the identity/SSTORE fixtures: `target` runs
+    /// `target_code`, its storage slot 7 holds the committed value 42, and the
+    /// caller/coinbase accounts are proven against the returned anchor root.
+    pub fn anchored_witness_with_code(
+        caller: Address,
+        target: Address,
+        caller_nonce: u64,
+        target_code: Bytes,
+    ) -> (EvmAnchorV1, PrestateWitnessV1) {
         let coinbase = addr(0xc0);
         let storage_slot = U256::from(7u64);
         let storage_value = U256::from(42u64);
@@ -720,7 +817,6 @@ pub mod testkit {
             trie_with_proofs(vec![(storage_key, alloy_rlp::encode(storage_value))]);
 
         let caller_code = Bytes::new();
-        let target_code = Bytes::from_static(&IDENTITY_RUNTIME);
         let caller_account = TrieAccount {
             nonce: caller_nonce,
             balance: U256::from(10u64).pow(U256::from(18)),
@@ -971,6 +1067,114 @@ mod tests {
         assert!(replay(&anchor, &witness, &plan, &at_most, &commitments())
             .unwrap()
             .reproduced());
+    }
+
+    // The soundness regression behind `PostStateDelta`: a bound predicate over a
+    // slot the plan never writes reads the *prestate* value, so a cheating seller
+    // can satisfy "balance >= minOut" with a no-op plan whenever the buyer's
+    // prestate already met the bound. The delta predicate closes this — the
+    // adjudicated quantity is the increase the plan itself caused, which a no-op
+    // cannot fake.
+    #[test]
+    fn post_state_delta_refuses_the_no_op_prestate_attack() {
+        let caller = addr(0xaa);
+        let target = addr(0xbb);
+        let (anchor, witness) = anchored_identity_witness(caller, target);
+        let slot = U256::from(7u64); // committed prestate value 42
+
+        // A no-op plan (identity code, no SSTORE) leaves slot 7 at its prestate 42.
+        let no_op = EvmCallPlanV1 {
+            caller,
+            target,
+            calldata: Bytes::from_static(b"noop"),
+            value: U256::ZERO,
+            gas_limit: 200_000,
+        };
+
+        // The SAME slot/bound a cheating seller would lean on: "balance >= 40".
+        // Under the *bound* predicate the no-op reproduces (prestate 42 >= 40) —
+        // the seller is paid for doing nothing. This is the attack.
+        let bound = PredicateV1::PostStateBounded {
+            checks: vec![(target, slot, U256::from(40u64), U256::MAX)],
+        };
+        assert!(
+            replay(&anchor, &witness, &no_op, &bound, &commitments())
+                .unwrap()
+                .reproduced(),
+            "bound predicate is prestate-satisfiable — the gap delta closes",
+        );
+
+        // Under the *delta* predicate "credited >= 1", the no-op yields delta 0
+        // (post 42 - pre 42) and is REFUSED. The seller cannot be paid without
+        // actually moving the slot.
+        let delta = PredicateV1::PostStateDelta {
+            checks: vec![(target, slot, U256::from(1u64), U256::MAX)],
+        };
+        assert_eq!(
+            replay(&anchor, &witness, &no_op, &delta, &commitments())
+                .unwrap()
+                .verdict,
+            Verdict::Failed(FailReason::PostStateDeltaOutOfBounds {
+                address: target,
+                slot,
+                pre: U256::from(42u64),
+                post: U256::from(42u64),
+                delta: U256::ZERO,
+                min: U256::from(1u64),
+                max: U256::MAX,
+            }),
+            "a no-op plan must not satisfy a causal 'credited >= minOut'",
+        );
+    }
+
+    // The honest side: a plan that actually raises the slot produces a real
+    // delta, and the credited increase is adjudicated against the funded floor.
+    #[test]
+    fn post_state_delta_reproduces_for_a_real_credit_and_refunds_a_short_one() {
+        let caller = addr(0xaa);
+        let target = addr(0xbb);
+        let (anchor, witness) = anchored_sstore_witness(caller, target);
+        let slot = U256::from(7u64); // committed prestate value 42
+
+        // Calldata word 142 → the plan SSTOREs slot 7 = 142, a credited +100.
+        let credit_to = U256::from(142u64);
+        let plan = EvmCallPlanV1 {
+            caller,
+            target,
+            calldata: Bytes::from(credit_to.to_be_bytes::<32>().to_vec()),
+            value: U256::ZERO,
+            gas_limit: 200_000,
+        };
+
+        // "credited >= 100" — the honest fill clears the floor exactly.
+        let ok = PredicateV1::PostStateDelta {
+            checks: vec![(target, slot, U256::from(100u64), U256::MAX)],
+        };
+        let out = replay(&anchor, &witness, &plan, &ok, &commitments()).unwrap();
+        assert!(
+            out.reproduced(),
+            "credited 100 (142-42) should clear a floor of 100: {:?}",
+            out.verdict
+        );
+
+        // "credited >= 101" — a floor higher than the real credit refunds.
+        let too_high = PredicateV1::PostStateDelta {
+            checks: vec![(target, slot, U256::from(101u64), U256::MAX)],
+        };
+        assert_eq!(
+            replay(&anchor, &witness, &plan, &too_high, &commitments())
+                .unwrap()
+                .verdict,
+            Verdict::Failed(FailReason::PostStateDeltaOutOfBounds {
+                address: target,
+                slot,
+                pre: U256::from(42u64),
+                post: U256::from(142u64),
+                delta: U256::from(100u64),
+                min: U256::from(101u64),
+                max: U256::MAX,
+            }),
+        );
     }
 
     #[test]

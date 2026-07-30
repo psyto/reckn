@@ -44,12 +44,17 @@ committed pre-state (`prestateAnchor`) — which makes the dispute *decidable*. 
 `challenge`, a keeper pins that pre-state, replays the seller's actual plan, and
 evaluates the predicate. The escrow releases on `Reproduced`, refunds on `Failed`.
 
-The predicate can be an exact match (`RESULT_EQUALS` / `POSTSTATE_EQUALS`) **or a
-bound** (`POSTSTATE_BOUNDED` / SVM `LamportsBounded`) over an inclusive `[min, max]`
-range — so the flagship "swap at ≤X slippage" claim funds as an *inequality*
-("output balance ≥ minOut", `max = MAX`), symmetric across both VMs. Act II of
-`anvil-e2e.sh` demonstrates it end-to-end: an honest fill clears the floor,
-reproduces, and is **released to the seller**.
+The predicate can be an exact match (`RESULT_EQUALS` / `POSTSTATE_EQUALS`), a
+**bound** (`POSTSTATE_BOUNDED` / SVM `LamportsBounded`, a post-state *property*
+over `[min, max]`), or a causal **delta** (`POSTSTATE_DELTA` / `LamportsDelta`).
+The flagship "swap at ≤X slippage" claim is causal, so it funds as a delta:
+"the fill credited ≥ minOut" = `post − pre ≥ minOut` on the output-balance slot.
+This is the soundness point — a plain bound ("balance ≥ minOut") is satisfiable
+by a no-op plan off the prestate, whereas the delta adjudicates the increase the
+plan itself caused, so a seller cannot be paid without moving the balance. Both
+are symmetric across the two VMs. Act II of `anvil-e2e.sh` demonstrates the delta
+end-to-end: a real crediting fill clears the floor, reproduces, and is **released
+to the seller** (a no-op would yield delta 0 and refund).
 
 The differentiator is **checkability**: the verdict commits the canonical
 re-execution trace hash and pre-state root on-chain, so a **keyless third party
@@ -89,8 +94,8 @@ live and tested — on **both** VMs, behind **one** router.
 | Layer | EVM | Solana (SVM) |
 |---|---|---|
 | Settlement contract | `contracts/` (Solidity) — 28 tests (incl. verified EIP-3009 funding) | `escrow-svm/` (Pinocchio) — 4 LiteSVM e2e |
-| Re-execution backend | `reexec-evm/` (revm 38, offline MPT) — 7 tests | `reexec-svm/` (LiteSVM V2, closed-world) — 15 tests |
-| Keeper + keyless verify | `keeper/` (EIP-712) — 2 tests + `anvil-e2e.sh` | `reckn-svm-keeper/` (Ed25519) — full-loop |
+| Re-execution backend | `reexec-evm/` (revm 38, offline MPT) — 9 tests | `reexec-svm/` (LiteSVM V2, closed-world) — 17 tests |
+| Keeper + keyless verify | `keeper/` (EIP-712) — 3 tests + `anvil-e2e.sh` | `reckn-svm-keeper/` (Ed25519) — full-loop |
 | Shared verdict record | `packages/protocol-rs` (`ReplayRecordV1`) — one type both VMs emit | ← same |
 | Cross-VM binder | `binder/` — **one `BackendRouter` re-executes both VMs**, 6 tests (incl. `router_two_vms.rs`) | ← same |
 
@@ -133,11 +138,12 @@ positioned; if it stalls, the verdict still reproduces anywhere.
 - **One-command local proof:** `bash scripts/anvil-e2e.sh` — two acts over one
   frozen state. Act I funds a deal, delivers a false plan, disputes it, and the
   keeper's re-execution **refunds the buyer** (exact-match predicate). Act II funds a
-  **bound predicate** ("output ≥ minOut", the swap slippage floor); the honest fill
-  reproduces and is **released to the seller**. A keyless re-verifier reproduces both
-  on-chain verdicts from public inputs. The run **narrates each phase in plain
-  language** (real addresses/hashes shown underneath), so a judge can follow it
-  without knowing the internals.
+  **causal delta predicate** ("the fill credited ≥ minOut", the swap slippage floor);
+  a real crediting plan reproduces and is **released to the seller** — a no-op could
+  not, which is the soundness point. A keyless re-verifier reproduces both on-chain
+  verdicts from public inputs. The run **narrates each phase in plain language**
+  (real addresses/hashes shown underneath), so a judge can follow it without knowing
+  the internals.
 - **Repo:** https://github.com/psyto/reckn
 
 ---
@@ -184,5 +190,5 @@ positioned; if it stalls, the verdict still reproduces anywhere.
       Agentic Economy), sponsor tech (ERC-8004, x402/EIP-3009, Arc), repo + artifact
       + video links.
 - [ ] **`bash scripts/anvil-e2e.sh` green** on a clean clone (Foundry + Rust + jq).
-- [ ] Test tally current in README (contracts 28, reexec-evm 7, reexec-svm 15,
-      binder 6, keeper 2, escrow-svm 4, evm-content 4, record 1).
+- [ ] Test tally current in README (contracts 28, reexec-evm 9, reexec-svm 17,
+      binder 6, keeper 3, escrow-svm 4, evm-content 5, record 1).

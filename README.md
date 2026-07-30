@@ -46,10 +46,14 @@ economy"). Every entry in that lane gates payment on a **trusted adjudicator**:
 Re-execution cannot judge subjective quality ("was the essay good?"). Reckn's
 lane is the class of agent payments whose deliverable is **machine-verifiable**:
 
-- on-chain action delegation ("executed this swap at ≤X slippage") — the ≤X
-  slippage bound is a `POSTSTATE_BOUNDED` predicate ("output balance ≥ minOut"),
-  demonstrated end-to-end in Act II of [`anvil-e2e.sh`](#try-it-one-command):
-  an honest fill that clears the floor reproduces and is released to the seller
+- on-chain action delegation ("executed this swap at ≤X slippage") — the claim
+  is *causal*, so it funds as a `POSTSTATE_DELTA` predicate ("the fill credited
+  ≥ minOut" = `post − pre ≥ minOut` on the output-balance slot). Unlike a plain
+  bound ("balance ≥ minOut", which a no-op plan satisfies straight off the
+  prestate), the delta adjudicates the increase the plan itself caused, so a
+  seller cannot be paid without moving the balance. Demonstrated end-to-end in
+  Act II of [`anvil-e2e.sh`](#try-it-one-command): a real crediting fill clears
+  the floor, reproduces, and is released to the seller
 - computation with a spec (re-run, check output matches)
 - provenance-bearing data / oracle claims (reproduce the claimed source state)
 
@@ -219,18 +223,22 @@ content publication.
   evidence to force a timeout; the zero trace distinguishes it from a reproduced
   `Failed`. Emitted on-chain and asserted by contract tests.
 - **Re-execution backend (EVM V1):** revm 38 replay implemented in
-  [`reexec-evm/`](reexec-evm) — deterministic CALL replay with `RESULT_EQUALS`,
-  `POSTSTATE_EQUALS`, and `POSTSTATE_BOUNDED` predicates. The bound predicate
-  widens adjudication from exact reproduction to a **funded envelope** over an
-  inclusive `[min, max]` range — `≥ minOut` (`max = MAX`) is the flagship swap
-  slippage floor, `≤ cap` is `min = 0`, and equality is the degenerate
-  `min == max` — so the funded predicate can be an *inequality*, not just an
-  exact match. Honest delivery → `Reproduced`; a seller's false success claim →
-  `Failed` (→ refund). Offline MPT account/storage proofs bind the closed replay
-  witness to `anchor.state_root`; proof failure or a missing witness is an
-  operational error, not a verdict. Replay ignores tx-validity ceremony
-  (base-fee / nonce) so honest deliveries reproduce against real blocks; balance
-  for `value` is still enforced. `cargo test`: **7 passing**.
+  [`reexec-evm/`](reexec-evm) — deterministic CALL replay with four predicate
+  kinds: `RESULT_EQUALS`, `POSTSTATE_EQUALS`, `POSTSTATE_BOUNDED`, and
+  `POSTSTATE_DELTA`. `POSTSTATE_BOUNDED` widens adjudication to a **funded
+  envelope** over an inclusive `[min, max]` range (`≥ minOut`, `≤ cap`, or
+  equality), a *property* of the post-state. `POSTSTATE_DELTA` closes the
+  soundness gap that a property leaves open — it adjudicates `post − pre`
+  (saturating), the increase the plan itself **caused**, so a no-op plan cannot
+  satisfy `≥ minOut` off the prestate. That makes the flagship "this swap
+  credited ≥ minOut" claim sound at the engine level rather than resting on the
+  buyer's predicate design. Honest delivery → `Reproduced`; a seller's false
+  success claim → `Failed` (→ refund). Offline MPT account/storage proofs bind
+  the closed replay witness to `anchor.state_root`; proof failure or a missing
+  witness is an operational error, not a verdict. Replay ignores tx-validity
+  ceremony (base-fee / nonce) so honest deliveries reproduce against real blocks;
+  balance for `value` is still enforced. `cargo test`: **9 passing** (incl.
+  adversarial: a no-op plan cannot forge a `POSTSTATE_DELTA` credit).
 - **Re-execution backend (Solana / SVM):** [`reexec-svm/`](reexec-svm) — the same
   mechanism on Solana via `LiteSVM`, replaying a committed **signed** transaction
   against a committed account snapshot and emitting the **identical VM-neutral
@@ -247,10 +255,12 @@ content publication.
   snapshot from the checkpoint's `bank_hash` via an Agave-compatible verifier) is a
   separate, unbuilt piece, and the closed runtime currently permits only the System
   builtin (custom SBF is `UnsupportedEnvironmentDependency`). The predicate set is
-  symmetric with the EVM backend: `RESULT_EQUALS`, `LamportsEquals`, and the
-  bound `LamportsBounded` (`≥ minOut` via `max = u64::MAX`) — the same funded
-  envelope, so the slippage bound adjudicates identically across both VMs.
-  `cargo test`: **15 passing** (reckn-record: 1).
+  symmetric with the EVM backend: `RESULT_EQUALS`, `LamportsEquals`, the bound
+  `LamportsBounded` (`≥ minOut` via `max = u64::MAX`), and the causal
+  `LamportsDelta` (`post − pre` credited increase) — so both the funded envelope
+  and the sound "this fill credited ≥ minOut" claim adjudicate identically across
+  the two VMs. `cargo test`: **17 passing** (reckn-record: 1; incl. the
+  no-op-cannot-forge-a-delta adversarial regression).
 - **Settlement contract (Solana / SVM):** [`escrow-svm/`](escrow-svm) — a Pinocchio
   program mirroring the EVM escrow: the same four-state machine, a Token-2022 vault,
   and a `resolve` that verifies the resolver's verdict by strict introspection of a
@@ -313,8 +323,8 @@ content publication.
   hash and MPT-verify it against `anchor.state_root` before replay — they never
   replay a live RPC witness. Its HTTP shell polls `Disputed`, SHA-256-checks
   content-store bytes before parsing, replays, and submits `resolve()`. The included
-  anvil E2E proves false claim → `Failed` → refund. `cargo test` + `forge test`:
-  **keeper 2, contracts 28**.
+  anvil E2E proves false claim → `Failed` → refund, and an honest credit →
+  `Reproduced` → release. `cargo test` + `forge test`: **keeper 3, contracts 28**.
 - **Independent re-verification (the trust property, executable):**
   `reckn-keeper verify <rpc> <escrow> <content-store> <dealId>` — a **keyless**
   third party reads the resolver's on-chain `VerdictCommitted` and re-derives the
@@ -345,11 +355,13 @@ its SHA-256 into the delivery. The run has **two acts over the same frozen state
 - **Act I (refund, exact-match):** a deal is funded on a `RESULT_EQUALS`
   predicate; the seller's `balanceOf` SLOAD plan can't satisfy it, so re-execution
   returns `Failed` and **refunds the buyer**.
-- **Act II (release, bound):** a second deal is funded on a `POSTSTATE_BOUNDED`
-  predicate — "the buyer's output-balance slot must end **≥ minOut**", the
-  flagship swap slippage floor. The honest fill clears the floor, so re-execution
-  returns `Reproduced` and **releases to the seller**. Same plan and witness as
-  Act I; only the funded predicate changes from an equality to an inequality.
+- **Act II (release, causal delta):** a second deal is funded on a
+  `POSTSTATE_DELTA` predicate — "the fill must **credit ≥ minOut**"
+  (`post − pre` on the output-balance slot), the flagship swap slippage floor
+  done *causally*. A real crediting plan (its own proof-carrying witness) raises
+  the balance, so the adjudicated increase clears the floor, re-execution returns
+  `Reproduced`, and the escrow **releases to the seller**. A no-op plan would
+  yield delta 0 and could not be paid — which is the whole point.
 
 In each act the keeper picks up the `Disputed` event, fetches the committed
 spec / delivery / anchor / **witness** from the content store (each hash-checked
@@ -374,9 +386,9 @@ PASS: re-execution returned Failed and refunded buyer; deal=0x…
 ▶ Anyone can reproduce this verdict themselves — no trust in the keeper
 VERIFIED — resolver verdict reproduced from public inputs with no resolver key. …
 PASS: independent re-verification reproduced the on-chain verdict.
-▶ Act II: buyer funds a slippage bound — output balance must end ≥ minOut
-▶ Reckn replays the work: output ≥ minOut reproduces, so the seller is paid
-PASS: bound predicate reproduced (output ≥ minOut); seller released; deal=0x…
+▶ Act II: buyer funds a *causal* slippage floor — the fill must CREDIT ≥ minOut
+▶ Reckn replays the work: the plan CREDITED ≥ minOut, so the seller is paid
+PASS: delta predicate reproduced (credited ≥ minOut); seller released; deal=0x…
 ▶ Anyone can reproduce the released verdict too — same public inputs, no key
 PASS: independent re-verification reproduced the RELEASE verdict.
 ```
@@ -393,17 +405,17 @@ Each component is self-contained; there is no top-level build.
 # settlement contracts (Foundry) — 28 tests (incl. verified EIP-3009 funding + end-to-end on real engine output)
 cd contracts && forge install foundry-rs/forge-std --no-git && forge test
 
-# re-execution engine (revm 38, MPT-verified prestate) — 7 tests
+# re-execution engine (revm 38, MPT-verified prestate) — 9 tests
 cd reexec-evm && cargo test
 
-# keeper signature + content-store guard — 2 tests
+# keeper signature + content-store guard — 3 tests
 cd keeper && cargo test
 
 # cross-VM binder: one router re-executes EVM + SVM, fails closed — 6 tests
 cd binder && cargo test
 
 # one-command local chain demo: Act I false claim → Failed → refund;
-# Act II bound predicate (output ≥ minOut) → Reproduced → seller release
+# Act II causal delta predicate (credited ≥ minOut) → Reproduced → seller release
 cd .. && bash scripts/anvil-e2e.sh
 
 # regenerate the dashboard's data from the real engine
