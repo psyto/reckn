@@ -7,6 +7,8 @@
 //! snapshot verifier is responsible for deriving this snapshot from the anchor's
 //! `bank_hash` and `snapshot_archive_hash` before it reaches this API.
 
+pub mod bankhash;
+
 use alloy_primitives::B256;
 use litesvm::{AccountLoadPolicy, LiteSVM};
 use reckn_record::{result_content_hash, ReexecCommitmentsV1, ReplayRecordV1};
@@ -33,6 +35,16 @@ pub struct SvmAnchorV2 {
     pub slot: u64,
     pub blockhash: B256,
     pub bank_hash: B256,
+    /// The `bank_hash` preimage fields, so replay can re-derive and check
+    /// `bank_hash` from the account set (see [`bankhash`]). `blockhash` above is
+    /// the `last_blockhash` input.
+    pub parent_bank_hash: B256,
+    pub signature_count: u64,
+    /// When set, the snapshot is asserted to be the *complete* account set the
+    /// lattice hash commits to, so replay verifies it reproduces `bank_hash`. A
+    /// compact per-tx prestate leaves this `false` and binds via the archive
+    /// (see `docs/svm-snapshot-authenticity.md`).
+    pub snapshot_is_complete: bool,
     pub runtime_profile_hash: B256,
     pub snapshot_archive_hash: B256,
     pub snapshot_format_version: u16,
@@ -166,6 +178,13 @@ pub enum OperationalError {
         got: u16,
     },
     PrestateCommitmentMismatch {
+        expected: B256,
+        got: B256,
+    },
+    /// A `snapshot_is_complete` snapshot did not reproduce the committed
+    /// `bank_hash` under the accounts lattice hash. Like a bad witness, this is an
+    /// operational error — never a `Failed`/`Reproduced` verdict.
+    BankHashMismatch {
         expected: B256,
         got: B256,
     },
@@ -400,6 +419,24 @@ pub fn replay(
             expected: anchor.state_commitment,
             got,
         });
+    }
+    // Snapshot authenticity: when the anchor asserts a complete account set, the
+    // committed accounts must reproduce the block's `bank_hash` under the accounts
+    // lattice hash. This makes `bank_hash` load-bearing rather than decorative. A
+    // compact per-tx prestate leaves `snapshot_is_complete` false and binds to a
+    // separately-verified archive (see `docs/svm-snapshot-authenticity.md`).
+    if anchor.snapshot_is_complete {
+        let preimage = bankhash::BankHashPreimageV1 {
+            parent_bank_hash: anchor.parent_bank_hash,
+            signature_count: anchor.signature_count,
+            last_blockhash: anchor.blockhash,
+        };
+        bankhash::verify_snapshot_against_bank_hash(snapshot, &preimage, anchor.bank_hash).map_err(
+            |e| OperationalError::BankHashMismatch {
+                expected: e.expected,
+                got: e.got,
+            },
+        )?;
     }
     let plan_blockhash = B256::from_slice(plan.transaction.message.recent_blockhash.as_ref());
     if plan_blockhash != anchor.blockhash {
@@ -761,6 +798,11 @@ mod tests {
             slot: 250_000_000,
             blockhash: B256::ZERO,
             bank_hash: B256::from([0x22; 32]),
+            // Compact fixture snapshot: authenticity binds via the archive, not an
+            // in-replay lattice recompute, so the complete-snapshot gate is off.
+            parent_bank_hash: B256::ZERO,
+            signature_count: 0,
+            snapshot_is_complete: false,
             runtime_profile_hash: runtime_profile_hash(profile).unwrap(),
             snapshot_archive_hash: B256::from([0x33; 32]),
             snapshot_format_version: SNAPSHOT_FORMAT_V2,
@@ -982,6 +1024,56 @@ mod tests {
                 max: u64::MAX,
             }),
         );
+    }
+
+    // The load-bearing flip: when the anchor asserts a complete snapshot, replay
+    // recomputes bank_hash from the accounts and an honest one passes the gate,
+    // while a tampered committed bank_hash is an operational error — never a
+    // verdict. This is the SVM analogue of the EVM witness-vs-state_root check.
+    #[test]
+    fn complete_snapshot_bank_hash_gate_binds_and_is_operational_on_mismatch() {
+        let (snapshot, profile, base, from, to) = fixture();
+        let preimage = bankhash::BankHashPreimageV1 {
+            parent_bank_hash: B256::from([0x44; 32]),
+            signature_count: 3,
+            last_blockhash: base.blockhash,
+        };
+        let honest_bank_hash =
+            bankhash::bank_hash(&preimage, &bankhash::accounts_lt_hash(&snapshot).checksum().0);
+
+        let mut anchor = base.clone();
+        anchor.snapshot_is_complete = true;
+        anchor.parent_bank_hash = preimage.parent_bank_hash;
+        anchor.signature_count = preimage.signature_count;
+        anchor.bank_hash = honest_bank_hash;
+
+        let plan = signed_plan(&from, &[system_transfer(&from.pubkey(), &to, 2_000_000)]);
+        let predicate = PredicateV1::LamportsEquals {
+            account: to,
+            expected: 2_000_001,
+        };
+
+        // Honest bank_hash: the gate passes and replay yields a normal verdict.
+        let out = replay(&anchor, &snapshot, &profile, &plan, &predicate, &commitments()).unwrap();
+        assert!(out.reproduced(), "honest complete snapshot must replay: {:?}", out.verdict);
+
+        // A committed bank_hash the accounts do not reproduce: operational error.
+        let mut wrong = anchor.clone();
+        wrong.bank_hash = B256::from([0xee; 32]);
+        assert!(matches!(
+            replay(&wrong, &snapshot, &profile, &plan, &predicate, &commitments()),
+            Err(OperationalError::BankHashMismatch { expected, .. }) if expected == B256::from([0xee; 32])
+        ));
+
+        // A tampered account (same committed bank_hash) also fails the gate — the
+        // accounts no longer hash to the block's bank_hash.
+        let mut tampered = snapshot.clone();
+        tampered.accounts[0].lamports += 1;
+        assert!(matches!(
+            replay(&anchor, &tampered, &profile, &plan, &predicate, &commitments()),
+            Err(OperationalError::PrestateCommitmentMismatch { .. })
+                | Err(OperationalError::BankHashMismatch { .. })
+        ));
     }
 
     #[test]

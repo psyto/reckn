@@ -250,17 +250,25 @@ content publication.
   snapshot commitment covers accounts + `rent_epoch` + Program/ProgramData +
   runtime profile, ELF derived from ProgramData not the seller, and a closed-world
   account-load trap (a small vendored LiteSVM fork) makes any unwitnessed read an
-  operational error, never a phantom-default `Reproduced`. It is honestly *not* an
-  auto-resolve basis on its own yet: snapshot **authenticity** (deriving the
-  snapshot from the checkpoint's `bank_hash` via an Agave-compatible verifier) is a
-  separate, unbuilt piece, and the closed runtime currently permits only the System
-  builtin (custom SBF is `UnsupportedEnvironmentDependency`). The predicate set is
+  operational error, never a phantom-default `Reproduced`. Snapshot
+  **authenticity** now has a real verifier: [`reexec-svm/src/bankhash.rs`](reexec-svm/src/bankhash.rs)
+  recomputes the SIMD-0215 accounts lattice hash over the account set and
+  re-derives `bank_hash` (via the audited `solana-lattice-hash` crate), so with
+  `snapshot_is_complete` set, a snapshot that does not reproduce the committed
+  `bank_hash` is an `OperationalError::BankHashMismatch` rather than a decorative
+  field. Because Solana (unlike EVM's MPT) has **no compact per-account inclusion
+  proof**, the compact per-tx prestate binds transitively to an archive-verified
+  full snapshot — the remaining stage — see
+  [`docs/svm-snapshot-authenticity.md`](docs/svm-snapshot-authenticity.md). The
+  closed runtime still permits only the System builtin (custom SBF is
+  `UnsupportedEnvironmentDependency`). The predicate set is
   symmetric with the EVM backend: `RESULT_EQUALS`, `LamportsEquals`, the bound
   `LamportsBounded` (`≥ minOut` via `max = u64::MAX`), and the causal
   `LamportsDelta` (`post − pre` credited increase) — so both the funded envelope
   and the sound "this fill credited ≥ minOut" claim adjudicate identically across
-  the two VMs. `cargo test`: **17 passing** (reckn-record: 1; incl. the
-  no-op-cannot-forge-a-delta adversarial regression).
+  the two VMs. `cargo test`: **23 passing** (reckn-record: 1; incl. the
+  no-op-cannot-forge-a-delta adversarial regression and the `bank_hash`
+  lattice-hash authenticity verifier).
 - **Settlement contract (Solana / SVM):** [`escrow-svm/`](escrow-svm) — a Pinocchio
   program mirroring the EVM escrow: the same four-state machine, a Token-2022 vault,
   and a `resolve` that verifies the resolver's verdict by strict introspection of a

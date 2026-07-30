@@ -80,6 +80,14 @@ SHA-256("reckn/v1/" || "evm-return-data" || returnData)
 This avoids describing a Keccak digest as the cross-VM SHA-256 `ContentHash`.
 The field remains exactly 32 opaque bytes, so the canonical TLV does not change.
 
+## The SVM analogue
+
+The Solana backend needs the same "prestate is real" guarantee, but Solana offers
+no compact per-account inclusion proof the way Ethereum's MPT does. See
+[`svm-snapshot-authenticity.md`](svm-snapshot-authenticity.md) for how
+`reexec-svm` re-derives `bank_hash` from the accounts lattice hash instead, and
+why the compact prestate binds transitively to an archive-verified full snapshot.
+
 ## Golden fixture
 
 [mpt-witness-v1.md](../reexec-evm/fixtures/mpt-witness-v1.md) contains a fixed

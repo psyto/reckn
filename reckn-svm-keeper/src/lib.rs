@@ -94,6 +94,14 @@ pub struct StoredAnchorV2 {
     pub slot: u64,
     pub blockhash: [u8; 32],
     pub bank_hash: [u8; 32],
+    // Bank-hash preimage + completeness gate. Defaulted so pre-existing stored
+    // anchors (compact prestates) still parse and keep the gate off.
+    #[serde(default)]
+    pub parent_bank_hash: [u8; 32],
+    #[serde(default)]
+    pub signature_count: u64,
+    #[serde(default)]
+    pub snapshot_is_complete: bool,
     pub runtime_profile_hash: [u8; 32],
     pub snapshot_archive_hash: [u8; 32],
     pub snapshot_format_version: u16,
@@ -193,6 +201,9 @@ pub fn load_for_disputed_deal(
             slot: anchor.slot,
             blockhash: b(anchor.blockhash),
             bank_hash: b(anchor.bank_hash),
+            parent_bank_hash: b(anchor.parent_bank_hash),
+            signature_count: anchor.signature_count,
+            snapshot_is_complete: anchor.snapshot_is_complete,
             runtime_profile_hash: b(anchor.runtime_profile_hash),
             snapshot_archive_hash: b(anchor.snapshot_archive_hash),
             snapshot_format_version: anchor.snapshot_format_version,
@@ -420,6 +431,9 @@ mod tests {
                 slot: 1,
                 blockhash: [0; 32],
                 bank_hash: [4; 32],
+                parent_bank_hash: [0; 32],
+                signature_count: 0,
+                snapshot_is_complete: false,
                 runtime_profile_hash: bytes32(
                     reckn_reexec_svm::runtime_profile_hash(&rprofile).unwrap(),
                 ),
