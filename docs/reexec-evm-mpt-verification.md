@@ -52,8 +52,11 @@ proof mismatches all reject the witness.
 returns `Result<ReplayOutcome, OperationalError>`. It verifies first and only
 then constructs revm's database. The database is closed-world: a missing account,
 code, storage slot, or historical block hash returns `OperationalError`, rather
-than inheriting `EmptyDB`'s default values. `PostStateEquals` also requires a
-proven prestate slot for every asserted key.
+than inheriting `EmptyDB`'s default values. The post-state predicates
+(`PostStateEquals`, `PostStateBounded`, `PostStateDelta`) also require a proven
+prestate slot for every asserted key — a missing slot is `OperationalError`, not
+a `0`-valued read. For `PostStateDelta` that proven slot is also the `pre`
+baseline the caused change `post − pre` is measured against.
 
 No `OperationalError` is serialized as `Reproduced` or `Failed`; no verdict is
 signed. The deal remains `Disputed` and its existing `resolveDeadline` path
