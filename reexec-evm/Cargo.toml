@@ -27,6 +27,7 @@ reckn-record = { path = "../packages/protocol-rs" }
 # pinned alloy-primitives 1.6.1 used by revm 38; `ethereum` provides TrieAccount.
 alloy-trie = { version = "0.9.5", features = ["ethereum"] }
 alloy-rlp = "0.3.16"
+alloy-consensus = { version = "2.2.0", default-features = false }
 
 [profile.dev]
 # revm is heavy; keep debug builds tolerable without losing determinism.

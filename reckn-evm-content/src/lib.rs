@@ -65,6 +65,9 @@ impl TryFrom<AnchorV11Json> for EvmAnchorV1 {
             coinbase: x.coinbase,
             prevrandao: x.prevrandao,
             spec_id: SpecId::CANCUN,
+            // A committed block header travels as separate content, verified by the
+            // keeper against this anchor; the codec anchor does not carry it yet.
+            block_header: None,
         })
     }
 }

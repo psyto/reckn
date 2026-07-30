@@ -80,6 +80,32 @@ SHA-256("reckn/v1/" || "evm-return-data" || returnData)
 This avoids describing a Keccak digest as the cross-VM SHA-256 `ContentHash`.
 The field remains exactly 32 opaque bytes, so the canonical TLV does not change.
 
+## Binding `state_root` to `block_hash` (header verification)
+
+The witness is MPT-verified against `anchor.state_root` — but `state_root` was
+itself committed anchor input, tied to nothing. An independent verifier could
+check `anchor.block_hash` against L1 (it is the canonical consensus value) but had
+no proof that `state_root` was that block's state root. `state_root` was as
+trustworthy as whoever wrote the anchor.
+
+[`header.rs`](../reexec-evm/src/header.rs) closes this. When the anchor carries the
+full block header (`EvmAnchorV1::block_header`), `replay` proves, before executing:
+
+```text
+keccak256(rlp(block_header)) == anchor.block_hash
+block_header.state_root      == anchor.state_root
+# plus number / timestamp / base_fee / gas_limit / coinbase / prevrandao
+```
+
+`Header::hash_slow()` (audited `alloy-consensus` RLP + keccak) does the hashing, so
+the maintenance surface stays small. A mismatch is
+`OperationalError::HeaderMismatch`, never a `Failed` verdict — identical to a bad
+witness. The essential property: a forged `state_root` changes the header, hence
+its hash, hence breaks `block_hash` — so `state_root` is only as forgeable as the
+consensus `block_hash`. When `block_header` is `None`, behavior is unchanged
+(back-compat); wiring the committed header through the codec and the keeper's
+keyless verdict path is the remaining plumbing step.
+
 ## The SVM analogue
 
 The Solana backend needs the same "prestate is real" guarantee, but Solana offers

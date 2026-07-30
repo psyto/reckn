@@ -19,6 +19,8 @@
 //! - The database is closed over verified witness entries: an EVM read outside
 //!   the witness is an operational error, not an implicit zero/default value.
 
+pub mod header;
+
 use alloy_trie::proof::verify_proof;
 use alloy_trie::{Nibbles, TrieAccount};
 use revm::context::result::{EVMError, ExecutionResult, Output};
@@ -38,9 +40,9 @@ use std::fmt;
 pub struct EvmAnchorV1 {
     pub chain_id: u64,
     pub block_number: u64,
-    /// Header hash for the committed snapshot. V1.1 binds this field to the
-    /// anchor bytes; BLOCKHASH opcode witnesses remain deliberately unsupported
-    /// until connected-header verification is introduced.
+    /// Header hash for the committed snapshot. When `block_header` is `Some`,
+    /// `replay` proves this equals `keccak256(rlp(block_header))`, binding
+    /// `state_root` (and the whole environment below) to a real block.
     pub block_hash: B256,
     pub state_root: B256,
     pub timestamp: u64,
@@ -49,6 +51,12 @@ pub struct EvmAnchorV1 {
     pub coinbase: Address,
     pub prevrandao: B256,
     pub spec_id: SpecId,
+    /// The full block header, when the anchor carries it. `replay` verifies it
+    /// binds every field above to `block_hash` (see [`header`]); `None` leaves
+    /// `state_root` trusted, as before. Excluded from the anchor's committed
+    /// bytes' identity is out of scope here — the header is itself committed
+    /// content bound to `block_hash`.
+    pub block_header: Option<Box<alloy_consensus::Header>>,
 }
 
 /// One committed account in the prestate.
@@ -244,6 +252,10 @@ pub enum OperationalError {
     MissingStorageWitness { address: Address, slot: U256 },
     MissingCodeWitness { code_hash: B256 },
     MissingBlockHashWitness { number: u64 },
+    /// The anchor carried a `block_header` that does not bind it (see
+    /// [`header::HeaderMismatch`]). Like a bad witness, this is operational — the
+    /// prestate anchor is unproven, so no verdict is signed.
+    HeaderMismatch(header::HeaderMismatch),
 }
 
 impl fmt::Display for OperationalError {
@@ -439,6 +451,16 @@ pub fn replay(
     predicate: &PredicateV1,
     commitments: &ReexecCommitmentsV1,
 ) -> Result<ReplayOutcome, OperationalError> {
+    // 0. If the anchor carries the block header, prove it binds the environment:
+    // keccak256(rlp(header)) == block_hash and header.state_root == state_root
+    // (plus number/timestamp/base_fee/gas_limit/coinbase/prevrandao). This anchors
+    // `state_root` — which the witness below is proven against — to a real block,
+    // rather than trusting seller-asserted anchor bytes. `None` preserves prior
+    // behavior. See `docs/svm-snapshot-authenticity.md` for the cross-VM picture.
+    if let Some(block_header) = &anchor.block_header {
+        header::verify_header_against_anchor(block_header, anchor)
+            .map_err(OperationalError::HeaderMismatch)?;
+    }
     // 1. Verify first, then execute against a closed DB built only from proven
     // witness material. No RPC and no implicit EmptyDB defaults.
     let verified =
@@ -721,6 +743,7 @@ pub mod testkit {
             coinbase: addr(0xc0),
             prevrandao: B256::from([0x22; 32]),
             spec_id: SpecId::CANCUN,
+            block_header: None,
         }
     }
 
@@ -1250,6 +1273,60 @@ mod tests {
             ),
             "a missing proof must not become a Failed verdict"
         );
+    }
+
+    // The load-bearing flip: when the anchor carries the block header, replay
+    // proves it hashes to `block_hash` and binds `state_root` before executing, so
+    // an honest header replays and a committed `block_hash` the header does not
+    // hash to is operational — never a verdict. The EVM analogue of the SVM
+    // `bank_hash` replay gate.
+    #[test]
+    fn anchor_block_header_binds_state_root_in_replay_or_is_operational() {
+        let caller = addr(0xaa);
+        let target = addr(0xbb);
+        let (mut anchor, witness) = anchored_identity_witness(caller, target);
+
+        // A header whose fields equal the anchor's environment; committing it and
+        // setting block_hash to its real hash makes state_root load-bearing.
+        let header = alloy_consensus::Header {
+            state_root: anchor.state_root,
+            number: anchor.block_number,
+            timestamp: anchor.timestamp,
+            gas_limit: anchor.block_gas_limit,
+            beneficiary: anchor.coinbase,
+            mix_hash: anchor.prevrandao,
+            base_fee_per_gas: Some(anchor.base_fee),
+            difficulty: U256::ZERO,
+            ..Default::default()
+        };
+        anchor.block_hash = header.hash_slow();
+        anchor.block_header = Some(Box::new(header));
+
+        let good = Bytes::from_static(b"swap-out>=1000USDC-good-output--");
+        let predicate = PredicateV1::ResultEquals {
+            expected_result_hash: keccak256(good.as_ref()),
+        };
+        let plan = EvmCallPlanV1 {
+            caller,
+            target,
+            calldata: good,
+            value: U256::ZERO,
+            gas_limit: 200_000,
+        };
+
+        // Header binds: replay proceeds to a normal verdict.
+        let out = replay(&anchor, &witness, &plan, &predicate, &commitments()).unwrap();
+        assert!(out.reproduced(), "bound header must replay: {:?}", out.verdict);
+
+        // A committed block_hash the header does not hash to: operational error.
+        let mut bad = anchor.clone();
+        bad.block_hash = B256::from([0xee; 32]);
+        assert!(matches!(
+            replay(&bad, &witness, &plan, &predicate, &commitments()),
+            Err(OperationalError::HeaderMismatch(
+                header::HeaderMismatch::BlockHash { .. }
+            ))
+        ));
     }
 
     // The ReplayRecordV1 golden vector now lives with the shared codec in the

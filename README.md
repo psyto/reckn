@@ -235,10 +235,17 @@ content publication.
   buyer's predicate design. Honest delivery → `Reproduced`; a seller's false
   success claim → `Failed` (→ refund). Offline MPT account/storage proofs bind
   the closed replay witness to `anchor.state_root`; proof failure or a missing
-  witness is an operational error, not a verdict. Replay ignores tx-validity
-  ceremony (base-fee / nonce) so honest deliveries reproduce against real blocks;
-  balance for `value` is still enforced. `cargo test`: **9 passing** (incl.
-  adversarial: a no-op plan cannot forge a `POSTSTATE_DELTA` credit).
+  witness is an operational error, not a verdict. And `state_root` itself is now
+  bindable to the real block: when the anchor carries the block header,
+  [`header.rs`](reexec-evm/src/header.rs) proves
+  `keccak256(rlp(header)) == block_hash` and the header's `state_root` +
+  environment equal the anchor's — so a forged `state_root` is impossible without
+  breaking the consensus `block_hash` (the EVM analogue of the SVM `bank_hash`
+  verifier), a mismatch being `OperationalError::HeaderMismatch`. Replay ignores
+  tx-validity ceremony (base-fee / nonce) so honest deliveries reproduce against
+  real blocks; balance for `value` is still enforced. `cargo test`: **15 passing**
+  (incl. adversarial: a no-op plan cannot forge a `POSTSTATE_DELTA` credit, and a
+  `state_root` cannot be forged without breaking `block_hash`).
 - **Re-execution backend (Solana / SVM):** [`reexec-svm/`](reexec-svm) — the same
   mechanism on Solana via `LiteSVM`, replaying a committed **signed** transaction
   against a committed account snapshot and emitting the **identical VM-neutral
@@ -420,7 +427,7 @@ Each component is self-contained; there is no top-level build.
 # settlement contracts (Foundry) — 28 tests (incl. verified EIP-3009 funding + end-to-end on real engine output)
 cd contracts && forge install foundry-rs/forge-std --no-git && forge test
 
-# re-execution engine (revm 38, MPT-verified prestate) — 9 tests
+# re-execution engine (revm 38, MPT-verified prestate + header binding) — 15 tests
 cd reexec-evm && cargo test
 
 # keeper signature + content-store guard — 3 tests
