@@ -51,7 +51,12 @@ Disputed --(adjudicator verdict)--> Resolved --> release(seller) | refund(buyer)
 
 2. **`spec` (predicate) type.** What gets bound at escrow time. Minimal encoding
    of the predicate + `prestateAnchor` (block / state root). Predicate forms:
-   post-state invariant holds / claimed-result equality.
+   claimed-result equality (`RESULT_EQUALS`); post-state invariant holds
+   (`POSTSTATE_EQUALS`); a post-state *bound* over `[min, max]`
+   (`POSTSTATE_BOUNDED`, a property); and a *causal* change
+   (`POSTSTATE_DELTA` = `post − pre ∈ [min, max]`), the sound form for
+   "this plan credited ≥ minOut". The SVM backend mirrors the lamports
+   variants (`LamportsEquals` / `LamportsBounded` / `LamportsDelta`).
 
 3. **On-chain verdict commitment.** Include traceHash + prestateRoot so a third
    party can reach the same verdict by independent re-execution.
