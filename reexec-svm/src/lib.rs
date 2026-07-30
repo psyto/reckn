@@ -103,6 +103,13 @@ pub enum PredicateV1 {
     ResultEquals { expected_result_hash: B256 },
     /// The named post-state account must still exist and have these lamports.
     LamportsEquals { account: Pubkey, expected: u64 },
+    /// The named post-state account must still exist and hold lamports within
+    /// the inclusive range `[min, max]`. This widens the funded predicate from
+    /// exact reproduction to a *funded envelope* — e.g. "the buyer's token
+    /// account received at least `minOut` lamports" (a slippage bound) is
+    /// `(account, minOut, u64::MAX)`, and "<= cap" is `(account, 0, cap)`.
+    /// Equality is the degenerate `min == max` case.
+    LamportsBounded { account: Pubkey, min: u64, max: u64 },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -116,6 +123,13 @@ pub enum FailReason {
         account: Pubkey,
         got: u64,
         expected: u64,
+    },
+    /// A `LamportsBounded` account held lamports outside its inclusive `[min, max]`.
+    LamportsOutOfBounds {
+        account: Pubkey,
+        got: u64,
+        min: u64,
+        max: u64,
     },
 }
 
@@ -378,7 +392,14 @@ pub fn replay(
 
     reject_unsupported_environment_dependencies(plan)?;
     ensure_closed_message_accounts(snapshot, profile, plan)?;
-    if let PredicateV1::LamportsEquals { account, .. } = predicate {
+    // Every predicate-read account must be present in the committed snapshot, so
+    // a missing account is an operational error rather than a spurious refund.
+    let predicate_account = match predicate {
+        PredicateV1::LamportsEquals { account, .. } => Some(account),
+        PredicateV1::LamportsBounded { account, .. } => Some(account),
+        PredicateV1::ResultEquals { .. } => None,
+    };
+    if let Some(account) = predicate_account {
         if !snapshot
             .accounts
             .iter()
@@ -477,6 +498,21 @@ pub fn replay(
                     account: *account,
                     got: poststate.lamports,
                     expected: *expected,
+                })
+            }
+        }
+        PredicateV1::LamportsBounded { account, min, max } => {
+            let poststate = svm
+                .get_account(account)
+                .ok_or(OperationalError::MissingPoststateAccount { account: *account })?;
+            if poststate.lamports >= *min && poststate.lamports <= *max {
+                Verdict::Reproduced
+            } else {
+                Verdict::Failed(FailReason::LamportsOutOfBounds {
+                    account: *account,
+                    got: poststate.lamports,
+                    min: *min,
+                    max: *max,
                 })
             }
         }
@@ -744,6 +780,73 @@ mod tests {
             out.verdict,
             Verdict::Failed(FailReason::LamportsMismatch { .. })
         ));
+    }
+
+    #[test]
+    fn lamports_bounded_reproduces_within_range_and_refunds_outside() {
+        let (snapshot, profile, anchor, from, to) = fixture();
+        // `to` starts at 1 lamport; a 2_000_000 transfer settles it at 2_000_001.
+        let plan = signed_plan(&from, &[system_transfer(&from.pubkey(), &to, 2_000_000)]);
+
+        // "received >= minOut": the marquee slippage bound, satisfied here.
+        let at_least = PredicateV1::LamportsBounded {
+            account: to,
+            min: 2_000_000,
+            max: u64::MAX,
+        };
+        let out = replay(&anchor, &snapshot, &profile, &plan, &at_least, &commitments()).unwrap();
+        assert!(out.reproduced(), "2_000_001 >= 2_000_000 should reproduce: {:?}", out.verdict);
+
+        // Bound violated: a higher minOut than the real output -> refund the buyer.
+        let too_high = PredicateV1::LamportsBounded {
+            account: to,
+            min: 3_000_000,
+            max: u64::MAX,
+        };
+        let out = replay(&anchor, &snapshot, &profile, &plan, &too_high, &commitments()).unwrap();
+        assert_eq!(
+            out.verdict,
+            Verdict::Failed(FailReason::LamportsOutOfBounds {
+                account: to,
+                got: 2_000_001,
+                min: 3_000_000,
+                max: u64::MAX,
+            }),
+        );
+
+        // Upper-bound form "<= cap" is the same predicate with min = 0.
+        let at_most = PredicateV1::LamportsBounded {
+            account: to,
+            min: 0,
+            max: 5_000_000,
+        };
+        assert!(replay(&anchor, &snapshot, &profile, &plan, &at_most, &commitments())
+            .unwrap()
+            .reproduced());
+    }
+
+    #[test]
+    fn lamports_bounded_missing_account_is_operational() {
+        let (snapshot, profile, anchor, from, _to) = fixture();
+        let absent = Pubkey::new_unique();
+        let plan = signed_plan(&from, &[system_transfer(&from.pubkey(), &from.pubkey(), 0)]);
+        let err = replay(
+            &anchor,
+            &snapshot,
+            &profile,
+            &plan,
+            &PredicateV1::LamportsBounded {
+                account: absent,
+                min: 0,
+                max: u64::MAX,
+            },
+            &commitments(),
+        )
+        .unwrap_err();
+        assert_eq!(
+            err,
+            OperationalError::MissingPredicateAccount { account: absent }
+        );
     }
 
     #[test]

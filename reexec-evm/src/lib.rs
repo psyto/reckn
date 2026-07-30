@@ -114,6 +114,13 @@ pub enum PredicateV1 {
     ResultEquals { expected_result_hash: B256 },
     /// Ordered post-state checks: each `(address, slot)` must hold `expected`.
     PostStateEquals { checks: Vec<(Address, U256, U256)> },
+    /// Ordered post-state bound checks: each `(address, slot, min, max)` must
+    /// hold a value in the inclusive range `[min, max]`. This widens the funded
+    /// predicate from exact reproduction to a *funded envelope* — e.g. "the
+    /// buyer's output-token balance slot is >= minOut" (a slippage bound) is
+    /// `(token, balanceSlot, minOut, U256::MAX)`, and "<= cap" is `(_, _, 0,
+    /// cap)`. Equality is the degenerate `min == max` case.
+    PostStateBounded { checks: Vec<(Address, U256, U256, U256)> },
 }
 
 /// Why a replay did not reproduce the funded predicate. All are deterministic.
@@ -129,6 +136,14 @@ pub enum FailReason {
         slot: U256,
         got: U256,
         expected: U256,
+    },
+    /// A `PostStateBounded` slot held a value outside its inclusive `[min, max]`.
+    PostStateOutOfBounds {
+        address: Address,
+        slot: U256,
+        got: U256,
+        min: U256,
+        max: U256,
     },
 }
 
@@ -400,15 +415,30 @@ pub fn replay(
     // witness material. No RPC and no implicit EmptyDB defaults.
     let verified =
         verify_witness_against_root(anchor, witness).map_err(OperationalError::InvalidWitness)?;
-    if let PredicateV1::PostStateEquals { checks } = predicate {
-        for (address, slot, _) in checks {
-            if !verified.has_storage(*address, *slot) {
-                return Err(OperationalError::MissingPredicateWitness {
-                    address: *address,
-                    slot: *slot,
-                });
+    // Every predicate-read slot must be provable from the committed witness, so
+    // a missing slot is an operational error rather than a spurious `0` verdict.
+    match predicate {
+        PredicateV1::PostStateEquals { checks } => {
+            for (address, slot, _) in checks {
+                if !verified.has_storage(*address, *slot) {
+                    return Err(OperationalError::MissingPredicateWitness {
+                        address: *address,
+                        slot: *slot,
+                    });
+                }
             }
         }
+        PredicateV1::PostStateBounded { checks } => {
+            for (address, slot, _, _) in checks {
+                if !verified.has_storage(*address, *slot) {
+                    return Err(OperationalError::MissingPredicateWitness {
+                        address: *address,
+                        slot: *slot,
+                    });
+                }
+            }
+        }
+        PredicateV1::ResultEquals { .. } => {}
     }
     let db = VerifiedWitnessDb::new(verified);
 
@@ -544,6 +574,21 @@ fn judge(
                         slot: *slot,
                         got,
                         expected: *expected,
+                    });
+                }
+            }
+            Verdict::Reproduced
+        }
+        PredicateV1::PostStateBounded { checks } => {
+            for (address, slot, min, max) in checks {
+                let got = read_post_slot(*address, *slot, post_state, witness);
+                if got < *min || got > *max {
+                    return Verdict::Failed(FailReason::PostStateOutOfBounds {
+                        address: *address,
+                        slot: *slot,
+                        got,
+                        min: *min,
+                        max: *max,
                     });
                 }
             }
@@ -842,6 +887,90 @@ mod tests {
             Verdict::Failed(FailReason::ResultMismatch),
             "false claim must fail -> refund",
         );
+    }
+
+    #[test]
+    fn post_state_equals_reproduces_and_mismatch_refunds() {
+        let caller = addr(0xaa);
+        let target = addr(0xbb);
+        let (anchor, witness) = anchored_identity_witness(caller, target);
+        let slot = U256::from(7u64); // committed value 42
+
+        // Identity code (no SSTORE), so slot 7 keeps its committed value.
+        let plan = EvmCallPlanV1 {
+            caller,
+            target,
+            calldata: Bytes::from_static(b"noop"),
+            value: U256::ZERO,
+            gas_limit: 200_000,
+        };
+
+        let ok = PredicateV1::PostStateEquals {
+            checks: vec![(target, slot, U256::from(42u64))],
+        };
+        let out = replay(&anchor, &witness, &plan, &ok, &commitments()).unwrap();
+        assert!(out.reproduced(), "slot==42 should reproduce: {:?}", out.verdict);
+
+        let bad = PredicateV1::PostStateEquals {
+            checks: vec![(target, slot, U256::from(43u64))],
+        };
+        let out = replay(&anchor, &witness, &plan, &bad, &commitments()).unwrap();
+        assert_eq!(
+            out.verdict,
+            Verdict::Failed(FailReason::PostStateMismatch {
+                address: target,
+                slot,
+                got: U256::from(42u64),
+                expected: U256::from(43u64),
+            }),
+        );
+    }
+
+    #[test]
+    fn post_state_bounded_reproduces_within_range_and_refunds_outside() {
+        let caller = addr(0xaa);
+        let target = addr(0xbb);
+        let (anchor, witness) = anchored_identity_witness(caller, target);
+        let slot = U256::from(7u64); // committed value 42
+
+        let plan = EvmCallPlanV1 {
+            caller,
+            target,
+            calldata: Bytes::from_static(b"noop"),
+            value: U256::ZERO,
+            gas_limit: 200_000,
+        };
+
+        // "output >= minOut": the marquee slippage bound, satisfied (42 >= 40).
+        let at_least = PredicateV1::PostStateBounded {
+            checks: vec![(target, slot, U256::from(40u64), U256::MAX)],
+        };
+        let out = replay(&anchor, &witness, &plan, &at_least, &commitments()).unwrap();
+        assert!(out.reproduced(), "42 >= 40 should reproduce: {:?}", out.verdict);
+
+        // Bound violated: a higher minOut than the real output -> refund the buyer.
+        let too_high = PredicateV1::PostStateBounded {
+            checks: vec![(target, slot, U256::from(43u64), U256::MAX)],
+        };
+        let out = replay(&anchor, &witness, &plan, &too_high, &commitments()).unwrap();
+        assert_eq!(
+            out.verdict,
+            Verdict::Failed(FailReason::PostStateOutOfBounds {
+                address: target,
+                slot,
+                got: U256::from(42u64),
+                min: U256::from(43u64),
+                max: U256::MAX,
+            }),
+        );
+
+        // Upper-bound form "<= cap" is the same predicate with min = 0.
+        let at_most = PredicateV1::PostStateBounded {
+            checks: vec![(target, slot, U256::ZERO, U256::from(100u64))],
+        };
+        assert!(replay(&anchor, &witness, &plan, &at_most, &commitments())
+            .unwrap()
+            .reproduced());
     }
 
     #[test]

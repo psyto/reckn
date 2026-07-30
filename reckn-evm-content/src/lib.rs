@@ -86,6 +86,9 @@ pub enum PredicateJson {
     PostStateEquals {
         checks: Vec<StorageCheckJson>,
     },
+    PostStateBounded {
+        checks: Vec<StorageBoundJson>,
+    },
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -93,6 +96,14 @@ pub struct StorageCheckJson {
     pub address: Address,
     pub slot: U256,
     pub expected: U256,
+}
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct StorageBoundJson {
+    pub address: Address,
+    pub slot: U256,
+    pub min: U256,
+    pub max: U256,
 }
 impl From<PredicateJson> for PredicateV1 {
     fn from(x: PredicateJson) -> Self {
@@ -106,6 +117,12 @@ impl From<PredicateJson> for PredicateV1 {
                 checks: checks
                     .into_iter()
                     .map(|x| (x.address, x.slot, x.expected))
+                    .collect(),
+            },
+            PredicateJson::PostStateBounded { checks } => Self::PostStateBounded {
+                checks: checks
+                    .into_iter()
+                    .map(|x| (x.address, x.slot, x.min, x.max))
                     .collect(),
             },
         }
@@ -275,5 +292,31 @@ mod tests {
         a["specId"] = serde_json::Value::String("PRAGUE".into());
         let bad: AnchorV11Json = serde_json::from_value(a).unwrap();
         assert!(EvmAnchorV1::try_from(bad).is_err());
+    }
+
+    /// The bounded predicate is fundable end-to-end: its wire form uses the
+    /// `POST_STATE_BOUNDED` tag with camelCase `min`/`max`, and it lowers into
+    /// the engine's `[min, max]` checks without loss.
+    #[test]
+    fn post_state_bounded_wire_maps_into_engine_checks() {
+        let json = r#"{"kind":"POST_STATE_BOUNDED","checks":[{"address":"0x00000000000000000000000000000000000000bb","slot":"0x7","min":"0x28","max":"0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"}]}"#;
+        let decoded: PredicateJson = serde_json::from_str(json).unwrap();
+        let engine: PredicateV1 = decoded.into();
+        let mut want_addr = [0u8; 20];
+        want_addr[19] = 0xbb;
+        match engine {
+            PredicateV1::PostStateBounded { checks } => {
+                assert_eq!(
+                    checks,
+                    vec![(
+                        Address::from(want_addr),
+                        U256::from(7u64),
+                        U256::from(40u64),
+                        U256::MAX,
+                    )]
+                );
+            }
+            other => panic!("expected PostStateBounded, got {other:?}"),
+        }
     }
 }
