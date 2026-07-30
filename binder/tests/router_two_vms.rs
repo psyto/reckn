@@ -205,6 +205,7 @@ fn svm_case(
         parent_bank_hash: [0; 32],
         signature_count: 0,
         snapshot_is_complete: false,
+            full_snapshot_hash: [0; 32],
         runtime_profile_hash: b32(runtime_hash),
         snapshot_archive_hash: b32(snapshot_hash),
         snapshot_format_version: 2,

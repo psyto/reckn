@@ -13,6 +13,8 @@ use {
     },
     reckn_record::ReexecCommitmentsV1,
     reckn_reexec_svm::{
+        authenticity::{verify_prestate_subset, AuthenticityError, FullSnapshotV1},
+        bankhash::{verify_accounts_against_bank_hash, BankHashPreimageV1},
         replay, AccountSnapshotV2, OperationalError, PredicateV1, PrestateSnapshotV2,
         ReplayOutcome, RuntimeProfileV1, SvmAnchorV2, SvmPlanV2, Verdict,
     },
@@ -36,6 +38,10 @@ pub enum KeeperError {
     InvalidDeal(&'static str),
     Operational(OperationalError),
     Replay(String),
+    /// The committed full snapshot did not authenticate the compact prestate
+    /// (bad archive commitment, bank_hash mismatch, or a divergent/absent
+    /// compact account). Like `Operational`, this yields no signed verdict.
+    SnapshotAuthenticity(AuthenticityError),
 }
 impl core::fmt::Display for KeeperError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
@@ -102,9 +108,21 @@ pub struct StoredAnchorV2 {
     pub signature_count: u64,
     #[serde(default)]
     pub snapshot_is_complete: bool,
+    /// Content hash of the [`StoredFullSnapshotV1`] the compact prestate binds to.
+    /// Zero (default) opts out — authenticity then rests on an external binding.
+    /// When set, `load_for_disputed_deal` enforces the archive-subset binding
+    /// before any replay.
+    #[serde(default)]
+    pub full_snapshot_hash: [u8; 32],
     pub runtime_profile_hash: [u8; 32],
     pub snapshot_archive_hash: [u8; 32],
     pub snapshot_format_version: u16,
+}
+/// The complete account set the compact prestate is a subset of, content-addressed
+/// by `StoredAnchorV2::full_snapshot_hash`. Reuses the stored account shape.
+#[derive(Clone, Serialize, Deserialize)]
+pub struct StoredFullSnapshotV1 {
+    pub accounts: Vec<StoredAccountV2>,
 }
 #[derive(Clone, Serialize, Deserialize)]
 pub struct StoredSnapshotV2 {
@@ -143,6 +161,16 @@ fn bytes32(v: B256) -> [u8; 32] {
 fn addr(v: [u8; 32]) -> solana_pubkey::Pubkey {
     solana_pubkey::Pubkey::new_from_array(v)
 }
+fn account_snapshot(x: StoredAccountV2) -> AccountSnapshotV2 {
+    AccountSnapshotV2 {
+        pubkey: addr(x.pubkey),
+        lamports: x.lamports,
+        owner: addr(x.owner),
+        executable: x.executable,
+        rent_epoch: x.rent_epoch,
+        data: x.data,
+    }
+}
 
 /// Validate the disputed deal fields, then resolve the transitive store graph:
 /// deal->spec/delivery/anchor, spec->runtime profile, anchor->snapshot.
@@ -171,6 +199,31 @@ pub fn load_for_disputed_deal(
     }
     let snapshot: StoredSnapshotV2 = store.load_json(b(anchor.snapshot_archive_hash))?;
     let profile: StoredRuntimeProfileV1 = store.load_json(b(spec.runtime_profile_content_hash))?;
+    let compact = PrestateSnapshotV2 {
+        accounts: snapshot.accounts.into_iter().map(account_snapshot).collect(),
+    };
+    // Snapshot authenticity: when the anchor commits a full snapshot, the compact
+    // prestate must bind to it as a subset of a set that reproduces `bank_hash`.
+    // The full snapshot is content-addressed by `full_snapshot_hash` (load_json
+    // binds the exact bytes), so that load *is* the archive-commitment check; we
+    // then verify it reproduces `bank_hash` and that the compact prestate is a
+    // faithful subset. Enforced here, before replay, so both the resolver and the
+    // keyless verifier reject an unauthentic prestate.
+    // See `docs/svm-snapshot-authenticity.md`.
+    if anchor.full_snapshot_hash != [0u8; 32] {
+        let full: StoredFullSnapshotV1 = store.load_json(b(anchor.full_snapshot_hash))?;
+        let full = FullSnapshotV1 {
+            accounts: full.accounts.into_iter().map(account_snapshot).collect(),
+        };
+        let preimage = BankHashPreimageV1 {
+            parent_bank_hash: b(anchor.parent_bank_hash),
+            signature_count: anchor.signature_count,
+            last_blockhash: b(anchor.blockhash),
+        };
+        verify_accounts_against_bank_hash(&full.accounts, &preimage, b(anchor.bank_hash))
+            .map_err(|e| KeeperError::SnapshotAuthenticity(AuthenticityError::BankHash(e)))?;
+        verify_prestate_subset(&compact, &full).map_err(KeeperError::SnapshotAuthenticity)?;
+    }
     let plan = bincode::deserialize(&delivery.transaction)
         .map_err(|e| KeeperError::Json(e.to_string()))?;
     let predicate = match spec.predicate {
@@ -208,20 +261,7 @@ pub fn load_for_disputed_deal(
             snapshot_archive_hash: b(anchor.snapshot_archive_hash),
             snapshot_format_version: anchor.snapshot_format_version,
         },
-        snapshot: PrestateSnapshotV2 {
-            accounts: snapshot
-                .accounts
-                .into_iter()
-                .map(|x| AccountSnapshotV2 {
-                    pubkey: addr(x.pubkey),
-                    lamports: x.lamports,
-                    owner: addr(x.owner),
-                    executable: x.executable,
-                    rent_epoch: x.rent_epoch,
-                    data: x.data,
-                })
-                .collect(),
-        },
+        snapshot: compact,
         profile: RuntimeProfileV1 {
             allowed_ambient_programs: profile
                 .allowed_ambient_programs
@@ -434,6 +474,7 @@ mod tests {
                 parent_bank_hash: [0; 32],
                 signature_count: 0,
                 snapshot_is_complete: false,
+            full_snapshot_hash: [0; 32],
                 runtime_profile_hash: bytes32(
                     reckn_reexec_svm::runtime_profile_hash(&rprofile).unwrap(),
                 ),
@@ -486,5 +527,123 @@ mod tests {
             fs::write(dir.path().join(format!("{:x}.json", spec_file)), b"{}").unwrap();
             assert!(replay_disputed(&store, &deal).is_err());
         }
+    }
+
+    // The archive-subset binding is load-bearing in the dispute path: when the
+    // anchor commits a full snapshot, an honest one lets the deal replay, and a
+    // committed bank_hash the full snapshot does not reproduce is rejected with
+    // SnapshotAuthenticity before any verdict is signed.
+    #[test]
+    fn full_snapshot_gate_binds_the_compact_prestate_or_rejects() {
+        use reckn_reexec_svm::bankhash::{accounts_lt_hash, bank_hash, BankHashPreimageV1};
+
+        let dir = tempdir().unwrap();
+        let from = Keypair::new_from_array([1; 32]);
+        let to = Address::new_from_array([2; 32]);
+        let mut tx =
+            Transaction::new_with_payer(&[transfer(from.pubkey(), to, 2_000_000)], Some(&from.pubkey()));
+        tx.sign(&[&from], Default::default());
+        let profile = StoredRuntimeProfileV1 {
+            allowed_ambient_programs: vec![[0; 32]],
+        };
+        let profile_file = write_content(dir.path(), &serde_json::to_vec(&profile).unwrap());
+
+        // Compact prestate = the two touched accounts; full snapshot = a superset.
+        let compact_accounts = vec![account(from.pubkey(), 1_000_000_000), account(to, 1)];
+        let snapshot = StoredSnapshotV2 {
+            accounts: compact_accounts.clone(),
+        };
+        let snapshot_file = put_json(dir.path(), &snapshot);
+        let full = StoredFullSnapshotV1 {
+            accounts: {
+                let mut a = compact_accounts.clone();
+                a.push(account(Address::new_from_array([9; 32]), 5_000));
+                a
+            },
+        };
+        let full_file = put_json(dir.path(), &full);
+        let full_reexec: Vec<AccountSnapshotV2> =
+            full.accounts.iter().cloned().map(account_snapshot).collect();
+
+        let preimage = BankHashPreimageV1 {
+            parent_bank_hash: B256::from([0x44; 32]),
+            signature_count: 3,
+            last_blockhash: B256::from([0; 32]),
+        };
+        let honest_bank = bytes32(bank_hash(&preimage, &accounts_lt_hash(&full_reexec).checksum().0));
+
+        let rprofile = RuntimeProfileV1::default();
+        let rsnapshot = PrestateSnapshotV2 {
+            accounts: compact_accounts.iter().cloned().map(account_snapshot).collect(),
+        };
+        let state_root = bytes32(reckn_reexec_svm::snapshot_commitment(&rsnapshot, &rprofile).unwrap());
+        let rp_hash = bytes32(reckn_reexec_svm::runtime_profile_hash(&rprofile).unwrap());
+        let delivery_file = put_json(
+            dir.path(),
+            &StoredDeliveryV1 {
+                transaction: bincode::serialize(&tx).unwrap(),
+            },
+        );
+        let store = FileContentStore::new(dir.path());
+
+        let make_deal = |committed_bank: [u8; 32]| -> Deal {
+            let anchor = StoredAnchorV2 {
+                state_commitment: state_root,
+                cluster_genesis_hash: [3; 32],
+                slot: 1,
+                blockhash: [0; 32],
+                bank_hash: committed_bank,
+                parent_bank_hash: [0x44; 32],
+                signature_count: 3,
+                snapshot_is_complete: false,
+                full_snapshot_hash: bytes32(full_file),
+                runtime_profile_hash: rp_hash,
+                snapshot_archive_hash: bytes32(snapshot_file),
+                snapshot_format_version: 2,
+            };
+            let anchor_file = put_json(dir.path(), &anchor);
+            let spec = StoredSpecV1 {
+                backend_id: [5; 32],
+                backend_version_hash: [6; 32],
+                anchor_hash: bytes32(anchor_file),
+                runtime_profile_content_hash: bytes32(profile_file),
+                predicate: StoredPredicateV1::LamportsEquals {
+                    account: *to.as_array(),
+                    expected: 2_000_001,
+                },
+            };
+            let spec_file = put_json(dir.path(), &spec);
+            Deal {
+                bump: 0,
+                state: state::DISPUTED,
+                _pad: [0; 6],
+                amount: 1,
+                buyer: [8; 32],
+                seller: [9; 32],
+                mint: [10; 32],
+                spec_hash: bytes32(spec_file),
+                delivery_hash: bytes32(delivery_file),
+                anchor_hash: bytes32(anchor_file),
+                backend_id: [5; 32],
+                backend_version_hash: [6; 32],
+                runtime_profile_hash: rp_hash,
+                deliver_deadline: 2,
+                challenge_deadline: 3,
+                resolve_deadline: 4,
+                nonce: [11; 32],
+            }
+        };
+
+        // Honest full snapshot reproduces bank_hash: the gate passes and replays.
+        assert!(replay_disputed(&store, &make_deal(honest_bank))
+            .unwrap()
+            .reproduced());
+
+        // A full snapshot that does not reproduce the committed bank_hash: rejected
+        // as an authenticity failure, not a verdict.
+        assert!(matches!(
+            replay_disputed(&store, &make_deal([0xee; 32])),
+            Err(KeeperError::SnapshotAuthenticity(AuthenticityError::BankHash(_)))
+        ));
     }
 }
