@@ -7,6 +7,7 @@
 //! snapshot verifier is responsible for deriving this snapshot from the anchor's
 //! `bank_hash` and `snapshot_archive_hash` before it reaches this API.
 
+pub mod authenticity;
 pub mod bankhash;
 
 use alloy_primitives::B256;
@@ -1039,7 +1040,7 @@ mod tests {
             last_blockhash: base.blockhash,
         };
         let honest_bank_hash =
-            bankhash::bank_hash(&preimage, &bankhash::accounts_lt_hash(&snapshot).checksum().0);
+            bankhash::bank_hash(&preimage, &bankhash::accounts_lt_hash(&snapshot.accounts).checksum().0);
 
         let mut anchor = base.clone();
         anchor.snapshot_is_complete = true;

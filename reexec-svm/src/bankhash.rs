@@ -49,10 +49,11 @@ pub fn account_lt_hash(account: &AccountSnapshotV2) -> LtHash {
 }
 
 /// The homomorphic sum of every account's contribution. Order-independent, so
-/// the snapshot need not be sorted for this to match the ledger's value.
-pub fn accounts_lt_hash(snapshot: &PrestateSnapshotV2) -> LtHash {
+/// the account set need not be sorted for this to match the ledger's value. Takes
+/// a slice so both a compact prestate and a full snapshot can feed it.
+pub fn accounts_lt_hash(accounts: &[AccountSnapshotV2]) -> LtHash {
     let mut acc = LtHash::identity();
-    for account in &snapshot.accounts {
+    for account in accounts {
         acc.mix_in(&account_lt_hash(account));
     }
     acc
@@ -82,7 +83,17 @@ pub fn verify_snapshot_against_bank_hash(
     preimage: &BankHashPreimageV1,
     expected: B256,
 ) -> Result<(), BankHashMismatch> {
-    let checksum = accounts_lt_hash(snapshot).checksum();
+    verify_accounts_against_bank_hash(&snapshot.accounts, preimage, expected)
+}
+
+/// As [`verify_snapshot_against_bank_hash`] but over a raw account slice, so a
+/// full snapshot (see `authenticity`) can be checked without a wrapper.
+pub fn verify_accounts_against_bank_hash(
+    accounts: &[AccountSnapshotV2],
+    preimage: &BankHashPreimageV1,
+    expected: B256,
+) -> Result<(), BankHashMismatch> {
+    let checksum = accounts_lt_hash(accounts).checksum();
     let got = bank_hash(preimage, &checksum.0);
     if got == expected {
         Ok(())
@@ -137,7 +148,10 @@ mod tests {
         let reversed = PrestateSnapshotV2 {
             accounts: vec![c, b, a],
         };
-        assert_eq!(accounts_lt_hash(&forward).0, accounts_lt_hash(&reversed).0);
+        assert_eq!(
+            accounts_lt_hash(&forward.accounts).0,
+            accounts_lt_hash(&reversed.accounts).0
+        );
     }
 
     // The whole point: a bank_hash derived from an account set verifies, and
@@ -153,7 +167,7 @@ mod tests {
         };
         let pre = preimage();
         // Derive the honest bank_hash, then confirm the verifier accepts it.
-        let honest = bank_hash(&pre, &accounts_lt_hash(&snapshot).checksum().0);
+        let honest = bank_hash(&pre, &accounts_lt_hash(&snapshot.accounts).checksum().0);
         assert!(verify_snapshot_against_bank_hash(&snapshot, &pre, honest).is_ok());
 
         // Tamper lamports.

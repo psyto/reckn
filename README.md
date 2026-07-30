@@ -257,8 +257,12 @@ content publication.
   `snapshot_is_complete` set, a snapshot that does not reproduce the committed
   `bank_hash` is an `OperationalError::BankHashMismatch` rather than a decorative
   field. Because Solana (unlike EVM's MPT) has **no compact per-account inclusion
-  proof**, the compact per-tx prestate binds transitively to an archive-verified
-  full snapshot — the remaining stage — see
+  proof**, the compact per-tx prestate binds *transitively*:
+  [`reexec-svm/src/authenticity.rs`](reexec-svm/src/authenticity.rs)'s
+  `verify_prestate_authenticity` checks the full snapshot is the committed archive,
+  reproduces `bank_hash`, and that every compact account is a faithful subset of
+  it — no per-account proof needed. The remaining piece is *ingesting* a real
+  Agave archive into that full snapshot; the binding logic is done and tested. See
   [`docs/svm-snapshot-authenticity.md`](docs/svm-snapshot-authenticity.md). The
   closed runtime still permits only the System builtin (custom SBF is
   `UnsupportedEnvironmentDependency`). The predicate set is
@@ -266,9 +270,9 @@ content publication.
   `LamportsBounded` (`≥ minOut` via `max = u64::MAX`), and the causal
   `LamportsDelta` (`post − pre` credited increase) — so both the funded envelope
   and the sound "this fill credited ≥ minOut" claim adjudicate identically across
-  the two VMs. `cargo test`: **23 passing** (reckn-record: 1; incl. the
-  no-op-cannot-forge-a-delta adversarial regression and the `bank_hash`
-  lattice-hash authenticity verifier).
+  the two VMs. `cargo test`: **30 passing** (reckn-record: 1; incl. the
+  no-op-cannot-forge-a-delta adversarial regression, the `bank_hash`
+  lattice-hash authenticity verifier, and the compact-prestate archive binding).
 - **Settlement contract (Solana / SVM):** [`escrow-svm/`](escrow-svm) — a Pinocchio
   program mirroring the EVM escrow: the same four-state machine, a Token-2022 vault,
   and a `resolve` that verifies the resolver's verdict by strict introspection of a

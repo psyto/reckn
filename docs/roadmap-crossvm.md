@@ -45,11 +45,11 @@ engine underneath is VM-specific. The exact types and invariants are in
   poststate-disappearance are all operational, never a verdict. 13 regression tests
   cover the false-`Reproduced` vectors.
 - **Still not auto-resolve on its own**, for two honest reasons: (a) snapshot
-  *authenticity* — the `bank_hash` verifier now exists (`reexec-svm/src/bankhash.rs`
-  recomputes the SIMD-0215 accounts lattice hash and re-derives `bank_hash`, gated
-  by `snapshot_is_complete`), but binding the *compact* per-tx prestate to an
-  archive-verified full snapshot remains, since Solana has no compact per-account
-  proof — see `docs/svm-snapshot-authenticity.md`; (b) the closed runtime
+  *authenticity* — the `bank_hash` verifier (`reexec-svm/src/bankhash.rs`) and the
+  compact-prestate archive binding (`reexec-svm/src/authenticity.rs`) now exist and
+  are tested; what remains is *ingesting* a real Agave snapshot archive and the
+  keeper store wiring — ingestion and plumbing, not soundness — see
+  `docs/svm-snapshot-authenticity.md`; (b) the closed runtime
   profile currently permits only the System builtin, so custom-SBF plans are
   `UnsupportedEnvironmentDependency` until the full checkpoint runtime is
   reconstructed. Both are deliberate cuts, surfaced not hidden. This asymmetry with

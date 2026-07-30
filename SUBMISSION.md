@@ -94,7 +94,7 @@ live and tested — on **both** VMs, behind **one** router.
 | Layer | EVM | Solana (SVM) |
 |---|---|---|
 | Settlement contract | `contracts/` (Solidity) — 28 tests (incl. verified EIP-3009 funding) | `escrow-svm/` (Pinocchio) — 4 LiteSVM e2e |
-| Re-execution backend | `reexec-evm/` (revm 38, offline MPT) — 9 tests | `reexec-svm/` (LiteSVM V2, closed-world, `bank_hash` verifier) — 23 tests |
+| Re-execution backend | `reexec-evm/` (revm 38, offline MPT) — 9 tests | `reexec-svm/` (LiteSVM V2, closed-world, `bank_hash` verifier + archive binding) — 30 tests |
 | Keeper + keyless verify | `keeper/` (EIP-712) — 3 tests + `anvil-e2e.sh` | `reckn-svm-keeper/` (Ed25519) — full-loop |
 | Shared verdict record | `packages/protocol-rs` (`ReplayRecordV1`) — one type both VMs emit | ← same |
 | Cross-VM binder | `binder/` — **one `BackendRouter` re-executes both VMs**, 6 tests (incl. `router_two_vms.rs`) | ← same |
@@ -104,12 +104,13 @@ live and tested — on **both** VMs, behind **one** router.
   signal, so withholding replay material cannot dodge the negative mark. Both VMs.
 - **Deliberate cuts, surfaced not hidden:** Solana snapshot *authenticity* now has
   a real verifier — `reexec-svm/src/bankhash.rs` recomputes the SIMD-0215 accounts
-  lattice hash and re-derives `bank_hash`, so a complete snapshot that doesn't
-  reproduce it is an operational error (`docs/svm-snapshot-authenticity.md`). What
-  remains is binding the *compact* per-tx prestate to an archive-verified full
-  snapshot — Solana has no compact per-account proof, so this is transitive, not a
-  Merkle path. Cross-chain settlement is designed fail-closed
-  (`docs/cross-chain-settlement.md`) but not yet implemented.
+  lattice hash and re-derives `bank_hash`, and `reexec-svm/src/authenticity.rs`
+  binds the *compact* per-tx prestate to that verified full snapshot as a subset
+  (Solana has no compact per-account proof, so this is transitive, not a Merkle
+  path). What remains is *ingesting* a real Agave snapshot archive into the full
+  snapshot and the keeper store wiring — ingestion and plumbing, not soundness
+  (`docs/svm-snapshot-authenticity.md`). Cross-chain settlement is designed
+  fail-closed (`docs/cross-chain-settlement.md`) but not yet implemented.
 
 ## Positioning & sponsor targets
 
@@ -194,5 +195,5 @@ positioned; if it stalls, the verdict still reproduces anywhere.
       Agentic Economy), sponsor tech (ERC-8004, x402/EIP-3009, Arc), repo + artifact
       + video links.
 - [ ] **`bash scripts/anvil-e2e.sh` green** on a clean clone (Foundry + Rust + jq).
-- [ ] Test tally current in README (contracts 28, reexec-evm 9, reexec-svm 23,
+- [ ] Test tally current in README (contracts 28, reexec-evm 9, reexec-svm 30,
       binder 6, keeper 3, escrow-svm 4, evm-content 5, record 1).

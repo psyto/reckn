@@ -66,33 +66,57 @@ verifier is therefore pinned to a cluster/epoch's active features; that is
 inherent to re-deriving a consensus hash and is called out here rather than
 hidden.
 
-## The completeness boundary (honest scope)
+## The completeness boundary and the compact binding
 
 An `accounts_lt_hash` commits to the **complete** account set, so the recompute is
-conclusive only over a complete set. reckn's dispute path commits a **compact**
+conclusive only over a complete set. reckn's dispute path replays a **compact**
 prestate (just the accounts a transaction touches), which cannot reproduce
-`bank_hash` on its own. Hence the `snapshot_is_complete` gate:
+`bank_hash` on its own. Two paths make that sound:
 
 - **Complete snapshot** (`snapshot_is_complete = true`): `bank_hash` is verified
-  in-replay. This is exercised by the unit/integration tests today.
-- **Compact prestate** (`false`, today's dispute flow): authenticity binds
-  transitively — the compact accounts must be a **subset** of a full snapshot
-  whose `bank_hash` was verified out of band, committed via
-  `anchor.snapshot_archive_hash`.
+  directly in `replay`.
+- **Compact prestate** (the normal dispute flow): authenticity binds
+  *transitively* to a full snapshot, via
+  [`authenticity.rs`](../reexec-svm/src/authenticity.rs). Given a
+  [`FullSnapshotV1`], `verify_prestate_authenticity` checks, in one call:
+  1. `full_snapshot_commitment(full) == snapshot_archive_hash` — the full
+     snapshot is the one the anchor commits to;
+  2. `verify_accounts_against_bank_hash(full, …)` — the full snapshot reproduces
+     `bank_hash` (it is authentic); and
+  3. `verify_prestate_subset(compact, full)` — every compact account is a faithful
+     copy of the full snapshot's value for that pubkey.
+
+  Then the compact prestate is authentic **without** a per-account inclusion proof
+  (which Solana does not offer). The binding logic and all its failure modes
+  (tampered/absent compact account, wrong archive commitment, an archive that does
+  not reproduce `bank_hash`) are tested in that module.
+
+## Keeper wiring (the integration point)
+
+The plumbing already fits. The keeper's `load_for_disputed_deal`
+(`reckn-svm-keeper`) resolves content by hash from `FileContentStore` and already
+loads the replay snapshot **by `anchor.snapshot_archive_hash`**. The load-bearing
+wiring is: content-address the *full* snapshot by `snapshot_archive_hash`, load it,
+call `verify_prestate_authenticity(compact, full, preimage, bank_hash,
+snapshot_archive_hash)`, and reject the dispute on error before replay — mapping
+`AuthenticityError` to an operational error exactly as `BankHashMismatch` is today.
 
 ## Remaining stages
 
-1. **Archive-subset binding** — parse a real Agave snapshot archive, verify it
-   reproduces `bank_hash` with this module, and prove the compact prestate's
-   accounts equal the archive's values for those pubkeys (content-addressed by
-   `snapshot_archive_hash`). This is what makes the *compact* dispute path
-   load-bearing end to end.
-2. **Preimage sourcing** — populate `parent_bank_hash` / `signature_count` from
+1. **Agave archive ingestion** — produce a [`FullSnapshotV1`] from a real Agave
+   snapshot archive (the `.tar.zst` account-vec format) so the full snapshot in
+   the binding is sourced from a validator snapshot rather than reconstructed.
+   This is the one external dependency left; the binding it feeds is done.
+2. **Keeper store wiring** — land the `load_for_disputed_deal` change above once a
+   `FullSnapshotV1` is available to store.
+3. **Preimage sourcing** — populate `parent_bank_hash` / `signature_count` from
    the block/checkpoint rather than trusting anchor input.
-3. **Feature/epoch pinning** — carry the active-feature set so the `bank_hash`
+4. **Feature/epoch pinning** — carry the active-feature set so the `bank_hash`
    rule is selected correctly across the delta-hash → lattice-hash transition.
 
-Until (1) lands, the compact dispute path trusts the archive binding; the verifier
-and the complete-snapshot gate are the foundation it stands on.
+The cryptographic binding is complete and tested; what remains is ingestion and
+plumbing, not soundness.
+
+[`FullSnapshotV1`]: ../reexec-svm/src/authenticity.rs
 
 [`solana-lattice-hash`]: https://crates.io/crates/solana-lattice-hash
