@@ -321,10 +321,13 @@ content publication.
   adjacency the program's introspection requires — using the escrow's own
   `verdict_message` + the canonical Ed25519 helper, i.e. byte-identical to the
   shape `escrow-svm`'s passing e2e already accepts. A keyless `verify` re-derives
-  the on-chain verdict from public inputs. Proven end-to-end by a LiteSVM
-  full-loop test: content SHA-256 → fund → deliver → challenge → replay → the
-  keeper's `[ed25519, resolve]` accepted on-chain → honest releases the seller /
-  false claim refunds the buyer → keyless `verify` agrees.
+  the on-chain verdict from public inputs. Settlement is **optimistic by default**
+  (matching the EVM keeper): the keeper registers + bonds the resolver, submits
+  `resolve_optimistic` (opening a challenge window), and `finalize_settlement`
+  settles once it elapses. Proven end-to-end by a LiteSVM full-loop test: content
+  SHA-256 → fund → deliver → challenge → replay → register + bond → the keeper's
+  `[ed25519, resolve_optimistic]` accepted → window elapses → finalize → honest
+  releases the seller / false claim refunds the buyer → keyless `verify` agrees.
 - **Cross-VM binder (one router, both VMs):** [`binder/`](binder) — a `ReexecBackend`
   trait both VMs implement, an `EvmBackend` + `SvmBackend` adapter pair, and a
   `BackendRouter` that verifies the committed content hashes and routes a dispute to
@@ -384,14 +387,12 @@ content publication.
   VM or a ZK proof of the re-execution.
   Optimistic settlement is now the **default EVM path** — the keeper submits
   `resolveOptimistic` and `anvil-e2e.sh` drives commit → window → `finalizeSettlement`.
-  The SVM escrow now mirrors optimistic settlement in-program (registry + bond +
-  window + peer-conflict + finalize + slash); migrating the `reckn-svm-keeper` to
-  drive it (the SVM analogue of the EVM Stage-A keeper migration) is the remaining
-  step.
-- **Next:** migrate `reckn-svm-keeper` to the optimistic SVM instructions, a
-  fraud-proof/quorum path for automatic on-chain slashing, and cross-chain
-  settlement around the binder (finality on both chains + verdict propagation +
-  double-settle rules).
+  Optimistic settlement is now the default on **both** VMs — the EVM keeper submits
+  `resolveOptimistic` and the SVM keeper submits `resolve_optimistic` (registry +
+  bond + window + peer-conflict + finalize + slash), each driven end-to-end.
+- **Next:** a fraud-proof/quorum path for automatic on-chain slashing (both VMs),
+  and cross-chain settlement around the binder (finality on both chains + verdict
+  propagation + double-settle rules).
 
 ## Try it (one command)
 

@@ -8,8 +8,8 @@ use {
     alloy_primitives::B256,
     ed25519_dalek::{Signer, SigningKey},
     reckn_escrow_svm::{
-        outcome, state, verdict_message, Deal, ResolverConfig, VerdictCommitment,
-        TOKEN_2022_PROGRAM_ID,
+        ix as escrow_ix, outcome, state, verdict_message, Deal, ResolverConfig, VerdictCommitment,
+        RESOLVER_SEED, TOKEN_2022_PROGRAM_ID,
     },
     reckn_record::ReexecCommitmentsV1,
     reckn_reexec_svm::{
@@ -362,6 +362,123 @@ pub fn signed_resolve_ixs(
         ],
     };
     Ok((c, [ed, resolve]))
+}
+
+/// The registry PDA for a resolver key: `[RESOLVER_SEED, key]`.
+pub fn resolver_pda(program_id: Address, key: [u8; 32]) -> Address {
+    Address::find_program_address(&[RESOLVER_SEED, &key], &program_id).0
+}
+
+pub struct OptimisticResolveAccounts {
+    pub config: Address,
+    pub resolver_pda: Address,
+}
+/// Build `[ed25519(current-ix), resolve_optimistic]`. Unlike `signed_resolve_ixs`,
+/// the signer's authority is proven on-chain by registry membership (the
+/// `resolver_pda`), not by matching `config.resolver`, and settlement is deferred:
+/// the verdict is recorded and a challenge window opens. `finalize_settlement_ix`
+/// pays once it elapses. This is the SVM analogue of the EVM keeper submitting
+/// `resolveOptimistic`.
+pub fn signed_resolve_optimistic_ixs(
+    program_id: Address,
+    deal_id: Address,
+    deal: &Deal,
+    config: &ResolverConfig,
+    resolver: &SigningKey,
+    replay: &ReplayOutcome,
+    a: OptimisticResolveAccounts,
+) -> Result<(VerdictCommitment, [Instruction; 2]), KeeperError> {
+    let c = commitment(*deal_id.as_array(), deal, replay);
+    let program_id_bytes = *program_id.as_array();
+    let message = verdict_message(&program_id_bytes, config, &c);
+    let sig = resolver.sign(&message).to_bytes();
+    let ed =
+        new_ed25519_instruction_with_signature(&message, &sig, &resolver.verifying_key().to_bytes());
+    let mut encoded = [0; VerdictCommitment::LEN];
+    c.encode(&mut encoded);
+    let mut data = Vec::with_capacity(1 + encoded.len());
+    data.push(escrow_ix::RESOLVE_OPTIMISTIC);
+    data.extend_from_slice(&encoded);
+    let resolve = Instruction {
+        program_id,
+        data,
+        accounts: vec![
+            AccountMeta::new(deal_id, false),
+            AccountMeta::new_readonly(a.config, false),
+            AccountMeta::new_readonly(a.resolver_pda, false),
+            AccountMeta::new_readonly(instructions::id(), false),
+        ],
+    };
+    Ok((c, [ed, resolve]))
+}
+
+pub struct FinalizeAccounts {
+    pub vault: Address,
+    pub destination: Address,
+    pub mint: Address,
+}
+/// Permissionlessly settle a deal whose challenge window has elapsed, per the
+/// recorded verdict. The SVM analogue of the EVM `finalizeSettlement`.
+pub fn finalize_settlement_ix(
+    program_id: Address,
+    deal_id: Address,
+    a: FinalizeAccounts,
+) -> Instruction {
+    Instruction {
+        program_id,
+        data: vec![escrow_ix::FINALIZE_SETTLEMENT],
+        accounts: vec![
+            AccountMeta::new(deal_id, false),
+            AccountMeta::new(a.vault, false),
+            AccountMeta::new(a.destination, false),
+            AccountMeta::new_readonly(a.mint, false),
+            AccountMeta::new_readonly(Address::from(TOKEN_2022_PROGRAM_ID), false),
+        ],
+    }
+}
+
+/// Admin registers a resolver in the on-chain allow-list (`SET_RESOLVER`).
+pub fn set_resolver_ix(
+    program_id: Address,
+    admin: Address,
+    config: Address,
+    key: [u8; 32],
+    allowed: bool,
+) -> Instruction {
+    let mut data = vec![escrow_ix::SET_RESOLVER];
+    data.extend_from_slice(&key);
+    data.push(allowed as u8);
+    Instruction {
+        program_id,
+        data,
+        accounts: vec![
+            AccountMeta::new(admin, true),
+            AccountMeta::new_readonly(config, false),
+            AccountMeta::new(resolver_pda(program_id, key), false),
+            AccountMeta::new_readonly(solana_sdk_ids::system_program::id(), false),
+        ],
+    }
+}
+
+/// Fund a resolver's bond (`DEPOSIT_BOND`).
+pub fn deposit_bond_ix(
+    program_id: Address,
+    payer: Address,
+    key: [u8; 32],
+    amount: u64,
+) -> Instruction {
+    let mut data = vec![escrow_ix::DEPOSIT_BOND];
+    data.extend_from_slice(&key);
+    data.extend_from_slice(&amount.to_le_bytes());
+    Instruction {
+        program_id,
+        data,
+        accounts: vec![
+            AccountMeta::new(payer, true),
+            AccountMeta::new(resolver_pda(program_id, key), false),
+            AccountMeta::new_readonly(solana_sdk_ids::system_program::id(), false),
+        ],
+    }
 }
 
 /// Keyless verifier: independently replay and compare the on-chain evidence.
