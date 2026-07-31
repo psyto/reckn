@@ -23,6 +23,9 @@ contract RecknEscrowTest is Test {
 
     uint256 resolverPk = 0xBEEF;
     address resolver;
+    // A second registered, bonded resolver — the challenger in a conflict.
+    uint256 resolver2Pk = 0xF00D;
+    address resolver2;
 
     bytes32 constant BACKEND_ID = keccak256("reckn/backend/evm");
     bytes32 constant BACKEND_VER = keccak256("reckn/backend/evm@v1");
@@ -34,20 +37,42 @@ contract RecknEscrowTest is Test {
     uint64 constant DELIVER_W = 1 days;
     uint64 constant CHALLENGE_W = 1 days;
     uint64 constant RESOLVE_W = 1 days;
+    uint64 constant SETTLE_W = 1 days;
+    uint256 constant BOND = 1 ether;
 
     function setUp() public {
         buyer = vm.addr(buyerPk);
         resolver = vm.addr(resolverPk);
+        resolver2 = vm.addr(resolver2Pk);
         registry = new ResolverRegistry(owner);
         escrow = new RecknEscrow(registry);
         token = new MockUSDC3009();
 
         vm.startPrank(owner);
         registry.setResolver(resolver, true);
+        registry.setResolver(resolver2, true);
         registry.setBackend(BACKEND_ID, BACKEND_VER, true);
+        registry.setMinBond(BOND);
         vm.stopPrank();
 
+        // Bond both resolvers (inert for the instant resolve() path).
+        vm.deal(resolver, BOND);
+        vm.prank(resolver);
+        registry.depositBond{value: BOND}();
+        vm.deal(resolver2, BOND);
+        vm.prank(resolver2);
+        registry.depositBond{value: BOND}();
+
         token.mint(buyer, AMOUNT);
+    }
+
+    // Fund → deliver → challenge, leaving the deal Disputed and ready to resolve.
+    function _toDisputed(bytes32 salt) internal returns (bytes32 id) {
+        id = _fund(salt);
+        vm.prank(seller);
+        escrow.deliver(id, DELIVERY_HASH, CHALLENGE_W);
+        vm.prank(buyer);
+        escrow.challenge(id, RESOLVE_W);
     }
 
     // --- helpers ---
@@ -547,5 +572,155 @@ contract RecknEscrowTest is Test {
         uint256 after_ = token.balanceOf(buyer) + token.balanceOf(seller) + token.balanceOf(address(escrow));
         assertEq(after_, total, "value conserved");
         assertEq(token.balanceOf(address(escrow)), 0, "escrow holds nothing after settle");
+    }
+
+    // --- optimistic settlement: bonded resolver + challenge window ---
+
+    function test_optimistic_reproduced_finalizes_to_seller() public {
+        bytes32 id = _toDisputed("o1");
+        VerdictHash.VerdictCommitment memory c = _commitment(id, 0); // Reproduced
+        (uint8 v, bytes32 r, bytes32 s) = _sign(c, resolverPk);
+        escrow.resolveOptimistic(c, v, r, s, SETTLE_W);
+
+        // Not settled during the window.
+        assertEq(token.balanceOf(address(escrow)), AMOUNT, "held during window");
+        assertEq(uint8(escrow.getDeal(id).state), uint8(RecknEscrow.DealState.Settling));
+
+        vm.warp(block.timestamp + SETTLE_W + 1);
+        escrow.finalizeSettlement(id);
+
+        assertEq(token.balanceOf(seller), AMOUNT, "seller paid after window");
+        assertEq(token.balanceOf(address(escrow)), 0, "escrow drained");
+    }
+
+    function test_optimistic_failed_finalizes_to_buyer() public {
+        bytes32 id = _toDisputed("o2");
+        VerdictHash.VerdictCommitment memory c = _commitment(id, 1); // Failed
+        (uint8 v, bytes32 r, bytes32 s) = _sign(c, resolverPk);
+        escrow.resolveOptimistic(c, v, r, s, SETTLE_W);
+
+        vm.warp(block.timestamp + SETTLE_W + 1);
+        escrow.finalizeSettlement(id);
+
+        assertEq(token.balanceOf(buyer), AMOUNT, "buyer refunded after window");
+        assertEq(token.balanceOf(address(escrow)), 0, "escrow drained");
+    }
+
+    function test_finalize_reverts_before_window_closes() public {
+        bytes32 id = _toDisputed("o3");
+        VerdictHash.VerdictCommitment memory c = _commitment(id, 0);
+        (uint8 v, bytes32 r, bytes32 s) = _sign(c, resolverPk);
+        escrow.resolveOptimistic(c, v, r, s, SETTLE_W);
+
+        vm.expectRevert(RecknEscrow.SettleWindowOpen.selector);
+        escrow.finalizeSettlement(id);
+    }
+
+    function test_resolveOptimistic_reverts_unbonded_resolver() public {
+        // Resolver pulls its bond → no longer bonded.
+        vm.prank(resolver);
+        registry.withdrawBond(BOND);
+
+        bytes32 id = _toDisputed("o4");
+        VerdictHash.VerdictCommitment memory c = _commitment(id, 0);
+        (uint8 v, bytes32 r, bytes32 s) = _sign(c, resolverPk);
+        vm.expectRevert(RecknEscrow.NotBonded.selector);
+        escrow.resolveOptimistic(c, v, r, s, SETTLE_W);
+    }
+
+    function test_challenge_conflict_refunds_buyer_and_emits_fault() public {
+        bytes32 id = _toDisputed("o5");
+        // Resolver 1 optimistically resolves Reproduced.
+        VerdictHash.VerdictCommitment memory c1 = _commitment(id, 0);
+        (uint8 v1, bytes32 r1, bytes32 s1) = _sign(c1, resolverPk);
+        escrow.resolveOptimistic(c1, v1, r1, s1, SETTLE_W);
+
+        // Resolver 2 presents a conflicting verdict (Failed) within the window.
+        VerdictHash.VerdictCommitment memory c2 = _commitment(id, 1);
+        (uint8 v2, bytes32 r2, bytes32 s2) = _sign(c2, resolver2Pk);
+
+        vm.expectEmit(true, true, true, true);
+        emit RecknEscrow.Fault(id, resolver, resolver2, c2.traceHash);
+        escrow.challengeVerdict(c2, v2, r2, s2);
+
+        assertEq(token.balanceOf(buyer), AMOUNT, "conflict fail-safes to buyer refund");
+        assertEq(token.balanceOf(address(escrow)), 0, "escrow drained");
+        assertEq(uint8(escrow.getDeal(id).state), uint8(RecknEscrow.DealState.Resolved));
+    }
+
+    function test_challenge_reverts_when_not_conflicting() public {
+        bytes32 id = _toDisputed("o6");
+        VerdictHash.VerdictCommitment memory c1 = _commitment(id, 0);
+        (uint8 v1, bytes32 r1, bytes32 s1) = _sign(c1, resolverPk);
+        escrow.resolveOptimistic(c1, v1, r1, s1, SETTLE_W);
+
+        // Resolver 2 signs the SAME verdict — honest agreement is not a challenge.
+        VerdictHash.VerdictCommitment memory c2 = _commitment(id, 0);
+        (uint8 v2, bytes32 r2, bytes32 s2) = _sign(c2, resolver2Pk);
+        vm.expectRevert(RecknEscrow.NotConflicting.selector);
+        escrow.challengeVerdict(c2, v2, r2, s2);
+    }
+
+    function test_challenge_reverts_same_resolver() public {
+        bytes32 id = _toDisputed("o7");
+        VerdictHash.VerdictCommitment memory c1 = _commitment(id, 0);
+        (uint8 v1, bytes32 r1, bytes32 s1) = _sign(c1, resolverPk);
+        escrow.resolveOptimistic(c1, v1, r1, s1, SETTLE_W);
+
+        // The same resolver cannot "challenge" its own verdict.
+        VerdictHash.VerdictCommitment memory c2 = _commitment(id, 1);
+        (uint8 v2, bytes32 r2, bytes32 s2) = _sign(c2, resolverPk);
+        vm.expectRevert(RecknEscrow.SameResolver.selector);
+        escrow.challengeVerdict(c2, v2, r2, s2);
+    }
+
+    function test_challenge_reverts_after_window() public {
+        bytes32 id = _toDisputed("o8");
+        VerdictHash.VerdictCommitment memory c1 = _commitment(id, 0);
+        (uint8 v1, bytes32 r1, bytes32 s1) = _sign(c1, resolverPk);
+        escrow.resolveOptimistic(c1, v1, r1, s1, SETTLE_W);
+
+        vm.warp(block.timestamp + SETTLE_W + 1);
+        VerdictHash.VerdictCommitment memory c2 = _commitment(id, 1);
+        (uint8 v2, bytes32 r2, bytes32 s2) = _sign(c2, resolver2Pk);
+        vm.expectRevert(RecknEscrow.SettleWindowClosed.selector);
+        escrow.challengeVerdict(c2, v2, r2, s2);
+    }
+
+    // --- registry bonds ---
+
+    function test_registry_deposit_and_withdraw_bond() public {
+        address r3 = address(0xD00D);
+        vm.deal(r3, 3 ether);
+        vm.startPrank(r3);
+        registry.depositBond{value: 2 ether}();
+        assertEq(registry.bond(r3), 2 ether);
+        assertTrue(registry.isBonded(r3));
+        registry.withdrawBond(2 ether);
+        assertEq(registry.bond(r3), 0);
+        assertFalse(registry.isBonded(r3));
+        vm.stopPrank();
+        assertEq(r3.balance, 3 ether, "bond returned in full");
+    }
+
+    function test_registry_withdraw_insufficient_reverts() public {
+        vm.prank(resolver);
+        vm.expectRevert(ResolverRegistry.InsufficientBond.selector);
+        registry.withdrawBond(BOND + 1);
+    }
+
+    function test_registry_slash_transfers_bond_to_payee() public {
+        assertEq(registry.bond(resolver), BOND);
+        vm.prank(owner);
+        registry.slash(resolver, buyer, BOND);
+        assertEq(registry.bond(resolver), 0, "bond slashed");
+        assertEq(buyer.balance, BOND, "harmed party compensated");
+        assertFalse(registry.isBonded(resolver), "no longer bonded");
+    }
+
+    function test_registry_slash_only_owner() public {
+        vm.prank(buyer);
+        vm.expectRevert(ResolverRegistry.NotOwner.selector);
+        registry.slash(resolver, buyer, BOND);
     }
 }

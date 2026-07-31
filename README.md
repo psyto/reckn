@@ -207,12 +207,20 @@ content publication.
   profile, data-availability + timeout policy, and the reproducibility vs
   settlement-authority split).
 - **Settlement contract (EVM V1):** implemented in [`contracts/`](contracts) —
-  four-state escrow, EIP-712 resolver verdicts, resolver/backend allow-list,
+  escrow state machine, EIP-712 resolver verdicts, resolver/backend allow-list,
   timeout escape hatches, nonzero-window guards, a cross-language digest pin
   against the keeper, an ERC-8004-style `ReputationEvidence` projection (below),
   and end-to-end tests that settle on the **real engine output** (the
   `moneyshot.json` hashes) and assert `VerdictCommitted` carries the actual
-  `traceHash`. `forge test`: **23 passing**.
+  `traceHash`. Plus an **optimistic settlement** path (`resolveOptimistic` →
+  challenge window → `finalizeSettlement`): the resolver must be **bonded** in the
+  registry, settlement is deferred so the reproducible verdict can be checked
+  before funds move, and a second registered resolver's **conflicting** verdict
+  during the window fail-safes to a buyer refund and emits `Fault` (governance
+  slashes the liar's bond). This turns the keyless-*detectable* verdict into an
+  economically-*enforced* one, reducing trust in a single resolver — full
+  trustless single-signer adjudication still wants fraud-proofs/quorum. `forge
+  test`: **40 passing**.
 - **Reputation (ERC-8004 style):** on every verdict the escrow emits
   `ReputationEvidence(agent, reproduced, dealId, traceHash, backendId)` — a pure
   projection that never changes settlement. Unlike AgentRankr's self-reported,
@@ -349,7 +357,7 @@ content publication.
   replay a live RPC witness. Its HTTP shell polls `Disputed`, SHA-256-checks
   content-store bytes before parsing, replays, and submits `resolve()`. The included
   anvil E2E proves false claim → `Failed` → refund, and an honest credit →
-  `Reproduced` → release. `cargo test` + `forge test`: **keeper 3, contracts 28**.
+  `Reproduced` → release. `cargo test` + `forge test`: **keeper 3, contracts 40**.
 - **Independent re-verification (the trust property, executable):**
   `reckn-keeper verify <rpc> <escrow> <content-store> <dealId>` — a **keyless**
   third party reads the resolver's on-chain `VerdictCommitted` and re-derives the
@@ -357,9 +365,17 @@ content publication.
   outcome / resultHash / prestateRoot / traceHash all match. This is what a TEE'd
   LLM verdict cannot offer: **don't trust the resolver — reproduce its verdict
   yourself.** The anvil E2E runs it as a final step and fails on any mismatch.
-- **Next:** Arc / x402 integration, a challenge/bond layer (turn the checkable
-  verdict into slashable fraud proofs), and the cross-chain settlement around the
-  binder (finality on both chains + verdict propagation + double-settle rules).
+- **Economic security (optimistic settlement):** `resolveOptimistic` bonds the
+  resolver and opens a challenge window before funds move; a second registered
+  resolver's conflicting verdict fail-safes to a buyer refund and emits `Fault`
+  (governance slashes the liar's bond). This turns the keyless-*detectable* verdict
+  into an economically-*enforced* one. Fully trustless single-signer adjudication
+  (which of two conflicting resolvers is right, on-chain) still wants a fraud-proof
+  VM or a ZK proof of the re-execution.
+- **Next:** make optimistic settlement the default (migrate keeper / e2e / the SVM
+  escrow mirror), a fraud-proof/quorum path for automatic on-chain slashing, and
+  cross-chain settlement around the binder (finality on both chains + verdict
+  propagation + double-settle rules).
 
 ## Try it (one command)
 
@@ -430,7 +446,7 @@ proves `keccak256(rlp(header)) == block_hash` before trusting `state_root`.
 Each component is self-contained; there is no top-level build.
 
 ```bash
-# settlement contracts (Foundry) — 28 tests (incl. verified EIP-3009 funding + end-to-end on real engine output)
+# settlement contracts (Foundry) — 40 tests (incl. verified EIP-3009 funding + end-to-end on real engine output)
 cd contracts && forge install foundry-rs/forge-std --no-git && forge test
 
 # re-execution engine (revm 38, MPT-verified prestate + header binding) — 16 tests
