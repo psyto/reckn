@@ -61,19 +61,26 @@ engine underneath is VM-specific. The exact types and invariants are in
   strict introspection of a preceding native Ed25519 instruction over a
   domain-separated `genesis‖program_id‖deal_id‖VerdictCommitment` message; an
   operational outcome can never settle, only `timeout_refund` favors the buyer;
-  `ReputationEvidence` is logged. LiteSVM tx-level e2e (release / refund / forged
-  signature / swapped anchor / operational outcome / timeout / double-resolve /
-  token conservation) is green.
+  `ReputationEvidence` is logged. It also mirrors the EVM **optimistic settlement**
+  faithfully — a per-resolver registry (PDA allow-list) + lamport bonds,
+  `resolve_optimistic` (opens a challenge window), `finalize_settlement`, a true
+  **peer-conflict** `challenge_verdict` (a second registered resolver's conflicting
+  Ed25519 verdict fail-safes to a buyer refund), and admin `slash`. LiteSVM
+  tx-level e2e (instant + optimistic + conflict + bond paths, token conservation)
+  is green.
 - Keeper + end-to-end: **done** — [`reckn-svm-keeper/`](../reckn-svm-keeper) mirrors
   the EVM keeper (content-store SHA-256 check → replay → build the escrow's
-  `VerdictCommitment` → emit the `[ed25519(current-ix), resolve]` the program
-  accepts → keyless `verify`). A LiteSVM full-loop test drives content SHA-256 →
-  fund → deliver → challenge → replay → on-chain resolve → payout → keyless verify,
-  for both an honest release and a false-claim refund. The SVM slice now mirrors
-  the EVM slice, both emitting the same `ReplayRecordV1`.
-- Remaining for full auto-resolve: the checkpoint → snapshot Bank verifier
-  (frame-thick) — the authenticity piece — plus a durable content-availability
-  story. The demo runs at the reproducibility tier (committed snapshot).
+  `VerdictCommitment` → emit the `[ed25519(current-ix), resolve_optimistic]` the
+  program accepts → `finalize_settlement` → keyless `verify`). A LiteSVM full-loop
+  test drives content SHA-256 → fund → deliver → challenge → replay → register +
+  bond → optimistic resolve → window → finalize → payout → keyless verify, for both
+  an honest release and a false-claim refund. Optimistic settlement is the default
+  on both VMs.
+- Snapshot **authenticity** is now built too: `reexec-svm` recomputes the
+  SIMD-0215 accounts lattice hash to re-derive `bank_hash`, and the keeper binds
+  the compact prestate to a verified full snapshot before replay (see
+  `svm-snapshot-authenticity.md`). Remaining is ingesting a real Agave snapshot
+  archive + a durable content-availability story.
 - Migration, not rewrite: the escrow state machine, predicate type, and verdict
   envelope are reused; only the replay engine changed — both backends emit
   byte-identical records against the shared golden.
