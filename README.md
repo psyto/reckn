@@ -401,11 +401,16 @@ content publication.
   Optimistic settlement is now the default on **both** VMs — the EVM keeper submits
   `resolveOptimistic` and the SVM keeper submits `resolve_optimistic` (registry +
   bond + window + peer-conflict + finalize + slash), each driven end-to-end.
+- **Toward zero-trust (ZK, PoC):** [`zk-verdict/`](zk-verdict) proves reckn's
+  causal delta verdict inside an **SP1 zkVM** and verifies the proof — the verdict
+  *derivation* needs no trusted resolver, run end-to-end on CPU. Proving the full
+  re-execution that produces the post-state (revm / SBF inside the zkVM) is the
+  remaining frontier (GPU + engine-in-guest).
 - **Next:** the EVM quorum-slashing mirror on the SVM escrow (Ed25519 quorum
-  introspection + lamport bond slash); a fraud-proof VM / ZK proof of the
-  re-execution for full zero-trust adjudication; and cross-chain settlement around
-  the binder (finality on both chains + verdict
-  propagation + double-settle rules).
+  introspection + lamport bond slash); scaling the ZK path to the full
+  re-execution (or a fraud-proof VM) for zero-trust adjudication; and cross-chain
+  settlement around the binder (finality on both chains + verdict propagation +
+  double-settle rules).
 
 ## Try it (one command)
 
