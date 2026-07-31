@@ -90,6 +90,12 @@ must be checkable against `prestate + plan` alone.
                         release ▲   (Reproduced → release, Failed → refund)
 ```
 
+By default the verdict settles **optimistically**: a bonded resolver commits it
+into a `Settling` state that opens a challenge window, and `finalize` settles once
+the window elapses — unless a second registered resolver posts a conflicting
+verdict first, which fail-safes to a buyer refund. This is the default on both VMs
+(the diagram shows the direct verdict → settlement it collapses to).
+
 ## The one design invariant
 
 The adjudicator lives behind a **VM-neutral boundary**:
