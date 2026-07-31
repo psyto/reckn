@@ -3,14 +3,15 @@ use {
     ed25519_dalek::SigningKey,
     litesvm::LiteSVM,
     reckn_escrow_svm::{
-        ix, state, Deal, ResolverConfig, CONFIG_SEED, DEAL_SEED, TOKEN_2022_PROGRAM_ID,
+        ix, state, Deal, ResolverConfig, CONFIG_SEED, DEAL_SEED, MIN_BOND, TOKEN_2022_PROGRAM_ID,
     },
     reckn_reexec_svm::{
         runtime_profile_hash, snapshot_commitment, AccountSnapshotV2, RuntimeProfileV1,
     },
     reckn_svm_keeper::{
-        replay_disputed, signed_resolve_ixs, verify, write_content, FileContentStore,
-        ResolveAccounts, StoredAnchorV2, StoredDeliveryV1, StoredPredicateV1,
+        deposit_bond_ix, finalize_settlement_ix, replay_disputed, resolver_pda, set_resolver_ix,
+        signed_resolve_optimistic_ixs, verify, write_content, FinalizeAccounts, FileContentStore,
+        OptimisticResolveAccounts, StoredAnchorV2, StoredDeliveryV1, StoredPredicateV1,
         StoredRuntimeProfileV1, StoredSnapshotV2, StoredSpecV1,
     },
     serde::Serialize,
@@ -85,23 +86,55 @@ fn keeper_full_loop_equality_and_bound_predicates_release_refund_and_keyless_ver
         } else {
             env.source
         };
-        let (onchain, ixs) = signed_resolve_ixs(
+        // Optimistic settlement: the admin registers + bonds the resolver, the
+        // bonded resolver opens a challenge window with resolve_optimistic, and —
+        // with no conflicting verdict — anyone finalizes once it elapses.
+        let resolver_key = env.resolver.verifying_key().to_bytes();
+        env.send_buyer(vec![set_resolver_ix(
+            PROGRAM_ID,
+            env.buyer.pubkey(),
+            env.config,
+            resolver_key,
+            true,
+        )])
+        .expect("register resolver");
+        env.send_buyer(vec![deposit_bond_ix(
+            PROGRAM_ID,
+            env.buyer.pubkey(),
+            resolver_key,
+            MIN_BOND,
+        )])
+        .expect("bond resolver");
+
+        let (onchain, ixs) = signed_resolve_optimistic_ixs(
             PROGRAM_ID,
             env.deal_id,
             &disputed,
             &env.config_value,
             &env.resolver,
             &replay,
-            ResolveAccounts {
+            OptimisticResolveAccounts {
+                config: env.config,
+                resolver_pda: resolver_pda(PROGRAM_ID, resolver_key),
+            },
+        )
+        .expect("bonded resolver opens the window");
+        env.send_buyer(ixs.to_vec())
+            .expect("ed25519 then resolve_optimistic accepted");
+        assert_eq!(env.deal().state, state::SETTLING);
+
+        env.svm.warp_to_slot(1_000);
+        env.svm.expire_blockhash();
+        env.send_buyer(vec![finalize_settlement_ix(
+            PROGRAM_ID,
+            env.deal_id,
+            FinalizeAccounts {
                 vault: env.vault,
                 destination,
                 mint: env.mint,
-                config: env.config,
             },
-        )
-        .expect("registered resolver signs only replay verdict");
-        env.send_buyer(ixs.to_vec())
-            .expect("ed25519 then resolve accepted");
+        )])
+        .expect("finalize after window");
 
         assert_eq!(env.deal().state, state::RESOLVED);
         assert_eq!(env.amount(env.vault), 0);
