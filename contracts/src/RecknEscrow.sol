@@ -38,6 +38,7 @@ contract RecknEscrow {
         Held,
         Delivered,
         Disputed,
+        Settling,
         Resolved
     }
 
@@ -62,6 +63,12 @@ contract RecknEscrow {
         uint64 challengeDeadline; // set at deliver()
         uint64 resolveDeadline; // set at challenge()
         DealState state;
+        // Recorded by resolveOptimistic(), read by finalizeSettlement() and
+        // compared by challengeVerdict(). Unused on the instant resolve() path.
+        uint64 settleDeadline;
+        uint8 verdictOutcome;
+        address verdictResolver;
+        bytes32 verdictTraceHash;
     }
 
     ResolverRegistry public immutable registry;
@@ -101,7 +108,14 @@ contract RecknEscrow {
     );
     event Settled(bytes32 indexed dealId, address indexed to, uint256 amount, uint8 reason);
     // reason: 0 = verdict release, 1 = verdict refund, 2 = timeout refund,
-    //         3 = unchallenged release, 4 = undelivered reclaim
+    //         3 = unchallenged release, 4 = undelivered reclaim, 5 = conflict fault refund
+    /// @notice Two registered resolvers signed conflicting verdicts for the same
+    ///         deterministic deal — a provable resolver-set fault. The deal
+    ///         fail-safes to a buyer refund; governance slashes the liar's bond in
+    ///         the registry, using the public reproducible verdict as evidence.
+    event Fault(bytes32 indexed dealId, address indexed resolver, address indexed challenger, bytes32 challengerTraceHash);
+    /// @notice A verdict was recorded and the optimistic settlement window opened.
+    event SettlementOpened(bytes32 indexed dealId, address indexed resolver, Outcome outcome, uint64 settleDeadline);
 
     /// @notice Reputation evidence about the seller-agent, projected from a
     ///         re-execution verdict (ERC-8004 style). Unlike self-reported
@@ -140,6 +154,11 @@ contract RecknEscrow {
     error BadSignature();
     error ZeroWindow();
     error BadNonce();
+    error NotBonded();
+    error SettleWindowOpen();
+    error SettleWindowClosed();
+    error SameResolver();
+    error NotConflicting();
 
     /// @dev Domain tag that binds an EIP-3009 authorization nonce to the exact
     ///      deal it funds. See {fundingNonce}.
@@ -257,7 +276,11 @@ contract RecknEscrow {
             deliverDeadline: deliverDeadline,
             challengeDeadline: 0,
             resolveDeadline: 0,
-            state: DealState.Held
+            state: DealState.Held,
+            settleDeadline: 0,
+            verdictOutcome: 0,
+            verdictResolver: address(0),
+            verdictTraceHash: bytes32(0)
         });
 
         // Pull funds last (state written first; token call is the only external
@@ -329,23 +352,33 @@ contract RecknEscrow {
     ///         committed fields MUST match the deal (no fresh anchor/backend),
     ///         the signer MUST be a registered resolver, and the backend/version
     ///         MUST be allow-listed. Releases on Reproduced, refunds on Failed.
-    function resolve(VerdictHash.VerdictCommitment calldata c, uint8 v, bytes32 r, bytes32 s) external {
-        bytes32 id = c.dealId;
-        Deal storage d = deals[id];
-        if (d.state != DealState.Disputed) revert BadState();
-
-        // Committed fields must match the deal exactly.
+    /// @dev The committed fields must match the deal exactly, the backend/version
+    ///      must be allow-listed, and the signer must be a registered resolver.
+    ///      Shared by `resolve`, `resolveOptimistic`, and `challengeVerdict`.
+    function _recoverRegisteredSigner(
+        Deal storage d,
+        VerdictHash.VerdictCommitment calldata c,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) private view returns (address signer) {
         if (
             c.specHash != d.specHash || c.deliveryHash != d.deliveryHash
                 || c.prestateAnchorHash != d.prestateAnchorHash || c.backendId != d.backendId
                 || c.backendVersionHash != d.backendVersionHash
         ) revert CommitmentMismatch();
-
         if (!registry.backendAllowed(c.backendId, c.backendVersionHash)) revert DisallowedBackend();
-
-        address signer = VerdictHash.recover(VerdictHash.digest(DOMAIN_SEPARATOR, _toMemory(c)), v, r, s);
+        signer = VerdictHash.recover(VerdictHash.digest(DOMAIN_SEPARATOR, _toMemory(c)), v, r, s);
         if (signer == address(0)) revert BadSignature();
         if (!registry.isResolver(signer)) revert UnknownResolver();
+    }
+
+    function resolve(VerdictHash.VerdictCommitment calldata c, uint8 v, bytes32 r, bytes32 s) external {
+        bytes32 id = c.dealId;
+        Deal storage d = deals[id];
+        if (d.state != DealState.Disputed) revert BadState();
+
+        address signer = _recoverRegisteredSigner(d, c, v, r, s);
 
         d.state = DealState.Resolved;
 
@@ -361,6 +394,83 @@ contract RecknEscrow {
         } else {
             _pay(d, id, d.buyer, 1);
         }
+    }
+
+    // --- optimistic settlement (bonded resolver + challenge window) ---
+
+    /// @notice Like `resolve`, but the signer must be bonded and settlement is
+    ///         *deferred*: the verdict is recorded and a challenge window opens.
+    ///         The reproducible verdict is public immediately (`VerdictCommitted`),
+    ///         so anyone can re-derive it and, if it is wrong, a second registered
+    ///         resolver can `challengeVerdict` before funds move.
+    function resolveOptimistic(
+        VerdictHash.VerdictCommitment calldata c,
+        uint8 v,
+        bytes32 r,
+        bytes32 s,
+        uint64 settleWindow
+    ) external {
+        bytes32 id = c.dealId;
+        Deal storage d = deals[id];
+        if (d.state != DealState.Disputed) revert BadState();
+        if (settleWindow == 0) revert ZeroWindow();
+
+        address signer = _recoverRegisteredSigner(d, c, v, r, s);
+        if (!registry.isBonded(signer)) revert NotBonded();
+
+        Outcome outcome = Outcome(c.outcome);
+        d.state = DealState.Settling;
+        d.settleDeadline = uint64(block.timestamp) + settleWindow;
+        d.verdictOutcome = c.outcome;
+        d.verdictResolver = signer;
+        d.verdictTraceHash = c.traceHash;
+
+        emit VerdictCommitted(c.dealId, outcome, c.prestateRoot, c.resultHash, c.traceHash, signer);
+        emit ReputationEvidence(d.seller, outcome == Outcome.Reproduced, id, c.traceHash, c.backendId);
+        emit SettlementOpened(id, signer, outcome, d.settleDeadline);
+    }
+
+    /// @notice After the window closes with no successful challenge, settle per the
+    ///         recorded verdict. Permissionless — anyone can finalize.
+    function finalizeSettlement(bytes32 id) external {
+        Deal storage d = deals[id];
+        if (d.state != DealState.Settling) revert BadState();
+        if (block.timestamp <= d.settleDeadline) revert SettleWindowOpen();
+
+        d.state = DealState.Resolved;
+        if (Outcome(d.verdictOutcome) == Outcome.Reproduced) {
+            _pay(d, id, d.seller, 0);
+        } else {
+            _pay(d, id, d.buyer, 1);
+        }
+    }
+
+    /// @notice During the window, a *different* registered resolver presents a
+    ///         conflicting verdict for the same deterministic deal. Because an
+    ///         honest resolver re-derives the same `outcome`/`traceHash` from the
+    ///         committed inputs, a conflict is a provable resolver-set fault. The
+    ///         escrow cannot tell on-chain which signer is honest, so it fail-safes
+    ///         to a **buyer refund** (matching the timeout philosophy) and emits
+    ///         `Fault`; governance slashes the liar's bond off-chain using the
+    ///         public verdict as evidence.
+    function challengeVerdict(VerdictHash.VerdictCommitment calldata c, uint8 v, bytes32 r, bytes32 s)
+        external
+    {
+        bytes32 id = c.dealId;
+        Deal storage d = deals[id];
+        if (d.state != DealState.Settling) revert BadState();
+        if (block.timestamp > d.settleDeadline) revert SettleWindowClosed();
+
+        address challenger = _recoverRegisteredSigner(d, c, v, r, s);
+        if (challenger == d.verdictResolver) revert SameResolver();
+        // A conflict is any disagreement on the deterministic verdict.
+        if (c.traceHash == d.verdictTraceHash && c.outcome == d.verdictOutcome) {
+            revert NotConflicting();
+        }
+
+        d.state = DealState.Resolved;
+        emit Fault(id, d.verdictResolver, challenger, c.traceHash);
+        _pay(d, id, d.buyer, 5);
     }
 
     // --- escape hatches so funds never lock forever ---
