@@ -222,11 +222,15 @@ content publication.
   challenge window → `finalizeSettlement`): the resolver must be **bonded** in the
   registry, settlement is deferred so the reproducible verdict can be checked
   before funds move, and a second registered resolver's **conflicting** verdict
-  during the window fail-safes to a buyer refund and emits `Fault` (governance
-  slashes the liar's bond). This turns the keyless-*detectable* verdict into an
-  economically-*enforced* one, reducing trust in a single resolver — full
-  trustless single-signer adjudication still wants fraud-proofs/quorum. `forge
-  test`: **40 passing**.
+  during the window fail-safes to a buyer refund and emits `Fault`. Slashing the
+  liar is **automatic**: `slashWithQuorum` lets anyone present a **K-of-N
+  registered-resolver quorum** co-signing the true (conflicting) verdict — since
+  the verdict is deterministic, K honest resolvers sign the same one — and slashes
+  the faulty resolver's bond to the submitter as a bounty, no governance. This
+  turns the keyless-*detectable* verdict into an economically-*enforced* one,
+  reducing trust from a single resolver to an honest-majority quorum. Full
+  zero-trust single-signer adjudication still wants a fraud-proof VM or a ZK proof
+  of the re-execution. `forge test`: **49 passing**.
 - **Reputation (ERC-8004 style):** on every verdict the escrow emits
   `ReputationEvidence(agent, reproduced, dealId, traceHash, backendId)` — a pure
   projection that never changes settlement. Unlike AgentRankr's self-reported,
@@ -376,7 +380,7 @@ content publication.
   (a bonded verdict that opens a challenge window). The included anvil E2E drives
   the full optimistic path — commit verdict → window elapses → `finalizeSettlement`
   → false claim `Failed` → refund / honest credit `Reproduced` → release — each
-  keylessly re-verified. `cargo test` + `forge test`: **keeper 3, contracts 40**.
+  keylessly re-verified. `cargo test` + `forge test`: **keeper 3, contracts 49**.
 - **Independent re-verification (the trust property, executable):**
   `reckn-keeper verify <rpc> <escrow> <content-store> <dealId>` — a **keyless**
   third party reads the resolver's on-chain `VerdictCommitted` and re-derives the
@@ -384,20 +388,23 @@ content publication.
   outcome / resultHash / prestateRoot / traceHash all match. This is what a TEE'd
   LLM verdict cannot offer: **don't trust the resolver — reproduce its verdict
   yourself.** The anvil E2E runs it as a final step and fails on any mismatch.
-- **Economic security (optimistic settlement):** `resolveOptimistic` bonds the
-  resolver and opens a challenge window before funds move; a second registered
-  resolver's conflicting verdict fail-safes to a buyer refund and emits `Fault`
-  (governance slashes the liar's bond). This turns the keyless-*detectable* verdict
-  into an economically-*enforced* one. Fully trustless single-signer adjudication
-  (which of two conflicting resolvers is right, on-chain) still wants a fraud-proof
-  VM or a ZK proof of the re-execution.
-  Optimistic settlement is now the **default EVM path** — the keeper submits
-  `resolveOptimistic` and `anvil-e2e.sh` drives commit → window → `finalizeSettlement`.
+- **Economic security (optimistic settlement + quorum slashing):**
+  `resolveOptimistic` bonds the resolver and opens a challenge window before funds
+  move; a conflicting verdict fail-safes to a buyer refund. Slashing the liar is
+  **automatic**: `slashWithQuorum` accepts a **K-of-N** registered-resolver quorum
+  co-signing the true verdict — provably contradicting the faulty one — and slashes
+  its bond, no governance. This reduces trust from a single resolver to an
+  honest-majority quorum; zero-trust single-signer adjudication still wants a
+  fraud-proof VM or a ZK proof of the re-execution. Optimistic settlement is the
+  **default on both VMs** — the keeper submits `resolveOptimistic` and drives commit
+  → window → `finalize`.
   Optimistic settlement is now the default on **both** VMs — the EVM keeper submits
   `resolveOptimistic` and the SVM keeper submits `resolve_optimistic` (registry +
   bond + window + peer-conflict + finalize + slash), each driven end-to-end.
-- **Next:** a fraud-proof/quorum path for automatic on-chain slashing (both VMs),
-  and cross-chain settlement around the binder (finality on both chains + verdict
+- **Next:** the EVM quorum-slashing mirror on the SVM escrow (Ed25519 quorum
+  introspection + lamport bond slash); a fraud-proof VM / ZK proof of the
+  re-execution for full zero-trust adjudication; and cross-chain settlement around
+  the binder (finality on both chains + verdict
   propagation + double-settle rules).
 
 ## Try it (one command)
@@ -472,7 +479,7 @@ proves `keccak256(rlp(header)) == block_hash` before trusting `state_root`.
 Each component is self-contained; there is no top-level build.
 
 ```bash
-# settlement contracts (Foundry) — 40 tests (incl. verified EIP-3009 funding + end-to-end on real engine output)
+# settlement contracts (Foundry) — 49 tests (incl. verified EIP-3009 funding + end-to-end on real engine output)
 cd contracts && forge install foundry-rs/forge-std --no-git && forge test
 
 # re-execution engine (revm 38, MPT-verified prestate + header binding) — 16 tests
