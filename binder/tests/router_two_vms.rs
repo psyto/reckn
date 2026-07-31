@@ -105,6 +105,7 @@ fn evm_case(
         value: U256::ZERO,
         gas_limit: 200_000,
         witness_content_hash: Some(witness_hash),
+        header_content_hash: None,
     })
     .unwrap();
     (

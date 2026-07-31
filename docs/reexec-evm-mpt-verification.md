@@ -102,9 +102,17 @@ the maintenance surface stays small. A mismatch is
 `OperationalError::HeaderMismatch`, never a `Failed` verdict — identical to a bad
 witness. The essential property: a forged `state_root` changes the header, hence
 its hash, hence breaks `block_hash` — so `state_root` is only as forgeable as the
-consensus `block_hash`. When `block_header` is `None`, behavior is unchanged
-(back-compat); wiring the committed header through the codec and the keeper's
-keyless verdict path is the remaining plumbing step.
+consensus `block_hash`.
+
+**Enforced in the keyless verdict path.** The keeper's `witness` command commits
+the block header's consensus RLP (`BlockHeaderContentV1`) alongside the witness,
+and `recompute_verdict` — the shared path the resolver signs and an independent
+verifier re-derives — calls `header::verify_header_rlp_against_anchor` before
+replay, failing the verdict (operationally) on mismatch. The RLP bytes are the
+cross-crate interface, so the keeper and engine need not share an exact
+`alloy-consensus` version. `scripts/anvil-e2e.sh` exercises this end to end against
+a **real anvil block header** in both acts. When `header_content_hash` is absent
+(back-compat), `state_root` is trusted as before.
 
 ## The SVM analogue
 

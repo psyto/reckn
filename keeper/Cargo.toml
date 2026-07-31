@@ -23,3 +23,4 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }
 # Anchor JSON must select the exact revm hardfork used by the backend. Keeping
 # this direct dependency at the engine's pinned major prevents a hidden mapper.
 revm = { version = "38", features = ["optional_no_base_fee"] }
+alloy-rlp = "0.3"

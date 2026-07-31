@@ -14,7 +14,8 @@
 
 use crate::EvmAnchorV1;
 use alloy_consensus::Header;
-use revm::primitives::B256;
+use alloy_rlp::Decodable;
+use revm::primitives::{keccak256, B256};
 
 /// Why a header does not bind the committed anchor.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -26,6 +27,29 @@ pub enum HeaderMismatch {
     StateRoot { expected: B256, got: B256 },
     /// A committed block-environment field diverges from the header's value.
     Field { name: &'static str },
+    /// The committed header bytes are not valid RLP for a block header.
+    Rlp,
+}
+
+/// Verify committed header **RLP bytes** bind the anchor, without the caller
+/// needing this crate's exact `alloy-consensus` version: the bytes are the wire
+/// interface. `keccak256(header_rlp) == block_hash` is the authoritative binding
+/// (independent of decode canonicity); the bytes are then decoded to check the
+/// environment fields. This is what the keeper's keyless verdict path calls on a
+/// committed header blob.
+pub fn verify_header_rlp_against_anchor(
+    header_rlp: &[u8],
+    anchor: &EvmAnchorV1,
+) -> Result<(), HeaderMismatch> {
+    let got = keccak256(header_rlp);
+    if got != anchor.block_hash {
+        return Err(HeaderMismatch::BlockHash {
+            expected: anchor.block_hash,
+            got,
+        });
+    }
+    let header = Header::decode(&mut &header_rlp[..]).map_err(|_| HeaderMismatch::Rlp)?;
+    verify_header_against_anchor(&header, anchor)
 }
 
 /// Verify a full block header binds the anchor. On `Ok(())`, `block_hash` is
@@ -155,6 +179,27 @@ mod tests {
         assert!(matches!(
             verify_header_against_anchor(&header, &anchor),
             Err(HeaderMismatch::StateRoot { .. })
+        ));
+    }
+
+    // The keeper-facing entry: committed RLP bytes bind the anchor, and corrupt
+    // bytes (that no longer hash to block_hash) are rejected — the interface is
+    // the wire bytes, not this crate's Header type.
+    #[test]
+    fn header_rlp_binds_the_anchor_and_corruption_is_rejected() {
+        use alloy_rlp::Encodable;
+        let header = base_header();
+        let anchor = anchor_from(&header);
+        let mut rlp = Vec::new();
+        header.encode(&mut rlp);
+        assert_eq!(verify_header_rlp_against_anchor(&rlp, &anchor), Ok(()));
+
+        // Flip a byte: it no longer hashes to the committed block_hash.
+        let mut corrupt = rlp.clone();
+        *corrupt.last_mut().unwrap() ^= 0x01;
+        assert!(matches!(
+            verify_header_rlp_against_anchor(&corrupt, &anchor),
+            Err(HeaderMismatch::BlockHash { .. }) | Err(HeaderMismatch::Rlp)
         ));
     }
 
