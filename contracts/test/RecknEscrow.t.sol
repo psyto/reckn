@@ -26,6 +26,11 @@ contract RecknEscrowTest is Test {
     // A second registered, bonded resolver — the challenger in a conflict.
     uint256 resolver2Pk = 0xF00D;
     address resolver2;
+    // A third registered, bonded resolver — needed to form a K=2 quorum.
+    uint256 resolver3Pk = 0xCAFE;
+    address resolver3;
+    // An EOA "watcher" that submits a quorum proof and collects the bounty.
+    address watcher = address(0xA7C4E5);
 
     bytes32 constant BACKEND_ID = keccak256("reckn/backend/evm");
     bytes32 constant BACKEND_VER = keccak256("reckn/backend/evm@v1");
@@ -44,6 +49,7 @@ contract RecknEscrowTest is Test {
         buyer = vm.addr(buyerPk);
         resolver = vm.addr(resolverPk);
         resolver2 = vm.addr(resolver2Pk);
+        resolver3 = vm.addr(resolver3Pk);
         registry = new ResolverRegistry(owner);
         escrow = new RecknEscrow(registry);
         token = new MockUSDC3009();
@@ -51,17 +57,21 @@ contract RecknEscrowTest is Test {
         vm.startPrank(owner);
         registry.setResolver(resolver, true);
         registry.setResolver(resolver2, true);
+        registry.setResolver(resolver3, true);
         registry.setBackend(BACKEND_ID, BACKEND_VER, true);
         registry.setMinBond(BOND);
+        // Quorum: the escrow may slash on a proof, K = 2 co-signers.
+        registry.setQuorumSlasher(address(escrow));
+        registry.setQuorumThreshold(2);
         vm.stopPrank();
 
-        // Bond both resolvers (inert for the instant resolve() path).
-        vm.deal(resolver, BOND);
-        vm.prank(resolver);
-        registry.depositBond{value: BOND}();
-        vm.deal(resolver2, BOND);
-        vm.prank(resolver2);
-        registry.depositBond{value: BOND}();
+        // Bond all three resolvers (inert for the instant resolve() path).
+        address[3] memory rs = [resolver, resolver2, resolver3];
+        for (uint256 i = 0; i < 3; i++) {
+            vm.deal(rs[i], BOND);
+            vm.prank(rs[i]);
+            registry.depositBond{value: BOND}();
+        }
 
         token.mint(buyer, AMOUNT);
     }
@@ -722,5 +732,135 @@ contract RecknEscrowTest is Test {
         vm.prank(buyer);
         vm.expectRevert(ResolverRegistry.NotOwner.selector);
         registry.slash(resolver, buyer, BOND);
+    }
+
+    // --- quorum-adjudicated automatic slashing ---
+
+    // Sign `c` with both keys and return the two-signer quorum in strictly
+    // ascending signer-address order (as slashWithQuorum requires).
+    function _orderedQuorum(VerdictHash.VerdictCommitment memory c, uint256 pkA, uint256 pkB)
+        internal
+        view
+        returns (RecknEscrow.Sig[] memory q)
+    {
+        (uint8 va, bytes32 ra, bytes32 sa) = _sign(c, pkA);
+        (uint8 vb, bytes32 rb, bytes32 sb) = _sign(c, pkB);
+        q = new RecknEscrow.Sig[](2);
+        if (vm.addr(pkA) < vm.addr(pkB)) {
+            q[0] = RecknEscrow.Sig(va, ra, sa);
+            q[1] = RecknEscrow.Sig(vb, rb, sb);
+        } else {
+            q[0] = RecknEscrow.Sig(vb, rb, sb);
+            q[1] = RecknEscrow.Sig(va, ra, sa);
+        }
+    }
+
+    function test_slashWithQuorum_slashes_faulty_resolver_to_submitter() public {
+        bytes32 id = _toDisputed("q1");
+        // resolver1 signed a false verdict (Reproduced); the truth (Failed) is
+        // co-signed by a K=2 quorum: resolver2 + resolver3.
+        VerdictHash.VerdictCommitment memory faulty = _commitment(id, 0);
+        (uint8 fv, bytes32 fr, bytes32 fs) = _sign(faulty, resolverPk);
+        VerdictHash.VerdictCommitment memory truth = _commitment(id, 1);
+        RecknEscrow.Sig[] memory quorum = _orderedQuorum(truth, resolver2Pk, resolver3Pk);
+
+        assertEq(registry.bond(resolver), BOND);
+        vm.expectEmit(true, true, true, true);
+        emit RecknEscrow.QuorumSlashed(id, resolver, watcher, BOND, truth.traceHash);
+        vm.prank(watcher);
+        escrow.slashWithQuorum(faulty, fv, fr, fs, truth, quorum);
+
+        assertEq(registry.bond(resolver), 0, "faulty resolver bond slashed");
+        assertEq(watcher.balance, BOND, "bounty to submitter");
+        assertTrue(escrow.quorumSlashed(id, resolver));
+
+        // Replay guard: the same fault cannot be slashed twice.
+        vm.prank(watcher);
+        vm.expectRevert(RecknEscrow.AlreadySlashed.selector);
+        escrow.slashWithQuorum(faulty, fv, fr, fs, truth, quorum);
+    }
+
+    function test_slashWithQuorum_reverts_below_threshold() public {
+        bytes32 id = _toDisputed("q2");
+        VerdictHash.VerdictCommitment memory faulty = _commitment(id, 0);
+        (uint8 fv, bytes32 fr, bytes32 fs) = _sign(faulty, resolverPk);
+        VerdictHash.VerdictCommitment memory truth = _commitment(id, 1);
+        RecknEscrow.Sig[] memory quorum = new RecknEscrow.Sig[](1);
+        (uint8 v, bytes32 r, bytes32 s) = _sign(truth, resolver2Pk);
+        quorum[0] = RecknEscrow.Sig(v, r, s);
+        vm.expectRevert(RecknEscrow.BelowQuorum.selector);
+        escrow.slashWithQuorum(faulty, fv, fr, fs, truth, quorum);
+    }
+
+    function test_slashWithQuorum_reverts_when_not_conflicting() public {
+        bytes32 id = _toDisputed("q3");
+        VerdictHash.VerdictCommitment memory faulty = _commitment(id, 0);
+        (uint8 fv, bytes32 fr, bytes32 fs) = _sign(faulty, resolverPk);
+        // Same verdict as faulty — not a conflict, so no fault to slash.
+        VerdictHash.VerdictCommitment memory truth = _commitment(id, 0);
+        RecknEscrow.Sig[] memory quorum = _orderedQuorum(truth, resolver2Pk, resolver3Pk);
+        vm.expectRevert(RecknEscrow.NotConflicting.selector);
+        escrow.slashWithQuorum(faulty, fv, fr, fs, truth, quorum);
+    }
+
+    function test_slashWithQuorum_reverts_unregistered_faulty() public {
+        bytes32 id = _toDisputed("q4");
+        VerdictHash.VerdictCommitment memory faulty = _commitment(id, 0);
+        (uint8 fv, bytes32 fr, bytes32 fs) = _sign(faulty, 0xBADBAD); // not registered
+        VerdictHash.VerdictCommitment memory truth = _commitment(id, 1);
+        RecknEscrow.Sig[] memory quorum = _orderedQuorum(truth, resolver2Pk, resolver3Pk);
+        vm.expectRevert(RecknEscrow.UnknownResolver.selector);
+        escrow.slashWithQuorum(faulty, fv, fr, fs, truth, quorum);
+    }
+
+    function test_slashWithQuorum_reverts_unregistered_quorum_signer() public {
+        bytes32 id = _toDisputed("q5");
+        VerdictHash.VerdictCommitment memory faulty = _commitment(id, 0);
+        (uint8 fv, bytes32 fr, bytes32 fs) = _sign(faulty, resolverPk);
+        VerdictHash.VerdictCommitment memory truth = _commitment(id, 1);
+        // A registered resolver2 + an unregistered signer is not a valid quorum.
+        RecknEscrow.Sig[] memory quorum = _orderedQuorum(truth, resolver2Pk, 0xBADBAD);
+        vm.expectRevert(RecknEscrow.QuorumNotRegistered.selector);
+        escrow.slashWithQuorum(faulty, fv, fr, fs, truth, quorum);
+    }
+
+    function test_slashWithQuorum_reverts_duplicate_quorum_signer() public {
+        bytes32 id = _toDisputed("q6");
+        VerdictHash.VerdictCommitment memory faulty = _commitment(id, 0);
+        (uint8 fv, bytes32 fr, bytes32 fs) = _sign(faulty, resolverPk);
+        VerdictHash.VerdictCommitment memory truth = _commitment(id, 1);
+        // The same resolver twice is not two distinct signers.
+        (uint8 v, bytes32 r, bytes32 s) = _sign(truth, resolver2Pk);
+        RecknEscrow.Sig[] memory quorum = new RecknEscrow.Sig[](2);
+        quorum[0] = RecknEscrow.Sig(v, r, s);
+        quorum[1] = RecknEscrow.Sig(v, r, s);
+        vm.expectRevert(RecknEscrow.QuorumUnordered.selector);
+        escrow.slashWithQuorum(faulty, fv, fr, fs, truth, quorum);
+    }
+
+    function test_slashWithQuorum_reverts_faulty_in_quorum() public {
+        bytes32 id = _toDisputed("q7");
+        VerdictHash.VerdictCommitment memory faulty = _commitment(id, 0);
+        (uint8 fv, bytes32 fr, bytes32 fs) = _sign(faulty, resolverPk);
+        VerdictHash.VerdictCommitment memory truth = _commitment(id, 1);
+        // The faulty resolver cannot also be a quorum signer.
+        RecknEscrow.Sig[] memory quorum = _orderedQuorum(truth, resolverPk, resolver2Pk);
+        vm.expectRevert(RecknEscrow.SameResolver.selector);
+        escrow.slashWithQuorum(faulty, fv, fr, fs, truth, quorum);
+    }
+
+    function test_registry_slashByQuorum_only_slasher() public {
+        vm.prank(buyer);
+        vm.expectRevert(ResolverRegistry.NotQuorumSlasher.selector);
+        registry.slashByQuorum(resolver, buyer, BOND);
+    }
+
+    function test_registry_quorum_setters_only_owner() public {
+        vm.prank(buyer);
+        vm.expectRevert(ResolverRegistry.NotOwner.selector);
+        registry.setQuorumThreshold(3);
+        vm.prank(buyer);
+        vm.expectRevert(ResolverRegistry.NotOwner.selector);
+        registry.setQuorumSlasher(buyer);
     }
 }

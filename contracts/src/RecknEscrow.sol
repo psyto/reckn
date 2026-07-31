@@ -71,10 +71,20 @@ contract RecknEscrow {
         bytes32 verdictTraceHash;
     }
 
+    /// @notice An ECDSA signature of a `VerdictCommitment`, used to present a
+    ///         resolver quorum to `slashWithQuorum`.
+    struct Sig {
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+    }
+
     ResolverRegistry public immutable registry;
     bytes32 public immutable DOMAIN_SEPARATOR;
 
     mapping(bytes32 => Deal) public deals;
+    /// @notice Replay guard for `slashWithQuorum`: `(dealId, faultyResolver)`.
+    mapping(bytes32 => mapping(address => bool)) public quorumSlashed;
 
     event Funded(
         bytes32 indexed dealId,
@@ -116,6 +126,9 @@ contract RecknEscrow {
     event Fault(bytes32 indexed dealId, address indexed resolver, address indexed challenger, bytes32 challengerTraceHash);
     /// @notice A verdict was recorded and the optimistic settlement window opened.
     event SettlementOpened(bytes32 indexed dealId, address indexed resolver, Outcome outcome, uint64 settleDeadline);
+    /// @notice A resolver whose verdict a K-of-N quorum contradicted was slashed
+    ///         automatically; its bond went to the submitter as a bounty.
+    event QuorumSlashed(bytes32 indexed dealId, address indexed faultyResolver, address indexed submitter, uint256 amount, bytes32 quorumTraceHash);
 
     /// @notice Reputation evidence about the seller-agent, projected from a
     ///         re-execution verdict (ERC-8004 style). Unlike self-reported
@@ -159,6 +172,10 @@ contract RecknEscrow {
     error SettleWindowClosed();
     error SameResolver();
     error NotConflicting();
+    error BelowQuorum();
+    error QuorumNotRegistered();
+    error QuorumUnordered();
+    error AlreadySlashed();
 
     /// @dev Domain tag that binds an EIP-3009 authorization nonce to the exact
     ///      deal it funds. See {fundingNonce}.
@@ -355,6 +372,19 @@ contract RecknEscrow {
     /// @dev The committed fields must match the deal exactly, the backend/version
     ///      must be allow-listed, and the signer must be a registered resolver.
     ///      Shared by `resolve`, `resolveOptimistic`, and `challengeVerdict`.
+    /// @dev The committed fields must match the deal exactly (no fresh anchor /
+    ///      backend). Shared by the settlement paths and `slashWithQuorum`.
+    function _commitmentBindsDeal(Deal storage d, VerdictHash.VerdictCommitment calldata c)
+        private
+        view
+    {
+        if (
+            c.specHash != d.specHash || c.deliveryHash != d.deliveryHash
+                || c.prestateAnchorHash != d.prestateAnchorHash || c.backendId != d.backendId
+                || c.backendVersionHash != d.backendVersionHash
+        ) revert CommitmentMismatch();
+    }
+
     function _recoverRegisteredSigner(
         Deal storage d,
         VerdictHash.VerdictCommitment calldata c,
@@ -362,11 +392,7 @@ contract RecknEscrow {
         bytes32 r,
         bytes32 s
     ) private view returns (address signer) {
-        if (
-            c.specHash != d.specHash || c.deliveryHash != d.deliveryHash
-                || c.prestateAnchorHash != d.prestateAnchorHash || c.backendId != d.backendId
-                || c.backendVersionHash != d.backendVersionHash
-        ) revert CommitmentMismatch();
+        _commitmentBindsDeal(d, c);
         if (!registry.backendAllowed(c.backendId, c.backendVersionHash)) revert DisallowedBackend();
         signer = VerdictHash.recover(VerdictHash.digest(DOMAIN_SEPARATOR, _toMemory(c)), v, r, s);
         if (signer == address(0)) revert BadSignature();
@@ -471,6 +497,59 @@ contract RecknEscrow {
         d.state = DealState.Resolved;
         emit Fault(id, d.verdictResolver, challenger, c.traceHash);
         _pay(d, id, d.buyer, 5);
+    }
+
+    /// @notice Permissionlessly slash a resolver whose signed verdict a **K-of-N
+    ///         registered-resolver quorum contradicts**. Because the verdict is
+    ///         deterministic from committed inputs, K honest resolvers sign the
+    ///         same `truth`, so a resolver on the other side is provably wrong —
+    ///         no governance, no window. Its whole bond is a **bounty** to the
+    ///         submitter (sound under an honest-majority quorum). Independent of
+    ///         the deal's settlement state.
+    ///
+    ///         This is the achievable "quorum" step toward trustless enforcement;
+    ///         zero-trust single-signer adjudication still wants a fraud-proof VM
+    ///         or a ZK proof of the re-execution.
+    function slashWithQuorum(
+        VerdictHash.VerdictCommitment calldata faulty,
+        uint8 fv,
+        bytes32 fr,
+        bytes32 fs,
+        VerdictHash.VerdictCommitment calldata truth,
+        Sig[] calldata quorum
+    ) external {
+        bytes32 id = faulty.dealId;
+        if (truth.dealId != id) revert CommitmentMismatch();
+        Deal storage d = deals[id];
+        _commitmentBindsDeal(d, faulty);
+        _commitmentBindsDeal(d, truth);
+        // `truth` must actually disagree with the faulty verdict.
+        if (faulty.traceHash == truth.traceHash && faulty.outcome == truth.outcome) {
+            revert NotConflicting();
+        }
+
+        address faultyResolver =
+            VerdictHash.recover(VerdictHash.digest(DOMAIN_SEPARATOR, _toMemory(faulty)), fv, fr, fs);
+        if (faultyResolver == address(0)) revert BadSignature();
+        if (!registry.isResolver(faultyResolver)) revert UnknownResolver();
+        if (quorumSlashed[id][faultyResolver]) revert AlreadySlashed();
+
+        if (quorum.length < registry.quorumThreshold()) revert BelowQuorum();
+        bytes32 truthDigest = VerdictHash.digest(DOMAIN_SEPARATOR, _toMemory(truth));
+        address last = address(0);
+        for (uint256 i = 0; i < quorum.length; i++) {
+            address qs = VerdictHash.recover(truthDigest, quorum[i].v, quorum[i].r, quorum[i].s);
+            if (qs == address(0) || !registry.isResolver(qs)) revert QuorumNotRegistered();
+            // Strictly ascending => the quorum signers are distinct.
+            if (qs <= last) revert QuorumUnordered();
+            if (qs == faultyResolver) revert SameResolver();
+            last = qs;
+        }
+
+        quorumSlashed[id][faultyResolver] = true;
+        uint256 amount = registry.bond(faultyResolver);
+        emit QuorumSlashed(id, faultyResolver, msg.sender, amount, truth.traceHash);
+        registry.slashByQuorum(faultyResolver, msg.sender, amount);
     }
 
     // --- escape hatches so funds never lock forever ---

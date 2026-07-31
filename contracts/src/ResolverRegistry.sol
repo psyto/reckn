@@ -24,6 +24,13 @@ contract ResolverRegistry {
     mapping(address => uint256) public bond;
     uint256 public minBond;
 
+    /// @notice A contract (the escrow) authorized to slash on a verified quorum
+    ///         proof, so a resolver whose verdict a K-of-N quorum contradicts is
+    ///         slashed automatically — not only by owner governance.
+    address public quorumSlasher;
+    /// @notice K: how many co-signing registered resolvers make a quorum.
+    uint256 public quorumThreshold;
+
     event OwnerTransferred(address indexed from, address indexed to);
     event ResolverSet(address indexed resolver, bool allowed);
     event BackendSet(bytes32 indexed backendId, bytes32 indexed backendVersionHash, bool allowed);
@@ -31,11 +38,14 @@ contract ResolverRegistry {
     event BondDeposited(address indexed resolver, uint256 amount, uint256 total);
     event BondWithdrawn(address indexed resolver, uint256 amount, uint256 remaining);
     event Slashed(address indexed resolver, address indexed to, uint256 amount);
+    event QuorumSlasherSet(address indexed slasher);
+    event QuorumThresholdSet(uint256 threshold);
 
     error NotOwner();
     error ZeroAddress();
     error InsufficientBond();
     error TransferFailed();
+    error NotQuorumSlasher();
 
     modifier onlyOwner() {
         if (msg.sender != owner) revert NotOwner();
@@ -113,6 +123,31 @@ contract ResolverRegistry {
     ///         resolver signed a conflicting one. Automatic, trustless slashing
     ///         (quorum / fraud proof) is a separate, larger effort.
     function slash(address resolver, address to, uint256 amount) external onlyOwner {
+        _slash(resolver, to, amount);
+    }
+
+    // --- quorum-adjudicated automatic slashing ---
+
+    function setQuorumSlasher(address slasher) external onlyOwner {
+        quorumSlasher = slasher;
+        emit QuorumSlasherSet(slasher);
+    }
+
+    function setQuorumThreshold(uint256 threshold) external onlyOwner {
+        quorumThreshold = threshold;
+        emit QuorumThresholdSet(threshold);
+    }
+
+    /// @notice Slash a bond on behalf of the `quorumSlasher` (the escrow), which
+    ///         has verified that a K-of-N resolver quorum contradicts the faulty
+    ///         resolver's verdict. Trustless under an honest-majority quorum — no
+    ///         owner action required.
+    function slashByQuorum(address resolver, address to, uint256 amount) external {
+        if (msg.sender != quorumSlasher) revert NotQuorumSlasher();
+        _slash(resolver, to, amount);
+    }
+
+    function _slash(address resolver, address to, uint256 amount) internal {
         if (to == address(0)) revert ZeroAddress();
         if (amount > bond[resolver]) revert InsufficientBond();
         bond[resolver] -= amount;
