@@ -33,6 +33,11 @@ use std::{
     path::PathBuf,
 };
 
+// The optimistic-settlement challenge window the keeper opens when it commits a
+// verdict. Long enough for an independent party to reproduce the verdict and, if
+// wrong, challenge it before `finalizeSettlement` moves funds.
+const SETTLE_WINDOW_SECS: u64 = 3600;
+
 // Deliberately local ABI: the escrow itself remains VM-neutral and the keeper
 // uses this only at its chain-I/O edge.  Field ordering mirrors VerdictHash.sol.
 sol! {
@@ -49,6 +54,7 @@ sol! {
         bytes32 traceHash;
     }
     function resolve(VerdictCommitmentWire calldata c, uint8 v, bytes32 r, bytes32 s);
+    function resolveOptimistic(VerdictCommitmentWire calldata c, uint8 v, bytes32 r, bytes32 s, uint64 settleWindow);
     event Disputed(
         bytes32 indexed dealId,
         bytes32 specHash,
@@ -411,7 +417,12 @@ where
     let submitter = alloy::providers::ProviderBuilder::new()
         .wallet(EthereumWallet::from(signer.clone()))
         .connect_http(rpc_url.parse()?);
-    let calldata = resolveCall {
+    // Optimistic settlement is the default path: the verdict is committed and a
+    // challenge window opens (the reproducible verdict is public immediately), so
+    // a bonded resolver's wrong verdict can be challenged before funds move.
+    // `finalizeSettlement` pays after the window; a conflicting verdict refunds
+    // the buyer. See contracts/src/RecknEscrow.sol.
+    let calldata = resolveOptimisticCall {
         c: VerdictCommitmentWire {
             dealId: signed.commitment.deal_id,
             specHash: signed.commitment.spec_hash,
@@ -427,6 +438,7 @@ where
         v: signed.v,
         r: signed.r,
         s: signed.s,
+        settleWindow: SETTLE_WINDOW_SECS,
     }
     .abi_encode();
     let pending = submitter
@@ -436,7 +448,7 @@ where
                 .input(TransactionInput::both(Bytes::from(calldata))),
         )
         .await
-        .context("submit resolve()")?;
+        .context("submit resolveOptimistic()")?;
     let receipt = pending
         .get_receipt()
         .await

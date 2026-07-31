@@ -355,9 +355,11 @@ content publication.
   (`witnessContentHash`); `once` / `verify` then resolve that committed witness by
   hash and MPT-verify it against `anchor.state_root` before replay — they never
   replay a live RPC witness. Its HTTP shell polls `Disputed`, SHA-256-checks
-  content-store bytes before parsing, replays, and submits `resolve()`. The included
-  anvil E2E proves false claim → `Failed` → refund, and an honest credit →
-  `Reproduced` → release. `cargo test` + `forge test`: **keeper 3, contracts 40**.
+  content-store bytes before parsing, replays, and submits **`resolveOptimistic`**
+  (a bonded verdict that opens a challenge window). The included anvil E2E drives
+  the full optimistic path — commit verdict → window elapses → `finalizeSettlement`
+  → false claim `Failed` → refund / honest credit `Reproduced` → release — each
+  keylessly re-verified. `cargo test` + `forge test`: **keeper 3, contracts 40**.
 - **Independent re-verification (the trust property, executable):**
   `reckn-keeper verify <rpc> <escrow> <content-store> <dealId>` — a **keyless**
   third party reads the resolver's on-chain `VerdictCommitted` and re-derives the
@@ -372,10 +374,12 @@ content publication.
   into an economically-*enforced* one. Fully trustless single-signer adjudication
   (which of two conflicting resolvers is right, on-chain) still wants a fraud-proof
   VM or a ZK proof of the re-execution.
-- **Next:** make optimistic settlement the default (migrate keeper / e2e / the SVM
-  escrow mirror), a fraud-proof/quorum path for automatic on-chain slashing, and
-  cross-chain settlement around the binder (finality on both chains + verdict
-  propagation + double-settle rules).
+  Optimistic settlement is now the **default EVM path** — the keeper submits
+  `resolveOptimistic` and `anvil-e2e.sh` drives commit → window → `finalizeSettlement`.
+- **Next:** mirror optimistic settlement in the SVM (Pinocchio) escrow, a
+  fraud-proof/quorum path for automatic on-chain slashing, and cross-chain
+  settlement around the binder (finality on both chains + verdict propagation +
+  double-settle rules).
 
 ## Try it (one command)
 
@@ -407,10 +411,13 @@ its SHA-256 into the delivery. The run has **two acts over the same frozen state
 In each act the keeper picks up the `Disputed` event, fetches the committed
 spec / delivery / anchor / **witness** from the content store (each hash-checked
 before parsing), MPT-verifies the witness against the anchor, **re-executes the
-seller's plan**, signs the verdict, and submits `resolve()`. Finally, a
-**keyless independent re-verifier** reads each on-chain verdict back and
-reproduces it from public inputs alone — proving the resolver couldn't have lied,
-for both the refund and the release.
+seller's plan**, signs the verdict, and submits **`resolveOptimistic`** — which
+commits the verdict and opens a bonded challenge window rather than paying
+instantly. With no conflicting verdict, the window elapses and anyone calls
+`finalizeSettlement` to pay per the verdict. Finally, a **keyless independent
+re-verifier** reads each on-chain verdict back and reproduces it from public
+inputs alone — proving the resolver couldn't have lied, for both the refund and
+the release.
 
 The run **narrates each phase in plain language** (with the real addresses, hashes,
 and deal id shown underneath), so it reads as a story even if you don't know the
