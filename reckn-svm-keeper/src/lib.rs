@@ -517,6 +517,11 @@ mod tests {
                 challenge_deadline: 3,
                 resolve_deadline: 4,
                 nonce: [11; 32],
+                settle_deadline: 0,
+                verdict_resolver: [0; 32],
+                verdict_trace_hash: [0; 32],
+                verdict_outcome: 0,
+                _pad2: [0; 7],
             };
             let store = FileContentStore::new(dir.path());
             let result = replay_disputed(&store, &deal).unwrap();
@@ -631,6 +636,11 @@ mod tests {
                 challenge_deadline: 3,
                 resolve_deadline: 4,
                 nonce: [11; 32],
+                settle_deadline: 0,
+                verdict_resolver: [0; 32],
+                verdict_trace_hash: [0; 32],
+                verdict_outcome: 0,
+                _pad2: [0; 7],
             }
         };
 

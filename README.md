@@ -302,10 +302,18 @@ content publication.
   never settle — only `timeout_refund` favors the buyer — and `ReputationEvidence`
   is logged (a dispute that times out emits a seller-attributed **evidence-withheld**
   signal — `FAILED` outcome with a zero trace and zero resolver — mirroring the EVM
-  escrow, so withholding replay material cannot dodge the negative mark). LiteSVM
-  tx-level e2e (release / refund / forged signature / swapped anchor / operational
-  outcome / timeout evidence-withheld / double-resolve / conservation):
-  **4 passing** via `cargo build-sbf`.
+  escrow, so withholding replay material cannot dodge the negative mark). It also
+  mirrors the EVM **optimistic settlement** faithfully: a per-resolver registry
+  (PDA allow-list, the Solana analogue of `ResolverRegistry`), lamport **bonds**,
+  `resolve_optimistic` (bonded, opens a challenge window in a new `SETTLING` state),
+  `finalize_settlement` (permissionless, after the window), and — since Solana can
+  verify a *second* resolver's Ed25519 verdict by introspection — a true
+  **peer-conflict** `challenge_verdict` that fail-safes to a buyer refund + `Fault`,
+  plus admin `slash`. LiteSVM tx-level e2e (instant release / refund / forged
+  signature / swapped anchor / operational outcome / timeout evidence-withheld /
+  double-resolve / conservation, **plus** optimistic finalize, unbonded/unregistered
+  rejects, peer-conflict refund, bond deposit/slash): **10 passing** via
+  `cargo build-sbf`.
 - **Keeper (Solana):** [`reckn-svm-keeper/`](reckn-svm-keeper) — the SVM analog of
   the EVM keeper: SHA-256-check the content store, match it to the on-chain deal,
   replay via `reexec-svm` (an operational error is never signed), build the
@@ -376,7 +384,11 @@ content publication.
   VM or a ZK proof of the re-execution.
   Optimistic settlement is now the **default EVM path** — the keeper submits
   `resolveOptimistic` and `anvil-e2e.sh` drives commit → window → `finalizeSettlement`.
-- **Next:** mirror optimistic settlement in the SVM (Pinocchio) escrow, a
+  The SVM escrow now mirrors optimistic settlement in-program (registry + bond +
+  window + peer-conflict + finalize + slash); migrating the `reckn-svm-keeper` to
+  drive it (the SVM analogue of the EVM Stage-A keeper migration) is the remaining
+  step.
+- **Next:** migrate `reckn-svm-keeper` to the optimistic SVM instructions, a
   fraud-proof/quorum path for automatic on-chain slashing, and cross-chain
   settlement around the binder (finality on both chains + verdict propagation +
   double-settle rules).

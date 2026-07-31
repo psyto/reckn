@@ -20,7 +20,7 @@ use pinocchio::{
     sysvars::{clock::Clock, instructions::Instructions, rent::Rent, Sysvar},
     ProgramResult,
 };
-use pinocchio_system::instructions::CreateAccount;
+use pinocchio_system::instructions::{CreateAccount, Transfer};
 
 pinocchio::program_entrypoint!(process_instruction);
 pinocchio::default_allocator!();
@@ -32,6 +32,15 @@ pub const ED25519_PROGRAM_ID: Pubkey =
     pinocchio_pubkey::from_str("Ed25519SigVerify111111111111111111111111111");
 pub const DEAL_SEED: &[u8] = b"reckn-deal";
 pub const CONFIG_SEED: &[u8] = b"reckn-resolver-config";
+/// Per-resolver registry PDA: `[RESOLVER_SEED, resolver_pubkey]`. Mirrors the EVM
+/// `ResolverRegistry` allow-list; its lamports above rent are the resolver's bond.
+pub const RESOLVER_SEED: &[u8] = b"reckn-resolver";
+
+/// The lamports a resolver must hold (above rent) to open an optimistic window.
+/// A program constant so the committed `ResolverConfig` layout is untouched.
+pub const MIN_BOND: u64 = 1_000_000_000; // 1 SOL
+/// Slots the optimistic challenge window stays open before `finalize` may settle.
+pub const SETTLE_WINDOW_SLOTS: u64 = 150;
 
 const TOKEN_IX_TRANSFER_CHECKED: u8 = 12;
 const TOKEN_ACCOUNT_LEN: usize = 165;
@@ -39,6 +48,7 @@ const MINT_DECIMALS_OFFSET: usize = 44;
 const ED25519_CURRENT_IX: u16 = u16::MAX;
 const VERDICT_DOMAIN: &[u8] = b"reckn/svm/verdict/v1";
 const EVIDENCE_DOMAIN: &[u8] = b"reckn-evidence/v1";
+const FAULT_DOMAIN: &[u8] = b"reckn-fault/v1";
 
 pub mod ix {
     pub const INITIALIZE_RESOLVER_CONFIG: u8 = 0;
@@ -47,6 +57,14 @@ pub mod ix {
     pub const CHALLENGE: u8 = 3;
     pub const RESOLVE: u8 = 4;
     pub const TIMEOUT_REFUND: u8 = 5;
+    // Optimistic settlement + multi-resolver registry (mirror of the EVM escrow).
+    pub const SET_RESOLVER: u8 = 6;
+    pub const DEPOSIT_BOND: u8 = 7;
+    pub const WITHDRAW_BOND: u8 = 8;
+    pub const SLASH: u8 = 9;
+    pub const RESOLVE_OPTIMISTIC: u8 = 10;
+    pub const FINALIZE_SETTLEMENT: u8 = 11;
+    pub const CHALLENGE_VERDICT: u8 = 12;
 }
 
 pub mod state {
@@ -54,6 +72,8 @@ pub mod state {
     pub const DELIVERED: u8 = 2;
     pub const DISPUTED: u8 = 3;
     pub const RESOLVED: u8 = 4;
+    /// A verdict is committed and the optimistic challenge window is open.
+    pub const SETTLING: u8 = 5;
 }
 
 pub mod outcome {
@@ -85,6 +105,15 @@ pub mod err {
     pub const ZERO_AMOUNT: ProgramError = ProgramError::Custom(0x5213);
     pub const BAD_DEADLINES: ProgramError = ProgramError::Custom(0x5214);
     pub const VAULT_NOT_EMPTY: ProgramError = ProgramError::Custom(0x5215);
+    pub const NOT_ADMIN: ProgramError = ProgramError::Custom(0x5216);
+    pub const NOT_RESOLVER: ProgramError = ProgramError::Custom(0x5217);
+    pub const NOT_BONDED: ProgramError = ProgramError::Custom(0x5218);
+    pub const SETTLE_WINDOW_OPEN: ProgramError = ProgramError::Custom(0x5219);
+    pub const SETTLE_WINDOW_CLOSED: ProgramError = ProgramError::Custom(0x521A);
+    pub const SAME_RESOLVER: ProgramError = ProgramError::Custom(0x521B);
+    pub const NOT_CONFLICTING: ProgramError = ProgramError::Custom(0x521C);
+    pub const INSUFFICIENT_BOND: ProgramError = ProgramError::Custom(0x521D);
+    pub const RESOLVER_MISMATCH: ProgramError = ProgramError::Custom(0x521E);
 }
 
 /// A resolver configuration is an allowlist of exactly one V2 backend/runtime
@@ -129,9 +158,32 @@ pub struct Deal {
     pub challenge_deadline: u64,
     pub resolve_deadline: u64,
     pub nonce: [u8; 32],
+    // Optimistic settlement — appended so `state` (offset 1) and every existing
+    // field keep their offsets; the layout stays 8-byte aligned with no padding.
+    // Written by RESOLVE_OPTIMISTIC, read by FINALIZE_SETTLEMENT / CHALLENGE_VERDICT.
+    pub settle_deadline: u64,
+    pub verdict_resolver: [u8; 32],
+    pub verdict_trace_hash: [u8; 32],
+    pub verdict_outcome: u8,
+    pub _pad2: [u8; 7],
 }
 
 impl Deal {
+    pub const LEN: usize = core::mem::size_of::<Self>();
+}
+
+/// A registered resolver. PDA: `[RESOLVER_SEED, key]`. Its lamports above rent are
+/// its bond. The EVM analogue is `ResolverRegistry`'s `isResolver` + `bond`.
+#[repr(C)]
+#[derive(Clone, Copy, Pod, Zeroable)]
+pub struct Resolver {
+    pub bump: u8,
+    pub allowed: u8,
+    pub _pad: [u8; 6],
+    pub key: [u8; 32],
+}
+
+impl Resolver {
     pub const LEN: usize = core::mem::size_of::<Self>();
 }
 
@@ -205,6 +257,13 @@ pub fn process_instruction(
         ix::CHALLENGE => challenge(program_id, accounts),
         ix::RESOLVE => resolve(program_id, accounts, rest),
         ix::TIMEOUT_REFUND => timeout_refund(program_id, accounts),
+        ix::SET_RESOLVER => set_resolver(program_id, accounts, rest),
+        ix::DEPOSIT_BOND => deposit_bond(program_id, accounts, rest),
+        ix::WITHDRAW_BOND => withdraw_bond(program_id, accounts, rest),
+        ix::SLASH => slash(program_id, accounts, rest),
+        ix::RESOLVE_OPTIMISTIC => resolve_optimistic(program_id, accounts, rest),
+        ix::FINALIZE_SETTLEMENT => finalize_settlement(program_id, accounts),
+        ix::CHALLENGE_VERDICT => challenge_verdict(program_id, accounts, rest),
         _ => Err(ProgramError::InvalidInstructionData),
     }
 }
@@ -345,6 +404,11 @@ fn fund(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> ProgramRe
             challenge_deadline,
             resolve_deadline,
             nonce,
+            settle_deadline: 0,
+            verdict_resolver: [0; 32],
+            verdict_trace_hash: [0; 32],
+            verdict_outcome: 0,
+            _pad2: [0; 7],
         };
     }
     cpi_transfer_checked(
@@ -430,24 +494,13 @@ fn resolve(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> Progra
     if commitment.outcome != outcome::REPRODUCED && commitment.outcome != outcome::FAILED {
         return Err(err::BAD_OUTCOME);
     }
-    if commitment.deal_id != *deal_ai.key()
-        || commitment.spec_hash != deal.spec_hash
-        || commitment.delivery_hash != deal.delivery_hash
-        || commitment.anchor_hash != deal.anchor_hash
-        || commitment.backend_id != deal.backend_id
-        || commitment.backend_version_hash != deal.backend_version_hash
-        || commitment.runtime_profile_hash != deal.runtime_profile_hash
-    {
-        return Err(err::COMMITMENT_MISMATCH);
-    }
-    if config.backend_id != deal.backend_id
-        || config.backend_version_hash != deal.backend_version_hash
-        || config.runtime_profile_hash != deal.runtime_profile_hash
-    {
-        return Err(err::DISALLOWED_BACKEND);
-    }
+    check_commitment_binds_deal(&commitment, &deal, deal_ai)?;
+    check_backend_allowed(&config, &deal)?;
     let message = verdict_message(program_id, &config, &commitment);
-    verify_preceding_ed25519(instructions_ai, &config.resolver, &message)?;
+    let signer = verify_preceding_ed25519(instructions_ai, &message)?;
+    if signer != config.resolver {
+        return Err(err::BAD_ED25519_SIGNER);
+    }
     validate_mint(mint)?;
     validate_token_account(vault, mint.key(), deal_ai.key())?;
     let expected_recipient = if commitment.outcome == outcome::REPRODUCED {
@@ -543,6 +596,320 @@ fn timeout_refund(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResul
     Ok(())
 }
 
+// --- multi-resolver registry + bonds (mirror of the EVM ResolverRegistry) ---
+
+fn require_admin(admin: &AccountInfo, config: &ResolverConfig) -> ProgramResult {
+    require_signer(admin)?;
+    if *admin.key() != config.admin {
+        return Err(err::NOT_ADMIN);
+    }
+    Ok(())
+}
+
+/// Validate the resolver registry PDA for `key` and return its (allowed) pod.
+fn read_resolver(
+    program_id: &Pubkey,
+    resolver_ai: &AccountInfo,
+    key: &[u8; 32],
+) -> Result<Resolver, ProgramError> {
+    let (expected, _) = find_program_address(&[RESOLVER_SEED, key], program_id);
+    if resolver_ai.key() != &expected || resolver_ai.owner() != program_id {
+        return Err(err::RESOLVER_MISMATCH);
+    }
+    let raw = resolver_ai.try_borrow_data()?;
+    let r = bytemuck::try_from_bytes::<Resolver>(raw.get(..Resolver::LEN).ok_or(err::BAD_DATA)?)
+        .copied()
+        .map_err(|_| err::BAD_DATA)?;
+    if r.allowed == 0 {
+        return Err(err::NOT_RESOLVER);
+    }
+    Ok(r)
+}
+
+/// A resolver is bonded when its lamports cover rent plus the required stake.
+fn require_bonded(resolver_ai: &AccountInfo) -> ProgramResult {
+    let rent = Rent::get()?.minimum_balance(Resolver::LEN);
+    if resolver_ai.lamports() < rent.saturating_add(MIN_BOND) {
+        return Err(err::NOT_BONDED);
+    }
+    Ok(())
+}
+
+/// Move `amount` lamports out of a program-owned account, never below `keep`.
+fn move_lamports(from: &AccountInfo, to: &AccountInfo, amount: u64, keep: u64) -> ProgramResult {
+    if from.lamports().saturating_sub(amount) < keep {
+        return Err(err::INSUFFICIENT_BOND);
+    }
+    *from.try_borrow_mut_lamports()? -= amount;
+    *to.try_borrow_mut_lamports()? += amount;
+    Ok(())
+}
+
+// Accounts: [admin signer, config, resolver PDA writable, system]
+// Data: resolver_key(32) allowed(1)
+fn set_resolver(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
+    let [admin, config_ai, resolver_ai, _system] = take4(accounts)?;
+    let config = read_config(program_id, config_ai)?;
+    require_admin(admin, &config)?;
+    if data.len() != 33 {
+        return Err(err::BAD_DATA);
+    }
+    let key = array32(data, 0)?;
+    let allowed = data[32];
+    let (expected, bump) = find_program_address(&[RESOLVER_SEED, &key], program_id);
+    if resolver_ai.key() != &expected {
+        return Err(err::PDA_MISMATCH);
+    }
+    if resolver_ai.owner() != program_id {
+        let lamports = Rent::get()?.minimum_balance(Resolver::LEN);
+        let bump_seed = [bump];
+        let seeds = [
+            Seed::from(RESOLVER_SEED),
+            Seed::from(&key),
+            Seed::from(&bump_seed),
+        ];
+        CreateAccount {
+            from: admin,
+            to: resolver_ai,
+            lamports,
+            space: Resolver::LEN as u64,
+            owner: program_id,
+        }
+        .invoke_signed(&[Signer::from(&seeds)])?;
+    }
+    let mut raw = resolver_ai.try_borrow_mut_data()?;
+    let r: &mut Resolver =
+        bytemuck::try_from_bytes_mut(raw.get_mut(..Resolver::LEN).ok_or(err::BAD_DATA)?)
+            .map_err(|_| err::BAD_DATA)?;
+    r.bump = bump;
+    r.allowed = allowed;
+    r._pad = [0; 6];
+    r.key = key;
+    Ok(())
+}
+
+// Accounts: [payer signer, resolver PDA writable, system]
+// Data: resolver_key(32) amount(8). Anyone may fund a resolver's bond.
+fn deposit_bond(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
+    let [payer, resolver_ai, _system] = take3(accounts)?;
+    require_signer(payer)?;
+    if data.len() != 40 {
+        return Err(err::BAD_DATA);
+    }
+    let key = array32(data, 0)?;
+    let amount = read_u64(data, 32)?;
+    read_resolver(program_id, resolver_ai, &key)?;
+    Transfer {
+        from: payer,
+        to: resolver_ai,
+        lamports: amount,
+    }
+    .invoke()?;
+    Ok(())
+}
+
+// Accounts: [resolver signer, resolver PDA writable, destination writable]
+// Data: amount(8). The resolver reclaims unslashed bond, never below rent.
+fn withdraw_bond(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
+    let [resolver, resolver_ai, destination] = take3(accounts)?;
+    require_signer(resolver)?;
+    if data.len() != 8 {
+        return Err(err::BAD_DATA);
+    }
+    let amount = read_u64(data, 0)?;
+    read_resolver(program_id, resolver_ai, resolver.key())?;
+    let rent = Rent::get()?.minimum_balance(Resolver::LEN);
+    move_lamports(resolver_ai, destination, amount, rent)?;
+    Ok(())
+}
+
+// Accounts: [admin signer, config, resolver PDA writable, destination writable]
+// Data: resolver_key(32) amount(8). Governance slashes a proven-faulty resolver.
+fn slash(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
+    let [admin, config_ai, resolver_ai, destination] = take4(accounts)?;
+    let config = read_config(program_id, config_ai)?;
+    require_admin(admin, &config)?;
+    if data.len() != 40 {
+        return Err(err::BAD_DATA);
+    }
+    let key = array32(data, 0)?;
+    let amount = read_u64(data, 32)?;
+    read_resolver(program_id, resolver_ai, &key)?;
+    let rent = Rent::get()?.minimum_balance(Resolver::LEN);
+    move_lamports(resolver_ai, destination, amount, rent)?;
+    Ok(())
+}
+
+// --- optimistic settlement (mirror of resolveOptimistic / finalize / challenge) ---
+
+fn record_verdict(
+    deal_ai: &AccountInfo,
+    settle_deadline: u64,
+    resolver: &[u8; 32],
+    trace_hash: &[u8; 32],
+    outcome: u8,
+) -> ProgramResult {
+    let mut raw = deal_ai.try_borrow_mut_data()?;
+    let deal: &mut Deal =
+        bytemuck::try_from_bytes_mut(raw.get_mut(..Deal::LEN).ok_or(err::BAD_DATA)?)
+            .map_err(|_| err::BAD_DATA)?;
+    deal.state = state::SETTLING;
+    deal.settle_deadline = settle_deadline;
+    deal.verdict_resolver = *resolver;
+    deal.verdict_trace_hash = *trace_hash;
+    deal.verdict_outcome = outcome;
+    Ok(())
+}
+
+/// The deal-PDA signing CPI that empties the vault to `destination`.
+fn pay_from_vault(
+    deal_ai: &AccountInfo,
+    deal: &Deal,
+    vault: &AccountInfo,
+    mint: &AccountInfo,
+    destination: &AccountInfo,
+) -> ProgramResult {
+    let bump = [deal.bump];
+    let seeds = [
+        Seed::from(DEAL_SEED),
+        Seed::from(&deal.buyer),
+        Seed::from(&deal.seller),
+        Seed::from(&deal.nonce),
+        Seed::from(&bump),
+    ];
+    cpi_transfer_checked(
+        vault,
+        mint,
+        destination,
+        deal_ai,
+        deal.amount,
+        mint_decimals(mint)?,
+        &[Signer::from(&seeds)],
+    )
+}
+
+// Accounts: [deal PDA writable, config, resolver PDA, instructions sysvar]
+// Data: VerdictCommitment (321). Bonded, registered resolver only. Records the
+// verdict and opens the challenge window; no payout.
+fn resolve_optimistic(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
+    let [deal_ai, config_ai, resolver_ai, instructions_ai] = take4(accounts)?;
+    let commitment = VerdictCommitment::parse(data)?;
+    let config = read_config(program_id, config_ai)?;
+    let deal = read_deal(program_id, deal_ai)?;
+    if deal.state != state::DISPUTED {
+        return Err(err::BAD_STATE);
+    }
+    if Clock::get()?.slot > deal.resolve_deadline {
+        return Err(err::DEADLINE_PASSED);
+    }
+    if commitment.outcome != outcome::REPRODUCED && commitment.outcome != outcome::FAILED {
+        return Err(err::BAD_OUTCOME);
+    }
+    check_commitment_binds_deal(&commitment, &deal, deal_ai)?;
+    check_backend_allowed(&config, &deal)?;
+    let message = verdict_message(program_id, &config, &commitment);
+    let signer = verify_preceding_ed25519(instructions_ai, &message)?;
+    read_resolver(program_id, resolver_ai, &signer)?;
+    require_bonded(resolver_ai)?;
+
+    let settle_deadline = Clock::get()?.slot + SETTLE_WINDOW_SLOTS;
+    record_verdict(
+        deal_ai,
+        settle_deadline,
+        &signer,
+        &commitment.trace_hash,
+        commitment.outcome,
+    )?;
+    msg!("RecknSettlementOpened");
+    Ok(())
+}
+
+// Accounts: [deal PDA writable, vault writable, destination token writable, mint,
+// token_2022]. Permissionless once the window has elapsed.
+fn finalize_settlement(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+    let [deal_ai, vault, destination, mint, token_program] = take5(accounts)?;
+    require_token_program(token_program)?;
+    let deal = read_deal(program_id, deal_ai)?;
+    if deal.state != state::SETTLING {
+        return Err(err::BAD_STATE);
+    }
+    if Clock::get()?.slot <= deal.settle_deadline {
+        return Err(err::SETTLE_WINDOW_OPEN);
+    }
+    validate_mint(mint)?;
+    validate_token_account(vault, mint.key(), deal_ai.key())?;
+    let recipient = if deal.verdict_outcome == outcome::REPRODUCED {
+        deal.seller
+    } else {
+        deal.buyer
+    };
+    validate_token_account(destination, mint.key(), &recipient)?;
+    set_state(deal_ai, state::RESOLVED)?;
+    emit_reputation_evidence(
+        &deal.seller,
+        deal_ai.key(),
+        deal.verdict_outcome,
+        &deal.verdict_trace_hash,
+        &deal.backend_id,
+        &deal.verdict_resolver,
+        Clock::get()?.slot,
+    );
+    pay_from_vault(deal_ai, &deal, vault, mint, destination)?;
+    msg!("RecknSettled");
+    Ok(())
+}
+
+// Accounts: [deal PDA writable, config, vault writable, buyer destination token
+// writable, mint, token_2022, challenger resolver PDA, instructions sysvar]
+// Data: the challenger's conflicting VerdictCommitment (321).
+fn challenge_verdict(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
+    let [deal_ai, config_ai, vault, buyer_destination, mint, token_program, challenger_ai, instructions_ai] =
+        take8(accounts)?;
+    require_token_program(token_program)?;
+    let commitment = VerdictCommitment::parse(data)?;
+    let config = read_config(program_id, config_ai)?;
+    let deal = read_deal(program_id, deal_ai)?;
+    if deal.state != state::SETTLING {
+        return Err(err::BAD_STATE);
+    }
+    if Clock::get()?.slot > deal.settle_deadline {
+        return Err(err::SETTLE_WINDOW_CLOSED);
+    }
+    if commitment.outcome != outcome::REPRODUCED && commitment.outcome != outcome::FAILED {
+        return Err(err::BAD_OUTCOME);
+    }
+    check_commitment_binds_deal(&commitment, &deal, deal_ai)?;
+    check_backend_allowed(&config, &deal)?;
+    let message = verdict_message(program_id, &config, &commitment);
+    let challenger = verify_preceding_ed25519(instructions_ai, &message)?;
+    read_resolver(program_id, challenger_ai, &challenger)?;
+    if challenger == deal.verdict_resolver {
+        return Err(err::SAME_RESOLVER);
+    }
+    // A conflict is any disagreement on the deterministic verdict.
+    if commitment.outcome == deal.verdict_outcome && commitment.trace_hash == deal.verdict_trace_hash
+    {
+        return Err(err::NOT_CONFLICTING);
+    }
+    validate_mint(mint)?;
+    validate_token_account(vault, mint.key(), deal_ai.key())?;
+    validate_token_account(buyer_destination, mint.key(), &deal.buyer)?;
+    set_state(deal_ai, state::RESOLVED)?;
+    // Two registered resolvers disagree on a deterministic verdict — a provable
+    // fault. The program cannot tell on-chain which signer is honest, so it
+    // fail-safes to a buyer refund and logs the fault for governance to slash.
+    msg!("RecknFault");
+    pinocchio::log::sol_log_data(&[
+        FAULT_DOMAIN,
+        deal_ai.key().as_ref(),
+        &deal.verdict_resolver,
+        &challenger,
+        &commitment.trace_hash,
+    ]);
+    pay_from_vault(deal_ai, &deal, vault, mint, buyer_destination)?;
+    Ok(())
+}
+
 /// Emit ERC-8004-style seller reputation evidence without participating in
 /// settlement. `reckn-evidence/v1` fields are, in order:
 /// `(domain, seller_agent, outcome, deal_id, trace_hash, backend_id, resolver,
@@ -572,6 +939,36 @@ fn emit_reputation_evidence(
         resolver,
         &evidence_slot,
     ]);
+}
+
+/// The verdict's committed fields must match the deal exactly (no fresh anchor or
+/// backend). Shared by `resolve`, `resolve_optimistic`, and `challenge_verdict`.
+fn check_commitment_binds_deal(
+    commitment: &VerdictCommitment,
+    deal: &Deal,
+    deal_ai: &AccountInfo,
+) -> ProgramResult {
+    if commitment.deal_id != *deal_ai.key()
+        || commitment.spec_hash != deal.spec_hash
+        || commitment.delivery_hash != deal.delivery_hash
+        || commitment.anchor_hash != deal.anchor_hash
+        || commitment.backend_id != deal.backend_id
+        || commitment.backend_version_hash != deal.backend_version_hash
+        || commitment.runtime_profile_hash != deal.runtime_profile_hash
+    {
+        return Err(err::COMMITMENT_MISMATCH);
+    }
+    Ok(())
+}
+
+fn check_backend_allowed(config: &ResolverConfig, deal: &Deal) -> ProgramResult {
+    if config.backend_id != deal.backend_id
+        || config.backend_version_hash != deal.backend_version_hash
+        || config.runtime_profile_hash != deal.runtime_profile_hash
+    {
+        return Err(err::DISALLOWED_BACKEND);
+    }
+    Ok(())
 }
 
 fn read_config(
@@ -692,11 +1089,14 @@ fn require_signer(account: &AccountInfo) -> ProgramResult {
     Ok(())
 }
 
+/// Verify the immediately-preceding native Ed25519 instruction binds
+/// `expected_message`, and return the **recovered signer pubkey**. The caller
+/// decides who is authorized (a fixed `config.resolver`, or registry membership) —
+/// this makes the same introspection serve both single- and multi-resolver paths.
 fn verify_preceding_ed25519(
     instructions_ai: &AccountInfo,
-    expected_signer: &[u8; 32],
     expected_message: &[u8],
-) -> ProgramResult {
+) -> Result<[u8; 32], ProgramError> {
     let instructions = Instructions::try_from(instructions_ai)?;
     if instructions.load_current_index() == 0 {
         return Err(err::BAD_ED25519);
@@ -724,13 +1124,11 @@ fn verify_preceding_ed25519(
     if slice(data, sig_off, 64).is_err() {
         return Err(err::BAD_ED25519);
     }
-    if slice(data, pk_off, 32)? != expected_signer {
-        return Err(err::BAD_ED25519_SIGNER);
-    }
+    let signer = array32(data, pk_off)?;
     if msg_len != expected_message.len() || slice(data, msg_off, msg_len)? != expected_message {
         return Err(err::BAD_ED25519_MESSAGE);
     }
-    Ok(())
+    Ok(signer)
 }
 
 const VERDICT_MESSAGE_LEN: usize = VERDICT_DOMAIN.len() + 32 + 32 + 32 + VerdictCommitment::LEN;
@@ -794,9 +1192,21 @@ fn take3(accounts: &[AccountInfo]) -> Result<[&AccountInfo; 3], ProgramError> {
         _ => Err(ProgramError::NotEnoughAccountKeys),
     }
 }
+fn take4(accounts: &[AccountInfo]) -> Result<[&AccountInfo; 4], ProgramError> {
+    match accounts {
+        [a, b, c, d, ..] => Ok([a, b, c, d]),
+        _ => Err(ProgramError::NotEnoughAccountKeys),
+    }
+}
 fn take5(accounts: &[AccountInfo]) -> Result<[&AccountInfo; 5], ProgramError> {
     match accounts {
         [a, b, c, d, e, ..] => Ok([a, b, c, d, e]),
+        _ => Err(ProgramError::NotEnoughAccountKeys),
+    }
+}
+fn take8(accounts: &[AccountInfo]) -> Result<[&AccountInfo; 8], ProgramError> {
+    match accounts {
+        [a, b, c, d, e, f, g, h, ..] => Ok([a, b, c, d, e, f, g, h]),
         _ => Err(ProgramError::NotEnoughAccountKeys),
     }
 }

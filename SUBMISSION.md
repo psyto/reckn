@@ -93,7 +93,7 @@ live and tested — on **both** VMs, behind **one** router.
 
 | Layer | EVM | Solana (SVM) |
 |---|---|---|
-| Settlement contract | `contracts/` (Solidity) — 40 tests (incl. verified EIP-3009 funding) | `escrow-svm/` (Pinocchio) — 4 LiteSVM e2e |
+| Settlement contract | `contracts/` (Solidity) — 40 tests (incl. verified EIP-3009 funding) | `escrow-svm/` (Pinocchio, optimistic settlement) — 10 LiteSVM e2e |
 | Re-execution backend | `reexec-evm/` (revm 38, offline MPT + header binding) — 16 tests | `reexec-svm/` (LiteSVM V2, closed-world, `bank_hash` verifier + archive binding) — 30 tests |
 | Keeper + keyless verify | `keeper/` (EIP-712) — 3 tests + `anvil-e2e.sh` | `reckn-svm-keeper/` (Ed25519) — full-loop |
 | Shared verdict record | `packages/protocol-rs` (`ReplayRecordV1`) — one type both VMs emit | ← same |
@@ -199,4 +199,4 @@ positioned; if it stalls, the verdict still reproduces anywhere.
       + video links.
 - [ ] **`bash scripts/anvil-e2e.sh` green** on a clean clone (Foundry + Rust + jq).
 - [ ] Test tally current in README (contracts 40, reexec-evm 16, reexec-svm 30,
-      binder 6, keeper 3, escrow-svm 4, evm-content 5, record 1).
+      binder 6, keeper 3, escrow-svm 10, evm-content 5, record 1).

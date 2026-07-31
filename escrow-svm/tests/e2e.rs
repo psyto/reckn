@@ -4,7 +4,7 @@ use {
     litesvm::LiteSVM,
     reckn_escrow_svm::{
         ix, outcome, state, verdict_message, ResolverConfig, VerdictCommitment, CONFIG_SEED,
-        DEAL_SEED, TOKEN_2022_PROGRAM_ID,
+        DEAL_SEED, MIN_BOND, RESOLVER_SEED, TOKEN_2022_PROGRAM_ID,
     },
     solana_account::Account,
     solana_address::Address,
@@ -29,6 +29,7 @@ struct Env {
     buyer: Keypair,
     seller: Keypair,
     resolver: SigningKey,
+    resolver2: SigningKey,
     mint: Address,
     source: Address,
     vault: Address,
@@ -145,6 +146,149 @@ fn timeout_refund_emits_seller_attributed_evidence_withheld_before_refund() {
     assert_eq!(env.token_amount(env.vault), 0);
 }
 
+// --- optimistic settlement: multi-resolver registry + bond + challenge window ---
+
+#[test]
+fn optimistic_reproduced_finalizes_to_seller_after_window() {
+    let mut env = Env::new();
+    env.setup_optimistic();
+    let total = env.total_tokens();
+    let c = env.commitment(outcome::REPRODUCED);
+    let r1 = env.resolver.clone();
+    env.resolve_optimistic(&r1, &c).expect("optimistic resolve");
+    assert_eq!(env.deal_state(), state::SETTLING);
+    assert_eq!(env.token_amount(env.vault), AMOUNT, "held during window");
+
+    // Finalizing inside the window is rejected.
+    assert!(env.finalize(true).is_err(), "finalize before window close");
+
+    env.svm.warp_to_slot(1_000);
+    env.svm.expire_blockhash(); // distinct blockhash so the retry isn't a dup tx
+    env.finalize(true).expect("finalize after window");
+    assert_eq!(env.deal_state(), state::RESOLVED);
+    assert_eq!(env.token_amount(env.seller_destination), AMOUNT, "seller paid");
+    assert_eq!(env.token_amount(env.vault), 0);
+    assert_eq!(env.total_tokens(), total, "tokens conserved");
+}
+
+#[test]
+fn optimistic_failed_finalizes_to_buyer() {
+    let mut env = Env::new();
+    env.setup_optimistic();
+    let c = env.commitment(outcome::FAILED);
+    let r1 = env.resolver.clone();
+    env.resolve_optimistic(&r1, &c).expect("optimistic resolve");
+    env.svm.warp_to_slot(1_000);
+    env.finalize(false).expect("finalize");
+    assert_eq!(env.token_amount(env.source), AMOUNT, "buyer refunded");
+    assert_eq!(env.token_amount(env.vault), 0);
+}
+
+#[test]
+fn optimistic_rejects_unbonded_and_unregistered_resolvers() {
+    let mut env = Env::new();
+    env.initialize_and_dispute();
+    let c = env.commitment(outcome::REPRODUCED);
+    let r1 = env.resolver.clone();
+
+    // Registered but not bonded → NOT_BONDED.
+    env.register(r1.verifying_key().to_bytes(), true).unwrap();
+    assert!(env.resolve_optimistic(&r1, &c).is_err(), "unbonded accepted");
+
+    // A signer with no registry PDA cannot resolve either.
+    let stranger = SigningKey::from_bytes(&[99; 32]);
+    assert!(
+        env.resolve_optimistic(&stranger, &c).is_err(),
+        "unregistered accepted"
+    );
+}
+
+#[test]
+fn conflicting_second_resolver_refunds_buyer_and_emits_fault() {
+    let mut env = Env::new();
+    env.setup_optimistic();
+    let total = env.total_tokens();
+    // Resolver 1 opens the window with Reproduced.
+    let c1 = env.commitment(outcome::REPRODUCED);
+    let r1 = env.resolver.clone();
+    env.resolve_optimistic(&r1, &c1).expect("optimistic resolve");
+
+    // Resolver 2 presents a conflicting (Failed) verdict within the window.
+    let c2 = env.commitment(outcome::FAILED);
+    let r2 = env.resolver2.clone();
+    let logs = env.challenge_verdict(&r2, &c2).expect("challenge");
+    assert!(
+        logs.iter().any(|l| l.contains("RecknFault")),
+        "fault logged: {logs:?}"
+    );
+    assert_eq!(env.deal_state(), state::RESOLVED);
+    assert_eq!(env.token_amount(env.source), AMOUNT, "conflict refunds buyer");
+    assert_eq!(env.token_amount(env.vault), 0);
+    assert_eq!(env.total_tokens(), total, "tokens conserved");
+}
+
+#[test]
+fn challenge_rejects_non_conflicting_same_resolver_and_after_window() {
+    let mut env = Env::new();
+    env.setup_optimistic();
+    let c1 = env.commitment(outcome::REPRODUCED);
+    let r1 = env.resolver.clone();
+    let r2 = env.resolver2.clone();
+    env.resolve_optimistic(&r1, &c1).expect("optimistic resolve");
+
+    // Same verdict from a second resolver is honest agreement, not a challenge.
+    let same = env.commitment(outcome::REPRODUCED);
+    assert!(
+        env.challenge_verdict(&r2, &same).is_err(),
+        "non-conflicting accepted"
+    );
+
+    // The original resolver cannot challenge its own verdict.
+    let conflict = env.commitment(outcome::FAILED);
+    assert!(
+        env.challenge_verdict(&r1, &conflict).is_err(),
+        "same-resolver challenge accepted"
+    );
+
+    // After the window closes, no challenge lands.
+    env.svm.warp_to_slot(1_000);
+    assert!(
+        env.challenge_verdict(&r2, &conflict).is_err(),
+        "after-window challenge accepted"
+    );
+}
+
+#[test]
+fn bond_deposit_and_admin_slash_move_lamports() {
+    let mut env = Env::new();
+    env.initialize_and_dispute();
+    let key = env.resolver.verifying_key().to_bytes();
+    env.register(key, true).unwrap();
+    let after_register = env.pda_lamports(key); // rent only
+    env.deposit_bond(key, MIN_BOND).unwrap();
+    assert_eq!(
+        env.pda_lamports(key),
+        after_register + MIN_BOND,
+        "bond deposited"
+    );
+
+    // Governance slashes the bond (admin = buyer). A non-admin cannot.
+    let mut data = vec![ix::SLASH];
+    data.extend_from_slice(&key);
+    data.extend_from_slice(&MIN_BOND.to_le_bytes());
+    let slash = program_ix(
+        data,
+        vec![
+            AccountMeta::new(env.buyer.pubkey(), true),
+            AccountMeta::new_readonly(env.config, false),
+            AccountMeta::new(env.resolver_pda(key), false),
+            AccountMeta::new(env.seller.pubkey(), false),
+        ],
+    );
+    env.send_buyer(vec![slash]).expect("admin slash");
+    assert_eq!(env.pda_lamports(key), after_register, "bond slashed to rent");
+}
+
 impl Env {
     fn new() -> Self {
         let mut svm = LiteSVM::new();
@@ -159,6 +303,7 @@ impl Env {
         let buyer = Keypair::new_from_array([1; 32]);
         let seller = Keypair::new_from_array([2; 32]);
         let resolver = SigningKey::from_bytes(&[3; 32]);
+        let resolver2 = SigningKey::from_bytes(&[30; 32]);
         svm.airdrop(&buyer.pubkey(), 10_000_000_000).unwrap();
         svm.airdrop(&seller.pubkey(), 10_000_000_000).unwrap();
 
@@ -188,6 +333,7 @@ impl Env {
             buyer,
             seller,
             resolver,
+            resolver2,
             mint,
             source,
             vault,
@@ -401,6 +547,152 @@ impl Env {
     }
     fn deal_state(&self) -> u8 {
         self.svm.get_account(&self.deal).unwrap().data[1]
+    }
+
+    // --- optimistic settlement helpers ---
+
+    fn resolver_pda(&self, key: [u8; 32]) -> Address {
+        Address::find_program_address(&[RESOLVER_SEED, &key], &PROGRAM_ID).0
+    }
+
+    fn config_value(&self) -> ResolverConfig {
+        ResolverConfig {
+            bump: 0,
+            _pad: [0; 7],
+            admin: self.buyer_bytes,
+            resolver: self.resolver.verifying_key().to_bytes(),
+            backend_id: [11; 32],
+            backend_version_hash: [12; 32],
+            runtime_profile_hash: [13; 32],
+            cluster_genesis_hash: [18; 32],
+        }
+    }
+
+    // The buyer is the config admin here, so it registers/bonds resolvers.
+    fn register(&mut self, key: [u8; 32], allowed: bool) -> Result<(), String> {
+        let mut data = vec![ix::SET_RESOLVER];
+        data.extend_from_slice(&key);
+        data.push(allowed as u8);
+        self.send_buyer(vec![program_ix(
+            data,
+            vec![
+                AccountMeta::new(self.buyer.pubkey(), true),
+                AccountMeta::new_readonly(self.config, false),
+                AccountMeta::new(self.resolver_pda(key), false),
+                AccountMeta::new_readonly(system_program::id(), false),
+            ],
+        )])
+    }
+
+    fn deposit_bond(&mut self, key: [u8; 32], amount: u64) -> Result<(), String> {
+        let mut data = vec![ix::DEPOSIT_BOND];
+        data.extend_from_slice(&key);
+        data.extend_from_slice(&amount.to_le_bytes());
+        self.send_buyer(vec![program_ix(
+            data,
+            vec![
+                AccountMeta::new(self.buyer.pubkey(), true),
+                AccountMeta::new(self.resolver_pda(key), false),
+                AccountMeta::new_readonly(system_program::id(), false),
+            ],
+        )])
+    }
+
+    fn register_and_bond(&mut self, signer: &SigningKey) {
+        let key = signer.verifying_key().to_bytes();
+        self.register(key, true).unwrap();
+        self.deposit_bond(key, MIN_BOND).unwrap();
+    }
+
+    // initialize_and_dispute + register/bond both resolvers.
+    fn setup_optimistic(&mut self) {
+        self.initialize_and_dispute();
+        let r1 = self.resolver.clone();
+        let r2 = self.resolver2.clone();
+        self.register_and_bond(&r1);
+        self.register_and_bond(&r2);
+    }
+
+    fn ed25519_for(&self, signer: &SigningKey, commitment: &VerdictCommitment) -> Instruction {
+        let message = verdict_message(PROGRAM_ID.as_array(), &self.config_value(), commitment);
+        let signature = signer.sign(&message).to_bytes();
+        new_ed25519_instruction_with_signature(
+            &message,
+            &signature,
+            &signer.verifying_key().to_bytes(),
+        )
+    }
+
+    fn resolve_optimistic(
+        &mut self,
+        signer: &SigningKey,
+        commitment: &VerdictCommitment,
+    ) -> Result<(), String> {
+        let ed = self.ed25519_for(signer, commitment);
+        let pda = self.resolver_pda(signer.verifying_key().to_bytes());
+        let mut encoded = [0u8; VerdictCommitment::LEN];
+        commitment.encode(&mut encoded);
+        let mut data = vec![ix::RESOLVE_OPTIMISTIC];
+        data.extend_from_slice(&encoded);
+        let call = program_ix(
+            data,
+            vec![
+                AccountMeta::new(self.deal, false),
+                AccountMeta::new_readonly(self.config, false),
+                AccountMeta::new_readonly(pda, false),
+                AccountMeta::new_readonly(instructions::id(), false),
+            ],
+        );
+        self.send_buyer(vec![ed, call])
+    }
+
+    fn finalize(&mut self, reproduced: bool) -> Result<(), String> {
+        let destination = if reproduced {
+            self.seller_destination
+        } else {
+            self.source
+        };
+        self.send_buyer(vec![program_ix(
+            vec![ix::FINALIZE_SETTLEMENT],
+            vec![
+                AccountMeta::new(self.deal, false),
+                AccountMeta::new(self.vault, false),
+                AccountMeta::new(destination, false),
+                AccountMeta::new_readonly(self.mint, false),
+                AccountMeta::new_readonly(token_2022(), false),
+            ],
+        )])
+    }
+
+    fn challenge_verdict(
+        &mut self,
+        signer: &SigningKey,
+        commitment: &VerdictCommitment,
+    ) -> Result<Vec<String>, String> {
+        let ed = self.ed25519_for(signer, commitment);
+        let pda = self.resolver_pda(signer.verifying_key().to_bytes());
+        let mut encoded = [0u8; VerdictCommitment::LEN];
+        commitment.encode(&mut encoded);
+        let mut data = vec![ix::CHALLENGE_VERDICT];
+        data.extend_from_slice(&encoded);
+        let call = program_ix(
+            data,
+            vec![
+                AccountMeta::new(self.deal, false),
+                AccountMeta::new_readonly(self.config, false),
+                AccountMeta::new(self.vault, false),
+                AccountMeta::new(self.source, false), // buyer destination
+                AccountMeta::new_readonly(self.mint, false),
+                AccountMeta::new_readonly(token_2022(), false),
+                AccountMeta::new_readonly(pda, false),
+                AccountMeta::new_readonly(instructions::id(), false),
+            ],
+        );
+        self.send_buyer_logs(vec![ed, call])
+    }
+
+    fn pda_lamports(&self, key: [u8; 32]) -> u64 {
+        self.svm.get_account(&self.resolver_pda(key)).unwrap().lamports
     }
 }
 
