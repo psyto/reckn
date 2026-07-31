@@ -18,10 +18,13 @@ use alloy_signer_local::PrivateKeySigner;
 use anyhow::{bail, Context as _, Result};
 use reckn_keeper::{build_commitment, sign_verdict, DealTerms, VerdictCommitment};
 use reckn_reexec_evm::{
-    replay, verify_witness_against_root, AccountWitness, EvmAnchorV1, EvmCallPlanV1, PredicateV1,
-    PrestateWitnessV1, ReexecCommitmentsV1, StorageWitnessV1,
+    header::verify_header_rlp_against_anchor, replay, verify_witness_against_root, AccountWitness,
+    EvmAnchorV1, EvmCallPlanV1, PredicateV1, PrestateWitnessV1, ReexecCommitmentsV1,
+    StorageWitnessV1,
 };
-use reckn_evm_content::{AnchorV11Json, DeliveryV11, SpecV11Json, WitnessJson, canonical_json, hash};
+use reckn_evm_content::{
+    AnchorV11Json, BlockHeaderContentV1, DeliveryV11, SpecV11Json, WitnessJson, canonical_json, hash,
+};
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use std::{
@@ -108,7 +111,7 @@ async fn build_transitive_witness<P>(
     provider: &P,
     anchor: &EvmAnchorV1,
     plan: &EvmCallPlanV1,
-) -> Result<PrestateWitnessV1>
+) -> Result<(PrestateWitnessV1, Vec<u8>)>
 where
     P: Provider<Ethereum>,
 {
@@ -127,6 +130,13 @@ where
             "RPC block hash differs from committed anchor at block {}",
             anchor.block_number
         );
+    }
+    // Capture the block header's consensus RLP so the keyless verdict path can
+    // later prove `anchor.state_root` is bound to `anchor.block_hash` offline
+    // (see `reexec_evm::header`). It must hash to the committed block hash.
+    let header_rlp = alloy_rlp::encode(&rpc_block.header.inner);
+    if alloy_primitives::keccak256(&header_rlp) != anchor.block_hash {
+        bail!("encoded header RLP does not hash to the committed block hash");
     }
     let request = TransactionRequest::default()
         .from(plan.caller)
@@ -197,7 +207,7 @@ where
     let witness = PrestateWitnessV1 { accounts };
     verify_witness_against_root(anchor, &witness)
         .map_err(|error| anyhow::anyhow!("operational witness verification error: {error:?}"))?;
-    Ok(witness)
+    Ok((witness, header_rlp))
 }
 
 /// Reconstruct the verdict from PUBLIC inputs only (content store + committed
@@ -240,6 +250,16 @@ where
     }
     let delivery: DeliveryV11 = store.load_json(terms.delivery_hash)?;
     let witness_hash = delivery.require_witness().map_err(anyhow::Error::msg)?;
+    // Snapshot authenticity: when a block header is committed, prove it binds
+    // `anchor.state_root` to `anchor.block_hash` (a real consensus value) before
+    // trusting the state root the witness is verified against. A mismatch is an
+    // operational error — no verdict — exactly like a bad witness. Enforced here,
+    // in the shared keyless path, so resolver and independent verifier agree.
+    if let Some(header_hash) = delivery.header_content_hash {
+        let header: BlockHeaderContentV1 = store.load_json(header_hash)?;
+        verify_header_rlp_against_anchor(header.header_rlp.as_ref(), &anchor)
+            .map_err(|e| anyhow::anyhow!("operational header verification error: {e:?}"))?;
+    }
     let plan: EvmCallPlanV1 = delivery.into();
     let predicate = PredicateV1::from(spec.predicate);
     // The resolver never feeds an RPC-created witness into settlement replay.
@@ -501,12 +521,20 @@ async fn main() -> Result<()> {
             let provider = alloy::providers::ProviderBuilder::new().connect_http(rpc_url.parse()?);
             let anchor: EvmAnchorV1 = store.load_json::<AnchorV11Json>(anchor_hash)?.try_into().map_err(anyhow::Error::msg)?;
             let plan: EvmCallPlanV1 = store.load_json::<DeliveryV11>(delivery_hash)?.into();
-            let witness = build_transitive_witness(&provider, &anchor, &plan).await?;
+            let (witness, header_rlp) = build_transitive_witness(&provider, &anchor, &plan).await?;
             if let Some(dir) = write {
                 let bytes = canonical_json(&WitnessJson::from(witness.clone()))?;
                 let witness_hash = hash(&bytes);
                 fs::write(dir.join(format!("{witness_hash:x}.json")), bytes)?;
                 println!("witnessContentHash={witness_hash:#x}");
+                // The block header binds state_root to block_hash for the keyless
+                // verdict path; commit it alongside the witness.
+                let header_bytes = canonical_json(&BlockHeaderContentV1 {
+                    header_rlp: header_rlp.into(),
+                })?;
+                let header_hash = hash(&header_bytes);
+                fs::write(dir.join(format!("{header_hash:x}.json")), header_bytes)?;
+                println!("headerContentHash={header_hash:#x}");
             }
             println!(
                 "witness verified: {} accounts at block {} ({:#x})",

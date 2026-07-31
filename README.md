@@ -241,9 +241,12 @@ content publication.
   `keccak256(rlp(header)) == block_hash` and the header's `state_root` +
   environment equal the anchor's — so a forged `state_root` is impossible without
   breaking the consensus `block_hash` (the EVM analogue of the SVM `bank_hash`
-  verifier), a mismatch being `OperationalError::HeaderMismatch`. Replay ignores
+  verifier), a mismatch being `OperationalError::HeaderMismatch`. This is
+  **enforced in the keyless verdict path** (the keeper commits the block header;
+  `recompute_verdict` verifies it) and exercised end-to-end against a real anvil
+  block header in [`anvil-e2e.sh`](#try-it-one-command). Replay ignores
   tx-validity ceremony (base-fee / nonce) so honest deliveries reproduce against
-  real blocks; balance for `value` is still enforced. `cargo test`: **15 passing**
+  real blocks; balance for `value` is still enforced. `cargo test`: **16 passing**
   (incl. adversarial: a no-op plan cannot forge a `POSTSTATE_DELTA` credit, and a
   `state_root` cannot be forged without breaking `block_hash`).
 - **Re-execution backend (Solana / SVM):** [`reexec-svm/`](reexec-svm) — the same
@@ -416,8 +419,11 @@ PASS: independent re-verification reproduced the RELEASE verdict.
 ```
 
 That is the entire trust chain end-to-end on a real node:
-`deal.prestateAnchorHash → checked anchor → state_root → MPT-proven witness →
-closed-world replay → verdict → settlement`.
+`deal.prestateAnchorHash → checked anchor → block_hash → RLP-verified header →
+state_root → MPT-proven witness → closed-world replay → verdict → settlement`.
+The `block_hash → header → state_root` link binds the committed state root to the
+real block: the keeper commits the anvil block header, and the keyless verdict path
+proves `keccak256(rlp(header)) == block_hash` before trusting `state_root`.
 
 ## Build & test
 
@@ -427,7 +433,7 @@ Each component is self-contained; there is no top-level build.
 # settlement contracts (Foundry) — 28 tests (incl. verified EIP-3009 funding + end-to-end on real engine output)
 cd contracts && forge install foundry-rs/forge-std --no-git && forge test
 
-# re-execution engine (revm 38, MPT-verified prestate + header binding) — 15 tests
+# re-execution engine (revm 38, MPT-verified prestate + header binding) — 16 tests
 cd reexec-evm && cargo test
 
 # keeper signature + content-store guard — 3 tests

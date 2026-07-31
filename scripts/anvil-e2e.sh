@@ -105,10 +105,14 @@ say "Seller attaches tamper-proof evidence of the state it ran against"
 witness_out=$(cargo run --quiet --manifest-path "$root/keeper/Cargo.toml" -- \
   witness "$rpc_url" "$store" "$anchor_hash" "$delivery_draft_hash" --write "$store")
 witness_hash=$(awk -F= '/^witnessContentHash=/{print $2}' <<<"$witness_out")
+header_hash=$(awk -F= '/^headerContentHash=/{print $2}' <<<"$witness_out")
 [[ "$witness_hash" =~ ^0x[0-9a-fA-F]{64}$ ]]
-printf '  witnessContentHash %s\n' "$witness_hash"
-delivery=$(jq -cn --arg caller "$buyer" --arg target "$token" --arg calldata "$calldata" --arg witness "$witness_hash" \
-  '{caller:$caller,target:$target,calldata:$calldata,value:"0x0",gasLimit:200000,witnessContentHash:$witness}')
+[[ "$header_hash" =~ ^0x[0-9a-fA-F]{64}$ ]]
+printf '  witnessContentHash %s\n  headerContentHash  %s\n' "$witness_hash" "$header_hash"
+# Commit the block header too: the keyless verdict path proves it binds
+# state_root to the real block_hash before trusting the state root.
+delivery=$(jq -cn --arg caller "$buyer" --arg target "$token" --arg calldata "$calldata" --arg witness "$witness_hash" --arg header "$header_hash" \
+  '{caller:$caller,target:$target,calldata:$calldata,value:"0x0",gasLimit:200000,witnessContentHash:$witness,headerContentHash:$header}')
 delivery_hash=$(printf %s "$delivery" | shasum -a 256 | awk '{print "0x" $1}')
 printf %s "$delivery" >"$store/${delivery_hash#0x}.json"
 spec=$(jq -cn --arg anchor "$anchor_hash" --arg backendId "$backend_id" --arg backendVersionHash "$backend_ver" \
@@ -208,9 +212,11 @@ say "Seller attaches tamper-proof evidence for the crediting plan"
 witness_out_b=$(cargo run --quiet --manifest-path "$root/keeper/Cargo.toml" -- \
   witness "$rpc_url" "$store" "$anchor_hash" "$delivery_draft_b_hash" --write "$store")
 witness_hash_b=$(awk -F= '/^witnessContentHash=/{print $2}' <<<"$witness_out_b")
+header_hash_b=$(awk -F= '/^headerContentHash=/{print $2}' <<<"$witness_out_b")
 [[ "$witness_hash_b" =~ ^0x[0-9a-fA-F]{64}$ ]]
-delivery_b=$(jq -cn --arg caller "$buyer" --arg target "$token" --arg calldata "$calldata_b" --arg witness "$witness_hash_b" \
-  '{caller:$caller,target:$target,calldata:$calldata,value:"0x0",gasLimit:200000,witnessContentHash:$witness}')
+[[ "$header_hash_b" =~ ^0x[0-9a-fA-F]{64}$ ]]
+delivery_b=$(jq -cn --arg caller "$buyer" --arg target "$token" --arg calldata "$calldata_b" --arg witness "$witness_hash_b" --arg header "$header_hash_b" \
+  '{caller:$caller,target:$target,calldata:$calldata,value:"0x0",gasLimit:200000,witnessContentHash:$witness,headerContentHash:$header}')
 delivery_b_hash=$(printf %s "$delivery_b" | shasum -a 256 | awk '{print "0x" $1}')
 printf %s "$delivery_b" >"$store/${delivery_b_hash#0x}.json"
 

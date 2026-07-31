@@ -16,6 +16,19 @@ pub struct DeliveryV11 {
     pub gas_limit: u64,
     #[serde(default)]
     pub witness_content_hash: Option<B256>,
+    /// SHA-256 of the committed [`BlockHeaderContentV1`] (the block header RLP)
+    /// that binds `anchor.state_root` to `anchor.block_hash`. Optional so
+    /// pre-header deliveries still parse; the keeper enforces it when present.
+    #[serde(default)]
+    pub header_content_hash: Option<B256>,
+}
+/// The committed block header, as its consensus RLP bytes. Content-addressed by
+/// `DeliveryV11::header_content_hash`; verified against the anchor by
+/// `reexec_evm::header::verify_header_rlp_against_anchor`.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct BlockHeaderContentV1 {
+    pub header_rlp: Bytes,
 }
 impl From<DeliveryV11> for EvmCallPlanV1 {
     fn from(x: DeliveryV11) -> Self {
@@ -277,6 +290,7 @@ mod tests {
             value: U256::ZERO,
             gas_limit: 1,
             witness_content_hash: Some(B256::from([0x44; 32])),
+            header_content_hash: None,
         };
         let s = String::from_utf8(canonical_json(&d).unwrap()).unwrap();
         assert!(
