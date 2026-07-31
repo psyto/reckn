@@ -6,7 +6,9 @@
 #            buyer funds "the fill must CREDIT ≥ minOut" (post−pre of the balance
 #            slot), which a no-op plan cannot fake; an honest crediting fill
 #            clears the floor, reproduces, and is RELEASED to the seller.
-# No BLOCKHASH opcode is used.
+# Settlement is optimistic: the keeper commits the verdict via resolveOptimistic
+# (bonded resolver), a challenge window opens, and finalizeSettlement pays once it
+# elapses with no conflicting verdict. No BLOCKHASH opcode is used.
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
@@ -22,6 +24,16 @@ trap cleanup EXIT
 
 # Progress markers (no logic; they narrate the run for the reader and the demo).
 say() { printf '\n\342\226\266 %s\n' "$*"; }
+
+# The keeper resolves optimistically: the verdict is committed and a challenge
+# window opens before funds move. With no challenge, warp past the window and
+# finalize (permissionless) to settle per the committed verdict.
+finalize_after_window() {
+  cast rpc --rpc-url "$rpc_url" evm_increaseTime 3601 >/dev/null
+  cast rpc --rpc-url "$rpc_url" evm_mine >/dev/null
+  cast send --rpc-url "$rpc_url" --private-key "$buyer_pk" "$escrow" \
+    'finalizeSettlement(bytes32)' "$1" >/dev/null
+}
 
 # Anvil's explicit, deterministic development mnemonic. These are only demo
 # identities; deriving rather than copying key literals keeps the three roles
@@ -67,6 +79,13 @@ cast send --rpc-url "$rpc_url" --private-key "$buyer_pk" "$registry" \
   'setResolver(address,bool)' "$resolver" true >/dev/null
 cast send --rpc-url "$rpc_url" --private-key "$buyer_pk" "$registry" \
   'setBackend(bytes32,bytes32,bool)' "$backend_id" "$backend_ver" true >/dev/null
+# Optimistic settlement: the resolver must post a bond (skin in the game) before
+# it may open a challenge window with resolveOptimistic.
+settle_bond=1000000000000000000 # 1 ETH
+cast send --rpc-url "$rpc_url" --private-key "$buyer_pk" "$registry" \
+  'setMinBond(uint256)' "$settle_bond" >/dev/null
+cast send --rpc-url "$rpc_url" --private-key "$resolver_pk" --value "$settle_bond" "$registry" \
+  'depositBond()' >/dev/null
 cast send --rpc-url "$rpc_url" --private-key "$buyer_pk" "$token" \
   'mint(address,uint256)' "$buyer" 1000000 >/dev/null
 
@@ -167,10 +186,12 @@ cast send --rpc-url "$rpc_url" --private-key "$seller_pk" "$escrow" \
 cast send --rpc-url "$rpc_url" --private-key "$buyer_pk" "$escrow" \
   'challenge(bytes32,uint64)' "$deal_id" 3600 >/dev/null
 
-say "Reckn replays the actual work and checks it against the promise"
+say "Reckn replays the work and commits the verdict, opening a challenge window"
 cargo run --quiet --manifest-path "$root/keeper/Cargo.toml" -- \
   once "$rpc_url" "$escrow" "$store" "$resolver_pk"
 
+say "No challenge lands; the window elapses and anyone finalizes the settlement"
+finalize_after_window "$deal_id"
 buyer_balance=$(cast call --rpc-url "$rpc_url" "$token" 'balanceOf(address)(uint256)' "$buyer")
 escrow_balance=$(cast call --rpc-url "$rpc_url" "$token" 'balanceOf(address)(uint256)' "$escrow")
 [[ "$buyer_balance" == "1000000" && "$escrow_balance" == "0" ]]
@@ -252,10 +273,12 @@ cast send --rpc-url "$rpc_url" --private-key "$seller_pk" "$escrow" \
 cast send --rpc-url "$rpc_url" --private-key "$buyer_pk" "$escrow" \
   'challenge(bytes32,uint64)' "$deal_b" 3600 >/dev/null
 
-say "Reckn replays the work: the plan CREDITED ≥ minOut, so the seller is paid"
+say "Reckn replays the work (CREDITED ≥ minOut) and opens the challenge window"
 cargo run --quiet --manifest-path "$root/keeper/Cargo.toml" -- \
   once "$rpc_url" "$escrow" "$store" "$resolver_pk"
 
+say "Window elapses with no challenge; finalize releases the seller"
+finalize_after_window "$deal_b"
 seller_balance=$(cast call --rpc-url "$rpc_url" "$token" 'balanceOf(address)(uint256)' "$seller")
 escrow_balance_b=$(cast call --rpc-url "$rpc_url" "$token" 'balanceOf(address)(uint256)' "$escrow")
 [[ "$seller_balance" == "1000000" && "$escrow_balance_b" == "0" ]]

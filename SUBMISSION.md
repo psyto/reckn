@@ -146,10 +146,12 @@ positioned; if it stalls, the verdict still reproduces anywhere.
   keeper's re-execution **refunds the buyer** (exact-match predicate). Act II funds a
   **causal delta predicate** ("the fill credited ≥ minOut", the swap slippage floor);
   a real crediting plan reproduces and is **released to the seller** — a no-op could
-  not, which is the soundness point. A keyless re-verifier reproduces both on-chain
-  verdicts from public inputs. The run **narrates each phase in plain language**
-  (real addresses/hashes shown underneath), so a judge can follow it without knowing
-  the internals.
+  not, which is the soundness point. Settlement is **optimistic**: the keeper
+  submits `resolveOptimistic` (bonded verdict + challenge window), and once the
+  window elapses with no conflicting verdict, `finalizeSettlement` pays. A keyless
+  re-verifier reproduces both on-chain verdicts from public inputs. The run
+  **narrates each phase in plain language** (real addresses/hashes shown
+  underneath), so a judge can follow it without knowing the internals.
 - **Repo:** https://github.com/psyto/reckn
 
 ---
