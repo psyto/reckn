@@ -24,6 +24,17 @@ re-execution), with no resolver key, and asserts it matches the on-chain
 `VerdictCommitted`. That keyless check is exactly the fraud-detection primitive a
 future challenge/bond layer turns into slashable proofs.
 
+The three routes named above are now partly built: **optimistic settlement** (the
+default on both VMs) and a **bonded quorum** with automatic, permissionless slashing
+(`RecknEscrow.slashWithQuorum`) reduce trust to an honest-majority quorum. The
+**ZK** route toward true permissionless settlement has a working slice: `zk-verdict/`
+proves the causal-delta verdict in an SP1 zkVM, and `RecknVerdictVerifier.sol`
+verifies that proof **on-chain** — settlement authority from a proof, not a signer
+(contract + invariants tested; the real Groth16 fixture is gated on SP1's 6.2 GB
+artifacts). This proves the verdict derivation, not the full re-execution — still
+the frontier. Do not overclaim: none of these yet make single-signer adjudication
+zero-trust.
+
 Subjective quality is out of scope. A future conventional judge is a separate
 `ResolutionBackend`, never a `ReexecBackend` verdict.
 

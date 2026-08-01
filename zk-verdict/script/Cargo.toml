@@ -8,6 +8,10 @@ default-run = "verdict"
 name = "verdict"
 path = "src/bin/main.rs"
 
+[[bin]]
+name = "evm"
+path = "src/bin/evm.rs"
+
 [dependencies]
 sp1-sdk = { version = "6.0.1", features = ["blocking", "native-gnark"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
