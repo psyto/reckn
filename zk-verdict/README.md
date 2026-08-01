@@ -80,50 +80,59 @@ wrapping circuit's proving key), fetched once into `~/.sp1/circuits/groth16/v6.1
 stays gated on the fixture's presence, so `forge test` is green for anyone who
 hasn't regenerated it.
 
-## Full re-execution in the guest (the trusted-`post` gap, closed)
+## Full re-execution in the guest (the trusted-prestate AND trusted-`post` gaps, closed)
 
 The predicate guest above trusts `post` as an input — someone still runs the EVM
 off-chain to produce it. The **re-execution guest** ([`program-revm/`](program-revm/src/main.rs))
-removes that trust: it runs **real `revm` inside the zkVM**, seeds the committed
-prestate, **executes the seller's committed CALL under proof**, reads the resulting
-post-state, and applies the same causal delta predicate. So `post` is *computed by
-the EVM inside the proof*, not supplied by a resolver.
+removes that trust at both ends. It (1) **verifies the committed prestate is
+authentic** — each account is MPT-proven against the committed `state_root` and each
+storage slot against the proven account storage root, exactly as
+`reexec-evm::verify_witness_against_root` does off-chain — then (2) runs **real
+`revm` inside the zkVM**, **executes the seller's committed CALL under proof**, reads
+the resulting post-state, and applies the causal delta predicate. So the prestate is
+*proven authentic* and `post` is *computed by the EVM* — both inside the proof, not
+supplied by a resolver. The verdict's trace hash binds the `state_root`, so the proof
+is about a **specific authenticated state**.
 
 ```sh
 cd script
-cargo run --release --bin reexec -- --execute   # run revm in-guest, print verdict + EVM cycles
+cargo run --release --bin reexec -- --execute   # verify prestate + run revm in-guest; print verdict + cycles
 cargo run --release --bin reexec -- --prove      # generate AND verify a core proof
 cargo run --release --bin reexec -- --fixture    # real Groth16 proof -> on-chain fixture
-# default: prestate slot7 = 42, plan SSTORE(slot7, 142) -> post EXECUTED to 142,
-#          delta 100 >= floor 100 -> Reproduced.  --credit 42 -> delta 0 -> Failed.
+cargo run --release --bin reexec -- --execute --tamper  # corrupt a proven slot -> guest REJECTS it
+# default: prestate slot7 = 42 (MPT-proven), plan SSTORE(slot7, 142) -> post EXECUTED
+#          to 142, delta 100 >= floor 100 -> Reproduced.  --credit 42 -> delta 0 -> Failed.
 ```
 
 Verified end-to-end:
 
-- **`revm` 38 compiles to the SP1 zkVM target** (`riscv64im-succinct-zkvm-elf`) once
-  its default features (C-based `c-kzg`/`secp256k1` precompiles) are dropped.
-- The guest **executes the SSTORE CALL in-guest**: `post` is derived as 142 by
-  execution, not given; the credited delta 100 clears the floor → `Reproduced`. A
-  plan that writes the same value (`--credit 42`) yields delta 0 → `Failed` — the
-  no-op-can't-fake-it soundness now holds under *real execution*, ~**200k cycles**.
-- Its `traceHash` **equals the predicate guest's** for the same `(pre, post, …)`,
-  so the two agree — one just proves `post` and the other trusts it.
-- A **real Groth16 proof** of the re-execution verifies **on-chain** against SP1's
-  `SP1Verifier` (v6.1.0) via the **same generic `RecknVerdictVerifier`** (only the
-  vkey differs, because the guest commits the identical `VerdictPublicValues`) —
-  `RecknReexecVerdict.t.sol`.
+- **`revm` 38 and `alloy-trie` compile to the SP1 zkVM target**
+  (`riscv64im-succinct-zkvm-elf`) once revm's default features (C-based
+  `c-kzg`/`secp256k1` precompiles) are dropped.
+- The guest **MPT-verifies the prestate then executes the SSTORE CALL**: slot 7 = 42
+  is proven against `state_root`, `post` is derived as 142 by execution (not given),
+  the credited delta 100 clears the floor → `Reproduced` (~**382k cycles**, of which
+  MPT verification is ~180k). A no-op (`--credit 42`) → delta 0 → `Failed`.
+- **`--tamper`** flips a proven slot value: the guest **panics with `storage proof
+  invalid` — a verdict cannot be produced for an inauthentic prestate.** That is the
+  authenticity soundness: a valid proof can only exist for a prestate that matches
+  the committed `state_root`.
+- The host builds the exact witness + Merkle proofs via **`reexec-evm`'s testkit**,
+  so the guest verifies the same proof format the production backend emits.
+- A **real Groth16 proof** verifies **on-chain** against SP1's `SP1Verifier` (v6.1.0)
+  via the **same generic `RecknVerdictVerifier`** (only the vkey differs, because the
+  guest commits the identical `VerdictPublicValues`) — `RecknReexecVerdict.t.sol`.
 
 ### Honest scope of the re-execution guest
 
-- **Is** the actual `revm` EVM executing a real CALL under proof — not a toy
-  interpreter. The trusted-`post` gap is genuinely closed for that execution.
-- **Not yet:** (a) in-guest prestate **MPT-authenticity** vs a committed `state_root`
-  — the same authenticity layer `reexec-evm` does off-chain, foldable into the guest
-  next (keccak-heavy); the proof today attests *execution from the committed
-  prestate*. (b) The `c-kzg`/`ecrecover` precompiles are disabled, so plans needing
-  them aren't supported until SP1's patched crypto is wired in. (c) Verdict values
-  map to `u64` to reuse the on-chain ABI. (d) One CALL + one delta check; a full
-  block or arbitrary contract set is more cycles, same architecture. **SBF (Solana)
+- **Is** the actual `revm` EVM executing a real CALL against an **MPT-authenticated
+  prestate**, under proof — not a toy interpreter, not a trusted prestate. Both the
+  trusted-prestate and trusted-`post` gaps are genuinely closed for that execution.
+- **Not yet:** (a) the `c-kzg`/`ecrecover` precompiles are disabled, so plans needing
+  them aren't supported until SP1's patched crypto is wired in. (b) Verdict values map
+  to `u64` to reuse the on-chain ABI. (c) One CALL + one delta check; a full block or
+  arbitrary contract set is more cycles, same architecture. (d) The `state_root`↔block
+  binding (header proof) stays the off-chain `reexec-evm::header` layer. **SBF (Solana)
   in-guest is untouched** — the harder mirror.
 
 This is a nested SP1 workspace, independent of the main reckn crates' build.

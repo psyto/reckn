@@ -16,26 +16,72 @@
 sp1_zkvm::entrypoint!(main);
 
 use alloy_sol_types::SolType;
+use alloy_trie::{proof::verify_proof, Nibbles, TrieAccount};
 use reexec_io::GuestInput;
 use revm::context::result::ExecutionResult;
 use revm::context::TxEnv;
 use revm::database::InMemoryDB;
-use revm::primitives::{Address, Bytes, TxKind, U256};
+use revm::primitives::{keccak256, Address, Bytes, TxKind, B256, U256};
 use revm::state::{AccountInfo, Bytecode};
 use revm::{Context, ExecuteEvm, MainBuilder, MainContext};
-use verdict_lib::{delta_outcome, verdict_trace_hash, VerdictPublicValues, FAILED};
+use verdict_lib::{delta_outcome, reexec_trace_hash, VerdictPublicValues, FAILED};
 
 fn u64_low(v: U256) -> u64 {
     v.as_limbs()[0]
+}
+
+/// Prove the committed prestate is authentic against `state_root`: each account is
+/// MPT-verified against the state root, and each storage slot against the proven
+/// account storage root — exactly as `reexec-evm::verify_witness_against_root` does
+/// off-chain. Panics on any mismatch, so a valid proof can only exist for an
+/// authentic prestate. (In the settlement protocol a real failure is an operational
+/// error; here "no proof" is the ZK expression of that.)
+fn verify_prestate_authenticity(input: &GuestInput) {
+    let state_root = B256::from(input.state_root);
+    for acct in &input.accounts {
+        let addr = Address::from(acct.address);
+
+        // The code the guest will run must be the committed code.
+        let code_hash = keccak256(&acct.code);
+        assert_eq!(code_hash.0, acct.code_hash, "code hash mismatch");
+
+        // Account leaf: keccak(address) -> rlp(TrieAccount) under state_root.
+        let trie_account = TrieAccount {
+            nonce: acct.nonce,
+            balance: U256::from_be_bytes(acct.balance),
+            storage_root: B256::from(acct.storage_root),
+            code_hash: B256::from(acct.code_hash),
+        };
+        let key = Nibbles::unpack(keccak256(addr.as_slice()));
+        let proof: Vec<Bytes> = acct.account_proof.iter().map(|n| Bytes::copy_from_slice(n)).collect();
+        verify_proof(state_root, key, Some(alloy_rlp::encode(trie_account)), proof.iter())
+            .expect("account proof invalid");
+
+        // Storage leaves: keccak(slot) -> rlp(value) under the account storage root.
+        let storage_root = B256::from(acct.storage_root);
+        for entry in &acct.storage {
+            let slot = U256::from_be_bytes(entry.slot);
+            let value = U256::from_be_bytes(entry.value);
+            let skey = Nibbles::unpack(keccak256(slot.to_be_bytes::<32>()));
+            let expected = if value.is_zero() {
+                None
+            } else {
+                Some(alloy_rlp::encode(value))
+            };
+            let sproof: Vec<Bytes> = entry.proof.iter().map(|n| Bytes::copy_from_slice(n)).collect();
+            verify_proof(storage_root, skey, expected, sproof.iter())
+                .expect("storage proof invalid");
+        }
+    }
 }
 
 /// The committed prestate value of a slot (the delta `pre` baseline).
 fn read_committed(input: &GuestInput, address: [u8; 20], slot: [u8; 32]) -> U256 {
     for a in &input.accounts {
         if a.address == address {
-            for (s, v) in &a.storage {
-                if *s == slot {
-                    return U256::from_be_bytes(*v);
+            for e in &a.storage {
+                if e.slot == slot {
+                    return U256::from_be_bytes(e.value);
                 }
             }
         }
@@ -46,7 +92,11 @@ fn read_committed(input: &GuestInput, address: [u8; 20], slot: [u8; 32]) -> U256
 pub fn main() {
     let input = sp1_zkvm::io::read::<GuestInput>();
 
-    // 1. Seed an in-memory DB from the committed prestate (execution material).
+    // 0. Prove the prestate is authentic against the committed state_root BEFORE
+    //    trusting any of its values. A valid proof cannot exist otherwise.
+    verify_prestate_authenticity(&input);
+
+    // 1. Seed an in-memory DB from the (now authenticated) prestate.
     let mut db = InMemoryDB::default();
     for acct in &input.accounts {
         let addr = Address::from(acct.address);
@@ -58,8 +108,8 @@ pub fn main() {
         }
         // insert_account_info recomputes code_hash from code.
         db.insert_account_info(addr, info);
-        for (slot, val) in &acct.storage {
-            db.insert_account_storage(addr, U256::from_be_bytes(*slot), U256::from_be_bytes(*val))
+        for e in &acct.storage {
+            db.insert_account_storage(addr, U256::from_be_bytes(e.slot), U256::from_be_bytes(e.value))
                 .expect("seed storage");
         }
     }
@@ -115,7 +165,9 @@ pub fn main() {
     } else {
         FAILED
     };
-    let trace = verdict_trace_hash(pre_u, post_u, check.min, check.max, outcome);
+    // The trace hash binds the authenticated prestate_root, so the verdict is
+    // about *this* state — a prover cannot swap in a convenient fake prestate.
+    let trace = reexec_trace_hash(input.state_root, pre_u, post_u, check.min, check.max, outcome);
 
     let bytes = VerdictPublicValues::abi_encode(&VerdictPublicValues {
         pre: pre_u,

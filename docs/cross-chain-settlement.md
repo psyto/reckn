@@ -97,8 +97,10 @@ proves the *verdict/predicate* derivation. A second guest closes the trusted-`po
 gap too: it runs **real revm inside the zkVM**, executing the committed CALL to
 derive the post-state under proof, and its Groth16 proof verifies on-chain through
 the same verifier (`zk-verdict/program-revm`, ~200k cycles for the SSTORE plan).
-Remaining frontier: in-guest prestate MPT-authenticity, disabled precompiles,
-full-block scale, and the SBF (Solana) mirror.
+The guest also **MPT-verifies the prestate against the committed `state_root`
+in-guest** (via `alloy-trie`), so a tampered prestate is rejected — both the
+trusted-prestate and trusted-`post` gaps are closed for that execution. Remaining
+frontier: disabled precompiles, full-block scale, and the SBF (Solana) mirror.
 
 ## Minimal implementation cut
 

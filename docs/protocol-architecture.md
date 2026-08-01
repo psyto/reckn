@@ -31,11 +31,12 @@ default on both VMs) and a **bonded quorum** with automatic, permissionless slas
 proves the causal-delta verdict in an SP1 zkVM, and `RecknVerdictVerifier.sol`
 verifies that proof **on-chain** — settlement authority from a proof, not a signer
 (tested with a **real Groth16 proof** against SP1's real `SP1Verifier`, circuit
-v6.1.0). A second guest (`zk-verdict/program-revm`) goes further and runs **real
-revm inside the zkVM**, executing the committed CALL to derive the post-state under
-proof — closing the trusted-`post` gap for that execution (its Groth16 proof
-verifies on-chain through the same verifier). Remaining: in-guest prestate
-MPT-authenticity, disabled precompiles, full-block scale, and the SBF mirror. Do
+v6.1.0). A second guest (`zk-verdict/program-revm`) goes further: it **MPT-verifies
+the committed prestate against the `state_root` and runs real revm inside the zkVM**,
+executing the committed CALL to derive the post-state under proof — closing both the
+trusted-prestate and trusted-`post` gaps for that execution (a tampered prestate is
+rejected; its Groth16 proof verifies on-chain through the same verifier). Remaining:
+disabled precompiles, full-block scale, and the SBF mirror. Do
 not overclaim: none of these yet make single-signer adjudication zero-trust for
 arbitrary work.
 

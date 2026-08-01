@@ -419,21 +419,24 @@ content publication.
   verifies a verdict itself, no bridge or light client for the authority). Verified
   with a **real Groth16 proof** against SP1's canonical `SP1Verifier` (circuit
   v6.1.0) on-chain (`forge test`, mock + real-verifier suites green).
-- **Full re-execution in the zkVM (the trusted-`post` gap, closed):** a second guest
-  ([`zk-verdict/program-revm`](zk-verdict/program-revm/src/main.rs)) runs **real
-  `revm` inside the SP1 zkVM** — it seeds the committed prestate, **executes the
-  seller's CALL under proof**, derives the post-state, and applies the delta
-  predicate. So `post` is *computed by the EVM inside the proof*, not trusted from a
-  resolver. Verified: revm 38 compiles to the zkVM target; the SSTORE crediting plan
-  executes to `post=142` → delta 100 → `Reproduced` (~200k cycles), a no-op
-  (`--credit 42`) → `Failed`; its `traceHash` equals the predicate guest's; and a
-  **real Groth16 proof of the execution verifies on-chain** through the same generic
-  verifier (`RecknReexecVerdict.t.sol`). Remaining: in-guest prestate MPT-authenticity,
-  the disabled `c-kzg`/`ecrecover` precompiles, scale (a full block), and the SBF
-  (Solana) mirror.
+- **Full re-execution in the zkVM (trusted-prestate AND trusted-`post` gaps, closed):**
+  a second guest ([`zk-verdict/program-revm`](zk-verdict/program-revm/src/main.rs))
+  **verifies the committed prestate is authentic** (each account MPT-proven against
+  the committed `state_root`, each slot against the account storage root — via
+  `alloy-trie` in-guest, the same check `reexec-evm` does off-chain) and then runs
+  **real `revm` inside the SP1 zkVM** to **execute the seller's CALL under proof** and
+  derive the post-state. So the prestate is *proven authentic* and `post` is *computed
+  by the EVM* — both in the proof, not trusted from a resolver; the trace hash binds
+  the `state_root`. Verified: revm 38 + alloy-trie compile to the zkVM target; the
+  SSTORE plan (slot 7 = 42 proven) executes to `post=142` → `Reproduced` (~382k
+  cycles), a no-op → `Failed`, and a **tampered prestate value is rejected** (the
+  guest panics on the bad MPT proof — no verdict for an inauthentic state). A **real
+  Groth16 proof verifies on-chain** through the same generic verifier
+  (`RecknReexecVerdict.t.sol`). Remaining: the disabled `c-kzg`/`ecrecover`
+  precompiles, scale (a full block), and the SBF (Solana) mirror.
 - **Next:** the EVM quorum-slashing mirror on the SVM escrow (Ed25519 quorum
-  introspection + lamport bond slash); folding prestate MPT-authenticity into the
-  re-execution guest and extending its opcode/precompile coverage; and cross-chain
+  introspection + lamport bond slash); extending the re-execution guest's
+  opcode/precompile coverage and scale; and cross-chain
   settlement around the binder (finality on both chains + verdict propagation +
   double-settle
   rules).
