@@ -13,14 +13,14 @@
 
 use alloy_sol_types::SolType;
 use clap::Parser;
-use reexec_io::{DeltaCheck, GuestAccount, GuestInput, GuestPlan};
+use reexec_io::{DeltaCheck, GuestAccount, GuestInput, GuestPlan, GuestStorage};
 use serde::{Deserialize, Serialize};
 use sp1_sdk::{
     blocking::{ProveRequest, Prover, ProverClient},
     include_elf, Elf, HashableKey, ProvingKey, SP1Stdin,
 };
 use std::path::PathBuf;
-use verdict_lib::{delta_outcome, verdict_trace_hash, VerdictPublicValues, FAILED, REPRODUCED};
+use verdict_lib::{delta_outcome, reexec_trace_hash, VerdictPublicValues, FAILED, REPRODUCED};
 
 /// On-chain fixture for a full-re-execution proof — same shape as the predicate
 /// fixture, so the same `RecknVerdictVerifier` (only the vkey differs) verifies it.
@@ -39,12 +39,9 @@ struct ReexecFixture {
 
 const REEXEC_ELF: Elf = include_elf!("verdict-program-revm");
 
-/// The reckn SSTORE fixture: PUSH0, CALLDATALOAD, PUSH1 07, SSTORE, STOP —
-/// writes the calldata word into storage slot 7 (a real *caused* delta).
-const SSTORE_SLOT7_RUNTIME: [u8; 6] = [0x5f, 0x35, 0x60, 0x07, 0x55, 0x00];
-const TARGET: [u8; 20] = [0x77; 20];
-const CALLER: [u8; 20] = [0xca; 20];
+/// The reckn SSTORE fixture pins slot 7 = 42 in the committed (MPT-proven) prestate.
 const SLOT: u64 = 7;
+const PRE: u64 = 42;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -56,15 +53,16 @@ struct Args {
     /// Generate a real Groth16 proof of the re-execution and write an on-chain fixture.
     #[arg(long)]
     fixture: bool,
-    /// Committed prestate value of slot 7 (the delta `pre` baseline).
-    #[arg(long, default_value = "42")]
-    pre: u64,
-    /// Value the CALL writes to slot 7 (post = this, so delta = credit - pre).
+    /// Value the CALL writes to slot 7 (post = this, so delta = credit - 42).
     #[arg(long, default_value = "142")]
     credit: u64,
     /// Causal floor: the credited increase must be >= this.
     #[arg(long, default_value = "100")]
     min: u64,
+    /// Corrupt the committed slot value so it no longer matches the MPT proof —
+    /// the guest must reject it (authenticity check fails; no verdict can be made).
+    #[arg(long)]
+    tamper: bool,
 }
 
 fn be32(v: u64) -> [u8; 32] {
@@ -73,38 +71,73 @@ fn be32(v: u64) -> [u8; 32] {
     out
 }
 
-fn build_input(pre: u64, credit: u64, min: u64) -> GuestInput {
-    let target = GuestAccount {
-        address: TARGET,
-        balance: [0u8; 32],
-        nonce: 0,
-        code: SSTORE_SLOT7_RUNTIME.to_vec(),
-        storage: vec![(be32(SLOT), be32(pre))],
-    };
-    let caller = GuestAccount {
-        address: CALLER,
-        balance: be32(1_000_000),
-        nonce: 0,
-        code: Vec::new(),
-        storage: Vec::new(),
-    };
-    GuestInput {
-        chain_id: 1,
-        accounts: vec![target, caller],
+/// Build the guest input from the REAL backend witness: `reexec-evm`'s testkit
+/// constructs the state/storage tries and retains Merkle proofs, so the guest
+/// verifies exactly the proof format the off-chain backend produces. The prestate
+/// (slot 7 = 42) is thus MPT-bound to `anchor.state_root`.
+fn build_input(credit: u64, min: u64, tamper: bool) -> (GuestInput, [u8; 32]) {
+    use reckn_reexec_evm::testkit;
+    let caller_addr = testkit::addr(0xca);
+    let target_addr = testkit::addr(0x77);
+    let (anchor, witness) = testkit::anchored_sstore_witness(caller_addr, target_addr);
+
+    let state_root: [u8; 32] = anchor.state_root.0;
+
+    let mut accounts: Vec<GuestAccount> = witness
+        .accounts
+        .iter()
+        .map(|a| GuestAccount {
+            address: a.address.0 .0,
+            balance: a.balance.to_be_bytes::<32>(),
+            nonce: a.nonce,
+            code: a.code.to_vec(),
+            storage_root: a.storage_root.0,
+            code_hash: a.code_hash.0,
+            account_proof: a.account_proof.iter().map(|b| b.to_vec()).collect(),
+            storage: a
+                .storage
+                .iter()
+                .map(|s| GuestStorage {
+                    slot: s.slot.to_be_bytes::<32>(),
+                    value: s.value.to_be_bytes::<32>(),
+                    proof: s.proof.iter().map(|b| b.to_vec()).collect(),
+                })
+                .collect(),
+        })
+        .collect();
+
+    if tamper {
+        // Flip the committed slot-7 value away from what the proof attests.
+        for a in &mut accounts {
+            if a.address == target_addr.0 .0 {
+                for s in &mut a.storage {
+                    if s.slot == be32(SLOT) {
+                        s.value = be32(PRE + 1);
+                    }
+                }
+            }
+        }
+    }
+
+    let input = GuestInput {
+        chain_id: anchor.chain_id,
+        state_root,
+        accounts,
         plan: GuestPlan {
-            caller: CALLER,
-            target: TARGET,
+            caller: caller_addr.0 .0,
+            target: target_addr.0 .0,
             calldata: be32(credit).to_vec(),
             value: [0u8; 32],
             gas_limit: 100_000,
         },
         check: DeltaCheck {
-            address: TARGET,
+            address: target_addr.0 .0,
             slot: be32(SLOT),
             min,
             max: u64::MAX,
         },
-    }
+    };
+    (input, state_root)
 }
 
 fn outcome_name(o: u8) -> &'static str {
@@ -127,36 +160,44 @@ fn main() {
         std::process::exit(1);
     }
 
-    let input = build_input(args.pre, args.credit, args.min);
+    let (input, state_root) = build_input(args.credit, args.min, args.tamper);
     let mut stdin = SP1Stdin::new();
     stdin.write(&input);
 
     println!(
-        "committed prestate: slot7 = {}   plan: SSTORE(slot7, {})   floor: delta >= {}",
-        args.pre, args.credit, args.min
+        "committed prestate: slot7 = {} (MPT-proven against state_root 0x{})",
+        PRE,
+        hex::encode(state_root)
     );
-    println!("(post is NOT given — the guest executes revm to derive it)");
+    println!(
+        "plan: SSTORE(slot7, {})   floor: delta >= {}{}",
+        args.credit,
+        args.min,
+        if args.tamper { "   [TAMPERED prestate — must be rejected]" } else { "" }
+    );
+    println!("(prestate authenticity AND post are established in-guest, not trusted)");
 
     let client = ProverClient::from_env();
 
     if args.execute {
         let (output, report) = client.execute(REEXEC_ELF, stdin).run().unwrap();
         let v = VerdictPublicValues::abi_decode(output.as_slice()).unwrap();
-        println!("guest re-executed the CALL under the zkVM:");
+        println!("guest verified the prestate and re-executed the CALL under the zkVM:");
         println!("  pre (committed): {}", v.pre);
         println!("  post (EXECUTED): {}", v.post);
         println!("  credited delta : {}", v.post.saturating_sub(v.pre));
         println!("  verdict        : {} ({})", v.outcome, outcome_name(v.outcome));
         println!("  traceHash      : 0x{}", hex::encode(v.traceHash.0));
 
-        // The in-guest execution must agree with the off-chain delta computation.
-        let expected = delta_outcome(args.pre, args.credit, args.min, u64::MAX);
-        let trace = verdict_trace_hash(args.pre, args.credit, args.min, u64::MAX, expected);
+        // The in-guest execution must agree with the off-chain delta computation,
+        // and the trace hash binds the authenticated state_root.
+        let expected = delta_outcome(PRE, args.credit, args.min, u64::MAX);
+        let trace = reexec_trace_hash(state_root, PRE, args.credit, args.min, u64::MAX, expected);
         assert_eq!(v.post, args.credit, "revm wrote the credited value to slot 7");
         assert_eq!(v.outcome, expected, "guest verdict matches the host delta");
-        assert_eq!(v.traceHash.0, trace, "guest traceHash matches the host");
+        assert_eq!(v.traceHash.0, trace, "guest traceHash matches the host (binds state_root)");
         println!("guest execution matches the host computation");
-        println!("EVM re-execution cycles: {}", report.total_instruction_count());
+        println!("EVM re-execution + MPT-verification cycles: {}", report.total_instruction_count());
     } else if args.prove {
         let pk = client.setup(REEXEC_ELF).expect("setup elf");
         let proof = client.prove(&pk, stdin).run().expect("generate proof");

@@ -58,6 +58,31 @@ pub fn verdict_trace_hash(pre: u64, post: u64, min: u64, max: u64, outcome: u8) 
     out
 }
 
+/// Trace hash for the **full re-execution** verdict, which additionally binds the
+/// `prestate_root` the execution ran against — so the verdict is *about a specific
+/// authenticated state*, not any state a prover might pick. Mirrors reckn's
+/// `ReplayRecordV1`, whose canonical trace hash includes `prestate_root`.
+pub fn reexec_trace_hash(
+    prestate_root: [u8; 32],
+    pre: u64,
+    post: u64,
+    min: u64,
+    max: u64,
+    outcome: u8,
+) -> [u8; 32] {
+    let mut h = Sha256::new();
+    h.update(b"reckn/zk/reexec/v1");
+    h.update(prestate_root);
+    h.update(pre.to_le_bytes());
+    h.update(post.to_le_bytes());
+    h.update(min.to_le_bytes());
+    h.update(max.to_le_bytes());
+    h.update([outcome]);
+    let mut out = [0u8; 32];
+    out.copy_from_slice(&h.finalize());
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

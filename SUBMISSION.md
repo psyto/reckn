@@ -123,14 +123,16 @@ live and tested — on **both** VMs, behind **one** router.
   **verified on-chain** by `RecknVerdictVerifier.sol`, so a paying chain checks a
   verdict itself with no bridge or light client for the authority (verified with a
   **real Groth16 proof** against SP1's real `SP1Verifier`, circuit v6.1.0).
-- **Full re-execution in the zkVM (trusted-`post` gap closed):** a second guest
-  (`zk-verdict/program-revm`) runs **real revm inside the SP1 zkVM** — it executes
-  the seller's committed CALL under proof and *derives* the post-state, so `post` is
-  computed by the EVM in the proof, not trusted from a resolver. The SSTORE crediting
-  plan proves to `Reproduced` (~200k cycles), a no-op to `Failed`, and a real Groth16
-  proof of the execution verifies on-chain through the same generic verifier.
-  Remaining frontier: in-guest prestate MPT-authenticity, disabled precompiles,
-  full-block scale, and the SBF (Solana) mirror.
+- **Full re-execution in the zkVM (trusted-prestate AND trusted-`post` gaps closed):**
+  a second guest (`zk-verdict/program-revm`) **MPT-verifies the committed prestate
+  against the `state_root`** (via `alloy-trie` in-guest, the same check `reexec-evm`
+  does off-chain) and then runs **real revm inside the SP1 zkVM** to execute the
+  seller's committed CALL under proof and *derive* the post-state. So the prestate is
+  proven authentic and `post` is computed by the EVM — both in the proof, not trusted.
+  The SSTORE crediting plan proves to `Reproduced` (~382k cycles), a no-op to `Failed`,
+  a **tampered prestate is rejected** (bad MPT proof → no verdict), and a real Groth16
+  proof verifies on-chain through the same generic verifier. Remaining frontier:
+  disabled precompiles, full-block scale, and the SBF (Solana) mirror.
 
 ## Positioning & sponsor targets
 
