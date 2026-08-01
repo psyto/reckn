@@ -91,11 +91,10 @@ own `remote_finality_deadline` and finalizes exactly once. ZK trust-minimizes th
 stays with an existing bridge as a downstream, low-authority step.
 
 Scope honesty: the on-chain verifier contract and its invariants are implemented
-and tested (a valid proof exposes the verdict; a tampered one reverts). Generating
-the *real* Groth16 proof that flows through it needs SP1's ~6.2 GB circuit
-artifacts + heavier proving; the fixture path is written and gated. And this proves
-the *verdict/predicate* derivation, not yet the full re-execution that produces the
-post-state — that remains the frontier (GPU + engine-in-guest).
+and tested with a **real Groth16 proof** verified against SP1's real `SP1Verifier`
+(circuit v6.1.0) — a valid proof exposes the verdict; a tampered one reverts. This
+proves the *verdict/predicate* derivation, not yet the full re-execution that
+produces the post-state — that remains the frontier (GPU + engine-in-guest).
 
 ## Minimal implementation cut
 

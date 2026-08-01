@@ -21,3 +21,7 @@ lib/
 dist/
 build/
 *.log
+
+# SP1 Groth16 circuit artifacts (multi-GB; live in ~/.sp1, never in the repo)
+v6.1.0-groth16.tar.gz
+*.tar.gz

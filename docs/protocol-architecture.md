@@ -30,9 +30,9 @@ default on both VMs) and a **bonded quorum** with automatic, permissionless slas
 **ZK** route toward true permissionless settlement has a working slice: `zk-verdict/`
 proves the causal-delta verdict in an SP1 zkVM, and `RecknVerdictVerifier.sol`
 verifies that proof **on-chain** — settlement authority from a proof, not a signer
-(contract + invariants tested; the real Groth16 fixture is gated on SP1's 6.2 GB
-artifacts). This proves the verdict derivation, not the full re-execution — still
-the frontier. Do not overclaim: none of these yet make single-signer adjudication
+(tested with a **real Groth16 proof** against SP1's real `SP1Verifier`, circuit
+v6.1.0). This proves the verdict derivation, not the full re-execution — still the
+frontier. Do not overclaim: none of these yet make single-signer adjudication
 zero-trust.
 
 Subjective quality is out of scope. A future conventional judge is a separate
