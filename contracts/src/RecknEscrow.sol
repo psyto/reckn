@@ -24,7 +24,10 @@ import {VerdictHash} from "./libraries/VerdictHash.sol";
 ///        - Disputed  + past resolveDeadline   -> buyer refunded (no verdict:
 ///          seller-provided delivery/replay evidence is unavailable, so timeout
 ///          favors the buyer). The buyer publishes the spec/anchor descriptor
-///          at funding under the protocol's data-availability policy.
+///          at funding under the protocol's data-availability policy. If the buyer
+///          committed an optional seller data-availability bond, this path also
+///          forfeits it to the buyer — so withholding evidence has an economic
+///          cost, not just a reputation mark (see {deliver} / {_pay}).
 ///
 ///      This is NOT a trustless settlement. Reproducibility (anyone re-derives
 ///      the verdict from published inputs) is separate from settlement authority
@@ -69,6 +72,14 @@ contract RecknEscrow {
         uint8 verdictOutcome;
         address verdictResolver;
         bytes32 verdictTraceHash;
+        // Optional seller data-availability bond (opt-in, buyer-committed at
+        // funding). `requiredSellerBond` is the amount the seller MUST lock to
+        // `deliver()`; `sellerBondLocked` is what is actually held (== required,
+        // once delivered) and is 0 until deliver / after payout. Same token as the
+        // payment. Returned to the seller on every terminal path EXCEPT a dispute
+        // timeout (evidence withheld), where it is forfeited to the buyer.
+        uint256 requiredSellerBond;
+        uint256 sellerBondLocked;
     }
 
     /// @notice An ECDSA signature of a `VerdictCommitment`, used to present a
@@ -96,9 +107,16 @@ contract RecknEscrow {
         bytes32 prestateAnchorHash,
         bytes32 backendId,
         bytes32 backendVersionHash,
-        uint64 deliverDeadline
+        uint64 deliverDeadline,
+        uint256 requiredSellerBond
     );
     event Delivered(bytes32 indexed dealId, bytes32 deliveryHash, uint64 challengeDeadline);
+    /// @notice The seller locked their committed data-availability bond at delivery.
+    event SellerBondPosted(bytes32 indexed dealId, address indexed seller, uint256 amount);
+    /// @notice The seller bond was released (`forfeited=false`, back to the seller)
+    ///         or forfeited to the buyer (`forfeited=true`, on a dispute timeout —
+    ///         the seller withheld replay evidence).
+    event SellerBondSettled(bytes32 indexed dealId, address indexed to, uint256 amount, bool forfeited);
     event Disputed(
         bytes32 indexed dealId,
         bytes32 specHash,
@@ -233,8 +251,14 @@ contract RecknEscrow {
     ///         recomputes a different expected nonce here, so either this check or
     ///         the token's signature check reverts — the buyer's intent is
     ///         tamper-evident even though anyone may submit the transaction.
-    function fundingNonce(bytes32 dealId, uint64 deliverWindow) public pure returns (bytes32) {
-        return keccak256(abi.encode(FUND_NONCE_TAG, dealId, deliverWindow));
+    ///         `requiredSellerBond` is committed here too, so a relayer cannot
+    ///         weaken (or drop) the seller's data-availability bond the buyer chose.
+    function fundingNonce(bytes32 dealId, uint64 deliverWindow, uint256 requiredSellerBond)
+        public
+        pure
+        returns (bytes32)
+    {
+        return keccak256(abi.encode(FUND_NONCE_TAG, dealId, deliverWindow, requiredSellerBond));
     }
 
     /// @notice Fund a deal atomically with the buyer's EIP-3009 authorization and
@@ -256,6 +280,7 @@ contract RecknEscrow {
         bytes32 backendId,
         bytes32 backendVersionHash,
         uint64 deliverWindow,
+        uint256 requiredSellerBond,
         // EIP-3009 authorization signed by the buyer (`from`):
         uint256 validAfter,
         uint256 validBefore,
@@ -276,7 +301,7 @@ contract RecknEscrow {
         // The authorization the buyer signed must be the one that funds *this*
         // deal for *this* window. This is the term binding that makes relaying
         // safe (see {fundingNonce}).
-        if (authNonce != fundingNonce(dealId, deliverWindow)) revert BadNonce();
+        if (authNonce != fundingNonce(dealId, deliverWindow, requiredSellerBond)) revert BadNonce();
 
         uint64 deliverDeadline = uint64(block.timestamp) + deliverWindow;
 
@@ -297,7 +322,9 @@ contract RecknEscrow {
             settleDeadline: 0,
             verdictOutcome: 0,
             verdictResolver: address(0),
-            verdictTraceHash: bytes32(0)
+            verdictTraceHash: bytes32(0),
+            requiredSellerBond: requiredSellerBond,
+            sellerBondLocked: 0
         });
 
         // Pull funds last (state written first; token call is the only external
@@ -318,7 +345,8 @@ contract RecknEscrow {
             prestateAnchorHash,
             backendId,
             backendVersionHash,
-            deliverDeadline
+            deliverDeadline,
+            requiredSellerBond
         );
     }
 
@@ -338,6 +366,17 @@ contract RecknEscrow {
         d.state = DealState.Delivered;
 
         emit Delivered(dealId, deliveryHash, challengeDeadline);
+
+        // Lock the seller's data-availability bond, if the buyer required one.
+        // State is already `Delivered`, so a re-entrant token hook re-hits the
+        // state guard above and reverts. The seller must have approved the escrow
+        // for `requiredSellerBond` of the payment token beforehand.
+        uint256 bond = d.requiredSellerBond;
+        if (bond > 0) {
+            d.sellerBondLocked = bond;
+            emit SellerBondPosted(dealId, msg.sender, bond);
+            IUSDC3009(d.paymentToken).transferFrom(msg.sender, address(this), bond);
+        }
     }
 
     /// @notice Buyer challenges a delivery, opening the re-execution window.
@@ -602,7 +641,24 @@ contract RecknEscrow {
         // re-entrant token hook re-hits the state guard and reverts.
         uint256 amount = d.amount;
         emit Settled(id, to, amount, reason);
+
+        // Settle the seller's data-availability bond, if one is locked. It is
+        // forfeited to the buyer ONLY on a dispute timeout (reason 2 = seller
+        // withheld replay evidence); on every other terminal path — release,
+        // verdict refund, unchallenged release, conflict fault — the seller
+        // provided evidence (or was not at fault) and gets the bond back. The
+        // `reclaimUndelivered` path (reason 4) never locked a bond, so
+        // `sellerBondLocked` is 0 there and nothing moves. Zeroed before transfer
+        // so a re-entrant hook cannot double-release.
+        uint256 bond = d.sellerBondLocked;
+        address bondTo = reason == 2 ? d.buyer : d.seller;
+
         IUSDC3009(d.paymentToken).transfer(to, amount);
+        if (bond > 0) {
+            d.sellerBondLocked = 0;
+            emit SellerBondSettled(id, bondTo, bond, reason == 2);
+            IUSDC3009(d.paymentToken).transfer(bondTo, bond);
+        }
     }
 
     function _toMemory(VerdictHash.VerdictCommitment calldata c)

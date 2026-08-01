@@ -23,5 +23,11 @@ interface IUSDC3009 {
 
     function transfer(address to, uint256 value) external returns (bool);
 
+    /// @dev Standard ERC-20 pull. Reckn uses it only for the optional seller
+    ///      data-availability bond: the seller approves the escrow, and `deliver`
+    ///      pulls the committed bond into escrow. Buyer payment never uses this
+    ///      path (it is EIP-3009, allowance-free).
+    function transferFrom(address from, address to, uint256 value) external returns (bool);
+
     function balanceOf(address account) external view returns (uint256);
 }

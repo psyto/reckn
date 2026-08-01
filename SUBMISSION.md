@@ -93,7 +93,7 @@ live and tested — on **both** VMs, behind **one** router.
 
 | Layer | EVM | Solana (SVM) |
 |---|---|---|
-| Settlement contract | `contracts/` (Solidity) — 49 tests (incl. verified EIP-3009 funding) | `escrow-svm/` (Pinocchio, optimistic settlement) — 10 LiteSVM e2e |
+| Settlement contract | `contracts/` (Solidity) — 57 tests (verified EIP-3009 funding + opt-in seller DA bond) | `escrow-svm/` (Pinocchio, optimistic settlement) — 10 LiteSVM e2e |
 | Re-execution backend | `reexec-evm/` (revm 38, offline MPT + header binding) — 16 tests | `reexec-svm/` (LiteSVM V2, closed-world, `bank_hash` verifier + archive binding) — 30 tests |
 | Keeper + keyless verify | `keeper/` (EIP-712) — 3 tests + `anvil-e2e.sh` | `reckn-svm-keeper/` (Ed25519) — full-loop |
 | Shared verdict record | `packages/protocol-rs` (`ReplayRecordV1`) — one type both VMs emit | ← same |
@@ -102,6 +102,12 @@ live and tested — on **both** VMs, behind **one** router.
 - **ERC-8004 reputation:** every verdict emits `ReputationEvidence` (reproducible,
   not self-reported); a dispute timeout emits a seller-attributed *evidence-withheld*
   signal, so withholding replay material cannot dodge the negative mark. Both VMs.
+- **Seller data-availability bond (EVM, opt-in):** a reputation mark alone costs a
+  throwaway (Sybil) seller nothing, so the buyer may commit a `requiredSellerBond`
+  the seller locks at `deliver()`. It is forfeited to the buyer **only** on a dispute
+  timeout (evidence withheld) and returned on every other exit — including a `Failed`
+  verdict on the merits — so it punishes *withholding*, not *losing*. The SVM lamport
+  mirror is the follow-up.
 - **Deliberate cuts, surfaced not hidden:** Solana snapshot *authenticity* now has
   a real verifier — `reexec-svm/src/bankhash.rs` recomputes the SIMD-0215 accounts
   lattice hash and re-derives `bank_hash`, and `reexec-svm/src/authenticity.rs`

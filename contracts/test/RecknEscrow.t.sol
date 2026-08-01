@@ -113,18 +113,34 @@ contract RecknEscrowTest is Test {
     ///      authorization, then a facilitator (not the buyer) relays it — the
     ///      default path already exercises the x402 relay property.
     function _fund(bytes32 salt) internal returns (bytes32 id) {
+        return _fundBond(salt, 0);
+    }
+
+    /// @dev Fund with an opt-in seller data-availability bond of `bond` committed
+    ///      by the buyer (folded into the signed nonce).
+    function _fundBond(bytes32 salt, uint256 bond) internal returns (bytes32 id) {
         id = escrow.computeDealId(
             salt, buyer, seller, address(token), AMOUNT, SPEC_HASH, ANCHOR_HASH, BACKEND_ID, BACKEND_VER
         );
-        bytes32 nonce = escrow.fundingNonce(id, DELIVER_W);
+        bytes32 nonce = escrow.fundingNonce(id, DELIVER_W, bond);
         bytes32 digest = _authDigest(buyer, AMOUNT, 0, type(uint256).max, nonce);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(buyerPk, digest);
 
         vm.prank(facilitator);
         escrow.fundWithAuthorization(
             salt, buyer, seller, address(token), AMOUNT, SPEC_HASH, ANCHOR_HASH, BACKEND_ID, BACKEND_VER, DELIVER_W,
-            0, type(uint256).max, nonce, v, r, s
+            bond, 0, type(uint256).max, nonce, v, r, s
         );
+    }
+
+    /// @dev Seller approves and delivers, locking `bond` (must match the deal's
+    ///      required bond). Mints the seller the bond first for convenience.
+    function _deliverWithBond(bytes32 id, uint256 bond) internal {
+        token.mint(seller, bond);
+        vm.prank(seller);
+        token.approve(address(escrow), bond);
+        vm.prank(seller);
+        escrow.deliver(id, DELIVERY_HASH, CHALLENGE_W);
     }
 
     function _commitment(bytes32 id, uint8 outcome) internal pure returns (VerdictHash.VerdictCommitment memory) {
@@ -326,12 +342,12 @@ contract RecknEscrowTest is Test {
         bytes32 id = escrow.computeDealId(
             "dup", buyer, seller, address(token), AMOUNT, SPEC_HASH, ANCHOR_HASH, BACKEND_ID, BACKEND_VER
         );
-        bytes32 dupNonce = escrow.fundingNonce(id, DELIVER_W);
+        bytes32 dupNonce = escrow.fundingNonce(id, DELIVER_W, 0);
         vm.expectRevert(RecknEscrow.DealExists.selector);
         vm.prank(facilitator);
         escrow.fundWithAuthorization(
             "dup", buyer, seller, address(token), AMOUNT, SPEC_HASH, ANCHOR_HASH, BACKEND_ID, BACKEND_VER, DELIVER_W,
-            0, type(uint256).max, dupNonce, 0, bytes32(0), bytes32(0)
+            0, 0, type(uint256).max, dupNonce, 0, bytes32(0), bytes32(0)
         );
     }
 
@@ -342,7 +358,7 @@ contract RecknEscrowTest is Test {
         vm.prank(facilitator);
         escrow.fundWithAuthorization(
             "zw", buyer, seller, address(token), AMOUNT, SPEC_HASH, ANCHOR_HASH, BACKEND_ID, BACKEND_VER, 0,
-            0, type(uint256).max, keccak256("zw-auth"), 0, bytes32(0), bytes32(0)
+            0, 0, type(uint256).max, keccak256("zw-auth"), 0, bytes32(0), bytes32(0)
         );
     }
 
@@ -367,7 +383,7 @@ contract RecknEscrowTest is Test {
         bytes32 id = escrow.computeDealId(
             "tamper", buyer, seller, address(token), AMOUNT, SPEC_HASH, ANCHOR_HASH, BACKEND_ID, BACKEND_VER
         );
-        bytes32 nonce = escrow.fundingNonce(id, DELIVER_W);
+        bytes32 nonce = escrow.fundingNonce(id, DELIVER_W, 0);
         bytes32 digest = _authDigest(buyer, AMOUNT, 0, type(uint256).max, nonce);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(buyerPk, digest);
 
@@ -376,7 +392,7 @@ contract RecknEscrowTest is Test {
         vm.prank(facilitator);
         escrow.fundWithAuthorization(
             "tamper", buyer, otherSeller, address(token), AMOUNT, SPEC_HASH, ANCHOR_HASH, BACKEND_ID, BACKEND_VER,
-            DELIVER_W, 0, type(uint256).max, nonce, v, r, s
+            DELIVER_W, 0, 0, type(uint256).max, nonce, v, r, s
         );
     }
 
@@ -388,7 +404,7 @@ contract RecknEscrowTest is Test {
         bytes32 id = escrow.computeDealId(
             "amt", buyer, seller, address(token), AMOUNT, SPEC_HASH, ANCHOR_HASH, BACKEND_ID, BACKEND_VER
         );
-        bytes32 nonce = escrow.fundingNonce(id, DELIVER_W);
+        bytes32 nonce = escrow.fundingNonce(id, DELIVER_W, 0);
         bytes32 digest = _authDigest(buyer, AMOUNT, 0, type(uint256).max, nonce);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(buyerPk, digest);
 
@@ -398,12 +414,12 @@ contract RecknEscrowTest is Test {
         bytes32 id2 = escrow.computeDealId(
             "amt", buyer, seller, address(token), tampered, SPEC_HASH, ANCHOR_HASH, BACKEND_ID, BACKEND_VER
         );
-        bytes32 nonce2 = escrow.fundingNonce(id2, DELIVER_W);
+        bytes32 nonce2 = escrow.fundingNonce(id2, DELIVER_W, 0);
         vm.expectRevert("3009: bad signature");
         vm.prank(facilitator);
         escrow.fundWithAuthorization(
             "amt", buyer, seller, address(token), tampered, SPEC_HASH, ANCHOR_HASH, BACKEND_ID, BACKEND_VER,
-            DELIVER_W, 0, type(uint256).max, nonce2, v, r, s
+            DELIVER_W, 0, 0, type(uint256).max, nonce2, v, r, s
         );
     }
 
@@ -411,7 +427,7 @@ contract RecknEscrowTest is Test {
         bytes32 id = escrow.computeDealId(
             "wrong", buyer, seller, address(token), AMOUNT, SPEC_HASH, ANCHOR_HASH, BACKEND_ID, BACKEND_VER
         );
-        bytes32 nonce = escrow.fundingNonce(id, DELIVER_W);
+        bytes32 nonce = escrow.fundingNonce(id, DELIVER_W, 0);
         bytes32 digest = _authDigest(buyer, AMOUNT, 0, type(uint256).max, nonce);
         // Signed by the resolver, not the buyer.
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(resolverPk, digest);
@@ -420,7 +436,7 @@ contract RecknEscrowTest is Test {
         vm.prank(facilitator);
         escrow.fundWithAuthorization(
             "wrong", buyer, seller, address(token), AMOUNT, SPEC_HASH, ANCHOR_HASH, BACKEND_ID, BACKEND_VER,
-            DELIVER_W, 0, type(uint256).max, nonce, v, r, s
+            DELIVER_W, 0, 0, type(uint256).max, nonce, v, r, s
         );
     }
 
@@ -429,7 +445,7 @@ contract RecknEscrowTest is Test {
         bytes32 id = escrow.computeDealId(
             "exp", buyer, seller, address(token), AMOUNT, SPEC_HASH, ANCHOR_HASH, BACKEND_ID, BACKEND_VER
         );
-        bytes32 nonce = escrow.fundingNonce(id, DELIVER_W);
+        bytes32 nonce = escrow.fundingNonce(id, DELIVER_W, 0);
         // Signed with a validBefore already in the past.
         bytes32 digest = _authDigest(buyer, AMOUNT, 0, 500, nonce);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(buyerPk, digest);
@@ -438,7 +454,7 @@ contract RecknEscrowTest is Test {
         vm.prank(facilitator);
         escrow.fundWithAuthorization(
             "exp", buyer, seller, address(token), AMOUNT, SPEC_HASH, ANCHOR_HASH, BACKEND_ID, BACKEND_VER,
-            DELIVER_W, 0, 500, nonce, v, r, s
+            DELIVER_W, 0, 0, 500, nonce, v, r, s
         );
     }
 
@@ -479,6 +495,9 @@ contract RecknEscrowTest is Test {
         bytes32 verdictTraceHash,
         bytes32 backendId
     );
+
+    event SellerBondPosted(bytes32 indexed dealId, address indexed seller, uint256 amount);
+    event SellerBondSettled(bytes32 indexed dealId, address indexed to, uint256 amount, bool forfeited);
 
     function test_e2e_false_claim_refunds_buyer_on_real_engine_output() public {
         bytes32 id = _fund("e2e-false");
@@ -862,5 +881,129 @@ contract RecknEscrowTest is Test {
         vm.prank(buyer);
         vm.expectRevert(ResolverRegistry.NotOwner.selector);
         registry.setQuorumSlasher(buyer);
+    }
+
+    // --- seller data-availability bond (opt-in; forfeited to buyer only on a
+    //     dispute timeout = evidence withheld; returned to the seller otherwise) ---
+
+    uint256 constant SELLER_BOND = 200e6;
+
+    function test_sellerBond_posted_at_deliver_and_held_in_escrow() public {
+        bytes32 id = _fundBond("b1", SELLER_BOND);
+        token.mint(seller, SELLER_BOND);
+        vm.prank(seller);
+        token.approve(address(escrow), SELLER_BOND);
+
+        vm.expectEmit(true, true, false, true, address(escrow));
+        emit SellerBondPosted(id, seller, SELLER_BOND);
+        vm.prank(seller);
+        escrow.deliver(id, DELIVERY_HASH, CHALLENGE_W);
+
+        assertEq(token.balanceOf(seller), 0, "seller bond pulled");
+        assertEq(token.balanceOf(address(escrow)), AMOUNT + SELLER_BOND, "escrow holds pot + bond");
+        assertEq(escrow.getDeal(id).sellerBondLocked, SELLER_BOND, "bond locked");
+    }
+
+    function test_deliver_reverts_if_seller_bond_not_approved() public {
+        bytes32 id = _fundBond("b2", SELLER_BOND);
+        token.mint(seller, SELLER_BOND); // has balance but no allowance
+        vm.expectRevert(bytes("allowance"));
+        vm.prank(seller);
+        escrow.deliver(id, DELIVERY_HASH, CHALLENGE_W);
+    }
+
+    function test_sellerBond_returned_to_seller_on_reproduced() public {
+        bytes32 id = _fundBond("b3", SELLER_BOND);
+        _deliverWithBond(id, SELLER_BOND);
+        vm.prank(buyer);
+        escrow.challenge(id, RESOLVE_W);
+
+        VerdictHash.VerdictCommitment memory c = _commitment(id, 0); // Reproduced
+        (uint8 v, bytes32 r, bytes32 s) = _sign(c, resolverPk);
+        escrow.resolve(c, v, r, s);
+
+        // Seller is paid AND gets the bond back; escrow fully drained.
+        assertEq(token.balanceOf(seller), AMOUNT + SELLER_BOND, "seller paid + bond back");
+        assertEq(token.balanceOf(buyer), 0, "buyer spent");
+        assertEq(token.balanceOf(address(escrow)), 0, "escrow drained");
+    }
+
+    function test_sellerBond_returned_on_failed_verdict_not_forfeited() public {
+        // A DA bond punishes *withholding*, not *losing*: a seller who provides
+        // evidence and loses on the merits still gets the bond back.
+        bytes32 id = _fundBond("b4", SELLER_BOND);
+        _deliverWithBond(id, SELLER_BOND);
+        vm.prank(buyer);
+        escrow.challenge(id, RESOLVE_W);
+
+        VerdictHash.VerdictCommitment memory c = _commitment(id, 1); // Failed
+        (uint8 v, bytes32 r, bytes32 s) = _sign(c, resolverPk);
+        escrow.resolve(c, v, r, s);
+
+        assertEq(token.balanceOf(buyer), AMOUNT, "buyer refunded on merits");
+        assertEq(token.balanceOf(seller), SELLER_BOND, "seller keeps bond (provided evidence)");
+        assertEq(token.balanceOf(address(escrow)), 0, "escrow drained");
+    }
+
+    function test_sellerBond_forfeited_to_buyer_on_timeout() public {
+        bytes32 id = _fundBond("b5", SELLER_BOND);
+        _deliverWithBond(id, SELLER_BOND);
+        vm.prank(buyer);
+        escrow.challenge(id, RESOLVE_W);
+
+        vm.warp(block.timestamp + RESOLVE_W + 1);
+        vm.expectEmit(true, true, false, true, address(escrow));
+        emit SellerBondSettled(id, buyer, SELLER_BOND, true);
+        escrow.timeoutRefund(id);
+
+        // The withholding seller is refunded nothing and loses the bond; the buyer
+        // gets the payment back plus the forfeited bond as compensation.
+        assertEq(token.balanceOf(buyer), AMOUNT + SELLER_BOND, "buyer refunded + forfeited bond");
+        assertEq(token.balanceOf(seller), 0, "seller forfeited bond");
+        assertEq(token.balanceOf(address(escrow)), 0, "escrow drained");
+    }
+
+    function test_sellerBond_returned_on_claimUnchallenged() public {
+        bytes32 id = _fundBond("b6", SELLER_BOND);
+        _deliverWithBond(id, SELLER_BOND);
+
+        vm.warp(block.timestamp + CHALLENGE_W + 1);
+        vm.prank(seller);
+        escrow.claimUnchallenged(id);
+        assertEq(token.balanceOf(seller), AMOUNT + SELLER_BOND, "seller paid + bond back on silence");
+        assertEq(token.balanceOf(address(escrow)), 0, "escrow drained");
+    }
+
+    function test_sellerBond_not_locked_when_seller_never_delivers() public {
+        // The bond is posted at deliver(), so a no-show seller never locks it —
+        // reclaimUndelivered refunds only the buyer's payment and moves no bond.
+        bytes32 id = _fundBond("b7", SELLER_BOND);
+        token.mint(seller, SELLER_BOND); // seller holds would-be bond, never posts it
+        vm.warp(block.timestamp + DELIVER_W + 1);
+        vm.prank(buyer);
+        escrow.reclaimUndelivered(id);
+
+        assertEq(token.balanceOf(buyer), AMOUNT, "buyer reclaimed payment only");
+        assertEq(token.balanceOf(seller), SELLER_BOND, "seller keeps un-posted bond");
+        assertEq(escrow.getDeal(id).sellerBondLocked, 0, "no bond was locked");
+    }
+
+    function test_fund_nonce_binds_required_seller_bond() public {
+        // Buyer signs a funding authorization committing SELLER_BOND. A relayer
+        // that tries to fund with a weaker (zero) required bond, reusing the
+        // signed nonce, fails the bound-nonce check.
+        bytes32 id = escrow.computeDealId(
+            "b8", buyer, seller, address(token), AMOUNT, SPEC_HASH, ANCHOR_HASH, BACKEND_ID, BACKEND_VER
+        );
+        bytes32 nonce = escrow.fundingNonce(id, DELIVER_W, SELLER_BOND);
+        bytes32 digest = _authDigest(buyer, AMOUNT, 0, type(uint256).max, nonce);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(buyerPk, digest);
+
+        vm.expectRevert(RecknEscrow.BadNonce.selector);
+        vm.prank(facilitator);
+        escrow.fundWithAuthorization(
+            "b8", buyer, seller, address(token), AMOUNT, SPEC_HASH, ANCHOR_HASH, BACKEND_ID, BACKEND_VER,
+            DELIVER_W, 0, 0, type(uint256).max, nonce, v, r, s
+        );
     }
 }

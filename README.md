@@ -230,7 +230,13 @@ content publication.
   turns the keyless-*detectable* verdict into an economically-*enforced* one,
   reducing trust from a single resolver to an honest-majority quorum. Full
   zero-trust single-signer adjudication still wants a fraud-proof VM or a ZK proof
-  of the re-execution. `forge test`: **49 passing**.
+  of the re-execution. Plus an **opt-in seller data-availability bond**: the buyer
+  commits a `requiredSellerBond` at funding (bound into the signed nonce, so a
+  relayer can't weaken it), the seller locks it at `deliver()`, and it is forfeited
+  to the buyer **only** on a dispute timeout (evidence withheld) — every other exit,
+  including a `Failed` verdict on the merits, returns it. So the bond punishes
+  *withholding*, not *losing*, and a throwaway seller can no longer dodge the cost
+  of withholding with just a reputation mark. `forge test`: **57 passing**.
 - **Reputation (ERC-8004 style):** on every verdict the escrow emits
   `ReputationEvidence(agent, reproduced, dealId, traceHash, backendId)` — a pure
   projection that never changes settlement. Unlike AgentRankr's self-reported,

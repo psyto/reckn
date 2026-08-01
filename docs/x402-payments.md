@@ -40,8 +40,10 @@ authorization both *pays* and *opens the disputable escrow*.
   the buyer's signed authorization on-chain — the gasless, pull-style property x402
   depends on — while the token, not the escrow, proves the buyer authorized the pull.
 - **One signature binds the terms, not just the payment.** The `authNonce` the buyer
-  signs is required to equal `fundingNonce(dealId, deliverWindow)` — a hash that
-  commits (via `dealId`) to seller, token, amount, spec, anchor, and backend. A
+  signs is required to equal `fundingNonce(dealId, deliverWindow, requiredSellerBond)`
+  — a hash that commits (via `dealId`) to seller, token, amount, spec, anchor, and
+  backend, plus the deliver window and the optional **seller data-availability bond**
+  (so a relayer cannot weaken or drop the bond the buyer chose). A
   relayer that alters *any* funded term recomputes a different expected nonce, so the
   transaction reverts either on the escrow's `BadNonce` check or, if the relayer forges
   a matching nonce, on the token's signature check (the buyer never signed that

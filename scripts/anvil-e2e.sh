@@ -141,6 +141,8 @@ printf %s "$spec" >"$store/${spec_hash#0x}.json"
 
 salt=0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 deliver_window=3600
+# No seller data-availability bond in this demo (opt-in; buyer-committed at funding).
+required_seller_bond=0
 valid_after=0
 valid_before=0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 # One buyer signature both pays and opens the escrow. The EIP-3009 authorization
@@ -152,7 +154,7 @@ deal_id=$(cast call --rpc-url "$rpc_url" "$escrow" \
   'computeDealId(bytes32,address,address,address,uint256,bytes32,bytes32,bytes32,bytes32)(bytes32)' \
   "$salt" "$buyer" "$seller" "$token" 1000000 "$spec_hash" "$anchor_hash" "$backend_id" "$backend_ver")
 auth_nonce=$(cast call --rpc-url "$rpc_url" "$escrow" \
-  'fundingNonce(bytes32,uint64)(bytes32)' "$deal_id" "$deliver_window")
+  'fundingNonce(bytes32,uint64,uint256)(bytes32)' "$deal_id" "$deliver_window" "$required_seller_bond")
 
 # Build and sign the EIP-712 ReceiveWithAuthorization digest the way the token
 # (and real USDC) verifies it. `to` is the escrow, the payee that pulls funds.
@@ -169,11 +171,11 @@ auth_v=$(cast to-dec "0x${auth_sig:130:2}")
 
 say "Buyer signs one x402/EIP-3009 authorization; a facilitator relays it on-chain"
 fund_tx=$(cast send --rpc-url "$rpc_url" --private-key "$facilitator_pk" --json "$escrow" \
-  'fundWithAuthorization(bytes32,address,address,address,uint256,bytes32,bytes32,bytes32,bytes32,uint64,uint256,uint256,bytes32,uint8,bytes32,bytes32)' \
+  'fundWithAuthorization(bytes32,address,address,address,uint256,bytes32,bytes32,bytes32,bytes32,uint64,uint256,uint256,uint256,bytes32,uint8,bytes32,bytes32)' \
   "$salt" "$buyer" "$seller" "$token" 1000000 "$spec_hash" "$anchor_hash" "$backend_id" "$backend_ver" \
-  "$deliver_window" "$valid_after" "$valid_before" "$auth_nonce" "$auth_v" "$auth_r" "$auth_s")
+  "$deliver_window" "$required_seller_bond" "$valid_after" "$valid_before" "$auth_nonce" "$auth_v" "$auth_r" "$auth_s")
 fund_receipt=$(cast receipt --rpc-url "$rpc_url" "$(jq -r .transactionHash <<<"$fund_tx")" --json)
-funded_topic=$(cast keccak 'Funded(bytes32,address,address,address,uint256,bytes32,bytes32,bytes32,bytes32,uint64)')
+funded_topic=$(cast keccak 'Funded(bytes32,address,address,address,uint256,bytes32,bytes32,bytes32,bytes32,uint64,uint256)')
 funded_deal=$(jq -r --arg topic "$funded_topic" '.logs[] | select(.topics[0] == $topic) | .topics[1]' <<<"$fund_receipt")
 # The event's dealId must match the one the buyer's nonce was bound to.
 [[ "$funded_deal" != "null" && -n "$funded_deal" && "$funded_deal" == "$deal_id" ]]
@@ -252,7 +254,7 @@ deal_b=$(cast call --rpc-url "$rpc_url" "$escrow" \
   'computeDealId(bytes32,address,address,address,uint256,bytes32,bytes32,bytes32,bytes32)(bytes32)' \
   "$salt_b" "$buyer" "$seller" "$token" 1000000 "$spec_b_hash" "$anchor_hash" "$backend_id" "$backend_ver")
 auth_nonce_b=$(cast call --rpc-url "$rpc_url" "$escrow" \
-  'fundingNonce(bytes32,uint64)(bytes32)' "$deal_b" "$deliver_window")
+  'fundingNonce(bytes32,uint64,uint256)(bytes32)' "$deal_b" "$deliver_window" "$required_seller_bond")
 auth_struct_b=$(cast keccak "$(cast abi-encode \
   'f(bytes32,address,address,uint256,uint256,uint256,bytes32)' \
   "$auth_typehash" "$buyer" "$escrow" 1000000 "$valid_after" "$valid_before" "$auth_nonce_b")")
@@ -263,9 +265,9 @@ auth_s_b=0x${auth_sig_b:66:64}
 auth_v_b=$(cast to-dec "0x${auth_sig_b:130:2}")
 
 cast send --rpc-url "$rpc_url" --private-key "$facilitator_pk" "$escrow" \
-  'fundWithAuthorization(bytes32,address,address,address,uint256,bytes32,bytes32,bytes32,bytes32,uint64,uint256,uint256,bytes32,uint8,bytes32,bytes32)' \
+  'fundWithAuthorization(bytes32,address,address,address,uint256,bytes32,bytes32,bytes32,bytes32,uint64,uint256,uint256,uint256,bytes32,uint8,bytes32,bytes32)' \
   "$salt_b" "$buyer" "$seller" "$token" 1000000 "$spec_b_hash" "$anchor_hash" "$backend_id" "$backend_ver" \
-  "$deliver_window" "$valid_after" "$valid_before" "$auth_nonce_b" "$auth_v_b" "$auth_r_b" "$auth_s_b" >/dev/null
+  "$deliver_window" "$required_seller_bond" "$valid_after" "$valid_before" "$auth_nonce_b" "$auth_v_b" "$auth_r_b" "$auth_s_b" >/dev/null
 
 say "Seller delivers the crediting fill; buyer disputes to force the check"
 cast send --rpc-url "$rpc_url" --private-key "$seller_pk" "$escrow" \
