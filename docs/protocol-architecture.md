@@ -200,14 +200,22 @@ Note the timeout refunds the **buyer**, so a seller who withholds replay materia
 is never paid — withholding is not a way to recover funds. To also deny the
 withholding seller a *reputation* dodge, the timeout emits a negative
 `ReputationEvidence` (evidence-withheld: `reproduced = false`, zero trace),
-distinct from a reproduced `Failed`; see the reputation hooks below. This holds
-*because there is no seller bond today*. A future challenge/bond layer changes the
-incentive: once a seller stakes value that a `Failed` verdict slashes, withholding
-to force a timeout could dodge the slash. So a bond and a **data-availability
-forfeiture rule** (a timeout after delivery must forfeit the seller's stake, not
-merely refund the buyer, and/or delivery must pin evidence to a durable DA layer)
-are a single co-designed change, never a bond alone. Tracked as a post-MVP
-economic cut-line, not an input to the deterministic core.
+distinct from a reproduced `Failed`; see the reputation hooks below.
+
+A reputation mark alone, however, costs a throwaway (Sybil) seller nothing. So the
+EVM escrow now adds the **co-designed bond + data-availability forfeiture rule** as
+an **opt-in seller data-availability bond**: the buyer commits a `requiredSellerBond`
+at funding (bound into the signed nonce, so a relayer cannot weaken it); the seller
+locks it at `deliver()`; and it is forfeited to the buyer **only** on a dispute
+timeout (evidence withheld), while every other terminal path — release, a reproduced
+`Failed` on the merits, unchallenged release, resolver-conflict fault — returns it.
+Crucially the bond punishes *withholding*, not *losing*: a seller who provides
+evidence and loses still gets it back, so it is a data-availability bond, not a
+correctness bond. It is never a bond alone — the forfeiture rule is what gives it
+teeth. Honest scope: bond *sizing* (bond ≥ a seller's gain from withholding) is an
+economic parameter left to the buyer, and this is the **EVM** cut; the SVM
+(Pinocchio) mirror — a lamport bond locked at `deliver` and forfeited on
+`timeout_refund` — is the follow-up. None of this touches the deterministic core.
 
 ### V1.1 demo content-store binding
 

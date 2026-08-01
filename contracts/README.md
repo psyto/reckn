@@ -26,10 +26,13 @@ forge test -vv
 ```
 
 Requires `via_ir = true` (set in `foundry.toml`) — `fundWithAuthorization` has a
-wide argument list. **17 tests currently pass**: lifecycle (reproduced/failed
+wide argument list. **57 tests currently pass**: lifecycle (reproduced/failed
 verdicts), timeout escape hatches (review C1), settlement-authority guards
 (unknown resolver, commitment mismatch, disallowed backend, double-resolve),
-nonzero-window guards (review M2), and a value-conservation fuzz test.
+nonzero-window guards (review M2), a value-conservation fuzz test, optimistic
+settlement + K-of-N quorum slashing, and the opt-in **seller data-availability
+bond** (posted at `deliver`, forfeited to the buyer only on a dispute timeout,
+returned on every other exit).
 
 ## Resolved protocol decisions (review C1/C2)
 

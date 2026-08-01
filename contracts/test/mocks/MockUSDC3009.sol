@@ -16,6 +16,8 @@ contract MockUSDC3009 is IUSDC3009 {
     string public constant version = "2";
 
     mapping(address => uint256) public override balanceOf;
+    // owner => spender => allowance (standard ERC-20, used for the seller bond)
+    mapping(address => mapping(address => uint256)) public allowance;
     // authorizer => nonce => used
     mapping(address => mapping(bytes32 => bool)) public authorizationState;
 
@@ -80,6 +82,21 @@ contract MockUSDC3009 is IUSDC3009 {
     function transfer(address to, uint256 value) external override returns (bool) {
         require(balanceOf[msg.sender] >= value, "insufficient");
         balanceOf[msg.sender] -= value;
+        balanceOf[to] += value;
+        return true;
+    }
+
+    function approve(address spender, uint256 value) external returns (bool) {
+        allowance[msg.sender][spender] = value;
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint256 value) external override returns (bool) {
+        require(balanceOf[from] >= value, "insufficient");
+        uint256 a = allowance[from][msg.sender];
+        require(a >= value, "allowance");
+        if (a != type(uint256).max) allowance[from][msg.sender] = a - value;
+        balanceOf[from] -= value;
         balanceOf[to] += value;
         return true;
     }
