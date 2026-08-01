@@ -12,7 +12,12 @@ path = "src/bin/main.rs"
 name = "evm"
 path = "src/bin/evm.rs"
 
+[[bin]]
+name = "reexec"
+path = "src/bin/reexec.rs"
+
 [dependencies]
+reexec-io = { path = "../reexec-io" }
 sp1-sdk = { version = "6.0.1", features = ["blocking", "native-gnark"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 serde = { version = "1.0.200", default-features = false, features = ["derive"] }

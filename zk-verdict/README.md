@@ -80,20 +80,50 @@ wrapping circuit's proving key), fetched once into `~/.sp1/circuits/groth16/v6.1
 stays gated on the fixture's presence, so `forge test` is green for anyone who
 hasn't regenerated it.
 
-## Honest scope (what this is and isn't)
+## Full re-execution in the guest (the trusted-`post` gap, closed)
 
-- **Is:** a genuine, runnable ZK proof of reckn's *verdict/predicate computation*,
-  reusing the exact delta logic and a domain-tagged `traceHash` mirroring
-  `ReplayRecordV1`. The soundness property (a no-op plan cannot forge a credit) is
-  now proven in zero-knowledge, not merely signed.
-- **Isn't:** a proof of the full **re-execution** that *produces* `post`. Running
-  the whole revm / SBF engine inside the zkVM (a zkEVM-scale guest) and proving a
-  realistic plan needs GPU proving and substantial engine-in-guest work — the
-  documented frontier. This PoC proves the last mile (predicate → verdict) and
-  establishes the toolchain end-to-end on CPU.
-- The on-chain verifier contract is **done and tested with a real Groth16 proof**
-  verified against SP1's canonical `SP1Verifier` (circuit v6.1.0) — see *On-chain
-  verification* above. This is still the last-mile predicate→verdict proof, not the
-  full re-execution.
+The predicate guest above trusts `post` as an input — someone still runs the EVM
+off-chain to produce it. The **re-execution guest** ([`program-revm/`](program-revm/src/main.rs))
+removes that trust: it runs **real `revm` inside the zkVM**, seeds the committed
+prestate, **executes the seller's committed CALL under proof**, reads the resulting
+post-state, and applies the same causal delta predicate. So `post` is *computed by
+the EVM inside the proof*, not supplied by a resolver.
+
+```sh
+cd script
+cargo run --release --bin reexec -- --execute   # run revm in-guest, print verdict + EVM cycles
+cargo run --release --bin reexec -- --prove      # generate AND verify a core proof
+cargo run --release --bin reexec -- --fixture    # real Groth16 proof -> on-chain fixture
+# default: prestate slot7 = 42, plan SSTORE(slot7, 142) -> post EXECUTED to 142,
+#          delta 100 >= floor 100 -> Reproduced.  --credit 42 -> delta 0 -> Failed.
+```
+
+Verified end-to-end:
+
+- **`revm` 38 compiles to the SP1 zkVM target** (`riscv64im-succinct-zkvm-elf`) once
+  its default features (C-based `c-kzg`/`secp256k1` precompiles) are dropped.
+- The guest **executes the SSTORE CALL in-guest**: `post` is derived as 142 by
+  execution, not given; the credited delta 100 clears the floor → `Reproduced`. A
+  plan that writes the same value (`--credit 42`) yields delta 0 → `Failed` — the
+  no-op-can't-fake-it soundness now holds under *real execution*, ~**200k cycles**.
+- Its `traceHash` **equals the predicate guest's** for the same `(pre, post, …)`,
+  so the two agree — one just proves `post` and the other trusts it.
+- A **real Groth16 proof** of the re-execution verifies **on-chain** against SP1's
+  `SP1Verifier` (v6.1.0) via the **same generic `RecknVerdictVerifier`** (only the
+  vkey differs, because the guest commits the identical `VerdictPublicValues`) —
+  `RecknReexecVerdict.t.sol`.
+
+### Honest scope of the re-execution guest
+
+- **Is** the actual `revm` EVM executing a real CALL under proof — not a toy
+  interpreter. The trusted-`post` gap is genuinely closed for that execution.
+- **Not yet:** (a) in-guest prestate **MPT-authenticity** vs a committed `state_root`
+  — the same authenticity layer `reexec-evm` does off-chain, foldable into the guest
+  next (keccak-heavy); the proof today attests *execution from the committed
+  prestate*. (b) The `c-kzg`/`ecrecover` precompiles are disabled, so plans needing
+  them aren't supported until SP1's patched crypto is wired in. (c) Verdict values
+  map to `u64` to reuse the on-chain ABI. (d) One CALL + one delta check; a full
+  block or arbitrary contract set is more cycles, same architecture. **SBF (Solana)
+  in-guest is untouched** — the harder mirror.
 
 This is a nested SP1 workspace, independent of the main reckn crates' build.

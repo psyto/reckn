@@ -1,5 +1,8 @@
 use sp1_build::build_program_with_args;
 
 fn main() {
-    build_program_with_args("../program", Default::default())
+    // The predicate guest (trusts `post`) and the full re-execution guest
+    // (executes revm in-guest to derive `post`).
+    build_program_with_args("../program", Default::default());
+    build_program_with_args("../program-revm", Default::default());
 }

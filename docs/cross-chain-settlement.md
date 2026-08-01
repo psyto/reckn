@@ -93,8 +93,12 @@ stays with an existing bridge as a downstream, low-authority step.
 Scope honesty: the on-chain verifier contract and its invariants are implemented
 and tested with a **real Groth16 proof** verified against SP1's real `SP1Verifier`
 (circuit v6.1.0) — a valid proof exposes the verdict; a tampered one reverts. This
-proves the *verdict/predicate* derivation, not yet the full re-execution that
-produces the post-state — that remains the frontier (GPU + engine-in-guest).
+proves the *verdict/predicate* derivation. A second guest closes the trusted-`post`
+gap too: it runs **real revm inside the zkVM**, executing the committed CALL to
+derive the post-state under proof, and its Groth16 proof verifies on-chain through
+the same verifier (`zk-verdict/program-revm`, ~200k cycles for the SSTORE plan).
+Remaining frontier: in-guest prestate MPT-authenticity, disabled precompiles,
+full-block scale, and the SBF (Solana) mirror.
 
 ## Minimal implementation cut
 
