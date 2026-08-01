@@ -63,6 +63,40 @@ after A challenge window -> release/refund exactly once
 - Never use a bare relayer signature, a B RPC response, or an unfinalized log as
   a release authorization. These are transport hints only.
 
+## Trust-minimized verdict transport: the self-verifying ZK verdict
+
+Step 3 above needs A to be convinced B's verdict is real. A B light client on A is
+the strong option; a bridge/committee is the weaker, pluggable one. Both make the
+**verdict authority** (reckn's Role 1) depend on a transport's trust assumption —
+exactly the thing reckn exists to remove.
+
+A **self-verifying ZK verdict** collapses that dependency. If the verdict is a
+succinct proof that the committed inputs reproduce the outcome, then A verifies the
+*proof itself* — no B light client, no bridge, no relayer trusted with authority:
+
+- [`zk-verdict/`](../zk-verdict) proves reckn's causal-delta verdict in an SP1
+  zkVM and commits `(outcome, traceHash)` as public values.
+- [`zk-verdict/contracts/src/RecknVerdictVerifier.sol`](../zk-verdict/contracts/src/RecknVerdictVerifier.sol)
+  verifies that proof **on-chain** against the program vkey and exposes the
+  verdict. The verdict is authoritative because the proof verifies, not because a
+  signer is on an allow-list — and a proof check is chain-agnostic, so it works
+  identically on A.
+
+Where this lands in the protocol: it replaces step 3's "verify a B
+light-client/finality proof" with "verify the verdict proof," and it makes the
+step-2 `VerdictFinalizedB` event carry (or commit to) that proof. **It does not
+remove** the A-side clock and challenge window (steps 1, 4, 5): A still commits its
+own `remote_finality_deadline` and finalizes exactly once. ZK trust-minimizes the
+*verdict transport* (Role 1); it does not by itself move value A→B (Role 2), which
+stays with an existing bridge as a downstream, low-authority step.
+
+Scope honesty: the on-chain verifier contract and its invariants are implemented
+and tested (a valid proof exposes the verdict; a tampered one reverts). Generating
+the *real* Groth16 proof that flows through it needs SP1's ~6.2 GB circuit
+artifacts + heavier proving; the fixture path is written and gated. And this proves
+the *verdict/predicate* derivation, not yet the full re-execution that produces the
+post-state — that remains the frontier (GPU + engine-in-guest).
+
 ## Minimal implementation cut
 
 Implement same-chain cross-VM first: the binder runs the B backend but the

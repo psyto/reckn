@@ -357,7 +357,9 @@ content publication.
   (exposed via a cfg-gated `testkit` feature so the production crate is unchanged and
   the test cannot drift onto a weaker witness). `cargo test`: **6 passing**. The
   cross-chain settlement *around* routing (finality on both chains, verdict
-  propagation, double-settle rules) is the remaining frame-thick step —
+  propagation, double-settle rules) is the remaining frame-thick step — with a
+  **self-verifying ZK verdict** as the trust-minimized verdict transport (A verifies
+  the proof itself, no light client for the authority) —
   [`docs/cross-chain-settlement.md`](docs/cross-chain-settlement.md).
 - **Money-shot dashboard:** [`dashboard/`](dashboard) — a self-contained,
   animated money-shot driven by real `reexec-evm` output: the escrow pot moves, a
@@ -403,14 +405,21 @@ content publication.
   bond + window + peer-conflict + finalize + slash), each driven end-to-end.
 - **Toward zero-trust (ZK, PoC):** [`zk-verdict/`](zk-verdict) proves reckn's
   causal delta verdict inside an **SP1 zkVM** and verifies the proof — the verdict
-  *derivation* needs no trusted resolver, run end-to-end on CPU. Proving the full
-  re-execution that produces the post-state (revm / SBF inside the zkVM) is the
-  remaining frontier (GPU + engine-in-guest).
+  *derivation* needs no trusted resolver, run end-to-end on CPU. The verdict is also
+  **verifiable on-chain**: [`RecknVerdictVerifier.sol`](zk-verdict/contracts/src/RecknVerdictVerifier.sol)
+  checks an SP1 proof against the program vkey and exposes the verdict, authoritative
+  *because the proof verifies* — a chain-agnostic check, which is what makes a ZK
+  verdict the **trustless cross-chain settlement primitive** (any paying chain
+  verifies a verdict itself, no bridge or light client for the authority). Contract +
+  invariants are tested (`forge test`, mock + real-verifier suites); generating the
+  *real* Groth16 proof through it needs SP1's ~6.2 GB circuit artifacts (gated
+  fixture). Proving the full re-execution that produces the post-state (revm / SBF
+  inside the zkVM) is the remaining frontier (GPU + engine-in-guest).
 - **Next:** the EVM quorum-slashing mirror on the SVM escrow (Ed25519 quorum
-  introspection + lamport bond slash); scaling the ZK path to the full
-  re-execution (or a fraud-proof VM) for zero-trust adjudication; and cross-chain
-  settlement around the binder (finality on both chains + verdict propagation +
-  double-settle rules).
+  introspection + lamport bond slash); generating the real Groth16 fixture on a
+  GPU/artifact-capable box; scaling the ZK path to the full re-execution (or a
+  fraud-proof VM) for zero-trust adjudication; and cross-chain settlement around the
+  binder (finality on both chains + verdict propagation + double-settle rules).
 
 ## Try it (one command)
 

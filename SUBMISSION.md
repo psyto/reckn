@@ -111,7 +111,14 @@ live and tested — on **both** VMs, behind **one** router.
   (`KeeperError::SnapshotAuthenticity` before any verdict). What remains is
   *ingesting* a real Agave snapshot archive into the full snapshot — ingestion, not
   soundness (`docs/svm-snapshot-authenticity.md`). Cross-chain settlement is
-  designed fail-closed (`docs/cross-chain-settlement.md`) but not yet implemented.
+  designed fail-closed (`docs/cross-chain-settlement.md`) but not yet implemented —
+  though its hardest piece, **trust-minimized verdict transport**, now has a concrete
+  primitive: a **self-verifying ZK verdict** (`zk-verdict/`) whose SP1 proof is
+  **verified on-chain** by `RecknVerdictVerifier.sol`, so a paying chain checks a
+  verdict itself with no bridge or light client for the authority (contract +
+  invariants tested; the real Groth16 fixture needs SP1's 6.2 GB artifacts and is
+  gated). This proves the verdict *derivation*, not the full re-execution — the
+  documented frontier.
 
 ## Positioning & sponsor targets
 
