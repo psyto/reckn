@@ -65,16 +65,20 @@ SP1_PROVER=cpu cargo run --release --bin evm -- --pre 42 --post 142 --min 100
 # writes contracts/src/fixtures/groth16-fixture.json, then `forge test` verifies it on-chain
 ```
 
-**Honest note on what was run here.** The contract and both invariants (a valid
-proof exposes the verdict; an invalid/tampered one reverts) are verified — the
-wiring suite is green. The core SP1 proof (`--prove`, `main.rs`) is generated and
-verified end-to-end on CPU. The *real Groth16 fixture* was **not** produced in this
-environment: SP1's EVM proof requires the ~6.2 GB v6.1.0 gnark circuit artifacts
-(the wrapping circuit's proving key), and generating it is a large download plus
-CPU-only proving. So `RecknVerdictVerifierFixture.t.sol` is committed and correct
-but currently **skips** (no fixture); running the command above on a machine that
-can fetch the artifacts makes it verify a real proof against SP1's real verifier.
-The download size is inherent to SP1's Groth16 path, not a reckn choice.
+**What was run here — a real proof, verified on-chain.** A **real Groth16 proof**
+of the verdict was generated on CPU (the gnark prover, ~15.9M constraints, ~34 s
+once the artifacts are local) and checked against SP1's **real** `SP1Verifier`
+(circuit v6.1.0) inside `RecknVerdictVerifierFixture.t.sol` — it verifies on-chain
+and a tampered public-values variant reverts. The fixture is committed at
+[`contracts/src/fixtures/groth16-fixture.json`](contracts/src/fixtures/groth16-fixture.json)
+(vkey `0x00cee7dc…`, outcome `Reproduced`, credited delta 100 ∈ [100, MAX]). Both
+the wiring suite (mock verifier) and the real-verifier suite are green.
+
+The only heavy prerequisite is SP1's ~6.2 GB v6.1.0 gnark circuit artifacts (the
+wrapping circuit's proving key), fetched once into `~/.sp1/circuits/groth16/v6.1.0`
+— inherent to SP1's Groth16 path, not a reckn choice. `RecknVerdictVerifierFixture.t.sol`
+stays gated on the fixture's presence, so `forge test` is green for anyone who
+hasn't regenerated it.
 
 ## Honest scope (what this is and isn't)
 
@@ -87,11 +91,9 @@ The download size is inherent to SP1's Groth16 path, not a reckn choice.
   realistic plan needs GPU proving and substantial engine-in-guest work — the
   documented frontier. This PoC proves the last mile (predicate → verdict) and
   establishes the toolchain end-to-end on CPU.
-- The on-chain verifier contract + verification logic are **done and tested**
-  against SP1's canonical `SP1Verifier` (circuit v6.1.0) interface (see *On-chain
-  verification* above). Producing the *real* Groth16 proof that flows through it
-  needs the 6.2 GB circuit artifacts + heavier proving — the fixture test is
-  written and gated for it. Either way this is still the last-mile predicate, not
-  the full re-execution.
+- The on-chain verifier contract is **done and tested with a real Groth16 proof**
+  verified against SP1's canonical `SP1Verifier` (circuit v6.1.0) — see *On-chain
+  verification* above. This is still the last-mile predicate→verdict proof, not the
+  full re-execution.
 
 This is a nested SP1 workspace, independent of the main reckn crates' build.

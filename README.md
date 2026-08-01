@@ -410,16 +410,16 @@ content publication.
   checks an SP1 proof against the program vkey and exposes the verdict, authoritative
   *because the proof verifies* — a chain-agnostic check, which is what makes a ZK
   verdict the **trustless cross-chain settlement primitive** (any paying chain
-  verifies a verdict itself, no bridge or light client for the authority). Contract +
-  invariants are tested (`forge test`, mock + real-verifier suites); generating the
-  *real* Groth16 proof through it needs SP1's ~6.2 GB circuit artifacts (gated
-  fixture). Proving the full re-execution that produces the post-state (revm / SBF
-  inside the zkVM) is the remaining frontier (GPU + engine-in-guest).
+  verifies a verdict itself, no bridge or light client for the authority). Verified
+  with a **real Groth16 proof** against SP1's canonical `SP1Verifier` (circuit
+  v6.1.0) on-chain (`forge test`, mock + real-verifier suites green). Proving the
+  full re-execution that produces the post-state (revm / SBF inside the zkVM) is the
+  remaining frontier (GPU + engine-in-guest).
 - **Next:** the EVM quorum-slashing mirror on the SVM escrow (Ed25519 quorum
-  introspection + lamport bond slash); generating the real Groth16 fixture on a
-  GPU/artifact-capable box; scaling the ZK path to the full re-execution (or a
-  fraud-proof VM) for zero-trust adjudication; and cross-chain settlement around the
-  binder (finality on both chains + verdict propagation + double-settle rules).
+  introspection + lamport bond slash); scaling the ZK path to the full re-execution
+  (or a fraud-proof VM) for zero-trust adjudication; and cross-chain settlement
+  around the binder (finality on both chains + verdict propagation + double-settle
+  rules).
 
 ## Try it (one command)
 

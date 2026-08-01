@@ -115,10 +115,10 @@ live and tested — on **both** VMs, behind **one** router.
   though its hardest piece, **trust-minimized verdict transport**, now has a concrete
   primitive: a **self-verifying ZK verdict** (`zk-verdict/`) whose SP1 proof is
   **verified on-chain** by `RecknVerdictVerifier.sol`, so a paying chain checks a
-  verdict itself with no bridge or light client for the authority (contract +
-  invariants tested; the real Groth16 fixture needs SP1's 6.2 GB artifacts and is
-  gated). This proves the verdict *derivation*, not the full re-execution — the
-  documented frontier.
+  verdict itself with no bridge or light client for the authority (verified with a
+  **real Groth16 proof** against SP1's real `SP1Verifier`, circuit v6.1.0). This
+  proves the verdict *derivation*, not the full re-execution — the documented
+  frontier.
 
 ## Positioning & sponsor targets
 
