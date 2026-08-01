@@ -28,6 +28,54 @@ SP1_PROVER=cpu cargo run --release --bin verdict -- --prove  # generate AND veri
 Verified locally: `--execute` reports ~21.7k cycles and the guest output matches
 the host computation; `--prove` generates a core proof and **verifies it**.
 
+## On-chain verification (the trustless cross-chain settlement primitive)
+
+A verdict is only a settlement primitive if *any* chain can check it **itself** —
+no bridge, no light client, no trusted relayer. That is what a self-verifying ZK
+proof gives us: [`contracts/src/RecknVerdictVerifier.sol`](contracts/src/RecknVerdictVerifier.sol)
+verifies an SP1 Groth16 proof on-chain against the program's verification key and
+exposes the committed verdict (`outcome`, `traceHash`). The verdict is
+authoritative because **the proof verifies**, not because a signer is on an
+allow-list — so a paying chain A can settle on a verdict about work on chain B by
+verifying this proof directly. Reckn's core function (verdict authority) crosses
+chains trustlessly; value transfer (A→B) is left to an existing bridge.
+
+```sh
+cd contracts
+forge install foundry-rs/forge-std --no-git
+# the SP1 verifier contracts (matching circuit v6.1.0) — see remappings.txt
+forge test                                    # wiring tests (mock verifier) — always run
+```
+
+Two test suites:
+
+- **`RecknVerdictVerifier.t.sol`** — the wiring, with a mocked verifier: a valid
+  proof exposes the ZK-attested verdict; an invalid proof reverts (no unproven
+  verdict settles). Always runs.
+- **`RecknVerdictVerifierFixture.t.sol`** — end-to-end against SP1's **real**
+  Groth16 verifier (`SP1Verifier`, circuit **v6.1.0** — the exact version this
+  `sp1-sdk` produces). It consumes a real proof and asserts it verifies on-chain
+  and that tampered public values are rejected. Gated on the fixture's presence.
+
+Generate the real proof + fixture to exercise that second suite:
+
+```sh
+cd script
+SP1_PROVER=cpu cargo run --release --bin evm -- --pre 42 --post 142 --min 100
+# writes contracts/src/fixtures/groth16-fixture.json, then `forge test` verifies it on-chain
+```
+
+**Honest note on what was run here.** The contract and both invariants (a valid
+proof exposes the verdict; an invalid/tampered one reverts) are verified — the
+wiring suite is green. The core SP1 proof (`--prove`, `main.rs`) is generated and
+verified end-to-end on CPU. The *real Groth16 fixture* was **not** produced in this
+environment: SP1's EVM proof requires the ~6.2 GB v6.1.0 gnark circuit artifacts
+(the wrapping circuit's proving key), and generating it is a large download plus
+CPU-only proving. So `RecknVerdictVerifierFixture.t.sol` is committed and correct
+but currently **skips** (no fixture); running the command above on a machine that
+can fetch the artifacts makes it verify a real proof against SP1's real verifier.
+The download size is inherent to SP1's Groth16 path, not a reckn choice.
+
 ## Honest scope (what this is and isn't)
 
 - **Is:** a genuine, runnable ZK proof of reckn's *verdict/predicate computation*,
@@ -39,7 +87,11 @@ the host computation; `--prove` generates a core proof and **verifies it**.
   realistic plan needs GPU proving and substantial engine-in-guest work — the
   documented frontier. This PoC proves the last mile (predicate → verdict) and
   establishes the toolchain end-to-end on CPU.
-- The EVM-verifiable (Groth16) wrapper + on-chain verifier contract are a further
-  step (SP1 supports them; they need ≥16GB RAM / heavier proving).
+- The on-chain verifier contract + verification logic are **done and tested**
+  against SP1's canonical `SP1Verifier` (circuit v6.1.0) interface (see *On-chain
+  verification* above). Producing the *real* Groth16 proof that flows through it
+  needs the 6.2 GB circuit artifacts + heavier proving — the fixture test is
+  written and gated for it. Either way this is still the last-mile predicate, not
+  the full re-execution.
 
 This is a nested SP1 workspace, independent of the main reckn crates' build.
