@@ -103,8 +103,10 @@ trusted-prestate and trusted-`post` gaps are closed for that execution. Remainin
 frontier (EVM): disabled precompiles and full-block scale. The **SVM mirror** now
 exists too (`zk-verdict/program-svm`): it signature-verifies the real Solana
 transaction in-guest and re-executes its System transfer under proof, verified
-on-chain through the same verifier — remaining there is in-guest `bank_hash`
-prestate authenticity.
+on-chain through the same verifier. It also recomputes the block `bank_hash` from
+the committed accounts in-guest (SIMD-0215 lattice hash) and rejects a tampered
+account set — so, like the EVM guest, both the prestate-authenticity and post-state
+gaps are closed on the SVM side too.
 
 ## Minimal implementation cut
 

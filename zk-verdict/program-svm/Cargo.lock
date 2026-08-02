@@ -601,6 +601,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7575182f7272186991736b70173b0ea045398f984bf5ebbb3804736ce1330c9d"
 
 [[package]]
+name = "bytemuck"
+version = "1.25.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "95832e849adfb21180ccb6826a99da14e5d266ae5c2e668e1602cf234f153797"
+
+[[package]]
 name = "byteorder"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2661,6 +2667,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-lattice-hash"
+version = "4.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e4dc0c380275da3d140f6027966ee35e0d647af735042c5cf8d4f58bb6fa99ac"
+dependencies = [
+ "base64",
+ "blake3",
+ "bs58",
+ "bytemuck",
+]
+
+[[package]]
 name = "solana-message"
 version = "3.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2879,6 +2897,16 @@ name = "subtle"
 version = "2.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
+
+[[package]]
+name = "svm-bankhash"
+version = "0.1.0"
+dependencies = [
+ "blake3",
+ "sha2 0.10.9",
+ "solana-lattice-hash",
+ "svm-io",
+]
 
 [[package]]
 name = "svm-io"
@@ -3137,6 +3165,7 @@ dependencies = [
  "solana-pubkey 3.0.0",
  "solana-transaction",
  "sp1-zkvm",
+ "svm-bankhash",
  "svm-io",
  "verdict-lib",
 ]

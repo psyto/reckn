@@ -37,10 +37,11 @@ executing the committed CALL to derive the post-state under proof — closing bo
 trusted-prestate and trusted-`post` gaps for that execution (a tampered prestate is
 rejected; its Groth16 proof verifies on-chain through the same verifier). Remaining:
 disabled precompiles and full-block scale; a **third guest**
-(`zk-verdict/program-svm`) mirrors this on Solana — it signature-verifies the real
-committed transaction in-guest and re-executes its System transfer under proof
-(reckn permits System builtins only), with in-guest `bank_hash` authenticity the
-remaining follow-up. Do
+(`zk-verdict/program-svm`) mirrors this on Solana — it recomputes the block
+`bank_hash` from the committed accounts (SIMD-0215 lattice hash), signature-verifies
+the real committed transaction, and re-executes its System transfer under proof
+(reckn permits System builtins only), closing both the prestate-authenticity and
+post-state gaps on the SVM side too. Do
 not overclaim: none of these yet make single-signer adjudication zero-trust for
 arbitrary work.
 

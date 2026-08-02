@@ -29,6 +29,17 @@ pub fn main() {
     let tx = sp1_zkvm::io::read::<Transaction>();
     let prestate = sp1_zkvm::io::read::<SvmPrestate>();
 
+    // 0. Prove the prestate is authentic: recompute the block `bank_hash` from the
+    //    committed accounts (SIMD-0215 lattice hash) and require it to match the
+    //    committed one. A valid proof cannot exist for a tampered account set.
+    let got_bank_hash = svm_bankhash::compute_bank_hash(
+        &prestate.accounts,
+        &prestate.parent_bank_hash,
+        prestate.signature_count,
+        &prestate.last_blockhash,
+    );
+    assert_eq!(got_bank_hash, prestate.bank_hash, "bank_hash authenticity");
+
     // 1. Signer bits are authority in the SVM: verify the real signatures in-guest.
     let mut exec_ok = tx.verify().is_ok();
 
@@ -37,7 +48,7 @@ pub fn main() {
     let mut accts: Vec<([u8; 32], u64, [u8; 32], u64)> = prestate
         .accounts
         .iter()
-        .map(|a| (a.pubkey, a.lamports, a.owner, a.data_len))
+        .map(|a| (a.pubkey, a.lamports, a.owner, a.data.len() as u64))
         .collect();
     let find = |accts: &Vec<([u8; 32], u64, [u8; 32], u64)>, k: &[u8; 32]| -> Option<usize> {
         accts.iter().position(|e| &e.0 == k)

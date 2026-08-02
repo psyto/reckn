@@ -995,16 +995,17 @@ dependencies = [
 
 [[package]]
 name = "blake3"
-version = "1.8.1"
+version = "1.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "389a099b34312839e16420d499a9cad9650541715937ffbdd40d36f49e77eeb3"
+checksum = "0aa83c34e62843d924f905e0f5c866eb1dd6545fc4d719e803d9ba6030371fce"
 dependencies = [
  "arrayref",
  "arrayvec",
  "cc",
  "cfg-if",
  "constant_time_eq",
- "digest 0.10.7",
+ "cpufeatures 0.3.0",
+ "digest 0.11.3",
 ]
 
 [[package]]
@@ -1062,6 +1063,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "bs58"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf88ba1141d185c399bee5288d850d63b8369520c1eafc32a0430b5b6c287bf4"
+
+[[package]]
 name = "bumpalo"
 version = "3.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1075,9 +1082,9 @@ checksum = "7575182f7272186991736b70173b0ea045398f984bf5ebbb3804736ce1330c9d"
 
 [[package]]
 name = "bytemuck"
-version = "1.22.0"
+version = "1.25.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6b1fc10dbac614ebc03540c9dbd60e83887fda27794998c6528f1782047d540"
+checksum = "95832e849adfb21180ccb6826a99da14e5d266ae5c2e668e1602cf234f153797"
 dependencies = [
  "bytemuck_derive",
 ]
@@ -1250,6 +1257,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f46ad14479a25103f283c0f10005961cf086d8dc42205bb44c46ac563475dca6"
 
 [[package]]
+name = "cmov"
+version = "0.5.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0c9ea0ac24bc397ab3c98583a3c9ba74fa56b09a4449bbe172b9b1ddb016027a"
+
+[[package]]
 name = "colorchoice"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1315,9 +1328,9 @@ dependencies = [
 
 [[package]]
 name = "constant_time_eq"
-version = "0.3.1"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7c74b8349d32d297c9134b8c88677813a227df8f779daa29bfc29c183fe3dca6"
+checksum = "3d52eff69cd5e647efe296129160853a42795992097e8af39800e1060caeea9b"
 
 [[package]]
 name = "core-foundation-sys"
@@ -1488,6 +1501,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ce6e4c961d6cd6c9a86db418387425e8bdeaf05b3c8bc1411e6dca4c252f1453"
 dependencies = [
  "hybrid-array",
+]
+
+[[package]]
+name = "ctutils"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7d5515a3834141de9eafb9717ad39eea8247b5674e6066c404e8c4b365d2a29e"
+dependencies = [
+ "cmov",
 ]
 
 [[package]]
@@ -1798,6 +1820,7 @@ checksum = "f1dd6dbb5841937940781866fa1281a1ff7bd3bf827091440879f9994983d5c2"
 dependencies = [
  "block-buffer 0.12.1",
  "crypto-common 0.2.2",
+ "ctutils",
 ]
 
 [[package]]
@@ -5831,6 +5854,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-lattice-hash"
+version = "4.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e4dc0c380275da3d140f6027966ee35e0d647af735042c5cf8d4f58bb6fa99ac"
+dependencies = [
+ "base64 0.22.1",
+ "blake3",
+ "bs58",
+ "bytemuck",
+]
+
+[[package]]
 name = "solana-message"
 version = "3.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6687,6 +6722,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "svm-bankhash"
+version = "0.1.0"
+dependencies = [
+ "blake3",
+ "sha2 0.10.9",
+ "solana-lattice-hash",
+ "svm-io",
+]
+
+[[package]]
 name = "svm-io"
 version = "0.1.0"
 dependencies = [
@@ -7391,6 +7436,7 @@ dependencies = [
  "solana-transaction",
  "sp1-build",
  "sp1-sdk",
+ "svm-bankhash",
  "svm-io",
  "tracing",
  "verdict-lib",

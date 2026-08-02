@@ -136,12 +136,14 @@ live and tested — on **both** VMs, behind **one** router.
   (`zk-verdict/program-svm`) **signature-verifies the real committed Solana transaction
   in-guest** (`Transaction::verify`, real ed25519 — the Solana data crates compile to
   the zkVM target) and **re-executes its System transfer** to derive the post-lamports,
-  then applies `LamportsDelta`. `System::Transfer(2M)` → `Reproduced` (~762k cycles); a
+  then applies `LamportsDelta`. `System::Transfer(2M)` → `Reproduced` (~970k cycles); a
   **tampered signature is rejected** → `Failed`; the real Groth16 proof verifies
   on-chain through the **same generic verifier** — one verdict contract, EVM and SVM
   proofs alike. reckn permits System builtins only, so this is not the full Agave/LiteSVM
-  runtime (out of scope in-zk) nor custom SBF; in-guest `bank_hash` prestate authenticity
-  is the remaining follow-up.
+  runtime (out of scope in-zk) nor custom SBF. It also **recomputes the block
+  `bank_hash`** from the committed accounts in-guest (SIMD-0215 lattice hash, byte-identical
+  to `reexec-svm::bankhash`) and rejects a tampered account set — so, like the EVM guest,
+  both the trusted-prestate and trusted-`post` gaps are closed.
 
 ## Positioning & sponsor targets
 
