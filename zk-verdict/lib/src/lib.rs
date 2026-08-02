@@ -24,6 +24,11 @@ sol! {
         uint64 maxDelta;
         uint8 outcome;
         bytes32 traceHash;
+        // Commitment over the guest's committed prestate + predicate + plan. An
+        // escrow deal commits the same value at funding, so a proof can only settle
+        // the deal it was actually about. Zero for the predicate guest (it trusts
+        // `pre`/`post` and is not a settlement source).
+        bytes32 dealBinding;
     }
 }
 

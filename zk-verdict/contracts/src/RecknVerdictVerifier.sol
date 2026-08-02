@@ -12,6 +12,10 @@ struct VerdictPublicValues {
     uint64 maxDelta;
     uint8 outcome;
     bytes32 traceHash;
+    /// @notice Commitment over the guest's prestate + predicate + plan. An escrow
+    ///         deal commits the same value at funding, so a proof can only settle
+    ///         the deal it was actually about (see RecknZkEscrow).
+    bytes32 dealBinding;
 }
 
 /// @title RecknVerdictVerifier

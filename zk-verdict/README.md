@@ -208,4 +208,27 @@ Verified end-to-end:
   of a full snapshot is `reexec-svm`'s separate `authenticity` layer. Payer-side fee
   modeling (the recipient-delta demo doesn't need it) and `u64` verdict values remain.
 
+## Settlement — the proof moves money ([`RecknZkEscrow`](contracts/src/RecknZkEscrow.sol))
+
+Verifying a verdict is not the point; *settling* on it is. [`RecknZkEscrow`](contracts/src/RecknZkEscrow.sol)
+holds a payment and releases it **purely on a ZK-verified verdict — no resolver**.
+The binding that makes this sound: each re-execution guest commits a `dealBinding`
+in its public values — a hash over its **authenticated prestate + predicate + plan**
+(EVM: `state_root ‖ target ‖ slot ‖ min ‖ max ‖ keccak(plan)`; SVM: `bank_hash ‖
+account ‖ min ‖ max ‖ signature`). A deal commits that same `dealBinding` at funding,
+and `settleWithProof` verifies the SP1 proof via `RecknVerdictVerifier` and requires
+the binding to match before paying out — so a proof from some *other* favorable
+execution cannot settle this deal.
+
+- `fund(dealId, seller, token, amount, dealBinding)` — buyer escrows the payment.
+- `settleWithProof(dealId, publicValues, proofBytes)` — **permissionless**: the proof
+  carries its own authority. `Reproduced` → release to the seller; `Failed` → refund
+  the buyer.
+
+Tested (`RecknZkEscrow.t.sol`): a **real Groth16 proof** of the EVM re-execution
+(`Reproduced`) **settles to the seller** on SP1's real verifier; a `Failed` verdict
+refunds the buyer; a **binding mismatch** and an **unverified proof** both revert.
+This is the endgame the earlier pieces pointed at: settlement authority from a proof
+that verifies, chain-agnostic, with no trusted resolver.
+
 This is a nested SP1 workspace, independent of the main reckn crates' build.

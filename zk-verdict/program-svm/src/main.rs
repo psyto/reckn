@@ -126,6 +126,20 @@ pub fn main() {
     };
     let trace = verdict_trace_hash(pre, post, check.min, check.max, outcome);
 
+    // Deal binding: commit the authenticated bank_hash + the predicate + the signed
+    // transaction (via its signature), so an escrow can require a proof to be about
+    // its exact committed deal.
+    use sha2::{Digest, Sha256};
+    let mut bh = Sha256::new();
+    bh.update(b"reckn/zk/bind/svm/v1");
+    bh.update(prestate.bank_hash);
+    bh.update(check.account);
+    bh.update(check.min.to_le_bytes());
+    bh.update(check.max.to_le_bytes());
+    bh.update(tx.signatures[0].as_ref());
+    let mut deal_binding = [0u8; 32];
+    deal_binding.copy_from_slice(&bh.finalize());
+
     let bytes = VerdictPublicValues::abi_encode(&VerdictPublicValues {
         pre,
         post,
@@ -133,6 +147,7 @@ pub fn main() {
         maxDelta: check.max,
         outcome,
         traceHash: trace.into(),
+        dealBinding: deal_binding.into(),
     });
     sp1_zkvm::io::commit_slice(&bytes);
 }

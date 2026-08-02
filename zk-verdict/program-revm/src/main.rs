@@ -169,6 +169,24 @@ pub fn main() {
     // about *this* state — a prover cannot swap in a convenient fake prestate.
     let trace = reexec_trace_hash(input.state_root, pre_u, post_u, check.min, check.max, outcome);
 
+    // Deal binding: commit the authenticated prestate root + the predicate + the
+    // plan, so an escrow can require a proof to be about its exact committed deal.
+    let mut plan_pre: Vec<u8> = Vec::new();
+    plan_pre.extend_from_slice(&input.plan.caller);
+    plan_pre.extend_from_slice(&input.plan.target);
+    plan_pre.extend_from_slice(&input.plan.calldata);
+    plan_pre.extend_from_slice(&input.plan.value);
+    let plan_hash = keccak256(&plan_pre);
+    let mut bind_pre: Vec<u8> = Vec::new();
+    bind_pre.extend_from_slice(b"reckn/zk/bind/evm/v1");
+    bind_pre.extend_from_slice(&input.state_root);
+    bind_pre.extend_from_slice(&check.address);
+    bind_pre.extend_from_slice(&check.slot);
+    bind_pre.extend_from_slice(&check.min.to_le_bytes());
+    bind_pre.extend_from_slice(&check.max.to_le_bytes());
+    bind_pre.extend_from_slice(plan_hash.as_slice());
+    let deal_binding = keccak256(&bind_pre);
+
     let bytes = VerdictPublicValues::abi_encode(&VerdictPublicValues {
         pre: pre_u,
         post: post_u,
@@ -176,6 +194,7 @@ pub fn main() {
         maxDelta: check.max,
         outcome,
         traceHash: trace.into(),
+        dealBinding: deal_binding.0.into(),
     });
     sp1_zkvm::io::commit_slice(&bytes);
 }

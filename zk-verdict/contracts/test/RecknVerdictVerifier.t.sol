@@ -30,7 +30,8 @@ contract RecknVerdictVerifierTest is Test {
                 minDelta: 100,
                 maxDelta: type(uint64).max,
                 outcome: 0,
-                traceHash: keccak256("trace")
+                traceHash: keccak256("trace"),
+                dealBinding: bytes32(0)
             })
         );
     }

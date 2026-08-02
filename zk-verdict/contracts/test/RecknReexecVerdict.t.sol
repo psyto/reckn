@@ -61,7 +61,8 @@ contract RecknReexecVerdictTest is Test {
                 minDelta: 0,
                 maxDelta: type(uint64).max,
                 outcome: 0,
-                traceHash: keccak256("forged")
+                traceHash: keccak256("forged"),
+                dealBinding: bytes32(0)
             })
         );
         vm.expectRevert();
