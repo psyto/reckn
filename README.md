@@ -554,12 +554,14 @@ cd keeper && cargo test
 # cross-VM binder: one router re-executes EVM + SVM, fails closed — 6 tests
 cd binder && cargo test
 
-# ZK re-execution: revm (EVM) and the Solana System transfer run INSIDE an SP1 zkVM,
-# each against an authenticated prestate (MPT / bank_hash), and a real Groth16 proof
-# is verified on-chain by one generic verifier — 8 tests
-cd zk-verdict/contracts && forge install foundry-rs/forge-std --no-git && forge test
-cd zk-verdict/script && cargo run --release --bin reexec -- --execute   # EVM in-guest
-cd zk-verdict/script && cargo run --release --bin svm -- --execute       # SVM in-guest
+# ZK re-execution, one command: re-execute both VMs in the zkVM (tampered prestate
+# rejected), verify the REAL Groth16 proofs on-chain, and SETTLE the escrow to the
+# seller on the proof alone — no resolver (RecknZkEscrow) — 12 tests
+bash zk-verdict/scripts/zk-e2e.sh
+# or piecemeal:
+cd zk-verdict/contracts && forge test                                    # verify + settle
+cd zk-verdict/script && cargo run --release --bin reexec -- --execute    # EVM in-guest
+cd zk-verdict/script && cargo run --release --bin svm -- --execute        # SVM in-guest
 
 # one-command local chain demo: Act I false claim → Failed → refund;
 # Act II causal delta predicate (credited ≥ minOut) → Reproduced → seller release

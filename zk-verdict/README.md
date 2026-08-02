@@ -21,7 +21,18 @@ verifies all of them (only the program vkey differs):
 
 So a reckn verdict — on either VM, against a cryptographically authenticated prestate
 — is provable in a zkVM and verified on-chain with no trusted resolver. The sections
-below go predicate → EVM → SVM.
+below go predicate → EVM → SVM → settlement.
+
+**Run the whole path in one command:**
+
+```sh
+bash scripts/zk-e2e.sh
+```
+
+It re-executes both VMs in the zkVM (live, if the SP1 toolchain is installed; a
+tampered prestate is rejected), then verifies the **real Groth16 proofs on-chain** and
+**settles the escrow to the seller** on the proof alone — using committed fixtures, so
+the on-chain half runs with just `forge`. `ZK_FRESH=1` regenerates a fresh proof.
 
 ## What it proves (the predicate guest)
 
