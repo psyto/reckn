@@ -36,7 +36,11 @@ the committed prestate against the `state_root` and runs real revm inside the zk
 executing the committed CALL to derive the post-state under proof — closing both the
 trusted-prestate and trusted-`post` gaps for that execution (a tampered prestate is
 rejected; its Groth16 proof verifies on-chain through the same verifier). Remaining:
-disabled precompiles, full-block scale, and the SBF mirror. Do
+disabled precompiles and full-block scale; a **third guest**
+(`zk-verdict/program-svm`) mirrors this on Solana — it signature-verifies the real
+committed transaction in-guest and re-executes its System transfer under proof
+(reckn permits System builtins only), with in-guest `bank_hash` authenticity the
+remaining follow-up. Do
 not overclaim: none of these yet make single-signer adjudication zero-trust for
 arbitrary work.
 

@@ -100,7 +100,11 @@ the same verifier (`zk-verdict/program-revm`, ~200k cycles for the SSTORE plan).
 The guest also **MPT-verifies the prestate against the committed `state_root`
 in-guest** (via `alloy-trie`), so a tampered prestate is rejected — both the
 trusted-prestate and trusted-`post` gaps are closed for that execution. Remaining
-frontier: disabled precompiles, full-block scale, and the SBF (Solana) mirror.
+frontier (EVM): disabled precompiles and full-block scale. The **SVM mirror** now
+exists too (`zk-verdict/program-svm`): it signature-verifies the real Solana
+transaction in-guest and re-executes its System transfer under proof, verified
+on-chain through the same verifier — remaining there is in-guest `bank_hash`
+prestate authenticity.
 
 ## Minimal implementation cut
 

@@ -131,8 +131,17 @@ live and tested — on **both** VMs, behind **one** router.
   proven authentic and `post` is computed by the EVM — both in the proof, not trusted.
   The SSTORE crediting plan proves to `Reproduced` (~382k cycles), a no-op to `Failed`,
   a **tampered prestate is rejected** (bad MPT proof → no verdict), and a real Groth16
-  proof verifies on-chain through the same generic verifier. Remaining frontier:
-  disabled precompiles, full-block scale, and the SBF (Solana) mirror.
+  proof verifies on-chain through the same generic verifier.
+- **SVM re-execution in the zkVM (the Solana mirror):** a third guest
+  (`zk-verdict/program-svm`) **signature-verifies the real committed Solana transaction
+  in-guest** (`Transaction::verify`, real ed25519 — the Solana data crates compile to
+  the zkVM target) and **re-executes its System transfer** to derive the post-lamports,
+  then applies `LamportsDelta`. `System::Transfer(2M)` → `Reproduced` (~762k cycles); a
+  **tampered signature is rejected** → `Failed`; the real Groth16 proof verifies
+  on-chain through the **same generic verifier** — one verdict contract, EVM and SVM
+  proofs alike. reckn permits System builtins only, so this is not the full Agave/LiteSVM
+  runtime (out of scope in-zk) nor custom SBF; in-guest `bank_hash` prestate authenticity
+  is the remaining follow-up.
 
 ## Positioning & sponsor targets
 
