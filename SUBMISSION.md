@@ -144,6 +144,13 @@ live and tested — on **both** VMs, behind **one** router.
   `bank_hash`** from the committed accounts in-guest (SIMD-0215 lattice hash, byte-identical
   to `reexec-svm::bankhash`) and rejects a tampered account set — so, like the EVM guest,
   both the trusted-prestate and trusted-`post` gaps are closed.
+- **ZK settlement — the proof moves money:** `RecknZkEscrow.settleWithProof` releases
+  escrow to the seller (`Reproduced`) or refunds the buyer (`Failed`) **purely on a
+  ZK-verified verdict, with no resolver**. Soundness: each guest commits a `dealBinding`
+  (a hash over its authenticated prestate + predicate + plan) that the deal commits at
+  funding, so a proof can only settle the deal it was about. Tested end-to-end with a
+  **real Groth16 proof** of the EVM re-execution settling to the seller; binding
+  mismatch and unverified proof both revert.
 
 ## Positioning & sponsor targets
 

@@ -27,6 +27,8 @@ pub fn main() {
         maxDelta: max,
         outcome,
         traceHash: trace.into(),
+        // The predicate guest trusts pre/post and is not a settlement source.
+        dealBinding: [0u8; 32].into(),
     });
     sp1_zkvm::io::commit_slice(&bytes);
 }

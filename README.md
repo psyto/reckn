@@ -15,10 +15,12 @@ signature that releases (or refunds) escrow binds to a re-execution, not to pros
 That re-execution now also runs **inside a zkVM**: a real Groth16 proof that the
 committed work reproduces the verdict — **EVM (`revm`) or Solana (System transfer),
 each against a cryptographically authenticated prestate** (MPT vs `state_root` /
-`bank_hash` lattice) — is **verified on-chain by one generic verifier**. So a verdict
-can be authoritative because a proof verifies, with **no trusted resolver at all** —
-a working proof-of-concept over a single instruction today (see [`zk-verdict/`](zk-verdict)),
-and the trustless cross-chain settlement primitive it points at.
+`bank_hash` lattice) — is **verified on-chain by one generic verifier**, and that
+proof **settles escrow directly** ([`RecknZkEscrow`](zk-verdict/contracts/src/RecknZkEscrow.sol)):
+`Reproduced` releases to the seller, `Failed` refunds the buyer, **with no resolver
+at all** — the proof carries its own authority. A working proof-of-concept over a
+single instruction today (see [`zk-verdict/`](zk-verdict)), and the trustless
+cross-chain settlement primitive it points at.
 
 **▶ Live money-shot:** <https://claude.ai/code/artifact/88a370e4-bfeb-480c-af14-015661e6e6f7>
 — the same dispute, judged by an opinion LLM vs deterministic re-execution.
