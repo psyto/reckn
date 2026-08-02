@@ -27,6 +27,12 @@ cross-chain settlement primitive it points at.
 Toggle *Honest delivery* / *False claim* and watch them disagree. Or run the whole
 thing live on a local chain: [`bash scripts/anvil-e2e.sh`](#try-it-one-command).
 
+**▶ ZK money-shot:** <https://claude.ai/code/artifact/9ae55be5-4a17-423e-8bb6-67c28838e579>
+— watch a disputed payment get **re-executed inside a zkVM → proven → verified on-chain
+→ settled on the proof alone**, on EVM or Solana (real fixture data). Flip *tamper
+prestate* and the pipeline is rejected: no proof, no settlement. One command:
+[`bash zk-verdict/scripts/zk-e2e.sh`](zk-verdict/scripts/zk-e2e.sh).
+
 ![Reckn money-shot — the same dispute: the opinion judge reads the seller's claim and approves; re-execution replays the actual plan, sees the real output, and refunds the buyer.](dashboard/media/reckn-moneyshot.gif)
 
 **▶ Demo video:** [`dashboard/media/reckn-demo-full.mp4`](dashboard/media/reckn-demo-full.mp4)
