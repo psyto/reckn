@@ -132,7 +132,52 @@ Verified end-to-end:
   them aren't supported until SP1's patched crypto is wired in. (b) Verdict values map
   to `u64` to reuse the on-chain ABI. (c) One CALL + one delta check; a full block or
   arbitrary contract set is more cycles, same architecture. (d) The `state_root`↔block
-  binding (header proof) stays the off-chain `reexec-evm::header` layer. **SBF (Solana)
-  in-guest is untouched** — the harder mirror.
+  binding (header proof) stays the off-chain `reexec-evm::header` layer.
+
+## SVM re-execution in the guest (the Solana mirror)
+
+reckn's Solana backend adjudicates **System-program transactions only** (its closed
+runtime profile permits just the System builtin — no custom SBF). The **SVM guest**
+([`program-svm/`](program-svm/src/main.rs)) mirrors the EVM one under proof: it (1)
+**signature-verifies the real committed Solana transaction** in-guest
+(`Transaction::verify`, real ed25519), (2) **re-executes the System transfer** against
+the committed prestate accounts to derive the post-lamports, and (3) applies reckn's
+causal `LamportsDelta`. So `post` is *computed by re-executing the transfer under
+proof*, not trusted.
+
+```sh
+cd script
+cargo run --release --bin svm -- --execute   # sigverify + re-execute; print verdict + cycles
+cargo run --release --bin svm -- --fixture    # real Groth16 proof -> on-chain fixture
+cargo run --release --bin svm -- --execute --amount 500000  # below floor -> Failed
+cargo run --release --bin svm -- --execute --tamper         # bad signature -> verify fails -> Failed
+```
+
+Verified end-to-end:
+
+- **The real Solana data crates compile to the SP1 zkVM target** (`solana-transaction`
+  with `verify`, `solana-account`, `solana-message`, …).
+- The guest **verifies signatures and re-executes** `System::Transfer(2_000_000)`:
+  recipient pre = 1 → **post EXECUTED to 2_000_001** (not given) → credited delta
+  2_000_000 ≥ floor → `Reproduced` (~**762k cycles**, dominated by ed25519 sigverify).
+  A transfer below the floor → `Failed`.
+- **`--tamper`** zeroes the signature: the in-guest `Transaction::verify` rejects it →
+  no transfer applied → `Failed`. A forged/invalid signature can never yield
+  `Reproduced` — the sigverify is real and load-bearing.
+- A **real Groth16 proof** of the SVM re-execution verifies **on-chain** through the
+  **same generic `RecknVerdictVerifier`** — `RecknSvmVerdict.t.sol`. One verdict
+  contract, one `VerdictPublicValues` record, **EVM and SVM proofs alike**.
+
+### Honest scope of the SVM guest
+
+- **Is** the real Solana transaction, signature-verified in-guest, with its System
+  transfer re-executed under proof — the operation reckn's SVM backend actually
+  adjudicates.
+- **Not:** the full Agave/LiteSVM runtime (JIT/OS-bound, out of scope in-zk — and
+  unnecessary, since reckn permits only the System builtin) and **not** custom SBF
+  bytecode execution (reckn runs none). **Not yet:** prestate **`bank_hash`
+  authenticity** in-guest (the SVM analogue of the EVM MPT check — reckn's
+  `reexec-svm::bankhash` does it off-chain; the follow-up), fee modeling on the payer
+  side (the recipient-delta demo doesn't need it), and `u64` verdict values.
 
 This is a nested SP1 workspace, independent of the main reckn crates' build.

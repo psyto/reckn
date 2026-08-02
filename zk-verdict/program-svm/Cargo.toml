@@ -1,0 +1,20 @@
+[package]
+name = "verdict-program-svm"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sp1-zkvm = { version = "6.0.1" }
+# Real Solana data crates (they compile to the zkVM target). The guest parses and
+# SIGNATURE-VERIFIES the actual committed transaction, then applies the System
+# builtin transfer semantics — the only instruction class reckn's SVM permits.
+solana-pubkey = "3"
+solana-message = "3"
+solana-instruction = "3"
+solana-transaction = { version = "3", features = ["verify"] }
+alloy-sol-types = "*"
+verdict-lib = { path = "../lib" }
+svm-io = { path = "../svm-io" }
+serde = { version = "1.0", default-features = false, features = ["derive", "alloc"] }
+
+[workspace]

@@ -432,8 +432,22 @@ content publication.
   cycles), a no-op → `Failed`, and a **tampered prestate value is rejected** (the
   guest panics on the bad MPT proof — no verdict for an inauthentic state). A **real
   Groth16 proof verifies on-chain** through the same generic verifier
-  (`RecknReexecVerdict.t.sol`). Remaining: the disabled `c-kzg`/`ecrecover`
-  precompiles, scale (a full block), and the SBF (Solana) mirror.
+  (`RecknReexecVerdict.t.sol`). Remaining on the EVM side: the disabled
+  `c-kzg`/`ecrecover` precompiles and scale (a full block).
+- **SVM re-execution in the zkVM (the Solana mirror):** a third guest
+  ([`zk-verdict/program-svm`](zk-verdict/program-svm/src/main.rs)) **signature-verifies
+  the real committed Solana transaction** in-guest (`Transaction::verify`, real
+  ed25519 — the Solana data crates compile to the zkVM target) and **re-executes its
+  System transfer** to derive the post-lamports, then applies the `LamportsDelta`. So
+  `post` is computed by re-execution, not trusted. Verified: `System::Transfer(2_000_000)`
+  → recipient `post` executed to `2_000_001` → `Reproduced` (~762k cycles, ed25519
+  sigverify dominant); below-floor → `Failed`; a **tampered signature is rejected**
+  (in-guest verify fails → `Failed`). Its **real Groth16 proof verifies on-chain
+  through the same generic verifier** (`RecknSvmVerdict.t.sol`) — one verdict contract,
+  EVM and SVM proofs alike. Honest scope: reckn's SVM permits **System builtins only**,
+  so this is not the full Agave/LiteSVM runtime (out of scope in-zk) nor custom SBF
+  (reckn runs none); prestate **`bank_hash` authenticity** in-guest (the SVM analogue
+  of the EVM MPT check) is the remaining follow-up.
 - **Next:** the EVM quorum-slashing mirror on the SVM escrow (Ed25519 quorum
   introspection + lamport bond slash); extending the re-execution guest's
   opcode/precompile coverage and scale; and cross-chain

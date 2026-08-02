@@ -5,4 +5,5 @@ fn main() {
     // (executes revm in-guest to derive `post`).
     build_program_with_args("../program", Default::default());
     build_program_with_args("../program-revm", Default::default());
+    build_program_with_args("../program-svm", Default::default());
 }
