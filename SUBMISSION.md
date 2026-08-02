@@ -173,6 +173,11 @@ positioned; if it stalls, the verdict still reproduces anywhere.
 - **▶ Live money-shot (clickable):** https://claude.ai/code/artifact/88a370e4-bfeb-480c-af14-015661e6e6f7
   — the same dispute, judged by an opinion LLM vs deterministic re-execution. Toggle
   *Honest delivery* / *False claim* and watch them disagree.
+- **▶ ZK money-shot (clickable):** https://claude.ai/code/artifact/9ae55be5-4a17-423e-8bb6-67c28838e579
+  — the trustless path, visualized: a disputed payment **re-executed inside a zkVM →
+  proven → verified on-chain → settled on the proof alone**, on EVM or Solana (real
+  fixture data). Flip *tamper prestate* and the pipeline is rejected — no proof, no
+  settlement. Runs for real via `bash zk-verdict/scripts/zk-e2e.sh`.
 - **Demo video (full, 35s, self-explanatory — no audio needed):**
   [`dashboard/media/reckn-demo-full.mp4`](dashboard/media/reckn-demo-full.mp4) — title
   cards frame it: hook (a trusted judge you can't check) → money-shot judged two ways
@@ -233,8 +238,8 @@ positioned; if it stalls, the verdict still reproduces anywhere.
 ## Pre-flight checklist
 
 - [ ] **README hero** renders on GitHub (GIF + clickable artifact link) — verified.
-- [ ] **Artifact shared:** open the money-shot artifact → Share → make link-viewable
-      (only the owner can do this from claude.ai; the link is private until then).
+- [ ] **Artifacts shared:** open the money-shot AND the ZK money-shot artifacts →
+      Share → make link-viewable (only the owner can, from claude.ai; private until then).
 - [ ] **Repo public:** flip `psyto/reckn` from private to public
       (`gh repo edit psyto/reckn --visibility public`). One-way-ish — do at submission.
 - [x] **Demo video** — full cut at `dashboard/media/reckn-demo-full.mp4` (money-shot +
@@ -244,5 +249,9 @@ positioned; if it stalls, the verdict still reproduces anywhere.
       Agentic Economy), sponsor tech (ERC-8004, x402/EIP-3009, Arc), repo + artifact
       + video links.
 - [ ] **`bash scripts/anvil-e2e.sh` green** on a clean clone (Foundry + Rust + jq).
-- [ ] Test tally current in README (contracts 49, reexec-evm 16, reexec-svm 30,
-      binder 6, keeper 3, escrow-svm 10, evm-content 5, record 1).
+- [x] **ZK demo green on a clean checkout** — `contracts` (57) and `zk-verdict/contracts`
+      (12, incl. the real proof settling to the seller) both pass from a fresh worktree
+      with only the auto-installed deps + committed proofs. `bash zk-verdict/scripts/zk-e2e.sh`
+      runs the full path (SP1 toolchain optional for the live half).
+- [ ] Test tally current in README (contracts 57, zk-verdict 12, reexec-evm 16,
+      reexec-svm 30, binder 6, keeper 3, escrow-svm 10, evm-content 5, record 1).
