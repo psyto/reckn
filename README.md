@@ -12,6 +12,14 @@ funding time. The verdict commits the re-execution trace hash and pre-state root
 on-chain, so **anyone can independently re-run and reach the same verdict**. The
 signature that releases (or refunds) escrow binds to a re-execution, not to prose.
 
+That re-execution now also runs **inside a zkVM**: a real Groth16 proof that the
+committed work reproduces the verdict — **EVM (`revm`) or Solana (System transfer),
+each against a cryptographically authenticated prestate** (MPT vs `state_root` /
+`bank_hash` lattice) — is **verified on-chain by one generic verifier**. So a verdict
+can be authoritative because a proof verifies, with **no trusted resolver at all** —
+a working proof-of-concept over a single instruction today (see [`zk-verdict/`](zk-verdict)),
+and the trustless cross-chain settlement primitive it points at.
+
 **▶ Live money-shot:** <https://claude.ai/code/artifact/88a370e4-bfeb-480c-af14-015661e6e6f7>
 — the same dispute, judged by an opinion LLM vs deterministic re-execution.
 Toggle *Honest delivery* / *False claim* and watch them disagree. Or run the whole
@@ -532,7 +540,7 @@ proves `keccak256(rlp(header)) == block_hash` before trusting `state_root`.
 Each component is self-contained; there is no top-level build.
 
 ```bash
-# settlement contracts (Foundry) — 49 tests (incl. verified EIP-3009 funding + end-to-end on real engine output)
+# settlement contracts (Foundry) — 57 tests (verified EIP-3009 funding + opt-in seller DA bond + end-to-end on real engine output)
 cd contracts && forge install foundry-rs/forge-std --no-git && forge test
 
 # re-execution engine (revm 38, MPT-verified prestate + header binding) — 16 tests
@@ -543,6 +551,13 @@ cd keeper && cargo test
 
 # cross-VM binder: one router re-executes EVM + SVM, fails closed — 6 tests
 cd binder && cargo test
+
+# ZK re-execution: revm (EVM) and the Solana System transfer run INSIDE an SP1 zkVM,
+# each against an authenticated prestate (MPT / bank_hash), and a real Groth16 proof
+# is verified on-chain by one generic verifier — 8 tests
+cd zk-verdict/contracts && forge install foundry-rs/forge-std --no-git && forge test
+cd zk-verdict/script && cargo run --release --bin reexec -- --execute   # EVM in-guest
+cd zk-verdict/script && cargo run --release --bin svm -- --execute       # SVM in-guest
 
 # one-command local chain demo: Act I false claim → Failed → refund;
 # Act II causal delta predicate (credited ≥ minOut) → Reproduced → seller release

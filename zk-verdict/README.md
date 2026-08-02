@@ -1,12 +1,29 @@
 # zk-verdict — a ZK-proven reckn verdict (SP1 PoC)
 
-The honest first step toward **zero-trust** adjudication. Reckn's optimistic
-settlement + quorum slashing reduce trust to an *honest-majority resolver quorum*;
-full zero-trust — deciding a verdict on-chain with **no** trusted party — needs
-either a fraud-proof VM or a **ZK proof of the re-execution**. This is a working
-proof-of-concept of the ZK path, run end-to-end on CPU.
+The path to **zero-trust** adjudication. Reckn's optimistic settlement + quorum
+slashing reduce trust to an *honest-majority resolver quorum*; full zero-trust —
+deciding a verdict on-chain with **no** trusted party — needs either a fraud-proof VM
+or a **ZK proof of the re-execution**. This is a working proof-of-concept of the ZK
+path, run end-to-end on CPU.
 
-## What it proves
+**Three guests, one on-chain verifier.** Each commits the identical
+`VerdictPublicValues`, so a single generic [`RecknVerdictVerifier`](contracts/src/RecknVerdictVerifier.sol)
+verifies all of them (only the program vkey differs):
+
+1. **`program/`** — the causal-delta *predicate* verdict (trusts `pre`/`post`; the
+   toolchain baseline). *What it proves*, below.
+2. **`program-revm/`** — **full EVM re-execution**: MPT-verifies the prestate against
+   the committed `state_root`, then runs **real `revm` in-guest** to derive `post`.
+   Closes the trusted-prestate *and* trusted-`post` gaps for the EVM.
+3. **`program-svm/`** — the **Solana mirror**: recomputes the block `bank_hash` from
+   the committed accounts, signature-verifies the real transaction, and re-executes
+   its System transfer in-guest. Same two gaps closed on Solana.
+
+So a reckn verdict — on either VM, against a cryptographically authenticated prestate
+— is provable in a zkVM and verified on-chain with no trusted resolver. The sections
+below go predicate → EVM → SVM.
+
+## What it proves (the predicate guest)
 
 The guest ([`program/`](program/src/main.rs)) runs reckn's **causal delta
 predicate** — the `LamportsDelta` / `PostStateDelta` verdict (the no-op-can't-fake
