@@ -60,9 +60,13 @@ struct Args {
     /// Causal floor: the credited increase must be >= this.
     #[arg(long, default_value = "1000000")]
     min: u64,
-    /// Corrupt a signature byte so the in-guest sigverify fails — no Reproduced.
+    /// Corrupt the signature so the in-guest sigverify fails — no Reproduced.
     #[arg(long)]
     tamper: bool,
+    /// Corrupt a committed account after bank_hash is computed, so the prestate no
+    /// longer reproduces bank_hash — the guest must reject it (authenticity).
+    #[arg(long)]
+    tamper_prestate: bool,
 }
 
 /// The System transfer instruction, encoded exactly as reckn does (tag 2 LE +
@@ -77,7 +81,7 @@ fn system_transfer(from: &Pubkey, to: &Pubkey, lamports: u64) -> Instruction {
     }
 }
 
-fn build(amount: u64, min: u64, tamper: bool) -> (Transaction, SvmPrestate) {
+fn build(amount: u64, min: u64, tamper: bool, tamper_prestate: bool) -> (Transaction, SvmPrestate) {
     let from = Keypair::new();
     let to = Pubkey::new_unique();
     let ix = system_transfer(&from.pubkey(), &to, amount);
@@ -88,20 +92,37 @@ fn build(amount: u64, min: u64, tamper: bool) -> (Transaction, SvmPrestate) {
         // Transaction::verify must reject it — no Reproduced without a real signer.
         tx.signatures[0] = Default::default();
     }
-    let accounts = vec![
+    let mut accounts = vec![
         SvmAccount {
             pubkey: from.pubkey().to_bytes(),
             lamports: PRE_FROM,
             owner: [0u8; 32],
-            data_len: 0,
+            executable: false,
+            data: Vec::new(),
         },
         SvmAccount {
             pubkey: to.to_bytes(),
             lamports: PRE_TO,
             owner: [0u8; 32],
-            data_len: 0,
+            executable: false,
+            data: Vec::new(),
         },
     ];
+
+    // Treat this committed set as the complete account world and derive its real
+    // post-SIMD-0215 bank_hash (the same computation reexec-svm::bankhash does).
+    let parent_bank_hash = [0x11u8; 32];
+    let signature_count = 1u64;
+    let last_blockhash = [0u8; 32]; // matches the default blockhash used to sign
+    let bank_hash =
+        svm_bankhash::compute_bank_hash(&accounts, &parent_bank_hash, signature_count, &last_blockhash);
+
+    if tamper_prestate {
+        // Perturb the recipient's committed lamports AFTER bank_hash is fixed, so
+        // the account set no longer reproduces it — the guest must reject.
+        accounts[1].lamports = PRE_TO + 1;
+    }
+
     let prestate = SvmPrestate {
         accounts,
         check: SvmCheck {
@@ -109,6 +130,10 @@ fn build(amount: u64, min: u64, tamper: bool) -> (Transaction, SvmPrestate) {
             min,
             max: u64::MAX,
         },
+        parent_bank_hash,
+        signature_count,
+        last_blockhash,
+        bank_hash,
     };
     (tx, prestate)
 }
@@ -133,19 +158,25 @@ fn main() {
         std::process::exit(1);
     }
 
-    let (tx, prestate) = build(args.amount, args.min, args.tamper);
+    let (tx, prestate) = build(args.amount, args.min, args.tamper, args.tamper_prestate);
     let mut stdin = SP1Stdin::new();
     stdin.write(&tx);
     stdin.write(&prestate);
 
     println!(
-        "committed prestate: recipient = {} lamports   tx: System::Transfer({}){}",
+        "committed prestate: recipient = {} lamports (bank_hash-bound 0x{})",
         PRE_TO,
-        args.amount,
-        if args.tamper { "   [TAMPERED signature]" } else { "" }
+        hex::encode(prestate.bank_hash)
     );
-    println!("floor: delta >= {}", args.min);
-    println!("(the guest SIGNATURE-VERIFIES the real tx and re-executes the transfer; post is not trusted)");
+    let flag = if args.tamper {
+        "   [TAMPERED signature]"
+    } else if args.tamper_prestate {
+        "   [TAMPERED prestate — must be rejected]"
+    } else {
+        ""
+    };
+    println!("tx: System::Transfer({})   floor: delta >= {}{}", args.amount, args.min, flag);
+    println!("(the guest recomputes bank_hash, SIGNATURE-VERIFIES the tx, and re-executes the transfer)");
 
     let client = ProverClient::from_env();
 

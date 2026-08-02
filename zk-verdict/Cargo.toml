@@ -1,5 +1,5 @@
 [workspace]
-members = ["lib", "program", "reexec-io", "svm-io", "script"]
+members = ["lib", "program", "reexec-io", "svm-io", "svm-bankhash", "script"]
 resolver = "2"
 
 [workspace.dependencies]
