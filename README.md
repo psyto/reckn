@@ -404,7 +404,7 @@ content publication.
   (a bonded verdict that opens a challenge window). The included anvil E2E drives
   the full optimistic path — commit verdict → window elapses → `finalizeSettlement`
   → false claim `Failed` → refund / honest credit `Reproduced` → release — each
-  keylessly re-verified. `cargo test` + `forge test`: **keeper 3, contracts 49**.
+  keylessly re-verified. `cargo test` + `forge test`: **keeper 3, contracts 57**.
 - **Independent re-verification (the trust property, executable):**
   `reckn-keeper verify <rpc> <escrow> <content-store> <dealId>` — a **keyless**
   third party reads the resolver's on-chain `VerdictCommitted` and re-derives the
