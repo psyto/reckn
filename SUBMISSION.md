@@ -129,14 +129,14 @@ live and tested — on **both** VMs, behind **one** router.
   does off-chain) and then runs **real revm inside the SP1 zkVM** to execute the
   seller's committed CALL under proof and *derive* the post-state. So the prestate is
   proven authentic and `post` is computed by the EVM — both in the proof, not trusted.
-  The SSTORE crediting plan proves to `Reproduced` (~382k cycles), a no-op to `Failed`,
+  The SSTORE crediting plan proves to `Reproduced` (~410k cycles), a no-op to `Failed`,
   a **tampered prestate is rejected** (bad MPT proof → no verdict), and a real Groth16
   proof verifies on-chain through the same generic verifier.
 - **SVM re-execution in the zkVM (the Solana mirror):** a third guest
   (`zk-verdict/program-svm`) **signature-verifies the real committed Solana transaction
   in-guest** (`Transaction::verify`, real ed25519 — the Solana data crates compile to
   the zkVM target) and **re-executes its System transfer** to derive the post-lamports,
-  then applies `LamportsDelta`. `System::Transfer(2M)` → `Reproduced` (~970k cycles); a
+  then applies `LamportsDelta`. `System::Transfer(2M)` → `Reproduced` (~980k cycles); a
   **tampered signature is rejected** → `Failed`; the real Groth16 proof verifies
   on-chain through the **same generic verifier** — one verdict contract, EVM and SVM
   proofs alike. reckn permits System builtins only, so this is not the full Agave/LiteSVM
@@ -191,6 +191,13 @@ positioned; if it stalls, the verdict still reproduces anywhere.
   re-verifier reproduces both on-chain verdicts from public inputs. The run
   **narrates each phase in plain language** (real addresses/hashes shown
   underneath), so a judge can follow it without knowing the internals.
+- **One-command trustless proof (ZK):** `bash zk-verdict/scripts/zk-e2e.sh` — the same
+  dispute taken to **zero trusted parties**. It re-executes both VMs **inside a zkVM**
+  (real `revm` / the real Solana transfer) against a **cryptographically authenticated
+  prestate** (MPT vs `state_root` / `bank_hash` lattice; a tampered prestate is
+  rejected on screen), verifies a **real Groth16 proof on-chain** through one generic
+  verifier, and **settles the escrow to the seller on the proof alone** — no resolver.
+  The on-chain half runs on committed real proofs with just `forge`.
 - **Repo:** https://github.com/psyto/reckn
 
 ---
