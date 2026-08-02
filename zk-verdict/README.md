@@ -139,7 +139,7 @@ Verified end-to-end:
   `c-kzg`/`secp256k1` precompiles) are dropped.
 - The guest **MPT-verifies the prestate then executes the SSTORE CALL**: slot 7 = 42
   is proven against `state_root`, `post` is derived as 142 by execution (not given),
-  the credited delta 100 clears the floor → `Reproduced` (~**382k cycles**, of which
+  the credited delta 100 clears the floor → `Reproduced` (~**410k cycles**, of which
   MPT verification is ~180k). A no-op (`--credit 42`) → delta 0 → `Failed`.
 - **`--tamper`** flips a proven slot value: the guest **panics with `storage proof
   invalid` — a verdict cannot be produced for an inauthentic prestate.** That is the
@@ -191,7 +191,7 @@ Verified end-to-end:
 - The guest **recomputes `bank_hash`, verifies signatures, and re-executes**
   `System::Transfer(2_000_000)`: the recipient is `bank_hash`-bound at pre = 1 →
   **post EXECUTED to 2_000_001** → credited delta 2_000_000 ≥ floor → `Reproduced`
-  (~**970k cycles**: ed25519 sigverify + the lattice recompute). Below the floor →
+  (~**980k cycles**: ed25519 sigverify + the lattice recompute). Below the floor →
   `Failed`.
 - **`--tamper`** zeroes the signature → in-guest `Transaction::verify` rejects it →
   `Failed`. **`--tamper-prestate`** perturbs a committed account so it no longer

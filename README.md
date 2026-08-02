@@ -438,7 +438,7 @@ content publication.
   derive the post-state. So the prestate is *proven authentic* and `post` is *computed
   by the EVM* — both in the proof, not trusted from a resolver; the trace hash binds
   the `state_root`. Verified: revm 38 + alloy-trie compile to the zkVM target; the
-  SSTORE plan (slot 7 = 42 proven) executes to `post=142` → `Reproduced` (~382k
+  SSTORE plan (slot 7 = 42 proven) executes to `post=142` → `Reproduced` (~410k
   cycles), a no-op → `Failed`, and a **tampered prestate value is rejected** (the
   guest panics on the bad MPT proof — no verdict for an inauthentic state). A **real
   Groth16 proof verifies on-chain** through the same generic verifier
@@ -453,7 +453,7 @@ content publication.
   System transfer** against the authenticated prestate to derive the post-lamports,
   then applies the `LamportsDelta`. So the prestate is *proven authentic* and `post`
   is *computed by re-execution*, not trusted. Verified: `System::Transfer(2_000_000)`
-  → `bank_hash`-bound recipient `post` executed to `2_000_001` → `Reproduced` (~970k
+  → `bank_hash`-bound recipient `post` executed to `2_000_001` → `Reproduced` (~980k
   cycles); below-floor → `Failed`; a **tampered signature is rejected** (verify fails
   → `Failed`) and a **tampered account is rejected** (fails the in-guest `bank_hash`
   check → guest panics). The `bank_hash` recompute is byte-identical to
@@ -463,6 +463,18 @@ content publication.
   not the full Agave/LiteSVM runtime (out of scope in-zk) nor custom SBF (reckn runs
   none); the `bank_hash` check is conclusive over a *complete* account set (the demo
   treats its set as the world, as reckn's tests do).
+- **ZK settlement — the proof moves money:**
+  [`RecknZkEscrow`](zk-verdict/contracts/src/RecknZkEscrow.sol) settles escrow **purely
+  on a ZK-verified verdict, no resolver**: `settleWithProof` verifies the SP1 proof via
+  `RecknVerdictVerifier` and, only if the proof's `dealBinding` (a commitment each guest
+  makes over its authenticated prestate + predicate + plan, matched to the deal at
+  funding) is correct, releases to the seller (`Reproduced`) or refunds the buyer
+  (`Failed`). Tested end-to-end with a **real Groth16 proof of the EVM re-execution
+  settling to the seller**; binding mismatch and unverified proof revert. The whole
+  path — re-execute in-guest → prove → verify on-chain → settle — runs in one command:
+  [`bash zk-verdict/scripts/zk-e2e.sh`](zk-verdict/scripts/zk-e2e.sh). `forge test`: **12
+  passing**. Integrating `settleWithProof` into the main `RecknEscrow` lifecycle is the
+  follow-up.
 - **Next:** the EVM quorum-slashing mirror on the SVM escrow (Ed25519 quorum
   introspection + lamport bond slash); extending the re-execution guest's
   opcode/precompile coverage and scale; and cross-chain
@@ -536,6 +548,22 @@ state_root → MPT-proven witness → closed-world replay → verdict → settle
 The `block_hash → header → state_root` link binds the committed state root to the
 real block: the keeper commits the anvil block header, and the keyless verdict path
 proves `keccak256(rlp(header)) == block_hash` before trusting `state_root`.
+
+### …or the fully trustless path (ZK), also one command
+
+```bash
+bash zk-verdict/scripts/zk-e2e.sh
+```
+
+Same dispute, taken all the way to **zero trusted parties**: the disputed work is
+**re-executed inside a zkVM** — real `revm` (EVM) / the real Solana transfer (SVM),
+each against a **cryptographically authenticated prestate** (MPT vs `state_root` /
+`bank_hash` lattice; a tampered prestate is rejected) — a **real Groth16 proof** of
+that execution is **verified on-chain** by one generic verifier, and
+[`RecknZkEscrow`](zk-verdict/contracts/src/RecknZkEscrow.sol) **settles the escrow on
+the proof alone** (`Reproduced` → seller, `Failed` → buyer). No resolver, no signer
+allow-list. The on-chain half runs on committed real proofs with just `forge`; the
+live in-guest half runs if the [SP1](https://docs.succinct.xyz) toolchain is present.
 
 ## Build & test
 
