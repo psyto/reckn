@@ -18,9 +18,12 @@ each against a cryptographically authenticated prestate** (MPT vs `state_root` /
 `bank_hash` lattice) — is **verified on-chain by one generic verifier**, and that
 proof **settles escrow directly** ([`RecknZkEscrow`](zk-verdict/contracts/src/RecknZkEscrow.sol)):
 `Reproduced` releases to the seller, `Failed` refunds the buyer, **with no resolver
-at all** — the proof carries its own authority. A working proof-of-concept over a
-single instruction today (see [`zk-verdict/`](zk-verdict)), and the trustless
-cross-chain settlement primitive it points at.
+at all** — the proof carries its own authority. The EVM guest runs **real `revm`
+over the seller's committed CALL** against an MPT-proven prestate (~410k cycles);
+the Solana guest is the narrower slice — a `bank_hash`-authenticated System
+transfer (~980k cycles). Scope and limits are stated honestly in
+[`zk-verdict/`](zk-verdict), including what is **not** closed
+([below](#known-gaps-not-closed)).
 
 **▶ Live money-shot:** <https://claude.ai/code/artifact/88a370e4-bfeb-480c-af14-015661e6e6f7>
 — the same dispute, judged by an opinion LLM vs deterministic re-execution.
@@ -43,6 +46,30 @@ anchor, publish the witness, re-execute, refund, reproduce the verdict keyless) 
 close (*one engine, any chain, any rail*). Component clips:
 [`reckn-demo.mp4`](dashboard/media/reckn-demo.mp4) (dashboard),
 [`reckn-e2e.mp4`](dashboard/media/reckn-e2e.mp4) (terminal).
+
+## The claim is a build condition, not a promise
+
+> **No key can judge.**
+
+Every competing design in this lane has *someone holding a key* — a TEE operator,
+a bonded resolver, a voting set. Reckn's zk path has none: `RecknZkEscrow` has no
+owner, admin, resolver, pause or upgrade, and `settleWithProof` is permissionless.
+Authority to move money comes from *a proof verifying*, and nothing else.
+
+Because a claim like that decays the moment someone adds "just one" privileged
+field, it is enforced mechanically rather than promised:
+
+```bash
+bash scripts/no-keys.sh     # exit 0 = the claim still holds
+```
+
+It fails the build if a privileged role appears, if the state-changing surface
+grows beyond the enumerated `fund` / `settleWithProof` / `refundAfterDeadline`, if
+any `msg.sender` gate is introduced, or if the constructor stores its caller. The
+check is itself tested against three negative controls (add an `admin` field, add
+an unlisted function, add a `msg.sender` gate — each must fail it). Widening the
+surface is allowed, but only by changing the claim in the same commit: this
+README, [`AGENTS.md`](AGENTS.md), and the script move together, or not at all.
 
 ## Why
 
@@ -156,11 +183,47 @@ EIP-3009** payments (EVM escrow — a buyer agent's x402 authorization *is* the 
 funding; see [`docs/x402-payments.md`](docs/x402-payments.md)) · **Circle Arc** as one
 settlement target · Chainlink CRE / MCP as swappable orchestration.
 
+## ETHOnline 2026 — where the boundary is
+
+Reckn is entered in **ETHOnline 2026** (9/4–16, async) under **Continuity — Ship a
+Feature**: an existing project shipping a new feature during the event. That track
+lives or dies on an honest boundary between what already existed and what is built
+during the event, so the boundary is stated here rather than reconstructed later.
+
+| | |
+|---|---|
+| Pre-event product work ends at | `a122b44` (2026-08-02) |
+| Commits dated 2026-09-03 | harness, planning and documentation only — no product feature |
+| **Event work** | **commits dated 2026-09-04 or later — the date is primary, not the hash** |
+| `EVENT_START` | recorded in [`STATUS.md`](STATUS.md) at the first commit on 9/4 |
+| Freeze | 9/12 |
+
+**Every feature described in this README is pre-event work**, disclosed to
+ETHGlobal in advance. Nothing here is claimed as event-day work. What the event is
+for is listed as tasks in [`AGENTS.md`](AGENTS.md) §3 — beginning with the gap this
+README states openly [below](#known-gaps-not-closed): the keyless escrow has no
+timeout.
+
+The repository is developed by an autonomous harness — `reckn-spec` (frame-thin:
+closes the frame) → `reckn-codex-review` (adversarial, second model) →
+`reckn-codex-impl` (frame-thick: fills the frame) → review → commit, with
+`reckn-demo` owning what a judge sees first. Rules, stop conditions and the
+Continuity discipline are in [`AGENTS.md`](AGENTS.md); the plan and the advance
+disclosure are in [`docs/ethonline-2026/`](docs/ethonline-2026).
+
 ## Repository layout
 
 ```text
+AGENTS.md                   # harness rules, day-work discipline, stop conditions
+CLAUDE.md                   # orientation: the central claim, verified facts, environment
+STATUS.md                   # where the event stands (EVENT_START, gates, freeze)
 SUBMISSION.md               # pitch surface: submission copy, demo-video script, checklist
+scripts/
+  no-keys.sh                # BUILD CONDITION: no key can judge (exit 0 = claim holds)
+  anvil-e2e.sh              # one-command live dispute on a throwaway local chain
 docs/
+  ethonline-2026/           # PLAN.md + DISCLOSURE.md (founder documents)
+  specs/ reviews/ tasks/    # per-task spec → review → impl records (event work)
   protocol-architecture.md  # converged EVM-first protocol (the source of truth)
   roadmap-crossvm.md        # EVM → Solana → cross-VM extension roadmap
   x402-payments.md          # how a buyer agent's x402/EIP-3009 payment funds the escrow
@@ -194,6 +257,12 @@ packages/protocol/          # canonical cross-VM codecs (specs + golden vectors)
   golden/                   #   cross-language conformance vectors
 packages/protocol-rs/       # reckn-record: the shared Rust record codec both
                             #   backends emit, so EVM and SVM trace hashes match
+zk-verdict/                 # the keyless path — independent SP1 workspace
+  program-revm/             #   guest: MPT-verify prestate, run real revm under proof
+  program-svm/              #   guest: recompute bank_hash, sigverify, re-execute transfer
+  contracts/src/RecknZkEscrow.sol      # settles on the proof alone — no resolver
+  contracts/src/RecknVerdictVerifier.sol # one generic verifier, EVM + SVM proofs
+  scripts/zk-e2e.sh         #   one command: re-execute → prove → verify → settle
 dashboard/                  # LLM-judge vs replay money-shot — implemented
   index.html                #   cinematic money-shot: money moves, live keeper
                             #   console + ledger, on-chain resolve receipt
@@ -488,6 +557,33 @@ content publication.
   double-settle
   rules).
 
+### Known gaps (not closed)
+
+Stated here so no reader has to discover them by reading the source. None of these
+is closed by anything above; the honest scope in
+[`zk-verdict/README.md`](zk-verdict/README.md) governs.
+
+- **`RecknZkEscrow` has no timeout.** If no proof ever arrives, a funded escrow
+  stays funded — permanently. The optimistic `RecknEscrow` has timeout escape
+  hatches; the keyless contract, which is the differentiated one, does not. Closing
+  this **without introducing a key** is the first ETHOnline task
+  ([`AGENTS.md`](AGENTS.md) §3, task 001); `no-keys.sh` already enumerates
+  `refundAfterDeadline` as the only permitted way in.
+- **In-guest precompiles.** `c-kzg` and `ecrecover` are disabled inside the zkVM;
+  a plan requiring either is unsupported, not merely slow.
+- **Verdict values are `u64`.** Balances map through limb 0, so amounts ≥ 2^64 are
+  truncated at the verdict boundary.
+- **Scale.** The guest proves one CALL plus one delta check. A full block or an
+  arbitrary contract set is more cycles on the same architecture — but that is a
+  claim about architecture, not a measured result.
+- **`state_root` ↔ block-header binding lives off-chain**, in the
+  `reexec-evm::header` layer, not inside the guest.
+- **SVM scope.** The Solana guest permits System builtins only — not the full
+  Agave/LiteSVM runtime, and no custom SBF.
+- **Not yet submitted anywhere.** The repository is private until submission; the
+  pre-flight in [`SUBMISSION.md`](SUBMISSION.md) is unchecked on exactly those two
+  lines.
+
 ## Try it (one command)
 
 Run the whole live dispute on a throwaway local chain:
@@ -616,9 +712,15 @@ by `resolve()`.
 
 ## Collaboration model
 
-CC (frame-thin: scoped modules, scaffolding, exploration) × Codex (frame-thick:
-whole-system convergence, the VM-neutral boundary, review); the human relays
-between the two. The frame-thick convergence is complete — its result is
+Two models, split by **how thick the frame is** rather than by seniority: Claude
+Code closes the frame (spec, invariants, acceptance criteria, non-goals) and Codex
+fills it and attacks it. The relay is no longer human — Claude Code drives Codex
+directly through the agents in [`.claude/agents/`](.claude/agents), and the one
+rule that keeps the review honest is **author independence**: the model that wrote
+a change never reviews it, and when Codex is asked for a second opinion the payload
+says who wrote the artifact.
+
+The original frame-thick convergence is complete — its result is
 [`docs/protocol-architecture.md`](docs/protocol-architecture.md).
 [`docs/architecture-brief.md`](docs/architecture-brief.md) is the original task
 brief, kept for history.

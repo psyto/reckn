@@ -7,10 +7,12 @@
 //! `RecknVerdictVerifier` already consumes, so nothing on-chain changes: only the
 //! proof got stronger (execution, not a trusted post-state).
 //!
-//! Scope: proves execution-from-committed-prestate + the delta predicate. Prestate
-//! MPT-authenticity vs a state root is the same off-chain layer as `reexec-evm`
-//! and can be folded into the guest next (keccak-heavy). Values map to `u64` to
-//! reuse the existing verdict ABI.
+//! Scope: proves prestate authenticity + execution-from-that-prestate + the delta
+//! predicate. Prestate MPT-authenticity **is verified in-guest** by
+//! `verify_prestate_authenticity` below (each account against the committed
+//! `state_root`, each slot against the account storage root) — the same check
+//! `reexec-evm` does off-chain, no longer deferred. Values map to `u64` to reuse
+//! the existing verdict ABI.
 
 #![no_main]
 sp1_zkvm::entrypoint!(main);

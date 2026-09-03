@@ -4,6 +4,15 @@ Paste-source for the ETHGlobal / Arc submission form, a 60–90s demo-video scri
 and a pre-flight checklist. Keep this in sync with `README.md`; the README is the
 canonical technical doc, this is the pitch surface.
 
+> **Status (2026-09-03).** This kit was written for the earlier ETHGlobal / Arc
+> form and has never been submitted anywhere — the pre-flight below is still
+> unchecked on *Repo public* and *Submission form*, and the repository is private.
+> The live entry is **ETHOnline 2026, Continuity — Ship a Feature**; its plan and
+> the advance disclosure are founder documents in `docs/ethonline-2026/`, and the
+> boundary that governs what may be claimed as event work is `AGENTS.md` §4.
+> Copy below describes **pre-event** capability. Before submitting, re-check every
+> number against a run — do not paste a figure this file inherited.
+
 ---
 
 ## One-liner

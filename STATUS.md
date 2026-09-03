@@ -20,6 +20,17 @@
 - `scripts/no-keys.sh` は**負のコントロール3件**（`admin` フィールド追加 / 列挙外の関数追加 /
   `msg.sender` ゲート追加）で**いずれも正しく落ちること**を確認済み。
 - 計画と事前開示文: `docs/ethonline-2026/{PLAN,DISCLOSURE}.md`
+- **ドキュメント整合（9/3、事前作業／製品機能の変更なし）** — `README.md` に
+  ①中心主張をビルド条件として明記 ②ETHOnline の境界（**当日作業=9/4以降の日付**、
+  この README の内容は全て事前作業）③`Known gaps (not closed)`（**`RecknZkEscrow`
+  に timeout が無く proof が来なければ資金がロックする**ことを含む）④欠けていた
+  `zk-verdict/` とハーネスを Repository layout に追加 ⑤Collaboration model を
+  「人間がリレーする」から現行ハーネスへ。あわせて `README:21` の
+  「single instruction の PoC」を訂正（**EVM guest は実 revm を MPT 検証済み
+  prestate 上で走らせている**。SVM 側だけが narrow slice）、`SUBMISSION.md` に
+  未提出であることと ETHOnline が live entry であることを明記、
+  `zk-verdict/program-revm/src/main.rs` の**コードに追いついていなかった**
+  モジュールコメント（MPT 検証は「次に折り込める」→ 既に実装済み）を訂正。
 
 ## 次
 
