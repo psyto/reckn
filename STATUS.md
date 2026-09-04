@@ -39,6 +39,7 @@
 | 003 key gauntlet（001 を内包） | spec | r1 | **CHANGES** | `docs/reviews/003-spec-r1.md` |
 | 003 key gauntlet（001 を内包） | spec | **r2** | **CHANGES** | `docs/reviews/003-spec-r2.md` |
 | 004 live adversarial input | spec | r1 | **CHANGES** | `docs/reviews/004-spec-r1.md` |
+| 004 live adversarial input | spec | **r2** | **CHANGES** | `docs/reviews/004-spec-r2.md` |
 
 ## 003 spec review r2（2026-09-04）— **CHANGES**
 
@@ -131,6 +132,75 @@ INV-9 の binding 式は `program-revm/src/main.rs:178-190` と一致。
 （finding 8）③`no-keys.sh` に target 引数を入れること自体（finding 12、`AGENTS.md` §0 は
 このチェックの緩和を founder 判断としている）。
 
+## 004 spec review r2（2026-09-04）— **CHANGES**
+
+記録: `docs/reviews/004-spec-r2.md`（payload `/tmp/reckn-payload-004-spec-r2.md` /
+Codex raw `/tmp/reckn-codex-004-spec-r2.md`、呼び出しは 1 回・`-s read-only`、payload は起動前に全文表示）。
+対象 `docs/specs/004-live-adversarial-input.md`（440 → **1233 行**）は `reckn-spec`（Claude Code）起草＝
+Codex は自分の宿題を採点していない。Codex 5件 → **全件を現物で再現して採用**（1件は remedy を証拠付きで
+差し替え）、末尾所見から2件を MINOR に格上げ、**私の独立検出5件**を追加。
+残った **12 findings（BLOCKER 2 / MAJOR 5 / MINOR 5）**。
+
+**r2 の pin は本物だった（再 litigate 不要）。** r1 BLOCKER 1/2/3 の remedy として置かれた数値を
+**11 種類すべて独立に再計算して一致**: `CODE_HASH` / **`STATE_ROOT` 2本を独立実装の Python secure-MPT で
+再構築** / §4.3 の fixture `deal_binding`・`trace_hash`（committed fixture と一致）/ AC-20 の 6 pin /
+`recordTraceHash` 2値・`resultHash`（`protocol-rs` の TLV を再実装）/ **§3.6 の `gasUsed` 8点を
+intrinsic gas + SSTORE メータリングから解析的に再導出**（非単調 26188 > 26164 は本物の EVM 由来量）/
+§7.5 corpus digest と 21-APPROVE/11-REJECT ベクタ（§7.4 の規則を実装して 32/32 一致）/ §7.6 の digest と 8/8 /
+`forge test` 12件・名指し4件の実在。`dashboard/index.html:705` の訂正は **r2 が正しく r1 の「706」が誤り**。
+
+**BLOCKER 2件:**
+
+1. **004 は 008 が削除する v1 guest に対して書かれている**（Codex 発見）。008 は founder 裁定で 004 より前に走り、
+   `008:228-234` が**全 preimage を fixed-width big-endian に、全ドメインタグを v2 に**する。決定的なのは
+   `008:882-890` が `reexec-groth16-fixture.json` を **`pre = 2^64` / `post = 2^64+100`** で再生成すると
+   明記していること — 004 §4.3 の組み直しレシピ `testkit::anchored_sstore_witness`（slot 7 = 42）は
+   その prestate を作れず、**AC-7(d) が再び「誰も通せない AC」になる**（r1 BLOCKER 2 の実行順による復活）。
+   併せて AC-6 が印字を義務づける「the divergence itself is task 008's, not closed here」は**解消済みを
+   未解消と書く**逆向きの §5 違反になり、INV-2 は `env_hash` の導入で偽になり、§11 D-1（`planHash` に
+   `gas_limit` が無い、"founder 裁定待ち"）は `008:292-294` が既に閉じている。
+   **`PinDrift` は不十分** — 変わるのは値でなく式・タグ・fixture の prestate。
+2. **「再実行が走ったこと」の担保とされた NC-19 は、受入条件のどこからも走らない。**
+   §6.1 は「NC-19 が白箱側の担保」と書くが、§6.0 の 24 gate に `negative-controls` の行が無く、
+   `scripts/004-live.sh` のサブコマンドにも無い（AC からの参照 **0件**）＝**NC-1〜NC-24 を1行も
+   書かない実装が 24 gate 全部で緑**。加えて §6.1 の「**2つ目のエンジンが要る**」は**偽**:
+   AC-4/17/18 の入力集合は有限で仕様が全部公開しており（8 amount + 6 fixture + 12 spec_id）、
+   **合計 26 行のルックアップ表**で 3 gate とも通る。正直な告白（「それでも証明ではない」）が
+   その2文前の過大主張を覆う位置に置かれている。COUNT CONTRACT も**被検査プログラム自身の出力**を
+   照合するだけなので、gate 本体を成功行の印字に置換した実装を落とせない（NC-24 はこの変異を覆わない）。
+
+**MAJOR 5件**: ③AC-15 の禁止語 `settled` が**既存の真の記述**に発火（`README.md:35` / `SUBMISSION.md:187`、
+zk 経路の記述で、004 の作業を1行も始める前に `lint-claims` が落ちる）④**AC-9 と AC-10(a) が同時に
+満たせない**（`judge.kind = "unavailable"` vs 許容集合 `{stub,cli,http}` + 必須 `judge.model`/`rawResponse`）
+⑤AC-10(b) は `attemptId` を**引用している文しか見ない**ので、引用の無い "A language model was persuaded"
+が全検査を素通り（Codex）⑥`JudgeTimeout`/`JudgeResponseTooLarge` を実行する AC が無く、AC-19 は
+逐次 `seq` 衝突しか見ない（同時 POST 未検定、Codex）⑦`DELIVERED_MAX` が回避策である開示が
+**selftest の stdout にしか無い**（§3.4 は「デモ・README・提出文で同じ言い方をする」と書くが強制する AC が無い）。
+
+**MINOR 5件**: 「u64 の縁に触れない」→ 実際は縁**ちょうど**まで受理（Codex）/ §6.0 の expected が
+列挙ケースと不一致（AC-0 = 5 vs 6、AC-7(e) = 4 vs 7、`docs-claims` は expected が実装依存で
+`check-counts` の厳密一致が原理的に効かない）/ **INV-3 を同じ文書の AC-18 が反証**している /
+§11 D-1 が解決済み / OQ-3 は `008:343-349`（実 ELF 差分テスト）で **founder 裁定なしに閉じられる**。
+
+**却下**: ①Codex の「004 は 008 の差分 gate に依存すべき」— N-9/T-8 が正しく避けている依存の逆流。
+②「AC-7(d) は Failed 側の outcome を外部アンカーしていない」— AC-20 の pin が outcome=1 でしか
+再現しないことを再計算で確認、却下。③「AC-11(b) は self-refereed のまま」— §7.4 の規則も §7.5 の
+corpus も**仕様が固定**しており、独立実装で 32/32 再現。ただし見出し「(b) 一般化」は誤称で「適合」が正しい。
+④「AC-11(a) は無意味」— 母集合と走査域を確定し POSITIVE CONTROL を持ち限界を明記した tripwire で、
+狭いが空ではない。⑤「T-8 の cold clone と offline が矛盾」— cold clone と cold cargo registry を
+正しく区別しており r1 finding 16 は閉じている。
+
+**tier 違反は発火せず**: 004 は `local only` を守り、`~34 s`/`~6.2 GB` は否定方向の引用のみ、
+Honest scope は1つも解消していない。ただし **kill 方向の tier 誤りが2件**（§11 D-1 と AC-6 の
+義務づけ文言が、008 が閉じたものを未解決として提示する）— finding 1 に含めた。
+
+**founder の低信頼点への回答**: ①「再実行しか作れない量」への結び直しは**半分効いている**。
+pin は本物で r1 の `fake_reexec` は確実に死ぬが、26行のルックアップ表は通る。必要なのは pin を
+増やすことではなく、負のコントロールを gate にすることと、**少なくとも1 gate の入力集合を
+実行時 seed にする**こと（表に書けなくする）。②AC-7(d) は **008 前の guest に対しては
+一致を強制できている**（判別軸 — min=100/pre=42/post=142/slot=be32(7)/タグ/順序/`gas_limit` 不在/
+outcome 符号化 — を全部数えて、ずれたまま両方一致する経路は見つからなかった）。**008 後は NO**。
+
 ## 004 spec review r1（2026-09-04）— **CHANGES**
 
 記録: `docs/reviews/004-spec-r1.md`（payload `/tmp/reckn-payload-004-spec-r1.md` /
@@ -172,13 +242,20 @@ AC-11(a) の静的リテラル検査は base64 化 1 行で抜けられ、AC-11(
    **blocking は2つだけ**: ①allowance 出口と走査域外出口を塞ぐ（or 出口が列挙されているという主張を
    取り下げる）②AC-18 観測5の偽文を削り、「format はテスト0件を防ぐが表明0件は防がない」と明記し、
    AC-18 に `ac.sh` 外の直接実行行を与え、全 forge AC に mutant を1つ以上持たせる
-4. **`reckn-spec`**: `docs/reviews/004-spec-r1.md` の「004 に戻すときに直すもの」12項目を
-   `docs/specs/004-live-adversarial-input.md` に反映 → `reckn-codex-review`(stage=spec, r2)
+4. **`reckn-spec`**: `docs/reviews/004-spec-r2.md` の「round 3 で直すもの」9項目を
+   `docs/specs/004-live-adversarial-input.md` に反映 → `reckn-codex-review`(stage=spec, **r3**)。
+   **blocking は2つだけ**: ①§4.1/§4.3/AC-6/AC-7(d)/AC-20/INV-2/§11/§3.4 を **008 後の guest**に対して
+   書き直す（式を参照で定義し、literal hex を "pre-008" と明示し、AC-7(d) の組み直しを構成子名で固定しない）
+   ②`negative-controls` を 25 番目の gate にし、NC-25（gate 本体を成功行の印字に置換）を足し、
+   §6.1 の「2つ目のエンジン」を削り、**1 gate の入力集合を実行時 seed にする**
 5. **founder 裁定（003 r2 追加）**: G-33 を disclosed に留めるのは**コストの判断であって
    中心主張の形の判断ではない**（finding 9）。OQ-6 は「実測が無い」ではなく「**~34 s は predicate guest の
    実測、`program-revm` は未測**」を前提に問い直す。OQ-1/OQ-2/OQ-3/OQ-5 は r2 で不変。
-6. **founder 裁定**: OQ-2（`cli` 実モデル経路の可否。**004 の見出し主張がこれに依存**）／
-   `u64`/`U256` 偽 release を**タスク 002 の前に閉じるか**（deferred D-2）
+6. **founder 裁定（004 r2 更新）**: OQ-2 は**決着済み**（見出しは判事非依存に書き換え済み）。
+   `u64`/`U256` 偽 release は **008 が引き取り済み**。004 で残る裁定は **OQ-1**（観客 attempt を
+   セッション後に実 Groth16 → `settleWithProof` する別タスクを起こすか）と **OQ-4**（凍結後に届いた
+   attempt を commit するかの Continuity 解釈）の2つだけ。**OQ-3 は裁定不要** — `008:343-349` が
+   実 ELF 差分テストを既に持つので 004 は何も足さない（004 自身がその条件を書いている）
 7. spec が APPROVE になってから `reckn-codex-impl`。**実装・コントラクトは未着手**（r2 の時点でも
    `RecknZkEscrow.sol` に変更なし）
 
