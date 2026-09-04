@@ -544,9 +544,12 @@ AC-11(a) の静的リテラル検査は base64 化 1 行で抜けられ、AC-11(
    description に全文を再掲する**」なので、残る実行項目は次の2つ:
    - **受理後**: Discord 接続時に全文を主催者へ渡す
    - **提出時（9/16 まで）**: submission description に全文を再掲
-   - ⚠ **その前に `DISCLOSURE.md:21-22` を修正すること**。「the repository is still private」は
-     2026-09-04 の public 化で**偽になった**。開示文書に偽の一文を残して送らない。
-     founder 文書なのでエージェントは書き換えない（`AGENTS.md` §8）。
+   - ✅ **`DISCLOSURE.md` の該当箇所は 2026-09-04 に修正済み**。「the repository is still
+     private」は public 化で偽になっていた → 「private until 2026-09-04, when it was made
+     public so that this application could be reviewed against the actual source」に差し替え。
+     **`AGENTS.md` §8 は founder 文書のエージェントによる書き換えを禁じているが、この編集は
+     founder の明示的な委任により行った**（黙って例外を作らないためここに記録する）。
+     §8 の規則自体は変更していない。次に同種の編集が要るときも、founder の委任を待つ。
 3. **`reckn-spec`（最優先・実行順の先頭）**: `docs/reviews/008-spec-r1.md` の
    「What must change before round 2」15項目を `docs/specs/008-verdict-domain-soundness.md` に反映 →
    `reckn-codex-review`(stage=spec, **r2**)。**blocking は2つ**: ①AC-13 を rename から

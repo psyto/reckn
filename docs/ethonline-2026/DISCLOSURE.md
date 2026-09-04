@@ -18,8 +18,10 @@ deterministic re-execution, not a trusted judge.
 
 Reckn was built in July–August 2026 and was **never submitted anywhere** — not to an
 ETHGlobal event, not elsewhere. A submission kit (`SUBMISSION.md`) was drafted but its
-pre-flight items "Repo public" and "Submission form" were never completed, and the
-repository is still private. It has received no prize, no judging, and no public showcase.
+pre-flight items "Repo public" and "Submission form" were never completed. The
+repository was **private until 2026-09-04**, when it was made public so that this
+application could be reviewed against the actual source. It has received no prize, no
+judging, and no public showcase.
 
 ## 2. What exists before the event (built 2026-07-26 → 2026-08-02)
 
