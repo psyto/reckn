@@ -62,8 +62,19 @@ repository history before 2026-09-04 is fully accounted for.
    so any observer can attempt to persuade the LLM judge, and watch re-execution disagree.
 4. **Real ERC-20 workload.** Extend the in-guest re-execution from the current single-slot
    SSTORE fixture to a real token-credit predicate, with measured cycle counts.
-5. **Sponsor integrations (new):** an x402-gated service hosted on Hedera; USDC escrow
-   deployed on Arc; World AgentKit gating who may open a dispute.
+5. **Sponsor integrations (new):** World AgentKit gating who may open a dispute.
+   *(Integrations against Arc/USDC and Hedera/x402 were listed at application time; the
+   full prize list was not yet published, and they will be attempted only if those
+   sponsors are confirmed for this event.)*
+6. **Verdict domain soundness.** The zkVM guest takes its balance delta on limb 0 of a
+   U256, so a *decrease* from `2^64` to `2^64−1` is accepted as the largest possible
+   credit — a false release. The guest also sets only `chain_id`, leaving the spec and
+   block environment out of sync with the off-chain re-execution, which uses the full
+   U256. Both are closed, with tests.
+7. **Cross-VM settlement.** A proof of work performed on Solana settles an escrow funded
+   on Ethereum. Today the SVM verdict is verified on-chain by the same general verifier,
+   but only EVM proofs reach `settleWithProof`. This closes that gap with **no resolver,
+   no bridge, and no light client in the adjudication path.**
 
 ## 4. How the boundary is enforced
 
