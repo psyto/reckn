@@ -12,7 +12,7 @@
 | 当日作業の定義 | **日付が 2026-09-04 以降の commit のみ**（ハッシュでなく日付が一次） |
 | 中心主張 | 判定する鍵が存在しない — `bash scripts/no-keys.sh` **PASS** |
 | 凍結予定 | **9/12**（9/13–15 は R[3]sidency 締切 9/15 に明け渡す） |
-| 撤退可能点 | **9/9** — **`008` と `003`（001 の受入条件を内包）の両方が緑**でなければ founder 判断（`AGENTS.md` §7 の文言に合わせて 008 を補った。2026-09-04 の実行順裁定で 008 が先頭。旧文言「001/002 が緑」は使わない） |
+| 撤退可能点 | **9/9** — **`008` と `009` の両方が緑**でなければ founder 判断（`AGENTS.md` §7、2026-09-04 の応募提出に合わせて `003` → `009` に差し替え。`003` は撤退判定の対象外だが **9/12 の凍結までに着地させる対象**。旧文言「001/002 が緑」「008 と 003 が緑」は使わない） |
 
 ## 完了
 
@@ -43,7 +43,8 @@
 | 004 live adversarial input | spec | r1 | **CHANGES** | `docs/reviews/004-spec-r1.md` |
 | 004 live adversarial input | spec | **r2** | **CHANGES** | `docs/reviews/004-spec-r2.md` |
 | **008 verdict domain soundness** | spec | r1 | **CHANGES** | `docs/reviews/008-spec-r1.md` |
-| **008 verdict domain soundness** | spec | **r2** | **CHANGES** | `docs/reviews/008-spec-r2.md` |
+| **008 verdict domain soundness** | spec | r2 | **CHANGES** | `docs/reviews/008-spec-r2.md` |
+| **008 verdict domain soundness** | spec | **r3** | **CHANGES** | `docs/reviews/008-spec-r3.md` |
 
 ## 003 spec review r4（2026-09-04）— **CHANGES**
 
@@ -164,6 +165,52 @@ Honest scope の 2 digest は再計算して一致。文書内の算術（`T`=48
 
 **round 4 は短いはず**: BLOCKER 3件はいずれも1節＋corpus/mutant 1件の局所修正で、
 matrix・manifest・算術・開示・honest-scope 凍結は検証に耐えた。**r6 hard stop まで残り 3 周。**
+
+## 008 spec review r3（2026-09-04）— **CHANGES**
+
+記録: `docs/reviews/008-spec-r3.md`（payload `/tmp/reckn-payload-008-spec-r3.md` /
+Codex raw `/tmp/reckn-codex-008-spec-r3.md`、呼び出しは 1 回・`-s read-only`）。
+対象 `docs/specs/008-verdict-domain-soundness.md`（**2334 行**）は `reckn-spec`（Claude Code）起草＝
+Codex は書いていないので、独立レビューとしてフル適用（author independence 充足、payload に明記）。
+
+**findings 7件（BLOCKER 1 / MAJOR 2 / MINOR 4）。r2 の 8件は全部閉じた**（digest 2件・
+テスト数 12/7/16・AC-14 の 8 literal・tilde 14 vs 12 を全部再測定して一致）。
+
+1. **[BLOCKER] M-8 が `RecknZkEscrow.sol` を in-place で編集する仕様のまま**＝ founder の
+   sandbox 裁定と `AGENTS.md` §0 に反する。r4 で必要なのは文言でなく4条件:
+   ①`surfaces.sh` が **`no-keys.sh:17-19` と同じく自分の位置から root を導出**（引数・環境変数・
+   絶対パス fallback を許さない）②sandbox に **`reexec-evm/src/lib.rs` も入れる**（AC-0b は
+   2節あり、第2節が `head -710`）③**変異前に clean copy で exit 0 を確認**（無いと
+   「コピーされていないファイルを読んで落ちる退化実装」が "detected" と誤採点される）
+   ④restore は `rm -rf "$S"`、N-1 は文字通りに戻る。
+2. **[MAJOR] AC-13 の行自体が `echo` で満たせる。** witness set が「16個の `.patch` ファイル」で
+   **どの mutant も patch ファイルを変更しない**ため witness は全 run で定数。`ac008-selftest.sh` を
+   2行の echo にすると `18/18 rows passed` が出る。step 0 / step 6 は stub の内側。**INV-14 は
+   AC-00 しか除外していないので偽**。閉じない（信頼の根は repo 内で終端しない）ので r4 は
+   ①INV-14 の量化子修正 ②`:1059` の偽文削除 ③**L-3 を「AC-13 の行は echo で満たせる」と平明に
+   書き直す** ④`ac008.sh --all` が **M-9 を canary として自分で適用**（zero-build）。
+3. **[MAJOR] OQ-5 の3案は列挙が不完全**で、しかも自案有利の方向（§0 を破る/検査を弱める/検査を消す＝
+   強いのは §0 破りだけ）。§0 に触れない案が2つ落ちていた（founder の sandbox、および M-8 を
+   AC-0b の**第2節**＝`reexec-evm/src/lib.rs:711` 上の comment に向ける弱い代替）。
+   **(b) の却下理由は founder の方が鋭い**（pin を変異させるとどのファイルを digest していても落ちる＝
+   「digest が `RecknZkEscrow.sol` から計算されている」を検定しない）。(c) の価格付けは正しい。
+   (a) の未計上リスク: `trap` は **SIGKILL を捕らえない**。`no-keys.sh` は設計上 comment-blind
+   （`:28-30`）なので、hard kill で残った変異 comment を commit 時に検出できない。
+4-7. **[MINOR]** honest scope の G-1 文（host 側の性質を無条件に書いている）／`:536` の
+   「byte-identical code」過剰主張（正しくは同一 crate・出力同一。`revm-precompile-34.0.0/src/blake2.rs:135,201`
+   に avx2+std の別実装）／AC-11 の witness set「5ファイル」は 008 が6本目を足す／AC-0b の
+   prefix 1..710 は testkit の doc comment を含み、2つ目の `#[cfg]` ブロックを禁じる。
+
+**独立に検証して健全と判定した（r4 で再litigate しない）**: **P-12 は閉じている** — 4つの call
+opcode が `revm-interpreter-35.0.1/src/instructions/contract.rs:158,203,248,293` →
+`load_acc_and_calc_gas` → `db.basic`（`revm-context-16.0.1/src/journal/inner.rs:927`）の**一本道**
+なので、実行時計算された callee でも `DELEGATECALL` でも witness に居る（P-12 panic）か
+居ない（両側 fail）かの二択。**Δ の9要素は完全**（`bn`/`gmp` は default でないので `0x05`–`0x08` は
+両側同一）。G-3・`head -710`・AC-7a・§7.5 の tier 扱いも健全（唯一の訂正＝「9/9 の blocker ではない」を
+post-008 と SVM の未測定値に**条件付き**と明記）。
+
+**round 4 は狭いはず**: 8項目とも局所で、§3 の修正内容・AC-1…AC-12 のベクタ・manifest 算術
+（18行/91/6/16）・guest freeze 規則は検証に耐えた。**r6 hard stop まで残り 3 周。**
 
 ## 008 spec review r2（2026-09-04）— **CHANGES**
 
