@@ -2,12 +2,12 @@
 
 | | |
 |---|---|
-| Status | **DRAFT — round 5 of a maximum of 6 (`AGENTS.md` §7).** Responds to all 11 findings in `docs/reviews/003-spec-r4.md` (`VERDICT: CHANGES`, BLOCKER 2 / MAJOR 4 / MINOR 5). Response table: **Appendix C**. Round 3's response to r2 is **Appendix A** and round 4's to r3 is **Appendix B**; neither is re-opened. |
+| Status | **DRAFT — round 6 of a maximum of 6 (`AGENTS.md` §7). This is the hard stop: whatever is open after this round goes to the founder.** Responds to all 6 findings in `docs/reviews/003-spec-r5.md` (`VERDICT: CHANGES`, BLOCKER 2 / MAJOR 2 / MINOR 2). Response table: **Appendix D**. Round 3's response to r2 is **Appendix A**, round 4's to r3 is **Appendix B** and round 5's to r4 is **Appendix C**; none is re-opened. |
 | Owner | `reckn-spec` (frame thin). Implementation is `reckn-codex-impl`. |
 | Supersedes | task `001` (keyless timeout) — folded in per founder ruling, `AGENTS.md` §3 |
 | Tier claimed | **local anvil / Foundry only.** No testnet, no mainnet, no real funds. |
-| Surface touched | `zk-verdict/contracts/src/RecknZkEscrow.sol`, `zk-verdict/contracts/test/`, `zk-verdict/contracts/foundry.toml`, `scripts/no-keys.sh` (**additive checks only** — §4.5), `scripts/` (new: `ac.sh`, `ac-selftest.sh`, `no-keys-selftest.sh`, `mutation-kill.sh`, `degeneracy-sweep.sh`, `gauntlet.sh`), `zk-verdict/scripts/zk-e2e.sh` (**one line**, S-1), `docs/gauntlet.json` (new), `docs/gauntlet.base.json` (**new; written once, at 003's base commit, by `gauntlet.sh --measure`** — §1.5.1), `README.md`, `CLAUDE.md`, `AGENTS.md`, `STATUS.md`, `SUBMISSION.md`, `zk-verdict/README.md` (**not** its Honest-scope blocks), `zk-verdict/scripts/surfaces.pinned` (**re-pinned, not authored** — task `008`'s artefact; §1.5, D-11) |
-| Surface **read but not edited** | `zk-verdict/contracts/src/RecknVerdictVerifier.sol` — **new in r5.** It is the second contract in the settlement path, and it enters `scripts/no-keys.sh`'s checked region as **check 15** (§4.5.10). 003 adds no line to it and changes no line in it; it constrains what may ever be in it. |
+| Surface touched | `zk-verdict/contracts/src/RecknZkEscrow.sol`, `zk-verdict/contracts/test/`, `zk-verdict/contracts/foundry.toml`, `scripts/no-keys.sh` (**additive checks only** — §4.5), `scripts/` (new: `ac.sh`, `ac-selftest.sh`, `no-keys-selftest.sh`, `mutation-kill.sh`, `degeneracy-sweep.sh`, `gauntlet.sh`), `zk-verdict/scripts/zk-e2e.sh` (**one line**, S-1), `docs/gauntlet.json` (new), `docs/gauntlet.base.json` (**new; written once, at 003's base commit, by `gauntlet.sh --measure`, and thereafter never deleted and never re-written — asserted from git history, not from a promise** — §1.5.1), `README.md`, `CLAUDE.md`, `AGENTS.md`, `STATUS.md`, `SUBMISSION.md`, `zk-verdict/README.md` (**not** its Honest-scope blocks), `zk-verdict/scripts/surfaces.pinned` (**re-pinned, not authored** — task `008`'s artefact; §1.5, D-11) |
+| Surface **read but not edited** | `zk-verdict/contracts/src/RecknVerdictVerifier.sol` — **new in r5.** It is the second contract in the settlement path, and it enters `scripts/no-keys.sh`'s checked region as **check 15** (§4.5.10). 003 adds no line to it and changes no line in it; it constrains what may ever be in it. **In r6 that constraint reaches the file's `constructor`, which is where the address `verifyProof` is dispatched to is chosen (`RecknVerdictVerifier.sol:38`, `:42-45`, `:55`) and which round 5's check excluded by construction.** |
 | Surface **not** touched | `contracts/RecknEscrow*` (optimistic path, `AGENTS.md` §8), `zk-verdict/program-revm`, `zk-verdict/program-svm`, `zk-verdict/lib`, `zk-verdict/script`, `docs/ethonline-2026/*` (founder documents), `docs/specs/004-*`, `docs/specs/008-*`, `docs/reviews/*` |
 
 Section numbering is normative. Task `004` must reuse this structure: §1 claim/non-goals,
@@ -90,6 +90,34 @@ devices, an outside-in control artefact (AC-18 observations 7/8, M-52/M-53) and 
 finally tested **against each other** (E-17/E-18, one pass, one state machine); and the
 sweep probe is read from parsed JSON rather than from an exit status.
 
+### What round 6 changes, in one paragraph
+
+**This round closes a new *kind* of hole, and names it.** The first four failures of this
+document were all one shape — *a criterion that is satisfied by breaking the thing that
+observes it* (R-9, R-10). r5's first finding is a different shape: **the attacker branches on
+the existence of the observer.** Check 15 pinned assignment *left-hand sides* and excluded the
+`constructor` — and `RecknVerdictVerifier`'s `verifier` is `address public immutable`, chosen
+in that constructor (`RecknVerdictVerifier.sol:38`, `:42-45`) and dispatched to at `:55`. A
+constructor reading `if (block.chainid == 31337) { verifier = _verifier; } else { verifier =
+address(0x…1337); }` passes 15a–15f, passes every matrix row and passes the whole suite —
+**because the gauntlet runs on a local chain, so an implementation that misbehaves only off
+that chain is invisible to every instrument in this document.** P5's sentence *"there is no
+branch for a constant address to live in"* was false: the branch was in the region the check
+excluded. Round 6 pins the constructor (**15g**), pins the escrow constructor's right-hand
+sides the same way (**check 8**), closes the **execution-context tokens** per range so that
+neither file can tell which chain it is on at all (**check 7b**), turns the seller's
+deployment check from **four parts into five** by reading `RecknVerdictVerifier.verifier()`
+on-chain, and writes the general rule down as **R-11**. Second, the anti-laundering mechanism
+was *"`--measure` refuses to overwrite"* while the laundering path is **`rm`** — and AC-16's
+own `Falsify:` asserted an outcome that does not occur, which under **R-6** is a broken
+instrument rather than a typo. Round 6 replaces it with two mechanical assertions over the
+base file's **git history** plus a clean-tree condition on `--measure`, and rewrites the
+falsifier to the three branches that actually happen. Third, AC-17 pinned the pre-existing
+suite's **size**; it now pins the recorded **id set**, so a meaningful pre-existing test
+cannot be deleted and replaced by a passing one. **What round 6 refused to do is in Appendix
+D**, and the one thing it found and deliberately did **not** close is **OQ-10** — returned to
+the founder open, because this round is `AGENTS.md` §7's hard stop.
+
 ---
 
 ## 1. Claim and non-goals
@@ -123,13 +151,15 @@ Today (`zk-verdict/contracts/src/RecknZkEscrow.sol`, re-read 2026-09-04):
   (`test_real_proof_settles_to_seller:38`, `test_failed_verdict_refunds_buyer:93`,
   `test_settle_reverts_on_binding_mismatch:104`, `test_settle_reverts_on_unverified_proof:117`;
   the file's other four `function` declarations are `setUp`, `_fund`, `_mockEscrow`, `_pv`).
-  **The size of the pre-existing suite is a measured quantity, not a literal in this
-  document** (§1.5.1, r4 finding 2): call it `P`. Measured on the tree as it stands
-  2026-09-04, **before 008 lands**, `P = 12`
+  **The pre-existing suite is a measured quantity, not a literal in this document**
+  (§1.5.1, r4 finding 2). **What is measured is the set of test *ids*, and `P` is its
+  cardinality (new in r6 — r5 finding 3): a count cannot tell a deleted test from a
+  replacement.** Measured on the tree as it stands 2026-09-04, **before 008 lands**,
+  `P = 12` across five files
   (`grep -c 'function test' zk-verdict/contracts/test/*.t.sol` → `2+2+2+2+4`, and
   `forge test --list --json | jq '[.[][][]] | length'` → 12). **008 adds tests to this
-  suite, so this number will be different at 003's base commit; every total in this
-  document is written as `46 + {P}` and no total is spelled out.**
+  suite, so both the set and its size will be different at 003's base commit; every total in
+  this document is written as `46 + {P}` and no total is spelled out.**
   None of the four publishes a key, fuzzes a caller, or enumerates what a key-holder
   *cannot* do.
 - **the settlement path spans two contracts, and only one of them is checked today.**
@@ -141,6 +171,14 @@ Today (`zk-verdict/contracts/src/RecknZkEscrow.sol`, re-read 2026-09-04):
   contains **one** `function` declaration (`verifyVerdict`), zero occurrences of
   `msg.sender` and zero of `tx.origin`, and a two-statement body. **Nothing enforces any
   of that**, and §3.1.4 states what a single extra line there buys an attacker.
+  **And the address that function dispatches to is chosen somewhere else again**: `verifier`
+  is `address public immutable` (`RecknVerdictVerifier.sol:38`), assigned in the
+  **constructor** (`:42-45`), and read at `:55` as
+  `ISP1Verifier(verifier).verifyProof(...)`. Re-read 2026-09-04, that constructor is two
+  statements, each assigning one immutable from the parameter of the same name. Nothing
+  enforced that either — **round 5's check 15 excluded the constructor by construction** —
+  and §3.1.4 states what a single extra branch *there* buys an attacker who never has to
+  touch `verifyVerdict` at all.
 - **`fund` discards `transferFrom`'s boolean return** (`RecknZkEscrow.sol:86`)
 - **nothing constrains the contract's outbound calls.** `scripts/no-keys.sh` has four
   checks, none of which looks at a call site; and its scan region begins at
@@ -262,37 +300,73 @@ lines forbidding: edit a pinned literal privately, or ship prose that is false.
 #### 1.5.1 `gauntlet.sh --measure` and `docs/gauntlet.base.json`
 
 Run **once**, as **P0** (§9.1) — before P1 and before any 003 edit — on the tree exactly as
-008 left it. It records `base_commit = git rev-parse HEAD` and these five measurements, and
-the resulting file is **committed**:
+008 left it, **which must be a committed tree**: `--measure` refuses to run while
+`git status --porcelain` is non-empty (rule 2). It records
+`base_commit = git rev-parse HEAD` and these six measurements, and the resulting file is
+**committed in the same part**:
 
 | key | what is measured | how | used by |
 |---|---|---|---|
-| `pre_existing_tests` (**`P`**) | the whole `zk-verdict/contracts` suite before 003 adds anything | `forge test --root zk-verdict/contracts --list --json \| jq '[.[][][]] \| length'` | AC-17, AC-21, AC-13 check 4, §7.1, §7.2 — always as `46 + {P}` |
+| `pre_existing_tests` (**the id set; `P` is its cardinality**) | the whole `zk-verdict/contracts` suite before 003 adds anything, **as a sorted list of ids `<contract>:<test>`, not as a number** (r5 finding 3) | `forge test --root zk-verdict/contracts --list --json` flattened to `<contract>:<test>` and sorted; `P := \|set\|` | AC-17, AC-21, GC-4, §7.1, §7.2 — always as `46 + {P}` |
 | `honest_scope` | the two "Honest scope" block digests of `zk-verdict/README.md` | the `awk` heading-recipe of AC-16, `shasum -a 256` | AC-16 |
 | `binding_preimage` | the domain tag and field list `program-revm` actually commits, **verbatim**, with the `file:line` it was read from | copied out of the source at `base_commit`; no agent retypes it | INV-9, AC-6 |
 | `public_values` | the declared Solidity type of each `VerdictPublicValues` field, with its `file:line` | read from `zk-verdict/contracts/src/RecknVerdictVerifier.sol` | INV-10, §8 |
 | `verifier_body` | the two statements of `verifyVerdict`, whitespace-normalized, with their `file:line` | read from the same file | check 15 (§4.5.10) — as **evidence**, not as the gate |
+| `verifier_constructor` (**new in r6 — r5 finding 1**) | the `constructor`'s parameter list and its two statements, whitespace-normalized, with their `file:line` | read from the same file (`RecknVerdictVerifier.sol:42-45`) | **15g** (§4.5.10) — as **evidence**, not as the gate |
+| `no_keys` (**new in r6 — orchestrator ruling of 2026-09-04**) | what `scripts/no-keys.sh` already is at the base commit: `{ "checks": <the integer in its `checks: N/N passed` line, or null if it prints none>, "targets": [<the source paths the script derives from its own location>] }` | read from the script and from its own output at `base_commit` | **§1.5.4** — decides whether 003 **extends** 008's check over `RecknVerdictVerifier.sol` or **introduces** it |
 
-**Three rules that make this a measurement rather than a ritual.**
+**Four rules that make this a measurement rather than a ritual.**
 
 1. **No agent types any of these values by hand.** Same discipline as D-11's re-pin: a
    hand-transcribed digest is a silent mismatch waiting to happen, and a recomputation
    performed by the party being checked is not a check.
-2. **`--measure` refuses to overwrite.** If `docs/gauntlet.base.json` exists,
-   `gauntlet.sh --measure` exits non-zero and prints the recorded `base_commit`. Re-running
-   it after a `zk-verdict/README.md` edit is exactly how AC-16 would be laundered, so the
-   file is written once and only once.
+2. **`--measure` writes once, and refuses a dirty tree** *(rewritten in r6 — r5 finding 2)*.
+   If `docs/gauntlet.base.json` exists, `gauntlet.sh --measure` exits non-zero and prints the
+   recorded `base_commit`; and **if `git status --porcelain` is non-empty it exits non-zero
+   before measuring anything**, printing the dirty paths. The second condition is not
+   decoration: without it the honest scope is measured from the **working tree** while
+   `base_commit` points at `HEAD`, and the resulting mismatch surfaces six parts later at P8
+   with no instruction attached instead of at P0 where it is cheap.
+
+   **What this rule does *not* do, said here because round 5 said the opposite.** Round 5
+   wrote *"the file is written once and only once"*. **That is false: refusing to overwrite is
+   not refusing to be replaced, and `rm` is not an overwrite.** The launderer owns git
+   (`AGENTS.md` §6): soften `zk-verdict/README.md`, commit it, delete the base file,
+   re-measure. All three sources of rule 3 are then re-derived from the same softened tree,
+   they agree, and `base_commit` is trivially an ancestor of `HEAD` because it **is** `HEAD`.
+   **The act is blocked by rule 4, not by this one**, and this rule's own contribution to
+   blocking it is exactly one branch: the delete leaves the tree dirty, so a launderer who
+   does not commit the deletion is stopped here.
 3. **The digests are pinned to a git object, not to a working tree.** `gauntlet.sh --check`
-   (check 15) re-derives `honest_scope` from
+   (GC-15) re-derives `honest_scope` from
    `git show <base_commit>:zk-verdict/README.md` and asserts it equals both the recorded
    value **and** the value computed from the working tree. Three sources. A softening edit
-   moves the working-tree value and not the other two, so AC-16 goes red and cannot be
-   rescued by re-measuring. **`base_commit` must be an ancestor of `HEAD`**, which is also
-   asserted.
+   moves the working-tree value and not the other two, so AC-16 goes red. **`base_commit`
+   must be an ancestor of `HEAD`**, which is also asserted.
+4. **The base file has exactly one history** *(new in r6 — r5 finding 2; this is the rule that
+   blocks the laundering path)*. `gauntlet.sh --check` (GC-15) asserts all four:
+   - `docs/gauntlet.base.json` is **tracked** (`git ls-files --error-unmatch` succeeds); an
+     untracked base file fails, naming the file and P0;
+   - `git log --diff-filter=A --format=%H -- docs/gauntlet.base.json` has **exactly one**
+     entry — the commit that introduced it;
+   - `git log --diff-filter=D --format=%H -- docs/gauntlet.base.json` is **empty** — it was
+     never deleted;
+   - the blob at that single `A` commit is **byte-identical** to the working-tree file, which
+     also closes the modify-in-place case without a separate assertion.
+
+   A delete-and-re-measure leaves a `D` entry **and** a second `A` entry; a stale-but-honest
+   file leaves neither; a base file that was re-measured without deleting fails rule 2 and,
+   if it is committed anyway, fails the blob comparison. **The three branches are traced end
+   to end in AC-16's `Falsify:`**, which is where round 5 asserted an outcome that does not
+   occur.
 
 **What this does not do**, stated so it is not read as more: it pins that 003 did not change
-the honest scope, the suite size or the binding after its base commit. It says nothing about
-whether 008's own changes to those things were right — that is 008's review, not this one.
+the honest scope, the pre-existing test set or the binding after its base commit. It says
+nothing about whether 008's own changes to those things were right — that is 008's review, not
+this one. **And rule 4 reads the history that is there**: an implementer who rewrites history
+(`commit --amend`, a rebase that drops the `D`) defeats it. That is not the accidental
+laundering this rule exists to stop; it is deliberate fabrication of evidence, which §8 names
+as outside 003's threat model **in those words** and does not claim to catch.
 
 #### 1.5.2 008's OQ-2, answered in all three parts
 
@@ -339,13 +413,54 @@ one.**
   the fixture stops settling.
 - **§7.1's `~34 s` source is located by content, not by line number.** Round 4 wrote
   `sed -n '97p' zk-verdict/README.md | grep -q '~34 s'` into a file 008 edits.
-  `gauntlet.sh --check` (check 17) instead runs `grep -n '~34 s' zk-verdict/README.md`,
+  `gauntlet.sh --check` (GC-17) instead runs `grep -n '~34 s' zk-verdict/README.md`,
   requires **exactly one** match, and writes that match's line number into
   `gauntlet.json.proving.predicate_guest_source`. Zero matches or two matches is a failure
   with an instruction attached: re-read the file; if the measurement is gone,
   `predicate_guest_wrap_seconds` becomes `null` and the gag rule stays. **A line number is
   not a citation; the text is.**
 
+
+#### 1.5.4 Who introduces the check over `RecknVerdictVerifier.sol` — 008 does; 003 extends it
+
+**Orchestrator ruling, 2026-09-04.** 008's own round-4 review reached r5 finding 1's file from
+the other side: `RecknVerdictVerifier.sol` is on the settlement path (`RecknZkEscrow.sol:99`
+calls `verifyVerdict` and obeys the struct it returns), **008 must edit that file** (it widens
+`VerdictPublicValues`), and the execution order is `008 → 009 → 003`. **008 opens the file
+first, so 008 introduces the check over it.** A check that does not exist at the moment a file
+is first edited is not a check: attributing it to 003 leaves the region open for the whole of
+008 and 009.
+
+**What that changes here is attribution, not mechanism.** Every technical statement of §4.5.10
+stands as written. What 003 owns is the **extension**:
+
+- **the `constructor` closure** — **15g**, plus check 8's right-hand-side clause and check 7b
+  in the escrow (§4.5.6a). This is r5 finding 1's body and it is 003's.
+- **the five-part deployment check** — reading `RecknVerdictVerifier(verifier).verifier()`
+  on-chain (§2.3 A part 5).
+- **the corresponding corpus entry E-20, mutant M-57 and matrix row G-40**, and the two
+  documentation consequences (D-12, §7.2).
+
+**008's part is referred to, never quoted.** 008 is not APPROVEd; its literals are not facts,
+and §1.5's rule applies to this coupling exactly as it applies to `{P}`: **what 008 left is
+measured at the base commit** (`docs/gauntlet.base.json.no_keys`), not asserted here.
+
+**Three cases, decided by that measurement and by nothing else:**
+
+| `no_keys` at the base commit | what 003 does |
+|---|---|
+| `targets` names **only** `RecknZkEscrow.sol` — **008 landed without it** | 003 **introduces** check 15 in full, exactly as §4.5.10 specifies. This is round 5's design unchanged, and it is the fallback the ruling requires 003 to keep |
+| `targets` also names `RecknVerdictVerifier.sol`, and `checks` is `null` or `5` — **008 landed a minimal form as one check** | 003 **extends it in place**: it keeps this document's slot **15**, adds whichever of 15a–15g the base script does not already perform, and the implementation report lists, **sub-check by sub-check**, which were inherited and which 003 added. The printed count stays `15/15`, because slot 15 is one check whether it has three sub-checks or seven |
+| anything else — `checks` is an integer other than `5`, or `targets` names a third file — **008 changed the script's shape in a way §4.5.2's table does not enumerate** | **stop and return to the founder** (`AGENTS.md` §7). That table is the *complete* post-003 enumeration and AC-00's evidence string is compared verbatim; silently folding an unspecified check into it is the "edit a pinned literal privately" act this document spends three thousand lines forbidding, and `AGENTS.md` §0 reserves that script's semantics to the founder (OQ-9) |
+
+**The check table numbering is 003's, and renumbering is not loosening.** If 008 numbered its
+check differently, 003 renumbers it into slot 15 and says so in the same commit (D-12). The set
+of rejected inputs only grows; §4.5's *"two scope changes, and both are tightenings"* is
+unaffected.
+
+**D-12 acquires the same no-op clause D-11 has.** If 008 already declared the second file in
+`AGENTS.md` §0, D-12 is an **amendment** — the constructor, part 5 — rather than the first
+declaration, and the implementation report says which it was.
 
 ---
 
@@ -378,9 +493,12 @@ proof that already carries its own authority.**
 
 **What the gauntlet actually exercises.** The **38 EVM rows** run in Foundry, where
 `vm.prank` impersonates an **address without touching its private key**. The rows therefore
-demonstrate address-level behaviour. (The 39th row, **G-39**, is class `enforcement`: it
-does not run in Foundry at all, because its expected result is a **build failure** —
-§3.1.4, §4.5.10.) The published keys are printed so a judge can verify
+demonstrate address-level behaviour. (The other two rows, **G-39** and **G-40**, are class
+`enforcement`: they do not run in Foundry at all, because their expected result is a **build
+failure** — §3.1.4, §4.5.10.)
+**And Foundry is a local chain, which is itself an attacker-visible fact** — that is R-11,
+and it is why G-40 exists and why the two checked files may not read
+`block.chainid` at all (check 7b, 15g). The published keys are printed so a judge can verify
 they derive to those addresses; unless OQ-1's signed mode is built, **no published key
 signs anything.** This is stated in §8 and printed by `gauntlet.sh` (§7.2), not left to
 the reader.
@@ -392,7 +510,7 @@ Everything each actor *can* do, and everything they cannot:
 | actor | can | cannot |
 |---|---|---|
 | `BUYER` | fund new deals; call `settleWithProof` with any bytes; call `refundAfterDeadline`; receive `Failed`/refund payouts; **choose which deployment to fund, and therefore its bytecode, verifier, vkey and `refundDelay`** (G-29, G-33, G-37); **choose `d.token`, and therefore whether the seller can ever be paid** (G-18, G-34, G-35, G-36) | redirect a `Reproduced` payout; refund before the deadline; cancel; change `seller`/`amount`/`dealBinding`/`token` after funding; stop a valid proof from settling before the deadline |
-| `SELLER` | the same public surface as anyone; receive `Reproduced` payouts; **refuse to work until (i) the four-part deployment check passes *before* funding and (ii) the terms carried by the `Funded` event are acceptable** (§2.3) | cause a payout without a verifying proof bound to this deal; flip a `Failed` verdict; prevent a post-deadline refund; extend the deadline; **learn `d.token` / `d.amount` / `d.seller` before the buyer funds** — those are post-`Funded`-event facts, not pre-funding ones |
+| `SELLER` | the same public surface as anyone; receive `Reproduced` payouts; **refuse to work until (i) the five-part deployment check passes *before* funding and (ii) the terms carried by the `Funded` event are acceptable** (§2.3) | cause a payout without a verifying proof bound to this deal; flip a `Failed` verdict; prevent a post-deadline refund; extend the deadline; **learn `d.token` / `d.amount` / `d.seller` before the buyer funds** — those are post-`Funded`-event facts, not pre-funding ones |
 | `KEEPER` | submit or withhold a proof | change the outcome a proof carries; settle a deal a proof is not bound to; be paid for submitting; prevent anyone else from submitting the same proof |
 | `DEPLOYER` | choose `verifier` and `refundDelay` **at construction, before any deal exists**; deploy other escrows, including look-alikes with honest parameters and different code (G-37) | anything about any deal in the deployed escrow; nothing is stored about them (`no-keys.sh` check 4, AC-20) |
 | `STRANGER` | the same public surface as anyone | the same as everyone |
@@ -404,10 +522,18 @@ These are **two different checks at two different times**, and round 2 collapsed
 one, crediting the seller with a pre-funding check of facts that do not exist before funding
 (r2 finding 4).
 
-**(A) The deployment check — possible before anyone funds. Four parts.**
+**(A) The deployment check — possible before anyone funds. Five parts (four until r6).**
 
-Four things are fixed by the deployer at construction and are then immutable and publicly
-readable:
+**Why it is five and not four (new in r6 — r5 finding 1).** Part 2 compares the escrow's
+`verifier` address. That address is a `RecknVerdictVerifier`, and *its* `verifier` — the SP1
+verifier it dispatches every proof to — is a second immutable chosen in a second constructor
+(`RecknVerdictVerifier.sol:38`, `:42-45`, `:55`). Until r6 nothing in this document read it:
+`gauntlet.json` reached into that contract for the **vkey** and not for this address, so a
+seller who performed the whole check learned nothing about where proofs actually go.
+**Comparing one address that hides a second is not a check**, and check 15 does not help,
+because check 15 is lexical over the **source in this repository** while part 2 is about a
+**deployment**. Five things, therefore, all fixed at construction and all immutable and
+publicly readable:
 
 1. **the escrow bytecode itself** — compared as `extcodehash(escrow)` against the code hash
    of the audited build. Round 2 listed the bytecode as the third thing the deployer chooses
@@ -427,13 +553,33 @@ readable:
    row **G-39** records it. 003 does **not** close it for a deployment whose verifier is a
    *different* source — that is G-29, and it is what part 2 of this check is for. The seller
    compares the address **and** must know that the address was deployed from the audited
-   build; the two are different facts and §8 says so.
+   build; the two are different facts and §8 says so. **Nor does part 2 see what that
+   contract dispatches to** — that is part 5, and until r6 nothing read it.
 3. `verdictProgramVKey`
 4. `refundDelay` — the settlement window (new in 003, §4.1)
+5. **`RecknVerdictVerifier(verifier).verifier()` — the SP1 verifier or gateway that
+   `verifyVerdict` dispatches to** (*new in r6 — r5 finding 1*). Read on-chain from the
+   contract part 2 names, and compared with the SP1 verifier/gateway the seller expects for
+   that chain. Without this part, an honest-looking `RecknVerdictVerifier` at the honest
+   address can point every `verifyProof` call at a permissive contract, and **every part of
+   the round-5 check still passes**.
 
-`gauntlet.json` must print all four, including `contract.code_hash`, so the check is
-possible (§7.1, AC-15). **003 makes the check possible; it does not make it automatic**, and
-§8 says so.
+   **What part 5 does and does not establish, said in the same breath as part 2's version of
+   this sentence.** It establishes which contract the proofs are handed to. It establishes
+   **nothing** about that contract's own bytecode — the recursion stops here, one hop further
+   out than it stopped in r5, and it stops at an address the seller must know from outside
+   this repository. **Tier (`AGENTS.md` §5):** on the local chain this document claims, there
+   is no canonical SP1 gateway; the value part 5 compares against is the SP1 verifier the demo
+   itself deployed, and `gauntlet.json` prints it as such. On any real chain the comparand is
+   SP1's published gateway address for that chain, which **003 neither deploys nor verifies**.
+   A green part 5 on anvil is not evidence about a testnet or mainnet deployment.
+   **Part 5 is also not the killer of the constructor branch of §3.1.4** — that splice sets
+   the honest address on the demo chain, so part 5 passes there. Its killer is **15g**, in the
+   source, and G-40 is its row.
+
+`gauntlet.json` must print all five, including `contract.code_hash` and
+`contract.verifier_sp1_verifier`, so the check is possible (§7.1, AC-15). **003 makes the
+check possible; it does not make it automatic**, and §8 says so.
 
 r1 finding 7 is why `refundDelay` is in that list: the buyer picks the deployment, so the
 buyer picks the clock, and a clock shorter than the proving time is a refund the buyer can
@@ -460,9 +606,9 @@ This is not a key over an existing deal; it is a choice made before the deal exi
 explicit.
 
 **Who must perform which part:** the buyer checks `verifier`/vkey for their own principal;
-the **seller** must check all four parts of (A) — the code hash is the only part that
-detects G-37, and `refundDelay` is the only part that detects G-33 — and then (B) for their
-payment.
+the **seller** must check all five parts of (A) — the code hash is the only part that
+detects G-37, `refundDelay` is the only part that detects G-33, and **part 5 is the only part
+that sees the second hop of G-29** — and then (B) for their payment.
 
 ---
 
@@ -658,6 +804,48 @@ frame. The reasons, in order:
 verifier **address** is a deployment-time choice (G-29), check 15 is lexical over one file
 like every other check here, and §8 and §2.3(A) say both out loud.
 
+##### The same file has a second region, and round 5's check excluded it (new in r6 — r5 finding 1)
+
+`verifyVerdict` does not choose the contract it calls. `ISP1Verifier(verifier).verifyProof(…)`
+(`RecknVerdictVerifier.sol:55`) dispatches to `verifier`, which is `address public immutable`
+(`:38`) and is assigned in the **`constructor`** (`:42-45`). Round 5's check 15 constrained
+that constructor through **15d only**, which is an enumeration of assignment **left-hand
+sides**; 15c's body pin is scoped to `verifyVerdict`, 15e's line-set pin is defined over the
+region *"outside the `constructor` and `verifyVerdict` ranges"*, 15b counts `function` tokens
+and `constructor` is not one, and 15f's denylist contains `msg.sender` and `assembly` and
+**not** `if`, `block.` or an address literal. So this compiles, and passes:
+
+```solidity
+constructor(address _verifier, bytes32 _verdictProgramVKey) {
+    if (block.chainid == 31337) { verifier = _verifier; }
+    else { verifier = address(0x0000000000000000000000000000000000001337); }
+    verdictProgramVKey = _verdictProgramVKey;
+}
+```
+
+Both assignment sites extract the left-hand side `verifier` under 14b's rule (the preceding
+delimiter is `{`, not the `(` of `address(`), which 15d permits in the constructor range.
+**All of 15a–15f pass.** On the demo chain the contract is honest, so the whole gauntlet, the
+whole suite, every sweep column and AC-17 stay green. Off the demo chain, `verifyProof` is
+whatever the holder of `0x…1337` deployed: if it does not revert, `abi.decode` returns
+**caller-supplied** public values and anyone settles any funded deal to either destination
+with no proof at all.
+
+**This is a different failure type from the four before it, and it is written down as R-11.**
+The previous four were *"a criterion satisfied by breaking the thing that observes it"*
+(R-9, R-10). This one is *"the attacker branches on the **existence** of the observer"*: the
+splice is honest exactly where every instrument runs. R-5 already said a constant-keyed
+backdoor needs a **structural** killer rather than a fuzz; R-11 adds the reason the structural
+killer was missing — **the check enumerated its region by exclusion, and an excluded region is
+a place to live.**
+
+Consequences, all mechanical and all in this round: sub-check **15g** pins the constructor the
+way 15c pins `verifyVerdict`; **check 8** gets the same right-hand-side clause for the escrow's
+constructor, because it has the identical shape; **check 7b** closes the execution-context
+tokens per range in the escrow, so neither checked file can read `block.chainid` at all; the
+seller's deployment check becomes **five parts** (§2.3 A); and mutant **M-57**, corpus entry
+**E-20** and matrix row **G-40** record it.
+
 Consequences, all of them mechanical: **check 15** (§4.5.10), the additive output line
 becomes `checks: 15/15 passed`, mutant **M-51**, corpus entry **E-19**, control **C-V**,
 matrix row **G-39** (class `enforcement`), and **D-12**, which declares the second checked
@@ -668,10 +856,10 @@ change to what the product claims, even though it is a tightening.
 
 `class`: **theft** rows must revert or leave value where it was; **authorized** rows must
 pay exactly the right party exactly once; **disclosed** rows are honest limitations that
-the demo must show rather than hide; **enforcement** rows (new in r5, exactly one) are
+the demo must show rather than hide; **enforcement** rows (new in r5; **two** as of r6) are
 attacks whose expected result is a **build failure** rather than an EVM outcome — they are
 satisfied by a script's exit status, carry `test: null` in `gauntlet.json`, and name the
-check that rejects them. AC-13 check 16 is what stops that class from becoming a place to
+check that rejects them. GC-16 is what stops that class from becoming a place to
 hide a row with no instrument.
 
 The block between the two markers below is machine-read by `scripts/gauntlet.sh --check`
@@ -709,7 +897,7 @@ The block between the two markers below is machine-read by `scripts/gauntlet.sh 
 | G-26 | theft | `ATTACKER_CONTRACT` (token) | reenters `fund` (a second deal, same token) during the inward pull | — | the outer `fund` reverts `UnderFunded`; no two deals can count the same tokens |
 | G-27 | disclosed | anyone | direct `token.transfer` to the escrow (donation) | any | escrow balance rises; **no path pays more than `d.amount`**; the donation is permanently unrecoverable — the price of having no sweep function |
 | G-28 | disclosed | anyone | force-send ETH (`selfdestruct`) | any | no function reads `address(this).balance` and the contract has no `payable`; nothing moves; the ETH is stuck |
-| G-29 | disclosed | `DEPLOYER` or attacker | deploys **their own** `RecknZkEscrow` with a rogue verifier / vkey | — | the honest escrow's deals are untouched; the rogue escrow only affects deals funded into it. Parts 2–3 of the **deployment** check (§2.3 A) |
+| G-29 | disclosed | `DEPLOYER` or attacker | deploys **their own** `RecknZkEscrow` with a rogue verifier / vkey | — | the honest escrow's deals are untouched; the rogue escrow only affects deals funded into it. Parts 2, 3 and **5** of the **deployment** check (§2.3 A) — part 5 is the one that sees a rogue **SP1 verifier behind an honest-looking `RecknVerdictVerifier`** |
 | G-30 | theft | `DEPLOYER` | rows G-01, G-03, G-06, G-07, G-11, G-15, G-19, G-31 replayed from the deployer address | — | **byte-identical results to `STRANGER`.** The deployer has no stored role |
 | G-31 | theft | fuzzed caller | `settleWithProof` **and** `refundAfterDeadline` | `dealId` never funded (fuzzed `dealId`) | both revert `BadState`; no storage is written |
 | G-32 | theft | fuzzed caller | any successful settle/refund of a deal in token `T` | other deals Funded in token `U ≠ T` | token `U`'s escrow balance is **unchanged**; only `T` moves |
@@ -717,13 +905,14 @@ The block between the two markers below is machine-read by `scripts/gauntlet.sh 
 | G-34 | disclosed | anyone | `settleWithProof` / `refundAfterDeadline` | token has an **outbound** fee (funds cleanly, escrow-side decrease ≠ `d.amount`) | revert `PayoutFailed`; state stays `Funded`; **retryable forever, never succeeds** — the deal is permanently stuck. Residual created by C-5 |
 | G-35 | disclosed | anyone | `settleWithProof` / `refundAfterDeadline` | **rebasing / share-accounted** token; the escrow's balance moved between `fund` and payout | revert `PayoutFailed` (or `UnderFunded` at `fund` if the drift is downward before funding completes); state stays `Funded`; permanently stuck. Residual created by C-5 |
 | G-36 | disclosed | anyone | `settleWithProof` / `refundAfterDeadline` | **recipient-side fee** token: debits the escrow exactly `d.amount`, credits the destination `d.amount − fee` (§1.3 d) | **the call succeeds**, the deal becomes terminal, and the authorized destination receives **less than `d.amount`**. C-5 measures the escrow side and cannot see this. Disclosed, not fixed |
-| G-37 | disclosed | `BUYER` or attacker | deploys a **look-alike** escrow with the genuine `verifier`, the genuine vkey and an in-range `refundDelay`, but **different bytecode** | — | the round-2 three-part check passes and the seller is outside the claim. Detected only by comparing `extcodehash(escrow)` with the audited build — part 1 of the four-part deployment check (§2.3 A). The honest escrow's deals are untouched |
+| G-37 | disclosed | `BUYER` or attacker | deploys a **look-alike** escrow with the genuine `verifier`, the genuine vkey and an in-range `refundDelay`, but **different bytecode** | — | the round-2 three-part check passes and the seller is outside the claim. Detected only by comparing `extcodehash(escrow)` with the audited build — part 1 of the five-part deployment check (§2.3 A). The honest escrow's deals are untouched |
 | G-38 | theft | fuzzed caller | `fund` | a **fresh** `dealId`, `amount = 0`, `dealBinding` set to a **victim deal's `dealId`** (readable from the indexed `Funded` event) | the victim's stored `Deal` is **bytewise identical** afterwards and an honest `Reproduced` proof still pays the seller the victim was funded with. `fund` writes `deals[dealId]` and nothing else — check 14, INV-2c |
 | G-39 | enforcement | anyone with commit access | a branch added to `RecknVerdictVerifier.verifyVerdict` that returns a chosen `outcome`/`dealBinding` for a named address, with `ISP1Verifier` never called | the honest escrow, constructed with the honest verifier **address**, whose **source** now has one extra line | **the build fails**: `bash scripts/no-keys.sh` exits non-zero at **check 15** (§4.5.10), naming the file and the rejected construct. No proof is involved and no EVM row can express this, because in a tree where the splice exists the escrow settles *correctly* by its own rules — §3.1.4. Expected result is a script exit status; `test: null`, `check: "no-keys.sh check 15"` |
+| G-40 | enforcement | anyone with commit access | a branch in `RecknVerdictVerifier`'s **constructor** that assigns `verifier` from a constant on every chain except the demo chain (`if (block.chainid == 31337) { verifier = _verifier; } else { verifier = address(0x…1337); }`) | the honest escrow, the honest verifier **address**, and a source that is honest **wherever this gauntlet runs** | **the build fails**: `bash scripts/no-keys.sh` exits non-zero at **check 15**, sub-check **15g** (§4.5.10), naming the constructor and the rejected token. No EVM row can express this: on the local chain the splice behaves exactly like the honest file, so every one of the 38 EVM rows is green in a tree that contains it (§3.1.4, **R-11**). Part 5 of the deployment check does **not** catch it either. Expected result is a script exit status; `test: null`, `check: "no-keys.sh check 15g"` |
 
 <!-- END MATRIX -->
 
-**39 rows. 21 theft, 7 authorized, 10 disclosed, 1 enforcement** — the counts are checked
+**40 rows. 21 theft, 7 authorized, 10 disclosed, 2 enforcement** — the counts are checked
 mechanically (AC-13), so this table cannot drift from the tests.
 
 ---
@@ -938,13 +1127,26 @@ stuck: `refundAfterDeadline` is callable by anyone forever after the deadline (G
   **Mechanically (added in r4 — this was the one invariant in §4.4 with no instrument at
   all, r3 finding 2):** check 9a pins both `transfer` call sites to the literal argument
   forms `\.transfer\(to, *d\.amount\)` and `\.transfer\(d\.buyer, *d\.amount\)`, and
-  check 7 forbids `msg.sender` in those two ranges — that closes *where the destination is
-  read from*. **Check 14** closes *who may write what it is read from*: `to` is assigned
-  only in `settleWithProof`, only from `d.seller` / `d.buyer`, and no function may assign
-  to `d.seller`, `d.buyer`, `d.amount`, `d.token`, `d.dealBinding` or `d.fundedAt` at all.
+  check 7a forbids `msg.sender` in those two ranges and **check 7b** forbids every
+  execution-context token in them — that closes *where the destination is read from* and
+  removes the *environment* an attacker could branch on. **Check 14** closes *who may write
+  what it is read from*: no function may assign to `d.seller`, `d.buyer`, `d.amount`,
+  `d.token`, `d.dealBinding` or `d.fundedAt` at all, and `to` may be assigned only inside
+  `settleWithProof`.
   **Behaviourally:** AC-3, AC-7, AC-20, and INV-2c's instruments below.
-  **Named limit:** both mechanisms are lexical. INV-2c is the runtime statement neither of
-  them proves, which is why it is tested rather than asserted.
+  **Named limit, corrected in r6.** Round 4 wrote here that check 14 closes *"`to` is
+  assigned only in `settleWithProof`, **only from `d.seller` / `d.buyer`**"*. **The second
+  half is not true of the instrument**: 14b extracts a left-hand side and 14c compares it
+  against a permitted set; **no clause of check 14 constrains a right-hand side**, and `to`
+  is a permitted left-hand side as a bare local `L`. What actually holds `to` to the two
+  stored addresses is the behavioural set (AC-3, AC-7, AC-20) — which runs on the local
+  chain, and is therefore exactly the instrument R-11 says an attacker may branch around.
+  **Check 7b removes the environment as a branch condition; it does not pin the right-hand
+  side, and a constant-keyed variant (`if (token == <a mainnet address>) to = <constant>;`)
+  remains open. That is OQ-10, returned to the founder rather than closed in round 6**
+  (`AGENTS.md` §7: this round is the hard stop, and this was not one of r5's six findings).
+  Both lexical mechanisms remain lexical; INV-2c is the runtime statement neither of them
+  proves, which is why it is tested rather than asserted.
 - **INV-2c (a funded deal's terms are immutable, new in r4 — r3 finding 2).** Once
   `deals[id].state == Funded`, the stored `Deal` struct changes **only** through the two
   exits, and then **only** in its `state` field. There is no path — through `fund`, through
@@ -1056,9 +1258,11 @@ here.
 the contract body isolated by `awk '/^contract RecknZkEscrow/{f=1} f'`
 (`scripts/no-keys.sh:29`) — **byte-identically**. **(i)** Checks 9, 11, 12 and 13 read the
 **whole file**; check 14 reads `body`, per function range, and so introduces no region
-change at all. **(ii) New in r5: check 15 reads a second file**,
-`zk-verdict/contracts/src/RecknVerdictVerifier.sol`, which is where settlement authority
-is actually computed (§3.1.4). Nothing the script rejected before is accepted now; the set
+change at all. **(ii) New in r5, and owned by task `008` since the ruling of 2026-09-04 (§1.5.4): check 15
+reads a second file**, `zk-verdict/contracts/src/RecknVerdictVerifier.sol`, which is where
+settlement authority is actually computed (§3.1.4). **003's share of it is 15g, the
+constructor closure that r5 finding 1 required, plus the fallback of introducing the whole
+check if 008 landed without it.** Nothing the script rejected before is accepted now; the set
 of rejected inputs strictly grows in both cases. (i) is what makes r2 finding 1's route B
 (a `library` above the `contract` declaration) visible and what removes 003's own dependence
 on the blind spot (C-4); (ii) is what makes r4 finding 1's splice a build failure instead of
@@ -1174,19 +1378,34 @@ the stripper cannot pass any of them by refusing all strings.
 | 4 | constructor stores no caller | `body` | existing, unchanged | AC-0 |
 | 5 | **no base contracts** — the declaration line must match `^contract[[:space:]]+RecknZkEscrow[[:space:]]*\{` | `body` | r2 | inheritance reintroduces a role outside the scanned body |
 | 6 | **no unenumerated entry point, escape hatch, or ETH surface** — must not contain `fallback`, `receive`, `assembly`, `tx.origin`, `.call(`, `.call{`, `staticcall`, `payable` | `body` | r2, **retained** | a `fallback()` is an entry point check 2's grep cannot see |
-| 7 | **`msg.sender` only inside `fund`** — split `body` at `function ` boundaries; the ranges beginning `function settleWithProof` and `function refundAfterDeadline` must contain zero occurrences of `msg.sender` | `body` | r2 | INV-1a. Covers check 3's blind spot (`require(x == msg.sender)`) |
-| 8 | **the constructor assigns only permitted immutables** — the left-hand side of every assignment inside the constructor body ∈ `{verifier, refundDelay}` | `body` | r2 | no stored authority |
+| 7 | **the caller and the execution context are closed per range** — **7a** (r2, unchanged): split `body` at `function ` boundaries; the ranges beginning `function settleWithProof` and `function refundAfterDeadline` must contain zero occurrences of `msg.sender`. **7b** (**new in r6**): the execution-context tokens are closed in every range — see §4.5.6a | `body`, per range | r2; **7b new in r6** | INV-1a, INV-2, **R-11** |
+| 8 | **the constructor assigns only permitted immutables, from the parameters of the same name** — the left-hand side of every assignment inside the constructor body ∈ `{verifier, refundDelay}` (r2) **and its right-hand side is exactly the corresponding constructor parameter, once each** (**new in r6** — §4.5.6a) | `body` | r2; **RHS new in r6** | no stored authority; **R-11** |
 | 9 | **closed call surface (property P)** — 9a member calls, 9b plain calls, **9c the `function` keyword** — see §4.5.3 | **`src_calls` (whole file)** | rewritten in r3; **9b range-restricted and 9c added in r4** | §3.1.2, P2, INV-2, INV-2b |
 | 10 | **`fund`'s use of `msg.sender` is pinned** — exactly 3 occurrences inside `fund`'s range, matching once each: `buyer: msg.sender`, `emit Funded(dealId, msg.sender,`, `transferFrom(msg.sender,` | `body` | r2 | INV-1b |
 | 11 | **the file's top-level declarations are closed** — see §4.5.4 | **`src_decl` (whole file)** | new in r3; region corrected in r4 | r2 finding 1 route B; removes C-4's dependence on the blind spot |
 | 12 | **`IERC20Min`'s declared function set is closed** — see §4.5.5 | **`src_decl` (whole file)** | new in r3; region corrected in r4 | r2 finding 1 route A at the declaration site |
 | 13 | **whole-file escape-hatch ban** — the file-wide superset of check 6: `assembly`, `delegatecall`, `staticcall`, `.call(`, `.call{`, `.send(`, `selfdestruct`, `payable`, `receive`, `fallback`, `tx.origin`, `{value:`, `ecrecover`, `create2`, `using` | **`src_calls` (whole file)** | **new in r3** | redundant backstop only — see the warning in §4.5.7 |
 | 14 | **closed assignment targets** — see §4.5.6 | `body`, per function range | **new in r4** | r3 finding 2; P3, INV-2, **INV-2c** |
-| 15 | **the second contract in the settlement path is closed** — 15a top-level declarations, 15b the `function` keyword, 15c `verifyVerdict`'s body, 15d assignment targets, 15e the non-function region, 15f the backstop — see §4.5.10 | **`RecknVerdictVerifier.sol` (whole file)** | **new in r5** | r4 finding 1; P4, P5, **G-39** |
+| 15 | **the second contract in the settlement path is closed** — 15a top-level declarations, 15b the `function` keyword, 15c `verifyVerdict`'s body, 15d assignment targets, 15e the non-function region, 15f the backstop, **15g the `constructor`** — see §4.5.10 | **`RecknVerdictVerifier.sol` (whole file)** | **introduced by task `008`; 15g and the extension are 003's — §1.5.4** | r4 finding 1, r5 finding 1; P4, P5, **G-39**, **G-40** |
 
 The ranges checks 7, 9, 10 and 14 use, and the order in which the derived texts are built,
 are defined once in **§4.5.1**. They are not restated here, because two statements of one
 splitter is how r4 finding 8 happened.
+
+**Two check series, and how they are spelled (new in r6 — r5 finding 6).** This document
+contains **two** independently numbered series of checks and both reach 15, which is one
+collision too many for a document that is read by an implementer:
+
+> - **`scripts/no-keys.sh`** has **checks 1–15** (this table). They are written *check N*,
+>   and the script is named at least once per section that mentions them.
+> - **`scripts/gauntlet.sh --check`** has its own checks, renamed in r6 to **`GC-1` … `GC-18`**
+>   (AC-13). They are never written *check N*.
+
+The `GC-` prefix rather than `C-` is deliberate: `C-1…C-7` are this document's contract
+changes (§4.1) and `C-P` / `C-S` / `C-V` / `C-M0` are the selftest controls (§5.2.1), so the
+obvious prefix was already taken twice. **Appendices A–C keep the old spelling** — they are
+round bookkeeping and are not rewritten; a reference of the form *"AC-13 check N"* inside them
+is the historical spelling of `GC-N`.
 
 #### 4.5.3 Check 9 — closed call surface
 
@@ -1380,6 +1599,83 @@ not say the assignments it permits are *correct* — `d.state = State.Settled` c
 written in the wrong branch and check 14 would not notice. That is what INV-2c's two
 behavioural instruments are for, and §8 says so.
 
+#### 4.5.6a Check 7b and check 8's right-hand sides — the execution context is closed (new in r6 — r5 finding 1)
+
+**The seam this closes.** Every instrument in this document runs on a **local chain**
+(`AGENTS.md` §5's tier discipline is the reason that is stated everywhere). An implementation
+that reads `block.chainid` can therefore be honest exactly where it is observed and dishonest
+everywhere else — §3.1.4's constructor splice is the version that survived round 5, and it is
+not the only place the token could go. **The fix is not "also forbid `block.chainid`"** (R-7,
+and it would be r2's mistake a third time); it is to close the *category*: **the two checked
+files may read exactly one execution-context value, `block.timestamp`, in exactly the two
+places C-2 and C-3 need it.**
+
+> **P6 — closed execution context.** In `RecknZkEscrow.sol` the only permitted
+> execution-context reads are `msg.sender` (pinned to three occurrences in `fund` by check 10,
+> forbidden in the two exits by 7a) and `block.timestamp` (at most one occurrence in `fund`'s
+> range and at most one in `refundAfterDeadline`'s range, zero elsewhere). Every other token
+> that lets the code learn *where or when it is running* is absent. In
+> `RecknVerdictVerifier.sol` there is no permitted execution-context read at all (15c-iii,
+> 15g, 15e).
+
+**(7b) Definition.** Over `body`, split into the constructor range and the three function
+ranges by the same splitter checks 7a, 9, 10 and 14 use:
+
+- `block.timestamp` occurs **at most once** in `fund`'s range and **at most once** in
+  `refundAfterDeadline`'s range, **zero** times in `settleWithProof`'s range, **zero** times in
+  the constructor range, and **zero** times anywhere in `body` outside those four ranges — the
+  last clause is there because R-11(ii) forbids leaving a region unpinned, and the region
+  outside the four ranges is where a state-variable initializer would live;
+- the tokens `block.chainid`, `chainid`, `block.number`, `block.difficulty`, `block.prevrandao`,
+  `block.coinbase`, `block.basefee`, `block.gaslimit`, `blockhash`, `gasleft`, `msg.value`,
+  `msg.data`, `msg.sig`, and **any `tx.`** occur **zero** times in the whole of `body`;
+- any `block.` occurrence that is not `block.timestamp` fails **as a class**, so a member of
+  this family added by a future Solidity version fails without being named here.
+
+Anything else fails, printing the token, the range and the line. **The enumeration above is a
+convenience for the error message; the gate is the class rule in the third clause.**
+`tx.origin` was already dead at checks 6 and 13 — 7b widens it to all of `tx.` and states the
+property those two denylist entries were standing in for.
+
+**(check 8, right-hand sides.)** Check 8 pinned the left-hand side of every constructor
+assignment to `{verifier, refundDelay}` and said nothing about what was assigned. It now also
+requires, over the constructor range:
+
+- exactly one assignment with left-hand side `verifier`, whose whitespace-normalized
+  right-hand side is exactly `_verifier`;
+- exactly one assignment with left-hand side `refundDelay`, whose right-hand side is exactly
+  `_refundDelay`;
+- **zero** occurrences of `0x` in the range (no address or byte literal can be assigned or
+  compared), on top of 7b's ban on `block.` / `chainid` / `tx.` there.
+
+`if (_refundDelay < MIN_REFUND_DELAY || _refundDelay > MAX_REFUND_DELAY) revert
+BadRefundDelay();` (C-2) contains no assignment and no banned token, so it is unaffected —
+which is why check 8's constructor pin is stated as *"every assignment"* and not as
+*"exactly two statements"* the way 15g's is. The two constructors differ in that one has a
+guard and the other does not, and the pins differ in exactly that way.
+
+**Both halves are witnessed, and the one remaining asymmetry is named (R-10(i)).** The
+verifier's constructor is witnessed by corpus entry **E-20** and source-text mutant **M-57**;
+the escrow's constructor is witnessed by corpus entry **E-23** (rejected twice over, by 7b and
+by check 8's right-hand-side clause), and AC-1's *minimal E* falsifier deletes exactly those
+two clauses and observes E-23 survive. **E-23 has no kill-table id**, and that is deliberate:
+M-57 already carries this construct's family in the kill table, and the escrow's version is
+additionally detectable **off-chain** — the escrow's `verifier` is `public immutable` and
+**part 2 of the deployment check reads exactly that value on-chain** (§2.3 A), so a seller
+performing the check sees a rogue address on the chain the escrow is deployed to. The
+verifier's own `verifier` had no such reader at all until part 5 was added in this same round.
+That is an asymmetry in *detectability*, not in whether the clause exists — the clause exists
+on both files.
+
+**What 7b does not close, and it is the reason OQ-10 exists.** 7b removes the *environment* as
+a branch condition. It does not remove a **constant** as one: `if (token == <a mainnet token
+address>) { to = <constant>; }` inside `settleWithProof` reads no execution-context token,
+produces no call-shaped token, and has the permitted left-hand side `to` (check 14 pins
+left-hand sides only — INV-2's *"Named limit, corrected in r6"*). A fuzz cannot draw the
+constant (R-5) and the gauntlet's tokens are mocks, so nothing here is red. **Closing it means
+pinning right-hand sides in check 14, which is new mechanism design and is therefore OQ-10**,
+not a round-6 edit (`AGENTS.md` §7).
+
 #### 4.5.7 Which check rejects what, and which of them carry the claim
 
 **Warning, so this is not misread as another name list.** Check 13 is a **denylist and a
@@ -1407,6 +1703,8 @@ check 6's existing wording meaningful at file scope.
 | `deals[victimId].seller = attacker;` inside `fund` — **no call-shaped token at all** (r3 finding 2) | **14** (`deals[victimId].seller` is not a permitted left-hand side in `fund`) | nothing else — 9a/9b/9c never see this line, and that is the point |
 | `delete deals[id];` / `d.amount -= x;` / `d.state++;` | **14a** (the constructs are closed, not the identifiers) | — |
 | `selfdestruct(payable(x))` | **9b** (`selfdestruct` not in `L_plain`) | 1, 13 |
+| `if (block.chainid == 31337) { verifier = _verifier; } else { verifier = <constant>; }` in the **constructor** (r5 finding 1) | **check 8** (the right-hand side is not the corresponding parameter; and `block.` is not permitted in the constructor range) — and **15g** for the same splice in `RecknVerdictVerifier.sol`, which is where it actually mattered | **7b** (the token, as a class). Nothing else: no call-shaped token, no new declaration, and the left-hand side is permitted |
+| `if (block.chainid != 31337) { to = <constant>; }` inside `settleWithProof` | **7b** (`block.chainid` cannot occur in that range) | **nothing else — and this row is honest about it:** 9a/9b/9c see no new call, and **check 14 permits the left-hand side `to`**. Remove 7b and the constant-keyed variant of this line is OQ-10 |
 | **a construct not in this table** | **9a** or **9b**, because the allowlists are closed over the syntactic category, not over the vocabulary | — |
 
 **A `modifier` is closed too, and it is worth one sentence** because the table does not
@@ -1433,7 +1731,12 @@ This exists so AC-0 cannot be satisfied by a script that ran nothing. It adds a 
 changes no existing line, no argument, no target, and no exit code. **The number is 15 and
 not 14 because of check 15 (§4.5.10); the count is the script's own, and AC-0's manifest
 evidence string is compared against it verbatim, so a check that is written but never run
-changes the printed number and fails AC-0.**
+changes the printed number and fails AC-0.** **15 is still the number after round 6 and after
+003 extends whatever 008 left**: 15g is a *sub-check* of 15, 7b of 7, and check 8's
+right-hand-side clause is a clause — none of them is a new check. If the base measurement
+shows a check count this table does not enumerate, that is §1.5.4's third case: **stop and
+return to the founder**, because this string is compared verbatim and folding an unspecified
+check into it privately is the act §1.5 exists to prevent.
 
 #### 4.5.9 Self-testing without a target argument (N-9, r1 finding 12)
 
@@ -1449,10 +1752,10 @@ which M-0 detects, because M-0 must be **accepted**.
 
 It runs three things (AC-1):
 
-1. the **19 source-text mutants** of §5.3, each rejected, each by a **named** check;
-2. the **exit corpus** of §5.2.1 — 19 constructs spliced into the real files, each rejected,
-   each by a named check — which is the *witness* that properties P, P2, P3, P4 and P5 cover
-   the family, **not** the definition of the properties;
+1. the **20 source-text mutants** of §5.3, each rejected, each by a **named** check;
+2. the **exit corpus** of §5.2.1 — 23 constructs spliced into the real files, each rejected,
+   each by a named check — which is the *witness* that properties P, P2, P3, P4, P5 and P6
+   cover the family, **not** the definition of the properties;
 3. **four controls**, all of which must be **accepted**: the unmodified copy (**M-0**, both
    files); the **prose control** **C-P** — the comment `// never call approve(), permit(),
    or .call{value:}()` spliced into `fund` — proving the checks read code and not text; the
@@ -1463,7 +1766,14 @@ It runs three things (AC-1):
    `// no msg.sender branch here; see check 15` spliced into `verifyVerdict` — proving check
    15's body pin reads stripped code rather than grepping English.
 
-#### 4.5.10 Check 15 — the second contract in the settlement path is closed (new in r5 — r4 finding 1)
+#### 4.5.10 Check 15 — the second contract in the settlement path is closed (designed in r5 — r4 finding 1; **owned by task `008`, extended by 003 — §1.5.4**)
+
+**Attribution first, because it decides who writes which line (orchestrator ruling,
+2026-09-04).** `008` edits `RecknVerdictVerifier.sol` and runs first, so **008 introduces this
+check**; 003 **extends** it with **15g**, the five-part deployment check, and E-20 / M-57 /
+G-40, and 003 **introduces it in full if 008 landed without it**. Which case holds is read off
+`docs/gauntlet.base.json.no_keys`, not assumed — §1.5.4. Everything below is the specification
+of the post-003 check, and it is the same specification in either case.
 
 **The seam this closes.** §3.1.4. `settleWithProof` obeys a struct computed in
 `zk-verdict/contracts/src/RecknVerdictVerifier.sol`, and until r5 no check, no mutant, no
@@ -1475,12 +1785,21 @@ but a closed region** (R-7). Two properties:
 > `verifyVerdict`, and exactly **four** top-level declarations. Nothing else in the file can
 > be called, and nothing new can become callable, whatever it is named.
 >
-> **P5 — the verdict is a function of its arguments alone.** `verifyVerdict`'s body is two
-> statements: verify, then decode. It contains **no control flow and no execution-context
-> token at all** — no `if`, no `return`, no `msg.sender`, no `tx.origin`, no `block.`. A
-> returned struct field can therefore be produced only by `abi.decode(publicValues, …)`
-> after `ISP1Verifier.verifyProof` did not revert. **There is no branch for a constant
-> address to live in.**
+> **P5 — the verdict is a function of its arguments alone, and the callee is a function of
+> the constructor's arguments alone** *(the second half is new in r6 — r5 finding 1)*.
+> `verifyVerdict`'s body is two statements: verify, then decode. It contains **no control flow
+> and no execution-context token at all** — no `if`, no `return`, no `msg.sender`, no
+> `tx.origin`, no `block.`. A returned struct field can therefore be produced only by
+> `abi.decode(publicValues, …)` after `ISP1Verifier.verifyProof` did not revert. **And the
+> address `verifyProof` is dispatched to is the constructor's `_verifier` parameter on every
+> chain**: the constructor is two statements, each assigning one immutable from the parameter
+> of the same name, with no branch, no execution-context token and no literal in it (15g).
+>
+> **Round 5 wrote the first half and then a sentence the first half does not carry:** *"there
+> is no branch for a constant address to live in."* There was one — in the `constructor`,
+> which 15d constrained by left-hand side only and which 15e excluded by construction
+> (§3.1.4). That sentence is true **as of 15g** and false without it, so it is stated here as
+> a conjunction: delete either half and it is visibly false.
 
 **Region.** The whole file, comments and string literals stripped by the same one-pass
 stripper as §4.5.1 (call this text `vrf`), plus the line-preserving variant for the
@@ -1547,14 +1866,42 @@ line-comparing sub-checks (`vrf_decl`). Sub-check by sub-check:
   `verifyVerdict` ranges must be exactly the four declaration lines named in 15d's first
   block, plus the contract's own braces. This is what stops a **new state variable with no
   initializer** — which 15d cannot see, because it is not an assignment — from being
-  declared at all. **The struct's field lines are deliberately not pinned**: task `008`
+  declared at all. **Its region is stated by exclusion, and R-11 makes that admissible only
+  because each excluded region now has its own pin**: the `verifyVerdict` range is pinned by
+  15c and the `constructor` range by **15g**. Until 15g existed the exclusion was a hole, and
+  §3.1.4's splice lived in it. **The struct's field lines are deliberately not pinned**: task `008`
   changes their widths, a struct field cannot hold code, and pinning them would put a
   008-coupled literal back into this document (§1.5).
+- **(15g) the `constructor` is closed (new in r6 — r5 finding 1).** The constructor range is
+  located by §4.5.1's constructor rule; **a file with no locatable constructor fails 15g**,
+  printing the file and the pattern — an unlocatable range is never treated as clean
+  (§4.5.1). Four conditions, all required:
+  - **(15g-i)** the parameter list is, whitespace-normalized, exactly
+    `(address _verifier, bytes32 _verdictProgramVKey)`;
+  - **(15g-ii)** the body contains exactly **two** statements (exactly two top-level `;`);
+  - **(15g-iii)** those two statements are, whitespace-normalized and in this order,
+    `verifier = _verifier` and `verdictProgramVKey = _verdictProgramVKey` — **each right-hand
+    side is the parameter of the same name and nothing else.** This is the clause round 5 did
+    not have: 15d enumerated the two left-hand sides and never looked to the right of the `=`;
+  - **(15g-iv)** the range contains **zero** occurrences of each of `if`, `else`, `for`,
+    `while`, `do`, `return`, `require`, `assert`, `try`, `catch`, `?`, `&&`, `||`, `block.`,
+    `chainid`, `tx.`, `msg.`, `assembly` — and **zero occurrences of `0x`**, so no branch, no
+    execution-context read and no literal address can occur there at all.
+
+  **The splice of §3.1.4 fails 15g four times over** — a third top-level `;` (15g-ii),
+  right-hand sides that are not the parameters (15g-iii), and the tokens `if` / `else` /
+  `block.` / `0x` (15g-iv). The **unconditional** variant (`verifier =
+  address(0x…1337);` with no branch, which today's local suite already kills because that
+  address has no code on a fresh anvil) fails 15g-iii and 15g-iv, so it is now rejected
+  **structurally as well as behaviourally** — and the structural rejection is the one that
+  survives being run on a chain where that address does have code. **None of these rejections
+  depends on the address, on the chain id, or on anyone having thought of that construct:**
+  what is pinned is that the constructor is a copy of its own parameters.
 - **(15f) whole-file backstop — a denylist, and it carries none of the claim.** `vrf` must
   contain none of `assembly`, `delegatecall`, `staticcall`, `.call(`, `.call{`, `.send(`,
   `selfdestruct`, `payable`, `receive`, `fallback`, `using`, `ecrecover`, `create2`,
   `{value:`, `msg.sender`, `tx.origin`. **If 15f were deleted, every construct above would
-  still be rejected by 15a–15e.** It exists for the same reason check 13 does: a redundant
+  still be rejected by 15a–15e and 15g.** It exists for the same reason check 13 does: a redundant
   fast rejection with a clear message is cheap. Read it as a backstop, not as the property —
   §4.5.7's warning applies here word for word.
 
@@ -1562,14 +1909,17 @@ line-comparing sub-checks (`vrf_decl`). Sub-check by sub-check:
 `VerdictPublicValues`'s field **widths** and nothing else in this file. Widths appear only
 in the struct's field lines, which 15a does not compare (it compares the `struct …{` header
 line) and which 15e explicitly excludes. The four top-level lines, the single `function`
-token, the two body statements and the seven assignment targets are all untouched by 008.
-**The two body statements are additionally recorded as measured evidence** in
-`docs/gauntlet.base.json.verifier_body` at the base commit (§1.5.1), so that if a later task
-does change them, the difference between the recorded text and the pinned form is visible
-rather than inferred.
+token, the two body statements, the seven assignment targets **and the constructor 15g pins**
+are all untouched by 008 — that constructor takes an `address` and a `bytes32`, and neither is
+one of the four numeric fields 008 moves.
+**The two body statements and the constructor are additionally recorded as measured
+evidence** in `docs/gauntlet.base.json.verifier_body` and `…verifier_constructor` at the base
+commit (§1.5.1), so that if a later task does change them, the difference between the recorded
+text and the pinned form is visible rather than inferred.
 
 **If check 15 ever has to be relaxed, that is a claim change, not a fix.** Widening 15a's
-four lines, 15b's single `function` or 15c's two statements means the settlement path grew.
+four lines, 15b's single `function`, 15c's two statements or **15g's two constructor
+statements** means the settlement path grew.
 `AGENTS.md` §0 makes that a declared change in the same commit (**D-12**), exactly as for
 `RecknZkEscrow`'s three functions. The implementer does not do it silently, and *"the
 compiler needed it"* is not a reason — it is a founder call (`AGENTS.md` §7).
@@ -1579,8 +1929,13 @@ compiler needed it"* is not a reason — it is a founder call (`AGENTS.md` §7).
 - **nothing about the deployed verifier's bytecode.** Check 15 is lexical, over the source
   in this repository. An escrow can be constructed with **any** address (G-29), and a rogue
   verifier deployed from different source is unaffected by every check in this document.
-  That is what part 2 of the seller's deployment check is for (§2.3 A), and it is a
-  human/off-chain step, not a mechanism.
+  That is what parts 2 and **5** of the seller's deployment check are for (§2.3 A), and both
+  are human/off-chain steps, not mechanisms.
+- **nothing about which address a *deployment* passed to the constructor.** 15g pins that the
+  source assigns `verifier` from `_verifier`; it says nothing about the value the deployer
+  supplied. That value is read on-chain by **part 5** (new in r6), and part 5's own limit is
+  stated where it is defined (§2.3 A): it compares an address, not a bytecode, and on this
+  document's tier the comparand is the SP1 verifier the demo itself deployed.
 - **nothing about `ISP1Verifier`.** The SP1 verifier the file calls into is outside both
   checked files and outside this repository. §8 already names its soundness as outside the
   frame; check 15 does not narrow that.
@@ -1657,7 +2012,7 @@ stdout to contain the manifest's `evidence` string **verbatim, as a substring of
 >
 > ```sh
 > # scripts/mutation-kill.sh
-> printf 'mutation: 59 mutants, 58 killed, 1 control survived; witness=…
+> printf 'mutation: 60 mutants, 59 killed, 1 control survived; witness=…
 '
 > # scripts/degeneracy-sweep.sh
 > printf 'sweep: 46/46 gauntlet tests accounted for; control …/… pass; witness=…
@@ -1796,7 +2151,7 @@ Binding rules:
   **only with `--root <sandbox>`**, and neither of those two ever invokes `ac-selftest.sh`.
   Maximum depth is unchanged at 3 (`ac.sh --all` → AC-18 → `ac-selftest.sh` →
   `mutation-kill.sh --root`), and the fourth level cannot re-enter `ac.sh --all`.
-  `gauntlet.sh --check` asserts both mechanically (check 10).
+  `gauntlet.sh --check` asserts both mechanically (GC-10).
 - `gauntlet.sh --check` asserts these mechanically: `scripts/gauntlet.sh` contains no
   `ac.sh --all` and no `ac.sh AC-13|AC-14|AC-15|AC-16|AC-18|AC-21`; the three harness
   scripts contain no `ac.sh --all` without `--root`.
@@ -1814,14 +2169,15 @@ manifest's `tests` and `evidence` columns:
 
 | token | value |
 |---|---|
-| `{P}` | `base.pre_existing_tests` — the suite size measured at 003's base commit |
+| `{P}` | **`\|base.pre_existing_tests\|`** — the **cardinality of the recorded id set**, measured at 003's base commit (§1.5.1; the set itself, not just its size, is what AC-17 asserts — r5 finding 3) |
 | `{S}` | `46 + {P}` — the whole suite after 003 |
 
 **`ac.sh` refuses to run at all if `docs/gauntlet.base.json` is missing, if
-`pre_existing_tests` is absent, or if it is not an integer ≥ 1**, and exits non-zero naming
-the file. That is a hard floor in the script, the same shape as the `N ≥ 1` floor at step 2.
+`pre_existing_tests` is absent, if it is not an array of ≥ 1 distinct strings, or if any entry
+is not of the form `<contract>:<test>`**, and exits non-zero naming the file. A recorded set
+replaced by `[]` is refused by the same floor that refuses `N < 1`. That is a hard floor in the script, the same shape as the `N ≥ 1` floor at step 2.
 `46` is a literal because it is **this document's own** number — the sum of the `tests`
-column over the 13 forge ACs, recomputed by AC-13 check 4 — and it depends on nothing
+column over the 13 forge ACs, recomputed by GC-4 — and it depends on nothing
 outside this file.
 
 **(2) Witnesses — so that "a script that ran nothing cannot print it" becomes true instead
@@ -1857,7 +2213,7 @@ appear in that AC's test names; `-` if none), `evidence` (verbatim stdout line r
 
 ```ac-manifest
 AC-00  script  scripts/no-keys.sh                 -   -                                        checks: 15/15 passed
-AC-01  script  scripts/no-keys-selftest.sh        -   G-39                                     selftest: 19 source mutants, 19 rejected; exit-corpus 19/19 rejected; 4 controls accepted
+AC-01  script  scripts/no-keys-selftest.sh        -   G-39,G-40                                selftest: 20 source mutants, 20 rejected; exit-corpus 23/23 rejected; 4 controls accepted
 AC-02  forge   _AC02_                             6   G-01,G-02,G-05,G-06,G-08,G-09            -
 AC-03  forge   _AC03_                             4   G-10,G-12,G-13,G-14                      -
 AC-04  forge   _AC04_                             2   G-11                                     -
@@ -1869,9 +2225,9 @@ AC-09  forge   _AC09_                             3   G-24,G-25,G-26            
 AC-10  forge   _AC10_                             5   G-27,G-28,G-32,G-38                      -
 AC-11  forge   _AC11_                             3   G-19,G-22,G-38                           -
 AC-12  forge   _AC12_                             2   G-31                                     -
-AC-13  script  scripts/gauntlet.sh --check        -   -                                        manifest: 39 rows, 22 acceptance criteria, 3 sources agree
-AC-14  script  scripts/mutation-kill.sh           -   -                                        mutation: 59 mutants, 58 killed, 1 control survived; witness={W14}
-AC-15  script  scripts/gauntlet.sh                -   -                                        39/39 rows as specified.
+AC-13  script  scripts/gauntlet.sh --check        -   -                                        manifest: 40 rows, 22 acceptance criteria, 3 sources agree
+AC-14  script  scripts/mutation-kill.sh           -   -                                        mutation: 60 mutants, 59 killed, 1 control survived; witness={W14}
+AC-15  script  scripts/gauntlet.sh                -   -                                        40/40 rows as specified.
 AC-16  script  scripts/gauntlet.sh --check        -   -                                        honest-scope: 2/2 digests unchanged since base commit
 AC-17  suite   -                                  {S}  -                                       suite: {S}/{S} passed
 AC-18  script  scripts/ac-selftest.sh             -   -                                        ac-selftest: 13 forge ACs, 13 observed failing when their tests are absent; degenerate dispatcher rejected; 3 harness scripts observed rejecting
@@ -1886,22 +2242,24 @@ Arithmetic that `gauntlet.sh --check` recomputes and that a reviewer can recompu
 - **13** `forge` ACs; their `tests` column sums to **46** — the number of gauntlet tests.
   `6+4+2+4+2+3+3+3+5+3+2+8+1 = 46`. **This is the one count in this document that is a
   literal, because it is derived from this document alone.**
-- AC-17's `tests` = **`{S}` = `46 + {P}`**, where `{P}` is the pre-existing suite size
-  **measured at 003's base commit** (§1.5.1, §5.0.3). It is **not** written out here: 008
-  lands first and changes it (r4 finding 2). Measured on the pre-008 tree 2026-09-04, `{P}`
-  was 12; that number is recorded as history in §1.2 and is used by nothing.
-- The union of the `rows` column is exactly the **39** ids of §3.2, each appearing at least
+- AC-17's `tests` = **`{S}` = `46 + {P}`**, where `{P}` is the **cardinality of the
+  pre-existing test id set measured at 003's base commit** (§1.5.1, §5.0.3). It is **not**
+  written out here: 008 lands first and changes it (r4 finding 2). Measured on the pre-008
+  tree 2026-09-04, `{P}` was 12; that number is recorded as history in §1.2 and is used by
+  nothing.
+- The union of the `rows` column is exactly the **40** ids of §3.2, each appearing at least
   once. (Rows may appear in more than one AC; G-05 and G-06 appear in AC-02 and AC-07, and
   **G-38** appears in AC-10 and AC-11 — the invariant and the targeted test of INV-2c.
-  **G-39** appears in **AC-01** and is the only `enforcement` row: it is satisfied by
-  `no-keys-selftest.sh` observing check 15 reject **M-51**, and AC-13 check 16 asserts that
-  every `enforcement` row is carried by a `script` AC and by a `gauntlet.json` row with
-  `test: null` and a non-empty `check`.)
+  **G-39** and **G-40** appear in **AC-01** and are the two `enforcement` rows: they are
+  satisfied by `no-keys-selftest.sh` observing check 15 reject **M-51** (at 15c/15d) and
+  **M-57** (at 15g), and GC-16 asserts that every `enforcement` row is carried by a `script`
+  AC and by a `gauntlet.json` row with `test: null` and a non-empty `check`.)
 - Every one of the 13 `forge` ACs appears in at least one `killed-by` cell of §5.3
   (`gauntlet.sh --check` check 8 — the rule r2 finding 2(d) required).
 - AC-14's evidence line is **derived, not literal**: `gauntlet.sh --check` recomputes
   `T` from §5.3 (below) and asserts the manifest line reads exactly
-  `mutation: <T> mutants, <T−1> killed, 1 control survived; witness={W14}`.
+  `mutation: <T> mutants, <T−1> killed, 1 control survived; witness={W14}`. Recomputed for
+  round 6: `T` = **60**.
 - **`{P}`, `{S}`, `{W14}` and `{W21}` are the only four substitution tokens** (§5.0.3).
   `gauntlet.sh --check` asserts that no other `{…}` token appears in the manifest, so a
   fifth one cannot be introduced without a spec edit.
@@ -1920,14 +2278,17 @@ three, so the *permitted* surface does not change; what changes is that the thir
 **exists**. `IERC20Min` also gains one declared function (`balanceOf`, C-4), and that
 interface is now itself an enumerated surface (check 12). **New in r5: the enforcement
 *region* gains a second file** — `RecknVerdictVerifier.sol`, whose single declared function
-`verifyVerdict` is now enumerated too (check 15, §4.5.10). All three are changes to what the
+`verifyVerdict` is now enumerated too (check 15, §4.5.10; **introduced by task `008`, extended
+by 003 — §1.5.4**), **and, new in r6, that file's `constructor`, which is where the address
+every proof is dispatched to is chosen** (15g). All three are changes to what the
 product claims, so §9's documentation obligations D-1…**D-12** must land in the same commit
 and the demo script must say them out loud.
 
 **Kills:** M-13 (constructor stores `msg.sender`), M-A (an `admin` address field), M-F
 (an unlisted `function sweep`), **M-51** (the constant-address branch in
 `RecknVerdictVerifier.verifyVerdict`) — the last by check 15, and by nothing that existed
-before r5.
+before r5 — and **M-57** (the chain-id branch in that file's **constructor**), by **15g**, and
+by nothing that existed before r6: M-57 passes 15a–15f, all 38 EVM rows and the whole suite.
 
 **Falsify:**
 
@@ -1942,6 +2303,17 @@ bash "$S/scripts/no-keys.sh"; echo $?      # must be non-zero
 # 3. NEW IN r5: splice the constant-address branch of §3.1.4 into
 #    zk-verdict/contracts/src/RecknVerdictVerifier.sol in the sandbox — check 15 must
 #    reject it. Before r5 this exited 0, which is r4 finding 1.
+# 4. NEW IN r6: splice the CONSTRUCTOR branch of §3.1.4 into the same sandbox file:
+#      constructor(address _verifier, bytes32 _verdictProgramVKey) {
+#          if (block.chainid == 31337) { verifier = _verifier; }
+#          else { verifier = address(0x0000000000000000000000000000000000001337); }
+#          verdictProgramVKey = _verdictProgramVKey;
+#      }
+#    check 15 must reject it at 15g. Before r6 this exited 0 AND every EVM row stayed
+#    green, which is r5 finding 1 and the reason R-11 is written down.
+# 5. NEW IN r6: the same splice in RecknZkEscrow.sol's constructor
+#      (verifier = block.chainid == 31337 ? _verifier : RecknVerdictVerifier(0x...1337);)
+#    must be rejected by check 8's right-hand-side clause and by check 7b.
 ```
 
 #### AC-1 — the enforcement script closes the call surface, over the whole file
@@ -1951,15 +2323,16 @@ bash scripts/ac.sh AC-01     # runs scripts/no-keys-selftest.sh
 bash scripts/no-keys-selftest.sh   # direct — the founder's own command
 ```
 `scripts/no-keys.sh` gains checks 5–15 and the two-sided check 2 exactly as tabulated in
-§4.5. **No interface change (N-9).** `scripts/no-keys-selftest.sh` builds the sandbox
+§4.5 — **with check 15 introduced by task `008` and extended here, or introduced here if 008
+landed without it (§1.5.4)**. **No interface change (N-9).** `scripts/no-keys-selftest.sh` builds the sandbox
 layout described in §4.5.9, applies each artefact to the copy, runs the copied script, and
 asserts:
 
-- the **19** source-text mutants (M-1, M-13…M-19, M-35…M-38, M-41, M-42, **M-46**, **M-47**,
-  **M-51**, M-A, M-F) are each **rejected** (exit non-zero), each by a **named** check — the
-  selftest records which check fired and fails if a mutant is rejected by no check or by an
-  unexpected one;
-- the **19** entries of the **exit corpus** (§5.2.1) are each **rejected**, each by a named
+- the **20** source-text mutants (M-1, M-13…M-19, M-35…M-38, M-41, M-42, **M-46**, **M-47**,
+  **M-51**, **M-57**, M-A, M-F) are each **rejected** (exit non-zero), each by a **named**
+  check — the selftest records which check fired and fails if a mutant is rejected by no check
+  or by an unexpected one;
+- the **23** entries of the **exit corpus** (§5.2.1) are each **rejected**, each by a named
   check;
 - the **control M-0** (unmodified copy of **both** source files) is **accepted** (exit 0);
 - the **prose control C-P** (a comment naming `approve()`, `permit()` and `.call{value:}()`
@@ -1971,7 +2344,7 @@ asserts:
   `verifyVerdict`) is **accepted**, so check 15c-iii is reading stripped code and not
   grepping English;
 - it prints
-  `selftest: 19 source mutants, 19 rejected; exit-corpus 19/19 rejected; 4 controls accepted`.
+  `selftest: 20 source mutants, 20 rejected; exit-corpus 23/23 rejected; 4 controls accepted`.
 
 **Kills:** M-1 `if (msg.sender == 0x5E11E5) { to = d.seller; }` inside `settleWithProof`
 — **by check 7, structurally.**
@@ -2023,37 +2396,62 @@ patches to the escrow, and R-5 says a caller fuzz is not its killer. Rejected by
 (`v.outcome` / `v.dealBinding` are not permitted assignment targets) — three independent
 sub-checks, none of which depends on the address or on the field names. **M-51 is the mutant
 row G-39 records**, and AC-1's evidence count is the only place its rejection is observed.
+**M-57** *(new in r6 — r5 finding 1)* the **constructor** branch of §3.1.4, spliced into
+`RecknVerdictVerifier`'s constructor: `if (block.chainid == 31337) { verifier = _verifier; }
+else { verifier = address(0x…1337); }`. It never touches `verifyVerdict`, so 15c and 15d have
+nothing to say about it; both of its assignment sites extract the left-hand side `verifier`,
+which 15d permits in the constructor range; 15e excludes that range by construction; and 15b
+counts `function` tokens, of which `constructor` is not one. **Under round 5 it passed all of
+15a–15f and every behavioural instrument in this document, because on the demo chain it is the
+honest file** (R-11). Rejected by **15g**, at 15g-ii (three top-level `;`), 15g-iii (the
+right-hand sides are not the parameters) and 15g-iv (`if`, `else`, `block.`, `0x`) — three
+independent sub-conditions, none of which depends on the address or on the chain id. **M-57 is
+the mutant row G-40 records.**
 The selftest also re-runs M-13, M-A and M-F, which §5.3 assigns to **AC-0** because the
 script's *original* checks 1/2/4 already reject them; they are exercised here, not claimed
 here.
 
-**What AC-1 does and does not establish.** It establishes that the 19 mutants and the 19
+**What AC-1 does and does not establish.** It establishes that the 20 mutants and the 23
 corpus constructs are rejected, and that four controls are accepted. It does **not**
-establish P, P2, P3, P4 or P5 — those are established by the *closedness* of the allowlists
-and pinned regions (checks 9, 11, 12, 14, 15), and the corpus is evidence that the closedness
-is real rather than an aspiration. A twentieth construct nobody listed is rejected because it
-must either produce a call-shaped token, write storage through one of the five source
-constructs that can (§4.5.6), or violate a pinned region of the verifier file (§4.5.10) —
-not because it is on a list. §8 restates the limit.
+establish P, P2, P3, P4, P5 or P6 — those are established by the *closedness* of the
+allowlists and pinned regions (checks 7b, 8, 9, 11, 12, 14, 15), and the corpus is evidence
+that the closedness is real rather than an aspiration. A twenty-fourth construct nobody listed
+is rejected because it must either produce a call-shaped token, write storage through one of
+the five source constructs that can (§4.5.6), read an execution-context value the two files
+may not read (§4.5.6a), or violate a pinned region of the verifier file (§4.5.10) — not
+because it is on a list. §8 restates the limit.
 
 **Falsify:**
 
 ```sh
 # minimal A: delete check 9 alone. M-35/M-36/M-37 survive (M-41 still dies at check 12,
 # M-42 at check 11, M-46 at check 14), so the evidence line reads
-#   "selftest: 19 source mutants, 16 rejected; ..."
+#   "selftest: 20 source mutants, 17 rejected; ..."
 # which is not the manifest's string, so `ac.sh AC-01` exits non-zero.
 #
 # minimal B (new in r4, and the only falsifier for the operand seam): delete check 14
 # alone. M-47 survives; M-46 still dies at 9c. The line reads
-#   "selftest: 19 source mutants, 18 rejected; ..."   -> non-zero.
+#   "selftest: 20 source mutants, 19 rejected; ..."   -> non-zero.
 #
-# minimal C (new in r5, and the only falsifier for the second contract): delete check 15
-# alone. M-51 survives and NOTHING else changes -- no other mutant, no corpus entry and no
-# control reads RecknVerdictVerifier.sol. The line reads
-#   "selftest: 19 source mutants, 18 rejected; exit-corpus 18/19 rejected; ..."  -> non-zero.
+# minimal C (new in r5, the falsifier for the second contract): delete check 15 entirely.
+# M-51 and M-57 survive, and so do corpus entries E-19 and E-20 -- no other mutant, no
+# other corpus entry and no control reads RecknVerdictVerifier.sol. The line reads
+#   "selftest: 20 source mutants, 18 rejected; exit-corpus 21/23 rejected; ..."  -> non-zero.
 # That this falsifier is available at all is the whole of r4 finding 1: before r5 there was
 # no check to delete.
+#
+# minimal D (new in r6, and the only falsifier for the constructor region): delete
+# sub-check 15g alone, keeping 15a-15f. M-51 still dies at 15c/15d; M-57 survives and E-20
+# survives, and NOTHING else moves. The line reads
+#   "selftest: 20 source mutants, 19 rejected; exit-corpus 22/23 rejected; ..."  -> non-zero.
+# Under round 5 this state was the specification, not a falsifier -- which is r5 finding 1.
+#
+# minimal E (new in r6, for the escrow's half of the same seam): delete check 7b AND
+# check 8's right-hand-side clause. E-23 -- the chain-id splice in RecknZkEscrow's own
+# constructor -- survives; nothing else moves. The line reads
+#   "selftest: 20 source mutants, 20 rejected; exit-corpus 22/23 rejected; ..."  -> non-zero.
+# Deleting only one of the two leaves E-23 rejected by the other, which is the point of
+# stating both: they are independent rejections of one construct.
 #
 # broad: delete checks 9, 11 and 12. At minimum M-35/M-36/M-37/M-41/M-42 survive, so the
 # printed count is <= 14 and the exit-corpus count is far below 19. NOTE: r3 asserted an
@@ -2397,19 +2795,21 @@ the wrong answer; use `grep -cE '^<!-- BEGIN MATRIX -->$'`.**
 
 The `ac-manifest` fenced block of §5.1 is located by its info string.
 
-1. §3.2's `G-NN` ids ↔ the `G` ids embedded in test names on disk ↔ `rows[].id` in
+**GC-1.** §3.2's `G-NN` ids ↔ the `G` ids embedded in test names on disk ↔ `rows[].id` in
    `docs/gauntlet.json`. **Rows of class `enforcement` are exempt from the test-name half
    and carry check 16's obligation instead;**
-2. §3.2's per-class counts (21 theft / 7 authorized / 10 disclosed / **1 enforcement** /
-   **39** total) recomputed from the table and from the JSON;
-3. §5.1's per-AC `tests` column ↔ the actual `--list --json` count for each selector;
-4. Σ(`tests` over `forge` ACs) = 46, and AC-17's `tests` = `46 + {P}` with `{P}` read from
+**GC-2.** §3.2's per-class counts (21 theft / 7 authorized / 10 disclosed / **2 enforcement** /
+   **40** total) recomputed from the table and from the JSON;
+**GC-3.** §5.1's per-AC `tests` column ↔ the actual `--list --json` count for each selector;
+**GC-4.** Σ(`tests` over `forge` ACs) = 46, and AC-17's `tests` = `46 + {P}` with `{P}` read from
    `docs/gauntlet.base.json` (§5.0.3) — **not** a literal;
-5. the union of §5.1's `rows` column = §3.2's id set;
-6. the number of manifest entries = 22;
-7. `docs/gauntlet.json` contains no `target override` string, no `signed_rows`
-   inconsistency, and a non-empty `contract.code_hash` (§7.1);
-8. **every `forge` AC in §5.1 appears in at least one `killed-by` cell of §5.3**
+**GC-5.** the union of §5.1's `rows` column = §3.2's id set;
+**GC-6.** the number of manifest entries = 22;
+**GC-7.** `docs/gauntlet.json` contains no `target override` string, no `signed_rows`
+   inconsistency, a non-empty `contract.code_hash`, and — **new in r6** — a non-empty
+   `contract.verifier_sp1_verifier`, which is part 5 of the deployment check and is
+   unperformable without it (§2.3 A, §7.1);
+**GC-8.** **every `forge` AC in §5.1 appears in at least one `killed-by` cell of §5.3**
    (r2 finding 2(d)). **Both sides are normalized to the two-digit spelling first** — §5.1
    writes `AC-08`, §5.3 writes `AC-8`, and comparing them raw silently finds nothing.
    Reproduce:
@@ -2424,43 +2824,57 @@ The `ac-manifest` fenced block of §5.1 is located by its info string.
    Run 2026-09-04 against this document: all 13 forge ACs are present, and **AC-14 is the
    only acceptance criterion that appears in no `killed-by` cell** — correct, because AC-14
    protects M-0 rather than killing anything;
-9. **AC-14's evidence literal is derived**: recompute `T` = the number of distinct ids
+**GC-9.** **AC-14's evidence literal is derived**: recompute `T` = the number of distinct ids
    matching `^M-([0-9]+|A|F)$` between the `KILLTABLE` markers, and assert §5.1's AC-14
    line reads exactly `mutation: <T> mutants, <T−1> killed, 1 control survived`
    (r2 finding 7);
-10. **the call-graph rules of §5.0.2** hold (`gauntlet.sh` contains no `ac.sh --all`, etc.);
-11. **no gauntlet test file contains a bare `vm.expectRevert()`** with no argument (R-2b);
-12. the **gag-rule pattern** of §7.1 does not match any rendered output while the
+**GC-10.** **the call-graph rules of §5.0.2** hold (`gauntlet.sh` contains no `ac.sh --all`, etc.);
+**GC-11.** **no gauntlet test file contains a bare `vm.expectRevert()`** with no argument (R-2b);
+**GC-12.** the **gag-rule pattern** of §7.1 does not match any rendered output while the
     re-execution guest's proving measurement is `null`;
-13. `SWEEP_EXEMPT.txt` (AC-21) contains at most **2** names, every one of them declared in
+**GC-13.** `SWEEP_EXEMPT.txt` (AC-21) contains at most **2** names, every one of them declared in
     `zk-verdict/contracts/test/KeyGauntletStructural.t.sol`, and every one carrying a
     reason line;
-14. **the sweep's column arithmetic (new in r4, re-derived in r5)**: `sweep.columns` in
+**GC-14.** **the sweep's column arithmetic (new in r4, re-derived in r5)**: `sweep.columns` in
     `docs/gauntlet.json` equals `T_beh − |§5.4a's pinned exclusion list| + (sweep mutants in
     §5.4)` = `25 − 1 + 5` = **29**, where `T_beh` is recomputed from §5.3 rather than typed
     (§5.3, AC-14); and `sweep.excluded_columns` equals §5.4a's pinned list exactly (today
     `["M-34"]`). A column silently added or dropped changes one of the two and fails here.
     **The pinned exclusion list is capped at 1** (§5.4a, r4 finding 9): a second entry fails
     here and is a founder decision, exactly as `SWEEP_EXEMPT.txt`'s third name is;
-15. **the base measurement is honest (new in r5 — r4 finding 2)**: `docs/gauntlet.base.json`
-    exists; its `base_commit` is an **ancestor of `HEAD`**; and the two Honest-scope digests
-    re-derived from `git show <base_commit>:zk-verdict/README.md` equal both the recorded
-    values **and** the values computed from the working tree. Three sources; a softening edit
-    moves exactly one of them (§1.5.1). This is the check AC-16 is dispatched onto;
-16. **every `enforcement` row is carried (new in r5)**: for each §3.2 row of class
-    `enforcement`, the id appears in the `rows` column of a **`script`** AC in §5.1, and
-    `docs/gauntlet.json`'s `rows[]` entry for it has `test: null` and a **non-empty** `check`
-    naming the check that rejects it. This is what stops `enforcement` from becoming a class
-    with no instrument;
-17. **the `~34 s` citation is located by content, not by line number (new in r5)**:
+**GC-15.** **the base measurement is honest (new in r5 — r4 finding 2; the history half is new
+    in r6 — r5 finding 2)**: `docs/gauntlet.base.json` exists; its `base_commit` is an
+    **ancestor of `HEAD`**; and the two Honest-scope digests re-derived from
+    `git show <base_commit>:zk-verdict/README.md` equal both the recorded values **and** the
+    values computed from the working tree. Three sources; a softening edit moves exactly one
+    of them (§1.5.1 rule 3). **And the base file has exactly one history** (§1.5.1 rule 4):
+    it is **tracked**; `git log --diff-filter=A --format=%H -- docs/gauntlet.base.json` has
+    **exactly one** entry; `git log --diff-filter=D --format=%H -- docs/gauntlet.base.json` is
+    **empty**; and the blob at that single `A` commit is byte-identical to the working-tree
+    file. Without these four, the laundering path is `rm` and every source of rule 3 is
+    re-derived from the softened tree. This is the check AC-16 is dispatched onto;
+**GC-16.** **every `enforcement` row is carried (new in r5)**: for each §3.2 row of class
+    `enforcement` — **G-39 and G-40 as of r6** — the id appears in the `rows` column of a
+    **`script`** AC in §5.1, and `docs/gauntlet.json`'s `rows[]` entry for it has `test: null`
+    and a **non-empty** `check` naming the check that rejects it. This is what stops
+    `enforcement` from becoming a class with no instrument;
+**GC-17.** **the `~34 s` citation is located by content, not by line number (new in r5)**:
     `grep -n '~34 s' zk-verdict/README.md` returns **exactly one** match, and its line number
     equals `gauntlet.json.proving.predicate_guest_source`'s line. Zero or two matches is a
     failure naming the file (§1.5.3);
-18. **no unknown substitution token**: the manifest contains no `{…}` token other than
-    `{P}`, `{S}`, `{W14}`, `{W21}` (§5.0.3).
+**GC-18.** **no unknown substitution token**: the manifest contains no `{…}` token other than
+    `{P}`, `{S}`, `{W14}`, `{W21}` (§5.0.3);
+**GC-19.** **the recorded pre-existing test set is a set of ids, not a number (new in r6 —
+    r5 finding 3)**: `docs/gauntlet.base.json.pre_existing_tests` is an array of ≥ 1 distinct
+    `<contract>:<test>` strings, `{P}` equals its cardinality, and every recorded id is present
+    in `forge test --root zk-verdict/contracts --list --json` on the current tree. A recorded
+    set that has silently become a count, or from which an id has vanished, fails here as well
+    as at AC-17.
 
-Any mismatch exits non-zero and names the missing ids. On success it prints
-`manifest: 39 rows, 22 acceptance criteria, 3 sources agree`.
+Any mismatch exits non-zero and names the missing ids. **The check series above is
+`GC-1 … GC-19`; `no-keys.sh`'s series is `check 1 … 15`, and the two are never spelled the
+same way** (§4.5.2, r5 finding 6). On success it prints
+`manifest: 40 rows, 22 acceptance criteria, 3 sources agree`.
 
 **Kills:** M-28 a hand-edited `gauntlet.json` with a row deleted; M-29 a test file where a
 row's test exists but is named without its ID; M-30 a §3.2 row added to this document
@@ -2470,9 +2884,12 @@ without a test; **M-45** *(new in r3)* a `gauntlet.json` written without
 caught by check 3 against `--list` and by check 4's sum; it is a harness self-check inside
 AC-13 and is **not** an entry in §5.3 (see the note under the kill table).
 
-**Falsify:** add a row `| G-40 | theft | … |` to §3.2 and run → non-zero, naming G-40. Also:
-delete `docs/gauntlet.base.json` → check 15 red before any forge run. Also: `git checkout`
-a commit that is not a descendant of `base_commit` → check 15's ancestry assertion red.
+**Falsify:** add a row `| G-41 | theft | … |` to §3.2 and run → non-zero, naming G-41. Also:
+delete `docs/gauntlet.base.json` → **GC-15** red before any forge run. Also: `git checkout`
+a commit that is not a descendant of `base_commit` → GC-15's ancestry assertion red. Also
+**new in r6**: `git rm docs/gauntlet.base.json && git commit`, then re-create it with
+`gauntlet.sh --measure` and commit that → GC-15's `--diff-filter=D` assertion is non-empty →
+red. Also: strip `contract.verifier_sp1_verifier` from `docs/gauntlet.json` → GC-7 red.
 
 #### AC-14 — the mutation harness is real, and it mutates the real file (r1 finding 4)
 
@@ -2514,11 +2931,12 @@ explicit: do not write as observed a number that was not observed. So:
 > four and asserts the identity; `mutation-kill.sh` builds exactly `T_beh` behavioural
 > sandboxes and asserts the same.
 
-Recomputed against this document (see AC-14's reproduction command below): `T_src` = **19**,
-`T_beh` = **25**, `T_hd` = **14**, `T` = **59**.
+Recomputed against this document **in round 6** (see AC-14's reproduction command below):
+`T_src` = **20**, `T_beh` = **25**, `T_hd` = **14**, `T` = **60**. Only `T_src` moved this
+round, and it moved by exactly one: **M-57**.
 
 The script prints a table `mutant | class | killed-by | status` and the evidence line
-`mutation: 59 mutants, 58 killed, 1 control survived; witness=<16 hex>`. **The witness is
+`mutation: 60 mutants, 59 killed, 1 control survived; witness=<16 hex>`. **The witness is
 `{W14}` of §5.0.3 and `ac.sh` recomputes it without running this script** — that, plus
 AC-18 observation 7, is what replaces round 4's false sentence about scripts that ran
 nothing. It exits non-zero if any mutant survives, if M-0 is reported killed, or if the
@@ -2531,11 +2949,11 @@ reproduce it:
 ```sh
 # NOTE the ^…$ anchors: the marker strings also appear quoted in AC-13 and in the appendices.
 awk '/^<!-- BEGIN KILLTABLE -->$/{f=1;next} /^<!-- END KILLTABLE -->$/{f=0} f' \
-  docs/specs/003-key-gauntlet.md | grep -oE '\bM-([0-9]+|A|F)\b' | sort -u | wc -l   # 59
+  docs/specs/003-key-gauntlet.md | grep -oE '\bM-([0-9]+|A|F)\b' | sort -u | wc -l   # 60
 ```
 
-Run against this document on 2026-09-04; the annotation is an **observed** output, not a
-carried-forward one. Round 4's annotation read `# 48` while §5.3 said 52 — the number was
+Run against this document on 2026-09-04, **in round 6, after M-57 was added**; the annotation
+is an **observed** output, not a carried-forward one (R-10(ii)). Round 4's annotation read `# 48` while §5.3 said 52 — the number was
 one round stale and was presented as a reviewer-verifiable observation, which is the failure
 `AGENTS.md` §5 names. **The class counts have the same status:** if the two disagree,
 `gauntlet.sh --check` fails rather than either being believed.
@@ -2564,7 +2982,12 @@ finding 3**: a fabricated selftest keeps AC-1 green while AC-0 reddens, so this 
 fails and the fabrication is detected. (b) **New in r5:** apply **M-51**'s patch to
 `zk-verdict/contracts/src/RecknVerdictVerifier.sol` on the live tree — **AC-0 and AC-1 must
 both go red.** Under round 4 this command exited 0 with every AC green, and that is r4
-finding 1 in one line. (c) replace `scripts/mutation-kill.sh` with a two-line `printf` of its
+finding 1 in one line. (b2) **New in r6:** apply **M-57**'s patch — the chain-id branch in the
+**constructor** of the same file — on the live tree and run **the whole AC set**: **AC-0 and
+AC-1 must go red and every other AC must stay green.** The second half matters as much as the
+first: under round 5 the first half failed (AC-0 and AC-1 were green) while the second half
+held, and that combination — *"the source is backdoored and only the structural check can
+tell"* — is precisely R-11 and precisely why no EVM row can carry G-40. (c) replace `scripts/mutation-kill.sh` with a two-line `printf` of its
 manifest evidence string → the witness `{W14}` no longer matches `ac.sh`'s recomputation, and
 independently AC-18 observation 7 goes red.
 
@@ -2576,8 +2999,9 @@ bash scripts/ac.sh AC-15   # runs `bash scripts/gauntlet.sh`
 `scripts/gauntlet.sh` must: print the five private keys with the banner
 `LOCAL ANVIL / FOUNDRY ONLY — throwaway development keys, no real funds`; print the escrow
 address, **`extcodehash(escrow)`**, the `verifier` address, the `verdictProgramVKey`, and
-`refundDelay` (§2.3(A)'s four-part deployment check); print the **enforcement region** — the
-two checked files and `checks: 15/15` (§7.2); run the 13 forge ACs through
+`refundDelay` **and `RecknVerdictVerifier(verifier).verifier()` read on-chain** (§2.3(A)'s
+**five-part** deployment check); print the **enforcement region** — the two checked files,
+**both of their constructors**, and `checks: 15/15` (§7.2); run the 13 forge ACs through
 `scripts/ac.sh AC-NN` individually and the five harness scripts **directly** (§5.0.2);
 write `docs/gauntlet.json` (schema §7.1) from the **actual** run; render the matrix as an
 ASCII table; and end with the money-shot block of §7.2.
@@ -2607,7 +3031,7 @@ break one test, run `gauntlet.sh`, grep for `rows as specified` → absent.
 #### AC-16 — the honest scope is not quietly overwritten
 
 ```sh
-bash scripts/ac.sh AC-16   # the digest half of `gauntlet.sh --check` (check 15)
+bash scripts/ac.sh AC-16   # the digest half of `gauntlet.sh --check` (GC-15)
 ```
 
 **Round 4 pinned two literals and would have gone red on day one (r4 finding 2).** The two
@@ -2624,10 +3048,17 @@ sources and fails unless all three agree:
 2. the digests recomputed from **`git show <base_commit>:zk-verdict/README.md`**;
 3. the digests **recorded** in `docs/gauntlet.base.json`.
 
-A softening edit moves (1) and leaves (2) and (3) where they are, so AC-16 goes red — and it
-**cannot be rescued by re-measuring**, because `--measure` refuses to overwrite an existing
-base file (§1.5.1 rule 2). Pinning to a git object rather than to a working tree is the
-whole of the fix.
+A softening edit moves (1) and leaves (2) and (3) where they are, so AC-16 goes red.
+
+**And it cannot be rescued by deleting the base file, which is what round 5 got wrong.**
+Round 5 wrote that re-measuring is blocked *"because `--measure` refuses to overwrite"*. **A
+`rm` is not an overwrite**: after the delete there is nothing to refuse, all three sources are
+re-derived from the softened tree, they agree, and `base_commit` is trivially an ancestor of
+`HEAD`. What blocks the act is **§1.5.1 rule 4**, asserted by GC-15: the base file must be
+tracked, must have exactly one `--diff-filter=A` commit, must have **no** `--diff-filter=D`
+commit, and its blob at that single `A` commit must equal the working-tree file. A
+delete-and-re-measure leaves a `D` and a second `A`. Pinning to a git object closes the
+*edit*; pinning the file's history closes the *replacement*, and both are needed.
 
 The block is the heading line through the line immediately preceding the next line that
 begins with `## ` (located by heading, not by line number, which drifts). Reproduce, for
@@ -2644,7 +3075,7 @@ git show "$(jq -r .base_commit docs/gauntlet.base.json):zk-verdict/README.md" \
 and the same with `/^### Honest scope of the SVM guest/`. **003 resolves none of the items
 in either block**, whatever 008 left them saying, so the digests must be unchanged at the end
 of 003. **003 also does not touch the `~34 s` measurement OQ-6 cites** — it quotes it, and
-§7.1 requires the quote to be re-located **by content** at run time (§1.5.3, AC-13 check 17).
+§7.1 requires the quote to be re-located **by content** at run time (§1.5.3, GC-17).
 On success `gauntlet.sh --check` prints
 `honest-scope: 2/2 digests unchanged since base commit`.
 
@@ -2656,10 +3087,37 @@ literal at all.
 
 **Kills:** M-32 a documentation edit that softens "Not yet:" to "Now closed:".
 
-**Falsify:** `sed -i '' 's/Not yet:/Now closed:/' zk-verdict/README.md && bash scripts/ac.sh AC-16`
-→ non-zero. Also: delete `docs/gauntlet.base.json` and re-create it with
-`gauntlet.sh --measure` **after** that edit → `--measure` refuses to overwrite, so the
-laundering path exits non-zero rather than producing a green AC-16.
+**Falsify (rewritten in r6 — r5 finding 2; the round-5 text asserted an outcome that does not
+occur, which under R-6 is a broken instrument, not a typo):**
+
+```sh
+# (a) the plain softening edit — unchanged, and it is the one AC-16 was always about
+sed -i '' 's/Not yet:/Now closed:/' zk-verdict/README.md && bash scripts/ac.sh AC-16   # non-zero
+
+# (b) the laundering path, branch 1: delete and re-measure WITHOUT committing the delete
+sed -i '' 's/Not yet:/Now closed:/' zk-verdict/README.md
+rm docs/gauntlet.base.json
+bash scripts/gauntlet.sh --measure     # non-zero: `git status --porcelain` is not empty
+                                       # (rule 2's clean-tree condition; the deleted file
+                                       #  is itself the dirt)
+
+# (c) the laundering path, branch 2: commit the softening AND the delete, then re-measure
+sed -i '' 's/Not yet:/Now closed:/' zk-verdict/README.md
+git commit -m '...' zk-verdict/README.md
+git rm docs/gauntlet.base.json && git commit -m '...'
+bash scripts/gauntlet.sh --measure     # SUCCEEDS — the tree is clean and no base file exists
+git add docs/gauntlet.base.json && git commit -m '...'
+bash scripts/ac.sh AC-16               # NON-ZERO at GC-15: the D-filter log is non-empty and
+                                       # the A-filter log has two entries. THIS is the branch
+                                       # round 5 claimed `--measure` would refuse, and it does
+                                       # not: all three of rule 3's sources agree here.
+
+# (d) never commit the base file at all
+bash scripts/ac.sh AC-16               # non-zero at GC-15: the file is untracked
+```
+
+**Each branch's expected outcome is the one that actually occurs**, and (c) is the one that
+matters: the mechanism that stops it is rule 4, not rule 2.
 
 #### AC-17 — the pre-existing settlement path still works, and the suite total is pinned
 
@@ -2667,13 +3125,40 @@ laundering path exits non-zero rather than producing a green AC-16.
 bash scripts/ac.sh AC-17
 bash zk-verdict/scripts/zk-e2e.sh   # exit 0 (after S-1; today its exit status is discarded)
 ```
-`ac.sh AC-17` runs the whole `zk-verdict/contracts` suite with `--json`, and requires:
-**`{S}` = `46 + {P}`** test results in total (46 gauntlet, both counted mechanically, plus
-the pre-existing count **measured at 003's base commit**, §5.0.3), every status `Success`,
-and the four pre-existing `RecknZkEscrowTest` names of §1.2 present — in particular
-`test_real_proof_settles_to_seller`, which settles a **real Groth16 proof**. Those four may
-change only in the constructor's new `refundDelay` argument. It prints
-`suite: <S>/<S> passed`.
+`ac.sh AC-17` runs the whole `zk-verdict/contracts` suite with `--json` and requires **four**
+things, the third of which is new in r6:
+
+1. **`{S}` = `46 + {P}`** test results in total (46 gauntlet, counted mechanically, plus the
+   cardinality of the pre-existing id set **measured at 003's base commit**, §5.0.3);
+2. every status `Success`;
+3. **the recorded pre-existing test id set is a subset of the ids the run produced** — id =
+   `<contract>:<test>`, with `(…)` stripped from the run's keys, the same normalization
+   `--measure` used. `ac.sh` prints **every missing id** and exits non-zero. *(New in r6 —
+   r5 finding 3.)*
+4. the four pre-existing `RecknZkEscrowTest` names of §1.2 present — in particular
+   `test_real_proof_settles_to_seller`, which settles a **real Groth16 proof**. They stay as
+   the **load-bearing named subset** of (3); they may change only in the constructor's new
+   `refundDelay` argument.
+
+It prints `suite: <S>/<S> passed`.
+
+**Why (3) is not implied by (1) and (4) — the attack it closes (r5 finding 3).** A count plus
+four protected names leaves the *other* pre-existing tests unprotected. Measured today the
+suite is 12 tests across five files and the four protected names are all in
+`RecknZkEscrow.t.sol`; the other eight are named by nothing:
+
+```sh
+grep -rn 'function test' zk-verdict/contracts/test/*.t.sol   # 12 today; 4 of them named by AC-17
+```
+
+Delete `test_reexec_tampered_public_values_are_rejected`
+(`zk-verdict/contracts/test/RecknReexecVerdict.t.sol:47`) — the test that proves a tampered
+public-values blob is rejected — and add any passing test to the same file: `{P}` is
+unchanged, `{S}` is unchanged, every status is `Success`, the four names are present, and
+**under round 5 AC-17 was green**. That is the shape this project has failed under before: a
+test that goes red during C-1…C-7's constructor change is easier to replace than to fix, and
+AC-17 is the only thing looking at it. Recording the **set** rather than its size costs one
+`--measure` field and closes it.
 
 **Why `{P}` and not a number (r4 finding 2).** Round 4 wrote **58** here and in ten other
 places, including two manifest evidence strings that `ac.sh` compares **verbatim**. 008 adds
@@ -2698,8 +3183,14 @@ criterion, which is the right instrument for a mutant that makes the whole suite
 
 **Falsify:** add a test to any pre-existing file → the observed total is `{S} + 1` → non-zero
 (drift is caught; `{P}` is fixed at the base commit and changing it means re-running
-`--measure`, which refuses). Also: delete `docs/gauntlet.base.json` → `ac.sh` refuses to run
-AC-17 at all and says which file is missing.
+`--measure`, which refuses on both counts — the file exists, and the tree is dirty). Also:
+delete `docs/gauntlet.base.json` → `ac.sh` refuses to run AC-17 at all and says which file is
+missing. **Also, new in r6 and the falsifier for requirement (3):** delete
+`test_reexec_tampered_public_values_are_rejected` from
+`zk-verdict/contracts/test/RecknReexecVerdict.t.sol` and add a passing test in its place →
+the total and every status are unchanged, and AC-17 exits non-zero naming
+`RecknReexecVerdictTest:test_reexec_tampered_public_values_are_rejected` as missing. **Run it
+and observe it (R-6); under round 5 it exited 0.**
 
 #### AC-18 — the AC dispatcher cannot be satisfied by an empty implementation
 
@@ -2917,7 +3408,7 @@ It prints `sweep: 46/46 gauntlet tests accounted for; control <S>/<S> pass; witn
 followed by the matrix and the killed/exempt split. **The evidence string deliberately does
 not carry the killed/exempt split**, because that split is not knowable before implementation
 and a literal that cannot be predicted is r2 finding 7 all over again. The two numbers it
-does carry are **46** (pinned by AC-13 check 4, Σ over the forge ACs' `tests` column — round
+does carry are **46** (pinned by GC-4, Σ over the forge ACs' `tests` column — round
 4 wrote 44 here and 56 in the sentence describing this line, both stale) and **`{S}`**
 (substituted from the base measurement, §5.0.3 — never a literal). The **witness** is
 `{W21}`, recomputed by `ac.sh` over the admitted columns' patched sources and the generated
@@ -2955,16 +3446,24 @@ observation 8 goes red; either alone is sufficient.
 
 Each entry is spliced into the real files in a sandbox and must be **rejected**, with the
 rejecting check recorded. **The corpus does not define the property.** Properties P / P2 / P3
-(§3.1.2) and P4 / P5 (§4.5.10) are defined by the closedness of the allowlists and pinned
-regions (checks 9, 11, 12, 14, 15); the corpus is nineteen witnesses that the closedness is
-real. Adding a twentieth construct to this list costs nothing and proves nothing new; a
-construct *not* on this list is rejected for the same reason the ones on it are. **E-14,
+(§3.1.2), P4 / P5 (§4.5.10) and P6 (§4.5.6a) are defined by the closedness of the allowlists
+and pinned regions (checks 7b, 8, 9, 11, 12, 14, 15); the corpus is twenty-three witnesses that
+the closedness is real. Adding a twenty-fourth construct to this list costs nothing and proves
+nothing new; a construct *not* on this list is rejected for the same reason the ones on it
+are. **E-14,
 E-15 and E-16 were new in r4** — an alias whose rejection depended on the author's choice of
 local name, and a stripper that could be made to delete the exit along with the evidence.
 **E-17, E-18 and E-19 are new in r5** and each exists because r4 produced a construct the
 corpus did **not** cover: the two delimiter families **crossed** (E-15 and E-16 each stayed
 inside one family, so a two-pass stripper passed all sixteen entries and all three controls
 while hiding a full drain), and a settlement backdoor in the **second** file.
+**E-20 … E-23 are new in r6**, for the same reason one round later: r5 produced the
+**constructor** of the second file (E-20) and of the first (E-23), which every check of round
+5 either excluded or read only the left-hand side of; and the **escape clause** inside a
+string literal (E-21, E-22), which §4.5.1 has required in prose since r3 —
+*"honouring backslash escapes inside the two string forms"* — with **no entry testing it**.
+A one-pass automaton that treats `\"` as a closing quote satisfies *"one pass, one state
+machine"* and passed all nineteen r5 entries and all four controls.
 
 | # | splice | rejected by |
 |---|---|---|
@@ -2987,6 +3486,10 @@ while hiding a full drain), and a settlement backdoor in the **second** file.
 | **E-17** | **a comment delimiter inside a string literal** (r4 finding 4): `string memory ref = "https://reckn.dev"; IERC20Min(token).transfer(seller, amount);` in `fund`. A **comments-first** pass sees the `//` inside the literal and deletes to end of line, so `src_calls` reads `string memory ref = "https:` and the `.transfer(` is gone; 9a's multiset is unchanged, 9b/9c see nothing, and **check 14 accepts the assignment** because `string memory ref` matches `D`. All fifteen checks pass and `fund` pays an arbitrary address | **9a** (`.transfer` count/range) — and again it is the **stripper** on trial: only a single left-to-right automaton over both families rejects this (§4.5.1) |
 | **E-18** | **a string delimiter inside a comment** — the mirror: `// memo: "note` on one line, `IERC20Min(token).transfer(seller, amount);` on the next, `string memory s = "x";` on the third. A **strings-first** pass opens at the quote inside the comment and closes at the quote before `x`, deleting the exit between them | **9a**, same reasoning. **E-17 and E-18 together are the entries a two-pass stripper cannot pass in either order** |
 | **E-19** | **the second contract** (r4 finding 1): the constant-address branch of §3.1.4 spliced into `RecknVerdictVerifier.verifyVerdict` before its `abi.decode`, giving one named address a proof-free settlement of any funded deal in either direction | **15c-i**, **15c-iii**, **15d** — and, before r5, by nothing in this document at all |
+| **E-20** | **the second contract's `constructor`** (r5 finding 1): `constructor(address _verifier, bytes32 _verdictProgramVKey) { if (block.chainid == 31337) { verifier = _verifier; } else { verifier = address(0x…1337); } verdictProgramVKey = _verdictProgramVKey; }`. It never touches `verifyVerdict`; both assignment sites extract the left-hand side `verifier`, which 15d permits in this range; 15e excludes the range; 15b counts `function` tokens and `constructor` is not one. **On the demo chain it is the honest file, so all 38 EVM rows and the whole suite stay green** | **15g-ii**, **15g-iii**, **15g-iv** — and, before r6, **by nothing in this document at all**, which is r5 finding 1 |
+| **E-21** | **an escaped quote inside a string literal** (r5 finding 4): `string memory ref = "a \" // b"; IERC20Min(token).transfer(seller, amount);` in `fund`. A scanner that does not honour `\` closes the literal at `\"`, sees `//`, and deletes the rest of the line: `.transfer(` disappears from `src_calls`, 9a's multiset is unchanged, 9b/9c see nothing, and **check 14 accepts `string memory ref` because `D` admits it** — E-17's chain of consequences through the one clause of §4.5.1 that had no witness | **9a** (`.transfer` count/range) — and it is the **stripper** on trial: only an automaton that honours backslash escapes inside string spans rejects this |
+| **E-22** | **the same, in the other string form**: `string memory ref = 'a \' // b'; IERC20Min(token).transfer(seller, amount);` in `fund`. It is a separate entry and not a decoration: §4.5.1's clause is written over *"the two string forms"*, and a stripper that honours `\"` and not `\'` passes E-21 and hides the exit here. **One entry cannot distinguish that implementation from a correct one**, which is exactly why E-15/E-16 were not enough for the delimiter families in r4 | **9a**, same reasoning |
+| **E-23** | **the first contract's `constructor`** (r5 finding 1, item 4): `verifier = block.chainid == 31337 ? _verifier : RecknVerdictVerifier(address(0x…1337));` in `RecknZkEscrow`'s constructor. Check 8 permitted the left-hand side `verifier` and said nothing about the right | **check 8**'s right-hand-side clause (the RHS is not `_verifier`) and **7b** (`block.chainid` in the constructor range) — two independent rejections, which is what AC-1's *minimal E* falsifier deletes one at a time |
 
 **Controls (must be ACCEPTED):**
 
@@ -2997,10 +3500,13 @@ while hiding a full drain), and a settlement backdoor in the **second** file.
 | **C-S** | `string memory sA = "a"; string memory sB = "b";` inside `fund` — two legitimate string literals on one line, **no call between them** | the **under**-stripping control. Without it, a stripper could pass E-15 and E-17 by deleting every line containing a quote, which would blind checks 9 and 13 to any code an attacker chooses to put on a quoted line |
 | **C-V** | `// no msg.sender branch here; see check 15` inside `verifyVerdict` | **new in r5.** The verifier's prose control: check 15c-iii bans the *token* `msg.sender`, and a check that fails on this comment is grepping English rather than reading the stripped body. It is also the only control that exercises the stripper on the **second** file |
 
-E-1, E-5, **E-14** and **E-19** are also registered in §5.3 as **M-41**, **M-42**, **M-46**
-and **M-51**, because r2, r3 and r4 named exactly those routes as blockers; they are counted
-once in each counter and the two counters are printed on the same line (AC-1's evidence
-string). **M-47** (the operand-corruption write) is a source-text mutant with **no** corpus
+E-1, E-5, **E-14**, **E-19** and **E-20** are also registered in §5.3 as **M-41**, **M-42**,
+**M-46**, **M-51** and **M-57**, because r2, r3, r4 and r5 named exactly those routes as
+blockers; they are counted once in each counter and the two counters are printed on the same
+line (AC-1's evidence string). **E-21, E-22 and E-23 have no kill-table id**: E-21/E-22 put
+the *stripper* on trial rather than the contract (the same status E-15…E-18 have), and E-23's
+family is already carried in the kill table by M-57 — the reason it is not duplicated is in
+§4.5.6a, stated rather than left as an unexplained asymmetry. **M-47** (the operand-corruption write) is a source-text mutant with **no** corpus
 entry, because the corpus's subject is value **exits** and M-47 adds none — it redirects one.
 That asymmetry is deliberate and is the whole content of r3 finding 2. **E-19 is the
 opposite asymmetry and is deliberate too:** it adds no value exit and corrupts no operand —
@@ -3011,10 +3517,10 @@ rather than a new check in the old one.
 
 `T` — the number of distinct ids matching `^M-([0-9]+|A|F)$` between the two **anchored**
 markers below (`^<!-- BEGIN KILLTABLE -->$` … `^<!-- END KILLTABLE -->$`; see AC-13's marker
-rule) — is **59**. One of them (M-0) must survive; the other **58** must be killed. The
+rule) — is **60**. One of them (M-0) must survive; the other **59** must be killed. The
 per-class counts `T_src` / `T_beh` / `T_hd` are recomputed the same way, restricted to the
-rows whose `class` cell names that class (AC-14): **19 / 25 / 14**, and
-`T = 1 + 19 + 25 + 14`. Every id appears in exactly one `killed-by` cell.
+rows whose `class` cell names that class (AC-14): **20 / 25 / 14**, and
+`T = 1 + 20 + 25 + 14`. Every id appears in exactly one `killed-by` cell.
 `scripts/mutation-kill.sh` and `scripts/gauntlet.sh --check` both parse the region between
 the markers, and **nothing but table rows may appear between them**.
 
@@ -3023,7 +3529,7 @@ the markers, and **nothing but table rows may appear between them**.
 | class | ids | count | driven by | killed by |
 |---|---|---|---|---|
 | control | M-0 | 1 | both harnesses | **nothing — must survive** |
-| source-text | M-1, M-13, M-14, M-15, M-16, M-17, M-18, M-19, M-35, M-36, M-37, M-38, M-41, M-42, M-46, M-47, M-51, M-A, M-F | 19 | `no-keys-selftest.sh` | AC-0 (M-13, M-A, M-F), AC-1 (the rest, including **M-51** at check 15) |
+| source-text | M-1, M-13, M-14, M-15, M-16, M-17, M-18, M-19, M-35, M-36, M-37, M-38, M-41, M-42, M-46, M-47, M-51, M-57, M-A, M-F | 20 | `no-keys-selftest.sh` | AC-0 (M-13, M-A, M-F), AC-1 (the rest, including **M-51** at check 15c/15d and **M-57** at check 15g) |
 | behavioural | M-21, M-24 | 2 | sandbox forge | AC-2 |
 | behavioural | M-3, M-4, M-5 | 3 | sandbox forge | AC-3 |
 | behavioural | M-6, M-7 | 2 | sandbox forge | AC-4 |
@@ -3047,8 +3553,8 @@ the markers, and **nothing but table rows may appear between them**.
 
 <!-- END KILLTABLE -->
 
-Sum: `1 + 19 + (2+3+2+2+2+2+1+1+2+3+1+2+1+1) + (4+1+1+4+2+2) = 1 + 19 + 25 + 14 = 59`.
-Killed = **58**.
+Sum: `1 + 20 + (2+3+2+2+2+2+1+1+2+3+1+2+1+1) + (4+1+1+4+2+2) = 1 + 20 + 25 + 14 = 60`.
+Killed = **59**.
 
 **The four ids added in r4, and which review finding each answers:** **M-46** (the
 function-pointer alias named `transfer`, source-text, check 9c — finding 1); **M-47** (the
@@ -3071,6 +3577,19 @@ a deterministic test.
 | **M-55** | harness | the handler cannot call `fund` with `amount == 0` | AC-10's `afterInvariant()` | 11 |
 | **M-56** | harness | `scripts/ac.sh` with §5.0.3's witness recomputation deleted | AC-18 observation 9 | 3 |
 
+**The one id added in r6:**
+
+| id | class | what it is | killed by | r5 finding |
+|---|---|---|---|---|
+| **M-57** | source-text | the chain-id branch in `RecknVerdictVerifier`'s **constructor** (§3.1.4): `if (block.chainid == 31337) { verifier = _verifier; } else { verifier = address(0x…1337); }`. Every proof off the demo chain is dispatched to a contract of the attacker's choosing; on the demo chain the file is honest | AC-1 at **check 15**, sub-check **15g** (15g-ii, 15g-iii, 15g-iv) | 1 — **and by nothing at all before r6: it passes 15a–15f, all 38 EVM rows, every sweep column and AC-17** |
+
+**M-57 is keyed on the chain id, which is a constant *of the environment*, so R-5's rule
+applies with a twist that R-11 now records.** R-5 says a mutant keyed on a constant needs a
+structural killer because a fuzz cannot draw the constant. M-57 needs one for a stronger
+reason: **the fuzz draws the constant on every single run and the mutant is honest when it
+does.** No behavioural instrument in this document can be its killer, because every one of
+them runs on the chain where the mutant behaves.
+
 **M-51 is keyed on a constant and is therefore killed structurally, per R-5** — a caller
 fuzz draws its address with probability ~2^-160, and until r5 there was no structural check
 in the region to be its killer. **M-50 is not keyed on anything** and is killed
@@ -3078,15 +3597,15 @@ behaviourally, which is why it is the mutant that can carry C-5's evidence where
 
 **Every one of the 13 `forge` ACs owns at least one mutant** — AC-2 (M-21, M-24), AC-3,
 AC-4, AC-5, AC-6, AC-7, **AC-8 (M-40)**, AC-9, **AC-10 (M-23, M-50, M-54, M-55)**,
-**AC-11 (M-25, M-26, M-48)**, AC-12, AC-19, AC-20. AC-13 check 8 asserts this mechanically.
+**AC-11 (M-25, M-26, M-48)**, AC-12, AC-19, AC-20. GC-8 asserts this mechanically.
 Round 2 failed it at AC-8 (r2 finding 6).
 
 **Excluded from `T` by construction:** the lettered sub-mutants `M-31b`, `M-31c`, `M-31d`,
 `M-32b` are harness self-checks inside AC-13 / AC-15 / AC-18. They do not match
 `^M-([0-9]+|A|F)$`, so no rule has to remember to exclude them. The **five sweep mutants**
-of §5.4 use the `SW-` prefix for the same reason, and the **nineteen exit-corpus entries**
-of §5.2.1 use `E-`; only E-1, E-5, E-14 and E-19 have kill-table identities (M-41, M-42,
-M-46, M-51).
+of §5.4 use the `SW-` prefix for the same reason, and the **twenty-three exit-corpus entries**
+of §5.2.1 use `E-`; only E-1, E-5, E-14, E-19 and E-20 have kill-table identities (M-41,
+M-42, M-46, M-51, M-57).
 
 ### 5.4 The sweep mutants (AC-21's columns; not counted in `T`)
 
@@ -3134,8 +3653,7 @@ body is `revert()`"*, is exactly such a column.
 id, held in this section **and** in `scripts/degeneracy-sweep.sh`, and printed as
 `sweep.excluded_columns` in `docs/gauntlet.json`. M-34 keeps its kill-table cell under
 **AC-17**, a whole-suite criterion, which is the right instrument for a mutant that makes
-the whole suite fail. Adding an id to this list is a **spec edit**, checked by AC-13 check
-14; the implementer cannot do it privately. Because the list is pinned, `sweep.columns` is a
+the whole suite fail. Adding an id to this list is a **spec edit**, checked by GC-14; the implementer cannot do it privately. Because the list is pinned, `sweep.columns` is a
 **predictable number** (`T_beh − 1 + 5` = `25 − 1 + 5` = **29**) rather than whatever
 survived at runtime.
 
@@ -3146,7 +3664,7 @@ M-33 paragraph offers *"a founder-visible addition to the pinned exclusion list"
 acceptable resolution when a probe fails at implementation time. Excluding a column makes
 AC-21 *stricter*, not vacuous, so this is a hole in **coverage** rather than in the
 assertion — under exactly the pressure this section anticipates. It gets the same shape as
-the exemption budget: **at most 1 entry. A second entry makes AC-13 check 14 fail and is a
+the exemption budget: **at most 1 entry. A second entry makes GC-14 fail and is a
 founder decision, not an implementer edit.** The two budgets are priced together in OQ-7.
 
 **(2) A setUp probe, per column, per test file.** The exclusion list only covers the
@@ -3238,8 +3756,8 @@ moot; with §5.4a in place the budget question is real again.
 | `zk-verdict/contracts/test/KeyGauntletFuzz.t.sol` | caller / time / parameter fuzz. **Exactly 1 test contract** | AC-2, AC-3, AC-4, AC-6, AC-7, AC-11 |
 | `zk-verdict/contracts/test/KeyGauntletInvariant.t.sol` + handler | random call sequences over ≥ 3 deals in ≥ 2 tokens; the handler's `fund` action draws `dealBinding` from **{fresh, an existing deal's `dealId`}** and may pass `amount == 0`, and exposes the two ghost counters `fundsWithExistingBinding` / `fundsWithZeroAmount` that `afterInvariant()` asserts non-zero (AC-10's two handler obligations, now instrumented). **Exactly 1 test contract + 1 handler contract; the handler declares no `test_`/`invariant_` function and therefore gets no sweep probe** | AC-10 (3 invariants + `afterInvariant`) |
 | `zk-verdict/contracts/test/KeyGauntletStructural.t.sol` | **at most 2** tests whose assertions no contract mutation can change; the only file whose tests may be sweep-exempt. **Exactly 1 test contract** | AC-19 (G-37), AC-21 |
-| `zk-verdict/contracts/test/SWEEP_EXEMPT.txt` | the exemption list, one `name # reason` per line, ≤ 2 lines | AC-21, AC-13 check 13 |
-| `zk-verdict/contracts/test/mutants/M-*.patch` | one patch per kill-table mutant, applied to a **sandbox copy of the real source**. **M-51 patches `src/RecknVerdictVerifier.sol`; every other source-text and behavioural patch targets `src/RecknZkEscrow.sol`** | AC-1, AC-14 |
+| `zk-verdict/contracts/test/SWEEP_EXEMPT.txt` | the exemption list, one `name # reason` per line, ≤ 2 lines | AC-21, GC-13 |
+| `zk-verdict/contracts/test/mutants/M-*.patch` | one patch per kill-table mutant, applied to a **sandbox copy of the real source**. **M-51 and M-57 patch `src/RecknVerdictVerifier.sol` (M-51 its `verifyVerdict`, M-57 its `constructor`); every other source-text and behavioural patch targets `src/RecknZkEscrow.sol`** | AC-1, AC-14 |
 | `zk-verdict/contracts/test/mutants/SW-*.patch` | the five sweep mutants of §5.4 | AC-21 |
 | `zk-verdict/contracts/test/mocks/ReentrantERC20.sol` | calls back into the escrow from `transfer`/`transferFrom` | AC-9 |
 | `zk-verdict/contracts/test/mocks/FalseReturningERC20.sol` | returns `false`, never reverts | AC-8 |
@@ -3338,6 +3856,22 @@ asserted:
 20. **C-5's bound is evidenced.** M-50 (`==` → `>=` in both exits) against
     `OutboundFeeERC20` with ≥ 2 deals in that token must break INV-4 and be killed by AC-10.
     *Control on r4 finding 10 — the claim that no mutant could evidence C-5.*
+21. **The environment-conditional constructor, and the two-sided observation it requires.**
+    M-57 (the chain-id branch in `RecknVerdictVerifier`'s constructor) applied to the **live
+    tree** must turn **AC-0 and AC-1 red while every other AC stays green** — both halves are
+    asserted. E-20 must be **rejected** by 15g and E-23 by check 8 / 7b, while control C-V
+    stays **accepted**. *Control on r5 finding 1, and the only control in this list whose
+    point is that the behavioural instruments are **not** allowed to fire (R-11).*
+22. **The pre-existing test set, not its size.** Delete
+    `test_reexec_tampered_public_values_are_rejected` from
+    `zk-verdict/contracts/test/RecknReexecVerdict.t.sol`, add a passing test in its place, and
+    run `bash scripts/ac.sh AC-17`: it must exit non-zero **naming the missing id**, with the
+    suite total and every status unchanged. *Control on r5 finding 3.*
+23. **The laundering path is a delete, not an overwrite.** AC-16's `Falsify` branch (c) —
+    commit a softened Honest-scope block, `git rm` the base file, re-measure, commit — must
+    make `bash scripts/ac.sh AC-16` exit non-zero **at GC-15's `--diff-filter=D` assertion**,
+    and branch (b) must be refused by `--measure`'s clean-tree condition. *Control on r5
+    finding 2, and on the fact that the round-5 falsifier asserted the wrong outcome.*
 
 ### 6.4 Anti-degeneracy rules (this project has opened the same hole four times)
 
@@ -3351,7 +3885,7 @@ Binding on the implementation:
   `d.seller`), not against a literal repeated from the setup.
 - **R-2b** *(new in r3)* No bare `vm.expectRevert()`. Every revert expectation names the
   specific error selector or the specific revert data. Mechanically checked by
-  `gauntlet.sh --check` (check 11); load-bearing for AC-21's SW-1 column (§5.4).
+  `gauntlet.sh --check` (GC-11); load-bearing for AC-21's SW-1 column (§5.4).
 - **R-3** Any test that would still pass if the contract's function body were replaced by
   `revert()` must be paired with an authorized-row test that would then fail. M-34 is the
   suite-level instance of this rule; **AC-21 is its per-test mechanization** and supersedes
@@ -3396,6 +3930,32 @@ Binding on the implementation:
   **(iii)** Where the chain stops, say so in §8 in one sentence, naming the artefact that
   nothing watches. R-9 is the special case of (i) for sweep columns; R-10 is the general
   form, and §5.0.3 and AC-18 observations 7–9 are its mechanization.
+- **R-11** *(new in r6 — r5 finding 1)* **An attacker may branch on the existence of the
+  observer. A check whose region is stated by exclusion is a check with a hole in it.**
+  R-9 and R-10 are about *breaking* the observer; this is about *detecting* it. Every
+  instrument in this document runs on a **local chain**, so an implementation that reads
+  `block.chainid` is honest exactly where it is watched. The rule has three parts.
+  **(i)** In any file this document pins, the **execution context is closed**: the code may
+  not learn which chain, block or transaction it is running in, except for the one value a
+  named contract change requires and only in the range that change names (§4.5.6a's P6 for
+  `RecknZkEscrow.sol`; 15c-iii / 15g-iv / 15e for `RecknVerdictVerifier.sol`). A ban on the
+  *token* is not the rule — the rule is that the category is closed, and the token list is
+  the error message (R-7).
+  **(ii)** **A region defined as "everything outside X and Y" is admissible only if X and Y
+  each have their own pin.** Round 5's 15e was defined outside the `constructor` and
+  `verifyVerdict` ranges, 15c pinned one of them, and nothing pinned the other; that unpinned
+  region is where the backdoor lived. Whenever a sub-check is written by exclusion, list the
+  excluded regions and name the sub-check that pins each.
+  **(iii)** **An LHS-only pin is not a pin.** 15d, check 8 and check 14 all enumerated
+  assignment *targets*; the address a contract dispatches to, and the address it pays, are on
+  the *right* of the `=`. Ask of every "this check pins X" sentence: *does it constrain what X
+  is set to, or only that X is what was set?* Where the answer is "only the latter" and the
+  document nevertheless claims the former, the sentence is corrected (INV-2's *"Named limit,
+  corrected in r6"*) or the clause is added (15g-iii, check 8's RHS) — **and where neither was
+  done in this round, it is an open question with the founder, not a silence** (OQ-10).
+  R-5 is the special case where the constant is an address; R-11 is the case where the
+  constant is the environment itself, and it is worse, because the fuzz draws it every run and
+  the mutant is honest each time.
 - **R-9** *(new in r4 — r3 finding 3)* **A mutant that breaks `setUp` is not a sensitivity
   column.** Any matrix whose columns are mutants must assert, per column and before reading
   it, that the harness itself still runs — otherwise "every test failed in some column" is
@@ -3411,11 +3971,13 @@ Binding on the implementation:
 between them is the JSON below; `reckn-demo` may render it however it likes and must not
 hand-edit it.
 
-### 7.1 `docs/gauntlet.json` — schema `reckn/gauntlet/v3`
+### 7.1 `docs/gauntlet.json` — schema `reckn/gauntlet/v5`
+
+**The heading and the `schema` field disagreed until r6** (the heading said `v3`, the document said `v4`) — a one-word drift of exactly the kind GC-1…GC-19 exist to prevent, in the one place no check was looking. Both now read **`v5`**, and r6's changes to this object are the reason for the bump: `contract.verifier_sp1_verifier`, `base_measurement.verifier_constructor_source`, `base_measurement.no_keys`, and two `enforcement` rows instead of one.
 
 ```json
 {
-  "schema": "reckn/gauntlet/v4",
+  "schema": "reckn/gauntlet/v5",
   "generated_at": "2026-09-0?T??:??:??Z",
   "commit": "<git rev-parse HEAD>",
   "base_commit": "<docs/gauntlet.base.json .base_commit>",
@@ -3429,22 +3991,27 @@ hand-edit it.
     ],
     "not_covered": [
       "the deployed verifier's bytecode (an escrow may be constructed with any address — G-29)",
+      "which address a deployment passed to either constructor (read on-chain by deployment-check parts 2 and 5, not by any check here)",
       "the SP1 verifier the verifier file calls into",
       "what the proof means (the guest — N-2, task 008)"
     ]
   },
   "base_measurement": {
     "pre_existing_tests": "<{P}>",
+    "pre_existing_tests_recorded_as": "id set in docs/gauntlet.base.json (AC-17 asserts the subset; this field is its cardinality only)",
     "honest_scope": ["<sha256>", "<sha256>"],
     "binding_preimage_source": "<file:line>",
     "public_values_source": "<file:line>",
-    "verifier_body_source": "<file:line>"
+    "verifier_body_source": "<file:line>",
+    "verifier_constructor_source": "<file:line>",
+    "no_keys": { "checks": "<int|null at the base commit>", "targets": ["<paths the base script derives>"] }
   },
   "contract": {
     "name": "RecknZkEscrow",
     "address": "0x...",
     "code_hash": "0x...",
     "verifier": "0x...",
+    "verifier_sp1_verifier": "0x...",
     "verdict_program_vkey": "0x...",
     "refund_delay_seconds": 86400,
     "min_refund_delay_seconds": 3600,
@@ -3488,23 +4055,31 @@ hand-edit it.
       "observed": "build fails: no-keys.sh check 15",
       "status": "AS_SPECIFIED",
       "test": null,
-      "check": "no-keys.sh check 15 (M-51, E-19)" }
+      "check": "no-keys.sh check 15, sub-checks 15c/15d (M-51, E-19)" },
+    { "id": "G-40", "class": "enforcement", "actor": "anyone with commit access",
+      "method": "chain-id branch in RecknVerdictVerifier's constructor",
+      "precondition": "honest escrow, honest verifier address, honest behaviour on this chain",
+      "expected": "build fails: no-keys.sh check 15g",
+      "observed": "build fails: no-keys.sh check 15g",
+      "status": "AS_SPECIFIED",
+      "test": null,
+      "check": "no-keys.sh check 15, sub-check 15g (M-57, E-20)" }
   ],
   "acceptance": [
     { "id": "AC-06", "kind": "forge", "tests_expected": 2, "tests_ran": 2, "passed": 2 }
   ],
   "totals": {
-    "rows": 39, "theft": 21, "authorized": 7, "disclosed": 10, "enforcement": 1,
-    "as_specified": 39, "keys_that_helped": 0,
+    "rows": 40, "theft": 21, "authorized": 7, "disclosed": 10, "enforcement": 2,
+    "as_specified": 40, "keys_that_helped": 0,
     "acceptance_criteria": 22, "gauntlet_tests": 46, "suite_tests": "<{S}>",
-    "mutants": 59, "mutants_killed": 58, "control_survived": true
+    "mutants": 60, "mutants_killed": 59, "control_survived": true
   }
 }
 ```
 
 - `status ∈ {AS_SPECIFIED, DEVIATED}`. Every `rows[]` entry carries **both** `test` and
   `check`; exactly one of them is non-null. Rows of class `enforcement` have `test: null` and
-  a non-empty `check`; every other class has a `test` and `check: null`. AC-13 check 16.
+  a non-empty `check`; every other class has a `test` and `check: null`. GC-16.
 - **`enforcement` (new in r5)** publishes the *region* the build condition covers and, in
   `not_covered`, the three things it does not. A judge reading `Addresses that helped: 0`
   should be able to see, in the same artefact, which files that claim was checked over —
@@ -3515,8 +4090,16 @@ hand-edit it.
   whose provenance is a paragraph. `<{P}>` and `<{S}>` are substituted at generation time;
   they are never typed.
 - `contract.code_hash` is `extcodehash(escrow)` read on the local chain. It is **part 1 of
-  the four-part deployment check** (§2.3 A); without it the check is unperformable, which is
-  why AC-13 check 7 fails on an empty or missing value and M-45 exists.
+  the five-part deployment check** (§2.3 A); without it the check is unperformable, which is
+  why GC-7 fails on an empty or missing value and M-45 exists.
+- **`contract.verifier_sp1_verifier` (new in r6 — r5 finding 1)** is
+  `RecknVerdictVerifier(verifier).verifier()`, read on the local chain. It is **part 5** of the
+  same check, and it exists because part 2 compares one address that hides a second. GC-7
+  fails on an empty or missing value, exactly as it does for `code_hash`; **M-45 is the mutant
+  that witnesses GC-7's non-empty assertion exists at all**, and it is not duplicated per
+  field. **Tier:** on this document's local chain the value a seller compares it against is
+  the SP1 verifier the demo itself deployed, not a canonical mainnet gateway (§2.3 A part 5),
+  and the artefact must not be read as evidence about any other chain.
 - `keys_that_helped` is **computed**: the number of theft rows whose `observed` differed
   between a key-holding actor and a fuzzed stranger. Non-zero ⇒ `gauntlet.sh` exits
   non-zero.
@@ -3525,7 +4108,7 @@ hand-edit it.
   derived from its length and `gauntlet.sh --check` fails if the printed number and
   `len(signed_rows)` disagree.
 - `sweep.exempt` mirrors `SWEEP_EXEMPT.txt`; `len(exempt) ≤ 2` and
-  `killed + len(exempt) == gauntlet_tests` are both asserted (AC-13 check 13, AC-21).
+  `killed + len(exempt) == gauntlet_tests` are both asserted (GC-13, AC-21).
 - **`sweep.excluded_columns` and `sweep.probe` are new in r4** (r3 finding 3).
   `excluded_columns` must equal §5.4a's pinned list exactly, **`len(excluded_columns) ≤ 1`**
   (r5, r4 finding 9), and `columns` must equal `T_beh − len(excluded_columns) + 5` (AC-13
@@ -3544,7 +4127,7 @@ hand-edit it.
   - **Source re-verification, by content and not by line number (corrected in r5 — r4
     finding 2).** Round 4 wrote `sed -n '97p' zk-verdict/README.md | grep -q '~34 s'` into a
     file **task 008 edits**, so the citation would break on a line shift rather than on a
-    change of fact. `gauntlet.sh --check` (check 17) instead runs
+    change of fact. `gauntlet.sh --check` (GC-17) instead runs
     `grep -n '~34 s' zk-verdict/README.md`, requires **exactly one** match, and writes that
     match's line number into `predicate_guest_source`. Zero matches or two is a failure with
     the instruction attached (§1.5.3): re-read the file, and if the measurement is gone set
@@ -3565,19 +4148,23 @@ hand-edit it.
 
   The rule stays even though a number now exists, because the number is for the **wrong
   guest**. `MIN_REFUND_DELAY` is **not** changed on the strength of it (OQ-6).
-- `acceptance[]` mirrors §5.1 and is what AC-13 check 3 compares against `--list`.
+- `acceptance[]` mirrors §5.1 and is what GC-3 compares against `--list`.
 
 ### 7.2 Terminal rendering
 
 ```
 ▶ KEY GAUNTLET — LOCAL FOUNDRY ONLY — throwaway development keys, no real funds
   escrow   0x...   codehash 0x...   verifier 0x...   vkey 0x...
+  verifier -> SP1 verifier 0x...   (RecknVerdictVerifier.verifier(), read on-chain)
   refundDelay 86400s (min 3600 / max 2592000)
-  Seller's four-part deployment check: codehash · verifier · vkey · refundDelay
+  Seller's FIVE-part deployment check:
+    codehash · verifier · vkey · refundDelay · the verifier's own SP1 verifier
   Seller's terms check (AFTER the Funded event): token · amount · seller · deadline
   No-key build condition: 15/15 checks over BOTH settlement-path sources —
-    RecknZkEscrow.sol and RecknVerdictVerifier.sol (which computes the verdict).
-    Not covered: the bytecode behind any *deployed* verifier address (see G-29/G-39).
+    RecknZkEscrow.sol and RecknVerdictVerifier.sol (which computes the verdict),
+    including BOTH constructors, which choose the addresses everything else trusts.
+    Neither file may read block.chainid, so neither can tell it is being tested.
+    Not covered: the bytecode behind any *deployed* verifier address (G-29/G-39/G-40).
 
   role      address    private key (published)
   BUYER     0x...      0x...
@@ -3595,7 +4182,7 @@ hand-edit it.
   G-36   disclosed   anyone     settleWithProof       settles, seller UNDERPAID settles, seller UNDERPAID ✓
   G-37   disclosed   BUYER      deploy look-alike     only codehash differs     only codehash differs     ✓
 
-  39/39 rows as specified.
+  40/40 rows as specified.
   Keys published: 5.  Addresses exercised: 5.  Addresses that helped: 0.
   Transactions signed by a published key: 0 — Foundry impersonates addresses (vm.prank);
   no published key signed anything. See §8 of docs/specs/003-key-gauntlet.md.
@@ -3613,6 +4200,15 @@ exemption list is on screen rather than in a file nobody opens. **The fifth line
 r4** and publishes the *column* split for the same reason: a matrix that quietly stopped
 counting columns is the shape r3 finding 3 exploited, and it now has to say so on screen.
 
+**The `verifier -> SP1 verifier` line, the fifth part of the deployment check and the two
+constructor sentences are new in r6 (r5 finding 1).** They change **what the seller is told to
+do**, which is why they are on screen and not only in §2.3: a four-part check that compares one
+address while a second address decides where every proof is sent is a check a seller can pass
+on a backdoored deployment. **The `block.chainid` sentence is the one that says the quiet part
+out loud** — this gauntlet runs on a local chain, so *"an implementation that misbehaves only
+elsewhere"* is the one attack the matrix cannot demonstrate failing, and it is therefore
+excluded **structurally** instead (R-11, G-40).
+
 **The banner's `No-key build condition` block and the closing `Suite:` line are new in r5.**
 The first exists because r4 finding 1 was, in the end, a question about **where the claim was
 checked**, and a judge who is told *"Addresses that helped: 0"* is entitled to see the region
@@ -3628,18 +4224,25 @@ the shape §1.5 exists to remove: `<P>` and `<base_commit>` are printed with it.
 - The surface grew from two functions to three, and `IERC20Min` from two declared functions
   to three, and why (`AGENTS.md` §0's requirement). **And the enforcement region grew from
   one file to two** — `RecknVerdictVerifier.sol` is where the verdict the escrow obeys is
-  computed, and until r5 nothing checked it (§3.1.4, D-12).
+  computed, and until r5 nothing checked it (§3.1.4, D-12); **the check over that file is task
+  `008`'s, extended here** (§1.5.4). **And inside both files it now reaches the
+  `constructor`s**, which is where the addresses everything else trusts are chosen.
 - The tier: local Foundry / anvil. Not testnet, not mainnet.
 - **`vm.prank` impersonates addresses; no key signed** (unless OQ-1 is built).
 - The **ten** disclosed rows are shown, not hidden — G-18, G-23, G-27, G-28, G-29,
   **G-33, G-34, G-35, G-36, G-37** — and G-33 and G-36 in particular are shown as rows that
   **succeed**, not as reverts.
-- **G-39 is the one `enforcement` row** and it is shown as a **build failure**, not as an EVM
-  outcome: in a tree where that splice exists, the escrow settles perfectly correctly by its
-  own rules, and the only thing that says no is `no-keys.sh`. That is the honest shape of the
-  central claim and it should be said in those words.
-- The seller has **two** checks at **two** times (§2.3), and 003 makes them possible, not
-  automatic.
+- **G-39 and G-40 are the two `enforcement` rows** and they are shown as **build failures**,
+  not as EVM outcomes: in a tree where either splice exists, the escrow settles perfectly
+  correctly by its own rules, and the only thing that says no is `no-keys.sh`. That is the
+  honest shape of the central claim and it should be said in those words. **G-40 is the
+  harder one to say and the more important** — in a tree containing it **every row of this
+  gauntlet is green**, because it is honest on the chain the demo runs on and dishonest
+  everywhere else. The demo cannot show that attack failing; that is why the **build
+  condition**, not the matrix, is the load-bearing artefact for it (R-11).
+- The seller has **two** checks at **two** times (§2.3), and the first now has **five** parts —
+  the fifth reads the SP1 verifier that the verifier itself dispatches to. 003 makes them
+  possible, not automatic.
 
 ---
 
@@ -3654,12 +4257,16 @@ Written here so that no one has to say it under questioning.
   formal verification here.
 
   **On the word "impossible."** This spec never says an *attack* is impossible, and never
-  says anything is impossible "in principle". The word appears only in §5.0.1 and in its
-  restatement in the next bullet, always in the same sentence — *"the five gates make zero
-  tests impossible; they do not make zero assertions impossible"* — where it is a statement
-  about a script's exit condition (`|found| == N ≥ 1`, checked twice), not about an
-  adversary. No count of the word is asserted here — a literal that drifts is r2 finding 7,
-  and this document has been bitten by one already. Every
+  says anything is impossible "in principle". **The word is never used about an adversary
+  anywhere in this document; its only substantive use is §5.0.1's claim about a script's exit
+  condition** (`|found| == N ≥ 1`, checked twice) — *"the five gates make zero tests
+  impossible; they do not make zero assertions impossible"* — restated once in the next
+  bullet, and otherwise appearing only in appendix rows recording that a round **refused** to
+  make such a claim. That is a property of how the word is used, not a list of places it
+  occurs. **Round 5 wrote the location list** — *"appears only in §5.0.1 and in its
+  restatement"* — **and it was false in the round that wrote it** (`grep -ni impossible`
+  returns matches in the appendices too), which is the same defect as a drifting literal, one
+  category up. No count and no location set is asserted here. Every
   claim about an adversary in this document is bounded by a named instrument and a named
   residual. **A fuzz in particular cannot find a backdoor keyed on a constant** — that is
   what the structural checks are for (R-5).
@@ -3681,16 +4288,36 @@ Written here so that no one has to say it under questioning.
   behaviour). It is **not** exhaustive with respect to attacks outside that frame —
   compiler bugs, EVM-level behaviour changes, and the SP1 verifier's own soundness are all
   outside it.
+- **An attacker can branch on the fact that this gauntlet runs on a local chain, and no row
+  of the matrix can show it failing** (R-11, G-40, r5 finding 1). Every behavioural instrument
+  in this document — 38 EVM rows, 46 gauntlet tests, 29 sweep columns, every fuzz — runs on
+  Foundry's local chain. A source that reads `block.chainid` is therefore honest exactly where
+  it is observed. Round 5 shipped a check whose region was *"everything except the
+  constructor"*, and the constructor is where `RecknVerdictVerifier` chooses the address every
+  proof is dispatched to; the resulting splice was green in **every** instrument here. What
+  closes it is **structural and only structural**: 15g pins that constructor to a copy of its
+  own parameters, check 8 does the same for the escrow's, and check 7b closes the
+  execution-context tokens so neither file can read the chain id at all. What this does **not**
+  establish: that the two files contain no *other* constant-keyed branch. 7b removes the
+  environment as a trigger; it does not remove a hard-coded token or counterparty address as
+  one, and **check 14 pins assignment left-hand sides only, so `to = <constant>` inside
+  `settleWithProof` under such a guard is not rejected by any check in this document**. That
+  is **OQ-10**, open with the founder; it is named here rather than left for the next reader to
+  find, and INV-2's *"Named limit, corrected in r6"* records that round 4 claimed a mechanism
+  which does not exist.
 - **The settlement path spans two contracts, and as of r5 the build condition spans both**
-  (§3.1.4, §4.5.10, r4 finding 1). Through round 4 this document checked one file while
+  (§3.1.4, §4.5.10, r4 finding 1; **the check over the second file is task `008`'s and 003
+  extends it — §1.5.4**). Through round 4 this document checked one file while
   `settleWithProof` obeyed a struct computed in another — same directory, same audited
   deployment, one function — and a constant-address branch there was a **resolver over every
   funded deal**, rejected by nothing. Check 15 closes that region. What it establishes: in
   **the source in this repository**, `RecknVerdictVerifier` declares four top-level things
   and one function, and that function's body is two statements with no control flow and no
   `msg.sender` / `tx.origin` / `block.` token at all, so the struct it returns can only come
-  from `abi.decode(publicValues, …)` after `verifyProof` did not revert. What it does **not**
-  establish, in the same breath:
+  from `abi.decode(publicValues, …)` after `verifyProof` did not revert — **and, as of r6,
+  that the address `verifyProof` is dispatched to is the constructor's own parameter, because
+  15g pins that constructor to two statements with no branch, no `block.` token and no
+  literal**. What it does **not** establish, in the same breath:
   - **nothing about the bytecode behind any deployed verifier address.** An escrow can be
     constructed with any address; a rogue verifier built from other source is untouched by
     every check here. That is row **G-29**, and the seller's defence is part 2 of the
@@ -3738,7 +4365,7 @@ Written here so that no one has to say it under questioning.
   write storage would need this enumeration re-opened, and this sentence is here so that a
   reader knows to check.
 - **Foundry `vm.prank` impersonates an address without using its private key.** The 38 EVM
-  rows demonstrate **address-level** behaviour (G-39 is not an EVM row). Unless `signed_rows` is non-empty, no published
+  rows demonstrate **address-level** behaviour (G-39 and G-40 are not EVM rows). Unless `signed_rows` is non-empty, no published
   key was exercised, and the money-shot says so (§7.2, r1 finding 8).
 - **Token honesty is assumed, and the supported class is narrow.** INV-4/INV-6 hold for
   **exact-transfer** tokens (§1.3). A token that lies about balances can corrupt deals
@@ -3782,9 +4409,12 @@ Written here so that no one has to say it under questioning.
   look-alike whose `verifier`, vkey and `refundDelay` are all genuine and whose **bytecode
   is not**. The contract's `MIN_REFUND_DELAY` is **not** a defence against the first — a
   buyer deploying their own escrow chooses their own constant. The defence is the seller's
-  **four-part** deployment check (§2.3 A: code hash, verifier, vkey, `refundDelay`), and it
-  is a human/off-chain check, not a mechanism. 003 makes it *possible* by printing all four
-  values including `contract.code_hash`; it does not make it automatic.
+  **five-part** deployment check (§2.3 A: code hash, verifier, vkey, `refundDelay`, and the
+  verifier's own SP1 verifier), and it is a human/off-chain check, not a mechanism. 003 makes
+  it *possible* by printing all five values, including `contract.code_hash` and
+  `contract.verifier_sp1_verifier`; it does not make it automatic. **Part 5's own limit is in
+  §2.3(A): it compares an address, not a bytecode, and on this tier the comparand is the SP1
+  verifier the demo itself deployed.**
 - **The seller cannot check the terms before funding.** `d.token`, `d.amount`, `d.seller`
   and the deadline are first visible in the `Funded` event (§2.3 B). Round 2's capability
   table credited the seller with a pre-funding check of facts that do not exist yet; that
@@ -3831,6 +4461,22 @@ Written here so that no one has to say it under questioning.
   defence against an implementer who fabricates evidence**, and it does not claim to be. The
   cheap accidental failure — a placeholder that was never finished — is what the two devices
   catch.
+- **The base measurement is protected by its git history, and a rewritten history defeats
+  it** (§1.5.1 rule 4, GC-15, r5 finding 2). Round 5 claimed *"the file is written once and
+  only once"* because `--measure` refuses to overwrite; the laundering path is `rm`, and after
+  a delete all three of the digest check's sources are re-derived from the softened tree and
+  agree. What blocks the act now is an assertion over the file's history — tracked, exactly one
+  `A`, no `D`, blob equal to the working tree — plus a clean-tree condition on `--measure`.
+  **An implementer who amends or rebases the `D` away defeats all four**, and that is the same
+  class as fabricating `ac-selftest.sh`: deliberate fabrication of evidence, which 003 does not
+  defend against and does not claim to.
+- **AC-17 pins the pre-existing tests by identity, which is not the same as by meaning**
+  (r5 finding 3). The recorded id set makes deleting a pre-existing test visible. It says
+  nothing about whether a pre-existing test still asserts what its name says: a body may be
+  gutted in place and AC-17 will not notice, because AC-21's sensitivity sweep covers the
+  **46 gauntlet** tests and not the pre-existing suite. That boundary is deliberate — the
+  pre-existing suite belongs to 008 and to the tasks before it — and it is stated so that the
+  subset assertion is not read as more than it is.
 - **The witness proves the patches were applied, not that the sandboxes were run**
   (§5.0.3). `{W14}` and `{W21}` are digests over patched sources, recomputable by `ac.sh`
   from the committed patch files; an `echo` cannot produce them without doing the patch work.
@@ -3861,7 +4507,7 @@ that r2 corrected are corrected again where r2's own replacement was off (D-4).
 | D-9 | `README.md:67` | "the enumerated `fund` / `settleWithProof` / `refundAfterDeadline`" | Already correct — add that all three must now be **present**, not merely permitted (two-sided check 2), and that the value exits are pinned by a **closed allowlist over the whole file**, not by a list of forbidden method names |
 | D-10 | `AGENTS.md` §0 | "列挙された関数面 … を増やすなら" | The permitted function set does not change, but the **script gains checks 5–15, one output line, and a scan region that is the whole file for checks 9/11/12/13**; and `IERC20Min` gains one declared function (`balanceOf`, C-4). Record all of that in the same commit, per §0's own instruction, and state that the interface was **not** changed (N-9) and that the scope widening is a **tightening** (§4.5) |
 | **D-11** | **`zk-verdict/scripts/surfaces.pinned`** (introduced by task `008`; **path corrected in r5 — round 4 wrote `scripts/surfaces.pinned` and ran `ls scripts/`, a directory 008 never uses.** `ls zk-verdict/scripts/` → `zk-e2e.sh` only, run 2026-09-04 — §1.5.2) | pins `sha256(zk-verdict/contracts/src/RecknZkEscrow.sol)` as a build condition | **003 necessarily breaks this pin** (C-1…C-7). **Re-pin it in the same commit that changes the contract** — not a follow-up commit. The re-pin is a **copy of the value `surfaces.sh` prints on failure**; **no step of this spec asks anyone to compute a digest by hand**, and no agent recomputes it in another way. If 008 landed without `surfaces.pinned`, D-11 is a no-op and the implementation report says so explicitly. **`docs/specs/008-*` is not edited** (see below) |
-| **D-12** | `AGENTS.md` §0 (the enforcement paragraph) and `CLAUDE.md`'s 中心主張 block | both name `RecknZkEscrow.sol` as **the** file the claim lives in | **New in r5.** The claim is now enforced over **two** files: `zk-verdict/contracts/src/RecknZkEscrow.sol` **and** `zk-verdict/contracts/src/RecknVerdictVerifier.sol`, whose one declared function `verifyVerdict` is the second enumerated surface (check 15, §4.5.10). Record the second file, the reason (settlement authority is computed there — §3.1.4), and the three things check 15 does **not** cover (§8). **This is a widening of what the build condition asserts, so §0's rule applies even though it is a tightening of what is permitted**: the same commit updates `AGENTS.md` §0, `scripts/no-keys.sh`, this spec, the money-shot and the demo script. **Relaxing check 15 later is a founder call, not an implementer fix** |
+| **D-12** | `AGENTS.md` §0 (the enforcement paragraph) and `CLAUDE.md`'s 中心主張 block | both name `RecknZkEscrow.sol` as **the** file the claim lives in | **New in r5.** The claim is now enforced over **two** files: `zk-verdict/contracts/src/RecknZkEscrow.sol` **and** `zk-verdict/contracts/src/RecknVerdictVerifier.sol`, whose one declared function `verifyVerdict` is the second enumerated surface (check 15, §4.5.10). Record the second file, the reason (settlement authority is computed there — §3.1.4), and the three things check 15 does **not** cover (§8). **This is a widening of what the build condition asserts, so §0's rule applies even though it is a tightening of what is permitted**: the same commit updates `AGENTS.md` §0, `scripts/no-keys.sh`, this spec, the money-shot and the demo script. **Relaxing check 15 later is a founder call, not an implementer fix.** **Amended in r6, two ways.** (i) **The declaration may already exist**: task `008` introduces the check over that file (§1.5.4), so if 008 already named the second file in `AGENTS.md` §0, D-12 is an **amendment** rather than the first declaration — the same no-op discipline D-11 has — and the implementation report says which case held, quoting `docs/gauntlet.base.json.no_keys`. (ii) **What 003 declares in either case** is the part it owns: the `constructor` closure (15g), the escrow-side clauses (check 8's right-hand sides, check 7b), and the **fifth part of the seller's deployment check**, which changes what the seller is told to do and is printed in the money-shot (§7.2) |
 
 | ID | file:line | change |
 |---|---|---|
@@ -3877,14 +4523,22 @@ do not fix it.** The same applies to `docs/ethonline-2026/DISCLOSURE.md`,
 
 Each part must end green. Do not merge them into one Codex call.
 
-0. **P0 — the base measurement, before anything else.** On the tree exactly as 008 left it
-   and **before a single 003 edit**, run `bash scripts/gauntlet.sh --measure` and commit
-   `docs/gauntlet.base.json` (§1.5.1). Everything downstream substitutes `{P}` / `{S}` from
-   it and `ac.sh` refuses to run without it. **If `--measure` finds the file already
-   present it must refuse**, so P0 happens once; if it was somehow written after an edit,
-   stop and return to the founder (`AGENTS.md` §7) rather than deleting and re-measuring.
-   The report pastes the file. Ends green on `bash scripts/gauntlet.sh --measure && test -f
-   docs/gauntlet.base.json`.
+0. **P0 — the base measurement, before anything else.** On the tree exactly as 008 left it,
+   **committed and clean**, and **before a single 003 edit**, run
+   `bash scripts/gauntlet.sh --measure` and commit `docs/gauntlet.base.json` **in its own
+   commit, which must be the only commit that ever adds that path** (§1.5.1 rules 2 and 4).
+   Everything downstream substitutes `{P}` / `{S}` from it and `ac.sh` refuses to run without
+   it. **`--measure` refuses if the file already exists and refuses if `git status
+   --porcelain` is non-empty**, so P0 happens once and on a tree whose `base_commit` really
+   describes it.
+   **Never delete this file.** If it was somehow written after an edit, **stop and return to
+   the founder** (`AGENTS.md` §7); deleting and re-measuring is the laundering path r5 finding
+   2 named, and GC-15 will see the `D` in the log for the rest of the project even if the
+   intent was innocent. The report pastes the file **and** the output of
+   `git log --diff-filter=A --oneline -- docs/gauntlet.base.json` (exactly one line).
+   **Read `no_keys` before starting P3**: it decides whether 003 extends 008's check over
+   `RecknVerdictVerifier.sol` or introduces it, and its third case is a founder stop (§1.5.4).
+   Ends green on `bash scripts/gauntlet.sh --measure && test -f docs/gauntlet.base.json`.
 1. **P1** — C-1…C-7 in `RecknZkEscrow.sol` + minimal adjustment of the four existing
    `RecknZkEscrowTest` tests to the new constructor. **The same commit re-pins
    `zk-verdict/scripts/surfaces.pinned` (D-11, §1.5.2) by copying the digest `surfaces.sh`
@@ -3895,17 +4549,22 @@ Each part must end green. Do not merge them into one Codex call.
    gauntlet test exists**, and its first demonstration is that every `forge` AC is
    **red** (AC-18 observation 1). Ends green on AC-18's control (observation 6) only after
    P3/P4.
-3. **P3** — `scripts/no-keys.sh` checks 5–**15**, two-sided check 2, the **one-pass**
-   stripper and the three derived texts in the order §4.5.1 fixes, the
-   `checks: 15/15 passed` line, `scripts/no-keys-selftest.sh` with the **two-file** sandbox
-   layout, the 19 source-text mutants and the 19-entry exit corpus with its **four**
-   controls. Ends green on AC-0, AC-1.
-   **This part carries the round-3 blocker and the round-4 BLOCKER 1; do it before the
-   test-writing parts** so that both live-tree falsifiers can be run early: apply M-41 to
-   `RecknZkEscrow.sol` → AC-0 and AC-1 red, and apply **M-51** to
-   `RecknVerdictVerifier.sol` → AC-0 and AC-1 red. **Run E-17 and E-18 against whatever
-   stripper you wrote before writing anything else in this part**; a two-pass stripper
-   passes the other seventeen corpus entries and hides a full drain (§4.5.1).
+3. **P3** — `scripts/no-keys.sh` checks 5–**15** (with check 15 **extended from 008's or
+   introduced in full**, per `no_keys` — §1.5.4), two-sided check 2, **7b**, **check 8's
+   right-hand-side clause**, **15g**, the **one-pass** stripper and the three derived texts in
+   the order §4.5.1 fixes, the `checks: 15/15 passed` line, `scripts/no-keys-selftest.sh` with
+   the **two-file** sandbox layout, the **20** source-text mutants and the **23**-entry exit
+   corpus with its **four** controls. Ends green on AC-0, AC-1.
+   **This part carries the round-3 blocker, the round-4 BLOCKER 1 and the round-5 BLOCKER 1;
+   do it before the test-writing parts** so that all three live-tree falsifiers can be run
+   early: apply M-41 to `RecknZkEscrow.sol` → AC-0 and AC-1 red; apply **M-51** to
+   `RecknVerdictVerifier.sol` → AC-0 and AC-1 red; and apply **M-57** (the constructor
+   chain-id branch) → **AC-0 and AC-1 red and every other AC green** — assert the second half
+   too, because it is what makes G-40 an `enforcement` row rather than an EVM one (R-11).
+   **Run E-17 and E-18 against whatever stripper you wrote before writing anything else in
+   this part**, and **E-21 and E-22 immediately after**: a two-pass stripper passes the other
+   twenty-one corpus entries and hides a full drain, and a one-pass automaton that ignores
+   `\"` passes twenty-two of them and hides the same drain (§4.5.1).
 4. **P4** — mocks (including `RecipientFeeERC20`) + `KeyGauntlet.t.sol` +
    `KeyGauntletStructural.t.sol` + `SWEEP_EXEMPT.txt`. Ends green on AC-5, AC-8, AC-9,
    AC-12, AC-19, AC-20 and AC-10's unit half.
@@ -3930,8 +4589,12 @@ Each part must end green. Do not merge them into one Codex call.
    `setUp`), and report it either way. **Expect this part to fail first**: it is designed to
    find tests written in P4/P5 that assert nothing, and finding some is the intended outcome,
    not an error in the sweep.
-8. **P8** — `scripts/gauntlet.sh`, `docs/gauntlet.json`, the digest check, the gag-rule
-   grep, S-1. Ends green on AC-13, AC-15, AC-16, AC-17.
+8. **P8** — `scripts/gauntlet.sh`, `docs/gauntlet.json`, the digest check **and GC-15's four
+   history assertions**, `contract.verifier_sp1_verifier` read on-chain (part 5), the gag-rule
+   grep, S-1. Ends green on AC-13, AC-15, AC-16, AC-17. **Run AC-16's `Falsify` branch (c) —
+   commit a softened block, `git rm` the base file, re-measure, commit — and observe it
+   non-zero at GC-15 before reporting AC-16 green** (R-6). Under round 5's text this branch
+   was claimed to be blocked by `--measure`; it was not.
 9. **P9** — D-1…**D-12**. Ends green on `bash scripts/ac.sh --all` from a clean tree.
 
 ---
@@ -4044,7 +4707,7 @@ Genuinely undecided. **Do not guess; bring these back rather than inventing an a
   a criterion that everything satisfies is meaningless. §5.4a makes it answerable, and adds
   a second, adjacent budget the founder may want to look at at the same time: the pinned
   **column** exclusion list, today `{M-34}`, one entry.)* **(r5: the second budget now has
-  the same shape as the first — capped at 1, a second entry fails AC-13 check 14 and is a
+  the same shape as the first — capped at 1, a second entry fails GC-14 and is a
   founder decision, r4 finding 9. So the question is now one question about two numbers:
   `SWEEP_EXEMPT.txt` ≤ 2 tests and `excluded_columns` ≤ 1 mutant. Both are printed on
   screen. The founder may set either to 0.)**
@@ -4065,6 +4728,24 @@ Genuinely undecided. **Do not guess; bring these back rather than inventing an a
   screen*, because 003's claim is about **keys** and is unaffected — but that is exactly the
   kind of "our claim is narrower than it looks" argument that needs a founder, not an agent.
 
+  **Two things r5 asked to be made explicit before the founder rules, both recorded here in
+  r6 rather than decided:**
+  - **The recommendation is not an obligation anywhere, deliberately.** §7.2's banner has no
+    line for the truncation item and AC-16 pins only that the honest scope was **not
+    changed**, never that it is **displayed**. **Writing that line now would decide the
+    question**: it only makes sense under option (a), and choosing (a) is the founder's call.
+    So the obligation is stated conditionally: **if the founder picks (a), one money-shot line
+    naming the `u64_low` truncation item is added to §7.2 and AC-15's evidence covers it; if
+    the founder picks (b), nothing is added.** Either way it is one line and it is not an
+    agent's decision.
+  - **"003's claim is about keys and is unaffected" is a claim-narrowing move, and it is
+    flagged as one.** `AGENTS.md` §5 warns about exactly this shape. The argument is true as
+    far as it goes — the gauntlet's subject is *who can move a funded deal*, not *whether the
+    verdict's domain is sound* — and it is nonetheless the sentence that would let a demo show
+    a keyless escrow settled by a verdict with a known-broken domain while saying nothing
+    false. **An agent must not decide whether that can be said on a stage; the founder must**,
+    and r5 was right that round 5 correctly did not.
+
 - **OQ-9 — new in r5. `RecknVerdictVerifier.sol` is now inside the build condition; is it
   also inside 003's *scope line*?** The scope line (r1, binding on 004) says 003 may change
   `RecknZkEscrow.sol` **only where a matrix row would otherwise have no true expected
@@ -4076,6 +4757,56 @@ Genuinely undecided. **Do not guess; bring these back rather than inventing an a
   003, which wrote them, or the task that next edits it. *Recommendation: the check moves
   with `scripts/no-keys.sh`, which `AGENTS.md` §0 reserves to the founder; agents may
   tighten it and may never loosen it.* **Founder call.**
+
+- **OQ-10 — new in r6. Should check 14 pin assignment *right-hand sides*, and what is the
+  budget for finding out?** *(Found while writing R-11. It is **not** one of r5's six
+  findings, and `AGENTS.md` §7 makes this round the hard stop, so it is returned open rather
+  than closed — that is the prescribed outcome, not a deferral.)*
+
+  **The fact.** Check 14 extracts an assignment's **left-hand side** (14b) and compares it
+  against a permitted set (14c). `to` is a permitted left-hand side in `settleWithProof` as a
+  bare local `L`. **Nothing in this document constrains what `to` is set to.** Round 4's INV-2
+  claimed otherwise in prose (*"only from `d.seller` / `d.buyer`"*); that sentence is corrected
+  in §4.4 in this round. The same is true of `deals[dealId]`'s right-hand side in `fund`.
+
+  **What is closed and what is not.** Check 7b (§4.5.6a) removes the *environment* as a branch
+  condition, so the version of this attack that keys on `block.chainid` — the one that would be
+  invisible to every instrument here (R-11) — is dead. What remains is a branch keyed on an
+  ordinary **constant**:
+
+  ```solidity
+  if (token == 0x<a mainnet token address>) { to = 0x<attacker>; }   // inside settleWithProof
+  ```
+
+  It produces no call-shaped token (9a/9b/9c see nothing), reads no execution-context value
+  (7b sees nothing), and has a permitted left-hand side (14c admits it). R-5 says a fuzz is not
+  its killer, and the gauntlet's tokens are mocks, so no behavioural row is red either.
+
+  **Why it was not closed in round 6.** Two reasons, both process rather than taste. (i) The
+  reviewer's instruction for this round is explicit — *"round 6 must not open new mechanism
+  design; if a round-6 finding lands that is not one of these six, the hard stop applies and
+  the document goes to the founder with it open."* (ii) The obvious closure — pin the
+  right-hand side of every assignment whose left-hand side is not a fresh local — **cannot be
+  written safely against a source that does not exist yet**: `fund`'s `deals[dealId] = Deal({…})`
+  literal is written in P1, and a pin authored blind would either over-reject the correct
+  implementation (M-0 must be **accepted**, and a check that fails M-0 fails everything) or be
+  weakened during implementation, which is the private-edit act this document exists to
+  prevent.
+
+  **The three options, priced.**
+  - **(a) A new task.** Pin `to`'s right-hand side to `d.seller` / `d.buyer` and the deal
+    struct's `seller` / `buyer` fields to `seller` / `msg.sender`, as **14d**, written against
+    the post-P1 source with M-0 accepted as its first control. Cost: one sub-check, one corpus
+    entry, one mutant, one round of review. This is the recommendation.
+  - **(b) Accept and disclose.** §8 already carries it. The demo's claim survives — a
+    constant-keyed redirect is a **backdoored source**, not a key, and `no-keys.sh` is not
+    claimed to be a proof about source that has not been read — but *"every theft path
+    reverts"* would be doing work the matrix does not do.
+  - **(c) Fold into 004.** 004 must reuse this structure (§ preamble); 14d would land with it.
+    Cost: the gap is open during 003's demo.
+
+  **Founder call.** The agent's view, stated once and not repeated: **(a)**, sized at one
+  part, after P1 exists.
 
 ---
 
@@ -4193,7 +4924,7 @@ Appendices A and B: `adopted` = the reviewer's required change is implemented as
 | # | sev | finding | disposition | where |
 |---|---|---|---|---|
 | 1 | **BLOCKER** | settlement authority passes through `RecknVerdictVerifier.verifyVerdict`, a file no check, no fuzz and no mutant in 003 ever reads; a constant-address splice there is a resolver and every instrument stays green | **adopted — option (a), with the parts of (b) that are true kept anyway.** **Check 15** (§4.5.10) brings the file into `no-keys.sh`'s region as **two properties**, not a name list: **P4** (four top-level declarations, exactly one `function`, named `verifyVerdict`) and **P5** (the body is two statements, no control flow, no `msg.sender` / `tx.origin` / `block.` token), plus closed assignment targets file-wide, a pinned non-function line set, and an explicitly-labelled backstop. **No interface change**: the script derives the second path from its own location, so **N-9 is untouched**. Mutant **M-51**, corpus **E-19**, control **C-V**, matrix row **G-39** (new class `enforcement`, carried by AC-13 check 16), evidence line `checks: 15/15 passed`, and **D-12** declaring the second file in `AGENTS.md` §0. **Why (a) and not (b):** §3.1.2's architecture is *close the category*, and leaving the neighbouring 58-line file open closes it over the wrong region; the file is small and static; and (b)'s required money-shot sentence — *"the contract that computes the verdict is not checked"* — is one the product cannot afford. **(b)'s disclosures are printed anyway**: §2.3(A) part 2 now says the address check establishes nothing about that address's **source**, §8 lists the three things check 15 does not cover, and the money-shot prints the enforcement region *and* `Not covered:` | §1.2, §2.3(A), **§3.1.4**, G-39, §4.5 (region), **§4.5.10**, §4.5.9, AC-0, AC-1, AC-13 checks 2/16, §5.2.1 (E-19, C-V), §5.3 (M-51), §6.3(16), §7.1, §7.2, §8, **D-12**, OQ-9 |
-| 2 | **BLOCKER** | 003 is written against the pre-008 tree while stating it runs after 008; the suite count (11 sites, two verbatim manifest strings), both honest-scope digests, INV-9's binding formula and INV-10's widths are all literals | **adopted, all four sub-items, and 008's numbers are *not* pasted.** **§1.5 is rewritten** around one rule — *003 contains no literal whose truth depends on 008* — and **§1.5.1** adds `gauntlet.sh --measure`, run once at 003's base commit, writing `docs/gauntlet.base.json` with five measurements. **§5.0.3** adds substitution tokens `{P}` (measured pre-existing count) and `{S}` (`46 + {P}`); `ac.sh` **refuses to run** without the base file, so the eleven literal sites become zero. **AC-16** pins *"unchanged since the base commit"* against **three** sources — working tree, `git show <base_commit>:…`, recorded value — and `--measure` refuses to overwrite, so the laundering path (re-measure after softening) exits non-zero. **INV-9** states the property and refers to `binding_preimage`; **INV-10** keeps the unit-crossing discipline (these fields are never compared with `Deal.amount`, at any width) and refers to `public_values` for the widths; **§8**'s honest-scope bullet stops enumerating items and says *whatever the base commit says is as true at the end as at the start*. **§1.5.2 answers all three of 008's OQ-2 couplings**, with the path corrected to `zk-verdict/scripts/` (D-11, §1.5.2 — round 4 ran `ls scripts/`). **§1.5.3** turns §7.1's `sed -n '97p'` into a content grep requiring exactly one match (AC-13 check 17). New part **P0** runs the measurement before anything else | **§1.5**, §1.5.1–§1.5.3, §1.2, §5.0.3, §5.1, AC-13 checks 4/15/17, **AC-16**, AC-17, AC-21, INV-9, INV-10, §7.1, §7.2, §8, D-4, D-11, P0, OQ-8 |
+| 2 | **BLOCKER** | 003 is written against the pre-008 tree while stating it runs after 008; the suite count (11 sites, two verbatim manifest strings), both honest-scope digests, INV-9's binding formula and INV-10's widths are all literals | **adopted, all four sub-items, and 008's numbers are *not* pasted.** **§1.5 is rewritten** around one rule — *003 contains no literal whose truth depends on 008* — and **§1.5.1** adds `gauntlet.sh --measure`, run once at 003's base commit, writing `docs/gauntlet.base.json` with five measurements. **§5.0.3** adds substitution tokens `{P}` (measured pre-existing count) and `{S}` (`46 + {P}`); `ac.sh` **refuses to run** without the base file, so the eleven literal sites become zero. **AC-16** pins *"unchanged since the base commit"* against **three** sources — working tree, `git show <base_commit>:…`, recorded value — and `--measure` refuses to overwrite, so the laundering path (re-measure after softening) exits non-zero. **[Corrected in r6 — r5 finding 2: `rm` is not an overwrite, so refusing to overwrite does not block that path and this clause was false. What blocks it is §1.5.1 rule 4's two `git log --diff-filter` assertions plus a clean-tree condition on `--measure`; AC-16's `Falsify` now traces all three branches. This row is left standing as the record of what round 5 wrote.]** **INV-9** states the property and refers to `binding_preimage`; **INV-10** keeps the unit-crossing discipline (these fields are never compared with `Deal.amount`, at any width) and refers to `public_values` for the widths; **§8**'s honest-scope bullet stops enumerating items and says *whatever the base commit says is as true at the end as at the start*. **§1.5.2 answers all three of 008's OQ-2 couplings**, with the path corrected to `zk-verdict/scripts/` (D-11, §1.5.2 — round 4 ran `ls scripts/`). **§1.5.3** turns §7.1's `sed -n '97p'` into a content grep requiring exactly one match (AC-13 check 17). New part **P0** runs the measurement before anything else | **§1.5**, §1.5.1–§1.5.3, §1.2, §5.0.3, §5.1, AC-13 checks 4/15/17, **AC-16**, AC-17, AC-21, INV-9, INV-10, §7.1, §7.2, §8, D-4, D-11, P0, OQ-8 |
 | 3 | MAJOR | *"a script that ran nothing cannot print it"* is false — two `printf`s make AC-14 and AC-21 green — and it is the sentence holding up the only two anti-degeneracy instruments; r2 finding 2 re-committed one layer up; R-9 is the rule it violates | **stronger — the false clause is deleted and replaced by two independent devices, not one.** (i) **Witnesses** (§5.0.3): AC-14 and AC-21's evidence lines carry `witness={W14}` / `{W21}`, digests over the **patched sources** that `ac.sh` **recomputes itself** without running the script under test. A two-line `printf` cannot produce them without applying every patch. (ii) **Outside-in control artefacts** (AC-18 observations **7, 8, 9**, mutants **M-52, M-53, M-56**): `ac-selftest.sh` must observe `mutation-kill.sh` rejecting a sandbox whose M-0 is not the control, `degeneracy-sweep.sh` rejecting a stubbed sandbox, and `ac.sh` rejecting a stale witness. Either device alone kills the attack. **The reviewer's correction is adopted**: AC-1's selftest is *not* affected, because AC-14's Falsify makes a fabricated selftest show up as AC-0-red/AC-1-green; that reasoning is written into AC-14's Falsify (a). **And the recursion is closed honestly rather than falsely**: §8 names `ac-selftest.sh` as the artefact nothing watches and says plainly that **003 is not a defence against an implementer who fabricates evidence** — deliberate fabrication is a different threat model from the accidental placeholder the two devices catch. General rule recorded as **R-10** | §5.0 (clause deleted), **§5.0.3**, §5.0.2, AC-14, AC-18, AC-21, §5.3 (M-52, M-53, M-56), §6.3(18), §8, **R-10**, P6 |
 | 4 | MAJOR | the stripper's two delimiter families are tested separately and never against each other; a two-pass stripper passes all 16 corpus entries and all 3 controls and hides a full drain; today's `no-keys.sh:29-30` is exactly that shape | **adopted, with the wording the reviewer asked for.** §4.5.1 states the obligation as **one pass, one state machine** — *"a stripper implemented as two independent passes is wrong in whichever order it is run"* — and spells out **both** drains: comments-first deletes the `.transfer(` after a `//` inside a string literal (and check 14 then *accepts* the assignment, because `string memory` is in `D`), strings-first deletes it between a quote inside a comment and the next quote. Corpus **E-17** (comment delimiter inside a string) and **E-18** (string delimiter inside a comment) are added, required verdict **REJECTED**; AC-1's evidence becomes `exit-corpus 19/19 rejected` (E-19 is finding 1's). §6.3 gains negative control 17 and P3 is instructed to run E-17/E-18 against the stripper **first** | §4.5.1, §5.2.1 (E-17, E-18), AC-1, §6.3(17), P3 |
 | 5 | MAJOR | `SweepProbe_F is FTest` inherits every test, so the probe cannot be read off the exit status and the pinned `control 58/58` is unreachable; the generator assumes one test contract per file | **adopted, all three parts.** §5.4a now probes with `--match-contract '^SweepProbe_' --match-test '^test_probe_setup_ok$'` **and parses that test's status from the JSON**, with a sentence saying the exit status of that command is not evidence about `setUp`; **`^SweepProbe_` contracts are excluded from every column read**, which is what makes the control column exactly `{S}`; and the generator enumerates **test-declaring contracts, not files**, with the inventory pinned in §6.1 (4 test contracts + 1 handler that declares none) and a failure if the tree disagrees. Inheritance is **kept** — §5.4a's reason for it is sound, as the reviewer says. AC-21 gains Falsify (e) | §5.4a, AC-21, §6.1 |
@@ -4243,3 +4974,93 @@ named in §8 rather than papered over.
 **(4) Say that anything is impossible.** §8 gained four residuals in this round — the
 verifier's deployed bytecode, `ISP1Verifier`, the end of the observer chain, and what a
 witness does not prove — and lost none.
+
+
+---
+
+## Appendix D — response to `docs/reviews/003-spec-r5.md` (round 6)
+
+All 6 findings (BLOCKER 2 / MAJOR 2 / MINOR 2), with where each landed. Same vocabulary as
+Appendices A–C: `adopted` = the reviewer's required change is implemented as written;
+`stronger` = a change that meets the stated requirement and goes further, with the reason;
+`founder` = returned as an open question.
+
+**This is round 6. `AGENTS.md` §2 makes it the hard stop**, so this appendix also lists, in
+its last two sections, exactly what is **open** and goes to the founder.
+
+| # | sev | finding | disposition | where |
+|---|---|---|---|---|
+| 1 | **BLOCKER** | check 15 pins assignment **left-hand sides** and excludes the `constructor`, so the address `verifyProof` is dispatched to is chosen in an unchecked region of the checked file; the braced chain-id form passes 15a–15f **and every behavioural instrument**, because the gauntlet runs on a local chain; P5's *"there is no branch for a constant address to live in"* is false | **adopted, all four required changes, plus the rule the reviewer's own diagnosis implies.** (1) **15g** pins the constructor the way 15c pins `verifyVerdict`: parameter list, exactly two statements, **each right-hand side the parameter of the same name**, and zero `if`/`?`/`block.`/`chainid`/`tx.`/`0x` tokens; a file with no locatable constructor **fails**. (2) The deployment check becomes **five parts** — `RecknVerdictVerifier(verifier).verifier()` read on-chain, printed as `contract.verifier_sp1_verifier`, asserted non-empty by GC-7, and printed in the money-shot next to a restatement of what the seller must now do. **§2.3(A) states what part 5 does not establish and its tier.** (3) One corpus entry **E-20**, one mutant **M-57**, one matrix row **G-40**; `T` → **60**, `T_src` → **20**, corpus → **23**, matrix → **40 rows / 2 enforcement**. (4) **Check 8 gets the identical right-hand-side clause** for the escrow's constructor, witnessed by **E-23**. **Stronger, in two places the reviewer did not ask for and the diagnosis requires:** **check 7b** closes the *execution-context tokens* per range, so neither checked file can read `block.chainid` at all — a name ban would be R-7's mistake, so it is stated as a closed category (**P6**) with the token list as the error message; and the failure type is written down as **R-11** with its three parts (close the environment; a region defined by exclusion needs a pin per excluded region; **an LHS-only pin is not a pin**) | §1.2, §2.1, §2.2, **§2.3(A)**, **§3.1.4**, §4.4 INV-2, §4.5.2, **§4.5.6a**, §4.5.7, **§4.5.10 (15g, P5)**, AC-0, AC-1, GC-2/GC-7/GC-16, §5.2.1 (**E-20, E-21…E-23**), §5.3 (**M-57**), §6.1, §6.3(21), **R-11**, §7.1, §7.2, §7.3, §8, D-12, P3, **G-40** |
+| 2 | **BLOCKER** | the anti-laundering mechanism is *"refuses to **overwrite**"* and the laundering path is `rm`; all three of AC-16's sources are re-derived from the softened tree; **AC-16's own `Falsify:` states an outcome that does not occur**, which R-6 makes a broken instrument; §9.1 P0 gives an instruction where R-10(i) demands a mechanism | **adopted exactly as the reviewer scoped it, and the escalation the reviewer rejected is not taken.** §1.5.1 gains **rule 4**: the base file must be **tracked**, must have exactly one `--diff-filter=A` commit, must have **no** `--diff-filter=D` commit, and its blob at that `A` commit must equal the working tree — asserted by **GC-15**. **Rule 2** gains the **clean-tree** condition (`git status --porcelain` empty) and **loses the "written once and only once" clause**, replaced by a paragraph saying in as many words that refusing to overwrite is not refusing to be replaced. **AC-16's `Falsify:` is rewritten as three branches with the outcomes that actually occur**, and branch (c) — commit the softening, `git rm`, re-measure, commit — is the one round 5 claimed was blocked and was not. §9.1 **P0** now forbids the delete, requires the base file's own commit, and makes the report paste the `A`-filter log. **Appendix C's row 2 carries an inline correction** rather than being rewritten. **Honest limit, stated in §8:** a rewritten history defeats rule 4, and that is the same class as fabricating `ac-selftest.sh` — deliberate fabrication, already outside the threat model | §1.5.1 (rules 2 and 4), **AC-16**, **GC-15**, §6.3(23), §8, §9.1 P0/P8, Appendix C row 2 |
+| 3 | MAJOR | AC-17 pins the suite's **size** and four **names**; the other eight pre-existing tests are unprotected, so a meaningful one can be deleted and replaced by a passing one with every gate green | **adopted as the reviewer specified.** `--measure` records the **id set** (`<contract>:<test>`, sorted) instead of a length; `{P}` becomes its cardinality; **AC-17 requires the recorded set to be a subset of the run's ids and prints every missing one**; §1.2's four names stay as the load-bearing named subset. `ac.sh` refuses a set that is not an array of ≥ 1 distinct ids, and **GC-19** asserts the shape independently. AC-17's `Falsify` gains the reviewer's own repro — delete `test_reexec_tampered_public_values_are_rejected`, add a passing test, observe non-zero — and §6.3 gains control 22. **§8 states the boundary**: identity is not meaning, and a pre-existing body gutted in place is still invisible, because AC-21's sweep covers the 46 gauntlet tests only | §1.2, §1.5.1, §5.0.3, **AC-17**, **GC-19**, §6.3(22), §8 |
+| 4 | MAJOR | §4.5.1's escape-handling clause is the one obligation with no corpus witness; a one-pass automaton that treats `\"` as a closing quote passes all nineteen entries and all four controls and hides a full drain | **adopted, with one deliberate deviation from the reviewer's arithmetic, stated here rather than buried.** **E-21** is the reviewer's splice (`string memory ref = "a \" // b"; IERC20Min(token).transfer(seller, amount);`, same line, which is E-17's shape). **E-22 is its `'` twin, and it is a separate entry.** The reviewer's text asks for both forms while its arithmetic (*"exit-corpus 20/20, or 21/21 with finding 1's entry"*) counts one. **Two, because §4.5.1's clause is written over "the two string forms" and a single entry cannot distinguish an automaton that honours `\"` and not `\'` from a correct one** — which is exactly the reasoning that made E-15/E-16 insufficient for the delimiter families in r4. Corpus is therefore **23** (19 + E-20 + E-21 + E-22 + E-23), not 21 | §4.5.1 (referenced), §5.2.1 (**E-21, E-22**), AC-1, §4.5.9, P3 |
+| 5 | MINOR | §8's *"the word appears only in §5.0.1 and in its restatement"* is a location claim, and it drifted in the round that wrote it | **adopted, replaced by the property.** §8 now says the word **is never used about an adversary anywhere in this document, and its only substantive use is §5.0.1's claim about a script's exit condition**, with the appendix occurrences characterised as records of rounds that *refused* to make such a claim. **And the paragraph now names its own failure**: round 5 avoided asserting a count, then asserted a location set, which is the same defect one category up | §8 |
+| 6 | MINOR | two check-numbering series both reach 15, and one is cited without its script | **adopted, with a different prefix than the reviewer suggested, for a stated reason.** `gauntlet.sh --check`'s checks are renamed **`GC-1 … GC-19`** throughout §1, §4, §5, §6 and §7. **Not `C-`**, which the reviewer proposed: `C-1…C-7` are this document's contract changes and `C-P` / `C-S` / `C-V` / `C-M0` are the selftest controls, so that prefix was already taken twice and the rename would have created a third collision. §4.5.2 states the convention once. **Appendices A–C keep the old spelling** and a sentence says so — they are round bookkeeping, not specification | §4.5.2, §1.5.1, AC-13 (whole list), AC-16, §5.0.2, §5.4a, §6.1, §7.1 |
+
+### Also landed in round 6, from the orchestrator's ruling of 2026-09-04 (not a review finding)
+
+**008 owns the check over `RecknVerdictVerifier.sol`; 003 extends it.** 008's own round-4
+review reached the same file from the other side; 008 must edit it (it widens
+`VerdictPublicValues`) and 008 runs first, so attributing the check's *introduction* to 003
+would leave the region open for the whole of 008 and 009. **§1.5.4** records the ruling, states
+what 003 owns regardless (15g, the five-part deployment check, E-20 / M-57 / G-40), and — per
+§1.5's rule about 008-coupled facts — **decides the case by measurement, not by assumption**:
+the new `docs/gauntlet.base.json.no_keys` records what `scripts/no-keys.sh` already is at the
+base commit, with three outcomes (003 introduces the check in full / 003 extends it in place /
+**stop and return to the founder**, if 008 changed the script's shape in a way §4.5.2's table
+does not enumerate). **No 008 literal is pasted anywhere**, exactly as with `{P}`.
+
+### What changed in size (round 5 → round 6)
+
+Matrix rows 39 → **40** (enforcement 1 → **2**; theft, authorized and disclosed unchanged at
+21 / 7 / 10); acceptance criteria **22** (unchanged); mutant ids 59 → **60** (`T_src` 19 →
+**20**, `T_beh` **25** and `T_hd` **14** unchanged); `no-keys.sh` checks **15** over **2** files
+(unchanged in count — 15g is a sub-check of 15, 7b of 7, and check 8's clause is a clause);
+exit-corpus entries 19 → **23**; selftest controls **4** (unchanged); sweep columns **29**
+(unchanged); `gauntlet.sh --check` checks 18 → **19**, renamed `GC-*`; gauntlet tests **46**
+(unchanged); documentation obligations **D-1…D-12** (unchanged); implementation parts **10**
+(unchanged); anti-degeneracy rules R-1…R-10 → **R-1…R-11**; open questions 9 → **10**; base
+measurements 5 → **7**. **Every one of those except the rule count, the part count and the
+question count is recomputed by `scripts/gauntlet.sh --check`, so this paragraph cannot drift.
+Verified by running the commands against this document on 2026-09-04:** `T` = 60 by the
+anchored `KILLTABLE` expression, and the matrix region contains 40 rows with 21 theft / 7
+authorized / 10 disclosed / 2 enforcement.
+
+### Four things round 6 refused to do
+
+**(1) Close OQ-10 quietly.** The right-hand-side hole in check 14 was found *while writing
+R-11*, it is not one of r5's six findings, and the reviewer's instruction for this round is
+explicit that a seventh finding goes to the founder open. It is written up with its splice, its
+three options and a priced recommendation, and **INV-2's false sentence about it is corrected
+in place** — so nothing in the document now claims a mechanism that does not exist.
+
+**(2) Add the round-5 recommendation for OQ-8 as an obligation.** Naming the truncation item on
+screen only makes sense under option (a), and choosing (a) is the founder's call; writing the
+money-shot line now would decide the question by implementation. The obligation is stated
+conditionally instead, and **the "our claim is about keys" argument is explicitly flagged as
+the claim-narrowing move `AGENTS.md` §5 warns about**, which is r5's second point about OQ-8.
+
+**(3) Extend a denylist.** `block.chainid` is not added to check 13. The execution context is
+closed as a **category** (P6, check 7b, 15g-iv), the token list is the error message, and R-7 is
+the reason.
+
+**(4) Say that anything is impossible.** §8 gained four residuals this round — the
+environment-conditional branch that no EVM row can show failing, part 5's own limit, the base
+file's history versus a rewritten history, and identity-versus-meaning in AC-17's subset — and
+lost none. The word *impossible* is still used about exactly one thing: a script's exit
+condition.
+
+### What goes to the founder, open
+
+1. **OQ-10** *(new)* — should check 14 pin right-hand sides? Recommendation: a new task, one
+   part, after P1 exists. The gap is disclosed in §8 and in §4.5.6a until then.
+2. **OQ-8** — what if 008 does not land? Unchanged, plus r5's two additions now recorded: the
+   truncation-on-screen line is **conditional on the founder picking (a)**, and the
+   *"003's claim is about keys"* argument is flagged as claim-narrowing.
+3. **OQ-1, OQ-2, OQ-3, OQ-5, OQ-6, OQ-7, OQ-9** — unchanged and still open, as r5 recorded.
+4. **The seller's deployment check now has five parts.** This is a change to what the seller is
+   told to do, printed in the money-shot; it is a tightening, and it is founder-visible by
+   §0's rule.
+5. **§1.5.4's third case is a stop condition**: if 008 left `scripts/no-keys.sh` with a check
+   count this document's table does not enumerate, the implementer stops rather than folding an
+   unspecified check into a verbatim-compared evidence string.
