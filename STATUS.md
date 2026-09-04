@@ -48,6 +48,7 @@
 | **008 verdict domain soundness** | spec | r2 | **CHANGES** | `docs/reviews/008-spec-r2.md` |
 | **008 verdict domain soundness** | spec | **r3** | **CHANGES** | `docs/reviews/008-spec-r3.md` |
 | **008 verdict domain soundness** | spec | **r4** | **CHANGES** | `docs/reviews/008-spec-r4.md` |
+| **008 verdict domain soundness** | spec | **r5** | **CHANGES** | `docs/reviews/008-spec-r5.md` |
 
 ## 003 spec review r5（2026-09-04）— **CHANGES**
 
@@ -249,6 +250,67 @@ Honest scope の 2 digest は再計算して一致。文書内の算術（`T`=48
 
 **round 4 は短いはず**: BLOCKER 3件はいずれも1節＋corpus/mutant 1件の局所修正で、
 matrix・manifest・算術・開示・honest-scope 凍結は検証に耐えた。**r6 hard stop まで残り 3 周。**
+
+## 008 spec review r5（2026-09-05）— **CHANGES**
+
+記録: `docs/reviews/008-spec-r5.md`（payload `/tmp/reckn-payload-008-spec-r5.md` /
+Codex raw `/tmp/reckn-codex-008-spec-r5.md`、**呼び出しは 1 回・`-s read-only`**）。
+対象 `docs/specs/008-verdict-domain-soundness.md`（**3619 行**）は `reckn-spec`（Claude Code）起草＝
+Codex は書いていないので独立レビューとしてフル適用（payload §0 に明記）。**次が hard stop（r6）。**
+
+**r4 の 9件は全部閉じている。** 仕様の実測値は全て今日再測定して一致した——43トークンの語彙、
+引用符行1・`/*` 0・`*/` 0、代入5、`verifyVerdict` 本体の `;` 2、r4 splice の **+5** と
+`verifyProof` 削除の **−1**、`surfaces.pinned` の2 digest、line 711 の一意性、AC-14 の
+9 literal / marker 8–11 不在 / tilde 14（naive 正規表現は 12）/ `~34 s` ちょうど1。
+**数値の誤りは1件も無い。findings は全て「その数値から何を結論したか」の側にある。**
+
+**findings 6件（BLOCKER 2 / MAJOR 2 / MINOR 2）。**
+
+1. **[BLOCKER] M-15 の因果が偽——検証者の定数を入れ替えても AC-10 は落ちない。**
+   `RecknZkEscrow.sol:25-26` は**自前の** `REPRODUCED`/`FAILED` を宣言し `:109-112` はそれと比較する
+   （`:4` の import は contract 型と struct だけ）。よって M-15 は誰に払うかを変えず、AC-10 の4本は
+   緑のまま → AC-13 が miss を記録 → 仕様自身の規則で **stop**。**AC-10（money-shot を持つ行）が
+   実質無 mutant。** 修正は M-15 の付け替え（~10分）。
+2. **[BLOCKER] check 5 は3領域を「除外」でしか pin していない**——struct のメンバ列、定数2つの**値**
+   （**10進 literal は5節のどれからも不可視**）、constructor の代入の**右辺**。実測で確認: struct を
+   `outcome` 先頭に並べ替えた版が **5a–5e を全て通る**（語彙43は集合として一致、宣言数一致、本体2文一致、
+   代入5・LHS一致）。`verifyProof` は本当に呼ばれ `dealBinding` は語6のままなので escrow の binding は通り、
+   `pre == 0` の deal に対する**本物の `Failed` proof が seller に払う**。
+   **003 r6 の生きている BLOCKER と同族**（`to` の右辺が無拘束 = R-11(iii)「左辺だけの pin は pin ではない」）
+   で、これが3例目。**`ac008.sh --all` は落ちる**（AC-10 test 1/3 が捕まえる）——だから Codex の
+   「check 5 だけで決まる」枠組みは却下したが、**`no-keys.sh` は commit 前とデモ時の器具**であり
+   `AGENTS.md` §6 の commit 儀式に `forge test` は無いので、**exit 0 が「主張はまだ真」を表示する側が
+   偽になる**。加えて文書は3箇所でこの穴の**逆**を書いている（R-10 item 4 の「同じものを計算する」、
+   §8 R-10 の非成立4項目、5d の「早期離脱の第3の道は無い」）。OQ-5/OQ-6 が記録した
+   **「自分に都合の良い方向の列挙」の4例目**。
+3. **[MAJOR/must-fix] check 5 が「性質」実装か「禁止語 grep」実装かを分ける mutant が無い。**
+   M-17 は `tx.origin` splice なので denylist でも検出でき、18行すべて緑のまま
+   `AGENTS.md` §0 に出荷される「禁止語の列挙ではなく閉包性質」が**偽の木**が作れる。
+   §7.8(d)(4) がレビュアに渡す2つの witness（`block.chainid` / `assembly{origin()}`）も
+   denylist に捕まるので**判別しない**。判別する witness は文書内に既にある（AC-0 Falsify 3 =
+   `verifyProof` 文の削除）。修正は sandbox mutant **M-19** 1本（zero-build、phase 17 の使い回し）。
+4. **[MAJOR] 「R5 に mutant は作れない」は偽。** founder の OQ-5(b) 却下は**リポジトリの** pin を
+   変える設計についてのもので、**sandbox 内のコピー**には移らない。clean control 済みの `$S` で
+   `surfaces.pinned` のコピーだけを1文字変えれば、正しい実装は非ゼロ＋**変わっていない** target digest を
+   印字し、heredoc 実装は **0 で抜ける**——「全実装が落ちる」ことはない（誤ったファイルを digest する実装は
+   8d で harness failure になる）。phase 20 を1本足せば R5 は「読んで確認」から機械検査に移る。
+5. **[MINOR]** §7.8 は「§7.8 が守られなかったことを誰が検出するか」を書いていない（終端は founder）。
+   Codex の「§8 に移せ」は **却下**——§8 は honest scope に逐語で写る節で、r3 が §7.6/§8 の分離を健全と
+   確認済み。
+6. **[MINOR]** 「003 の literal は1つも持ち込んでいない」と書きながら 003 の R-7 を逐語引用している。
+
+**Codex の裁定。** BLOCKER 1件（struct 並べ替え）は**本物だが severity の根拠は作り直した**——
+Codex 自身の実例は AC-10 test 1 が捕まえる。そして **Codex の「確認済み」5件のうち1件が偽**:
+*「M-15 の定数入れ替えは escrow の比較を誤らせる」*は**逆**で、それが上の BLOCKER 1。
+**誤りの向きは案を通す方向。** §7.8 への remedy も却下。**独立レビューが決定的な finding を出しつつ、
+同じ出力の中で仕様を通す方向に誤る**——両方向に裁定が要ることの実例として記録する。
+
+**round 6 の見積り（9/9 に間に合わせる観点）**: BLOCKER 2件は「1節＋sandbox phase 1本」と
+「mutant の付け替え」で、MAJOR 2件は**どちらも zero-build の sandbox phase 1本ずつ**。
+mutant は 18 → 20（項目2が mutant 形を取れば 21）、**manifest は 18行のまま、cargo 91 / forge 6 は不動**。
+AC-13 の 40分 budget は Groth16 の**再生成回数**で律速されており、**budget を上げて吸収しない**。
+**founder に要る答え**: 項目2の形（5f で締めるか、R-11(iii) の最小＝3文の訂正＋R-10 に3項目追加＋OQ 化か）。
+OQ-1 / OQ-2 は r4 から不変。OQ-4 は round 5 で初めて実装義務が付いたので**受諾が既定**。
 
 ## 008 spec review r4（2026-09-04）— **CHANGES**
 
@@ -823,8 +885,8 @@ AC-11(a) の静的リテラル検査は base64 化 1 行で抜けられ、AC-11(
 **受理された（2026-09-04、Kartik / ETHGlobal co-founder より）。** Hack on Existing Project で参加確定。
 
 **founder の手（期限あり）**:
-- **RSVP — 受理メールから24時間以内**
-- **0.005 ETH のステーク**（dashboard 上。参加完了後に返還）→ ステーク後に Discord リンクが出る
+- ✅ **RSVP — 完了**（2026-09-05 報告）
+- ✅ **0.005 ETH のステーク — 完了**（2026-09-05 報告。参加完了後に返還）
 - Discord 参加、Event Info Center 確認、Code of Conduct 確認
 - ステーク後に `DISCLOSURE.md` 全文を主催者へ（`§1` の修正は 2026-09-04 に適用済み）
 
