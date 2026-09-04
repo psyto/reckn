@@ -46,6 +46,7 @@
 | **008 verdict domain soundness** | spec | r1 | **CHANGES** | `docs/reviews/008-spec-r1.md` |
 | **008 verdict domain soundness** | spec | r2 | **CHANGES** | `docs/reviews/008-spec-r2.md` |
 | **008 verdict domain soundness** | spec | **r3** | **CHANGES** | `docs/reviews/008-spec-r3.md` |
+| **008 verdict domain soundness** | spec | **r4** | **CHANGES** | `docs/reviews/008-spec-r4.md` |
 
 ## 003 spec review r5（2026-09-04）— **CHANGES**
 
@@ -247,6 +248,71 @@ Honest scope の 2 digest は再計算して一致。文書内の算術（`T`=48
 
 **round 4 は短いはず**: BLOCKER 3件はいずれも1節＋corpus/mutant 1件の局所修正で、
 matrix・manifest・算術・開示・honest-scope 凍結は検証に耐えた。**r6 hard stop まで残り 3 周。**
+
+## 008 spec review r4（2026-09-04）— **CHANGES**
+
+記録: `docs/reviews/008-spec-r4.md`（payload `/tmp/reckn-payload-008-spec-r4.md` /
+Codex raw `/tmp/reckn-codex-008-spec-r4.md`、`-s read-only`）。
+対象 `docs/specs/008-verdict-domain-soundness.md`（**2744 行**）は `reckn-spec`（Claude Code）起草＝
+Codex は書いていないので独立レビューとしてフル適用（payload §0 に明記）。
+
+**Codex 呼び出しは実効 1 回。** 1回目は**私のハーネスの 10 分上限で kill され出力ファイルが
+生成されなかった**（返答ゼロ）。同一 payload を編集せずバックグラウンドで再発行し 1 回返答。
+気に入らない答えの再実行ではない。監査できるよう記録する。
+
+**findings 9件（BLOCKER 1 / MAJOR 3 / MINOR 5）。r3 の 7件は全部閉じている**
+（sandbox の control→mutation 順・4入力・Location rule、`:600` の byte-identical 訂正、
+AC-11 の glob、testkit 配置、host-only 限定の3箇所、§7.5 の条件付き化、いずれも現物で確認）。
+2 digest と line 711 は再計算して一致、cargo 91 と mutant 16 の内訳も再計算して閉じる。
+
+1. **[BLOCKER] `RecknVerdictVerifier.sol` が決済権限の経路上にあり、008 がそれを編集するのに、
+   008 のどの受入条件も守っていない。** `no-keys.sh:19` は `RecknZkEscrow.sol` しか読まず、
+   AC-0b は2ファイルしか pin せず、§7.1 のファイル表にこのファイルが**無い**（§3.4 `:465-469` で
+   `uint64`→`uint256` に変えるのに）。M-15 は定数を入れ替えるだけで分岐に届かない。
+   `verifyVerdict` に `tx.origin` 分岐を差し込むと `verifyProof` に到達せず、
+   `settleWithProof` は偽の `Reproduced` で seller に払う。**008 の全 AC が緑のまま。**
+   `:1842` はこの事実（`no-keys.sh` がこのファイルを読まない）を書いた上で**逆の結論**を出している。
+   003 r5 が同じ穴を自分の BLOCKER 1 として check 15（P4/P5）で塞いだが、**実行順は 008 → 009 → 003**
+   なので 2タスク分あいたままになる。r5 の閉じ方は 003 の property 対を 008 に写し、
+   zero-build の sandbox mutant を1本足すこと。`AGENTS.md` §0 の surface に2つ目のファイルを
+   宣言するかは **founder 判断**。
+2. **[MAJOR] AC-00b は digest を一切計算しない `surfaces.sh` で満たせる。** M-8 が証明するのは
+   「**名指しされた1つのコメント**が変わると exit status が変わる」だけ。`grep -q '<そのコメント>'`
+   で足りる（Location rule 準拠・8d 通過・8g 非ゼロ＝検出扱い）。`surfaces.pinned` を読まない実装が
+   通るので **r2 finding 6 の修正（digest を仕様の literal にした意味）が再び開く**。加えて
+   **AC-0b の第2節（`head -710`）にはどの mutant も当たらない**（M-16 は `:1954` で 711 行より下と
+   明記）。この節が守るのは差分テストの**基準側**＝`reexec-evm::replay` で、緩めば「guest でなく
+   oracle を直して通す」経路が空く。r5: 8g で `computed:` の digest 出力を要求＋sandbox 第2段で
+   711 行上を変異＋`surfaces.pinned` を読むことを検定対象にする。
+3. **[MAJOR] 「実装レビューが読んで走らせる」を唯一の信頼の根に据えながら、その義務がどこにも無い。**
+   L-3（`:2393-2408`）はそう書くが、§7.7 が縛るのは**実装者の報告**だけ。2本の echo スクリプトで
+   §7.7 の証拠行は全部貼れる。r5: stage=impl レビューの義務（自分で読む・自分で走らせる・
+   自分の run の per-mutant 行を `docs/reviews/008-impl-rN.md` に記録・報告だけの受理は受理でない）を
+   仕様に1節足す。**「人が読む」設計自体は受け入れる**（再帰は repo の内側で終わらない）。
+   受け入れられないのは、その人が指名されていないこと。
+4. **[MAJOR] INV-11 と §8 前文が偽で、しかも何も検出しない。** 「§8 の residual は全部 §9 の
+   honest scope に逐語で出る」と書いてあるが、**R-7（`min == 0` は no-op を許す）はどこにも
+   開示されていない**（`grep` で0件）。AC-14(ii) の marker 7本にも無い。OQ-4 の推奨は
+   「`min == 0` は合法のまま **R-7 を開示**」なのに、その開示を実装する義務が §9 に無い。
+   なお OQ-4 の「`zk-verdict/README.md:143` が不可能と宣伝している」は**過大**——143 行は
+   `min ≥ 1` の fixture の話で普遍主張ではない（正直な方向の訂正）。
+5–9. **[MINOR]** INV-14 の量化子が **AC-00b について今度は偽**（sandbox 化で M-8 は repo の
+   1バイトも動かさず、8h がそれを assert する。守りは 8g の exit status 側にあり実在するが、
+   INV-14 が挙げる機構は発火しない＝r3 finding 2 と同型の再発）／§6.3 の canary は in-tree で
+   `trap` の下に patch を当てるので **SIGKILL 残渣**を同文書の論法どおり抱えるが §6.3 が書いていない
+   （残渣は未使用関数で次の AC-06 が確実に落とすため Codex の「危険な worktree」評価は**却下**、
+   1文の欠落として MINOR）／**OQ-2 は陳腐化**（003 r5 §1.5.2 が3結合すべてに回答済み。
+   `003:341` と `004:171` の引用も両方ずれ。004 は `:370-375` に v1 前像を持ち、さらに
+   `planHash` が `gas_limit` を含まない＝008 AC-7a との3つ目のずれ）／AC-14(i) の見出しが
+   **"Seven"** なのに表は8行・evidence は `8/8`／`zk-verdict/README.md:97` の `~34 s` は
+   §7.5 が同じ操作を **335.02 s** と実測した後も無修正で残る（003 の check 17 が「ちょうど1件」を
+   要求するので**削除でなく限定**で直す）。
+
+**round 5 は短いはず**: 1 は隣（003 r5）に設計が既にあり、2–9 は局所の編集。§3 / §4 / §5.1 /
+AC-1…AC-12 / 試験計画は一切動かない。ただし 1 と 2 の帰結として **mutant 数 16 は動く**
+（新しい被覆の結果であって算術の再litigate ではない）。**r6 hard stop まで残り 2 周。**
+r5 で 1–4 が仕様どおり入れば r6 は APPROVE の形。入らなければ、9/9 のチェックポイントを
+付けたまま founder に開いた論点を返す。
 
 ## 008 spec review r3（2026-09-04）— **CHANGES**
 
