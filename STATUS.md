@@ -887,6 +887,12 @@ AC-11(a) の静的リテラル検査は base64 化 1 行で抜けられ、AC-11(
 **founder の手（期限あり）**:
 - ✅ **RSVP — 完了**（2026-09-05 報告）
 - ✅ **0.005 ETH のステーク — 完了**（2026-09-05 報告。参加完了後に返還）
+- ✅ **Discord 接続 — 完了**（`psyto7835`、2026-09-05 報告）
+- ⚠ **ダッシュボードでの track 選択 — Continuity Track**。応募時とは別に、ダッシュボード上で
+  改めて選択が要る（**切り替え不可**、「選んだ track の賞のみ対象」）。
+- **`DISCLOSURE.md` の送付先が判明**: ダッシュボードの **Create project**（提出は未開放だが
+  記入は可能）。`DISCLOSURE.md` 自身が「提出時の description に全文を再掲する」と指定して
+  いるので、**project を作って description に全文を貼れば義務を果たせる**。
 - Discord 参加、Event Info Center 確認、Code of Conduct 確認
 - ステーク後に `DISCLOSURE.md` 全文を主催者へ（`§1` の修正は 2026-09-04 に適用済み）
 
