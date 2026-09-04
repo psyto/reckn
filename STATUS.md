@@ -41,6 +41,7 @@
 | 003 key gauntlet（001 を内包） | spec | **r3** | **CHANGES** | `docs/reviews/003-spec-r3.md` |
 | 003 key gauntlet（001 を内包） | spec | **r4** | **CHANGES** | `docs/reviews/003-spec-r4.md` |
 | 003 key gauntlet（001 を内包） | spec | **r5** | **CHANGES** | `docs/reviews/003-spec-r5.md` |
+| 003 key gauntlet（001 を内包） | spec | **r6（hard stop）** | **CHANGES → founder** | `docs/reviews/003-spec-r6.md` |
 | 004 live adversarial input | spec | r1 | **CHANGES** | `docs/reviews/004-spec-r1.md` |
 | 004 live adversarial input | spec | **r2** | **CHANGES** | `docs/reviews/004-spec-r2.md` |
 | **008 verdict domain soundness** | spec | r1 | **CHANGES** | `docs/reviews/008-spec-r1.md` |
@@ -754,11 +755,23 @@ AC-11(a) の静的リテラル検査は base64 化 1 行で抜けられ、AC-11(
    **併せて「Founder uncertainty 1」の cut list を適用**（AC-13 縮小 / AC-14 の12箇所 exact 整数を撤回 /
    AC-6 の bash struct parser 撤回 / AC-5 を AC-6 に畳む）。適用しない場合は**規模の判断を founder に上げる**
    ——9/9 チェックポイントの対象タスク。
-4. **`reckn-spec`**: `docs/reviews/003-spec-r2.md` の「What must change before round 3」10項目を
-   `docs/specs/003-key-gauntlet.md` に反映 → `reckn-codex-review`(stage=spec, **r3**)。
-   **blocking は2つだけ**: ①allowance 出口と走査域外出口を塞ぐ（or 出口が列挙されているという主張を
-   取り下げる）②AC-18 観測5の偽文を削り、「format はテスト0件を防ぐが表明0件は防がない」と明記し、
-   AC-18 に `ac.sh` 外の直接実行行を与え、全 forge AC に mutant を1つ以上持たせる
+4. **`003` は round 6 で hard stop に到達（2026-09-04、`docs/reviews/003-spec-r6.md`）。
+   `VERDICT: CHANGES` → round 7 は無く、founder 裁定待ち。`reckn-spec` は指示があるまで動かない。**
+   **残った BLOCKER は1つ**: check 14 は代入の**左辺しか pin しない**ので、
+   `settleWithProof` 内の `if (d.token == <定数>) { to = <定数>; }` を**どの検査も拒否しない**
+   （`003:1138-1148`, `:1670-1677`）。この木では §1.1（「funded deal は funding 時に固定した
+   2つ以外の宛先へ動かせない」）が**偽でありながら 15/15 検査・46 テスト・38 EVM 行・全 fuzz が緑**で、
+   money-shot は `40/40 rows as specified` と `Addresses that helped: 0` を印字する。
+   仕様はこれを **OQ-10** として正直に開示済み（§8 / INV-2 / §4.5.6a / §10）だが、
+   **判事が見る §7 には一行も出ない**（`grep OQ-10` が §7 で0件）。
+   **G-39 / G-40 と同一クラス**であり、その2つは r5 で BLOCKER 判定→r6 で 15g により構造的に閉じた。
+   閉じるコスト（founder が 9/12 凍結までの日程で判断するための見積り）:
+   - **14d（`to` の右辺を `d.seller`/`d.buyer` に各1回で pin）＝仕様編集のみ、実装パート増加 0**
+     （P3 に吸収）。仕様の「P1 前には安全に書けない」という理由は、**同じ round が
+     check 8 の右辺句・15g-iii・14c と3つの右辺 pin を先に書いている**ので成立しない
+   - **§7.2 に1行＋§7.3 に1項目＝0 パート。14d が入っても必要**（14d は宛先側しか閉じない）
+   - `fund` の `deals[dealId] = Deal({…})` リテラルまで pin する広い形は **P1 後に1パート**
+   その他: `"top-level `;`"` の未定義（MINOR）、`GC-1 … GC-18` → `GC-19` の誤記（MINOR）
 5. **`reckn-spec`**: `docs/reviews/004-spec-r2.md` の「round 3 で直すもの」9項目を
    `docs/specs/004-live-adversarial-input.md` に反映 → `reckn-codex-review`(stage=spec, **r3**)。
    **blocking は2つだけ**: ①§4.1/§4.3/AC-6/AC-7(d)/AC-20/INV-2/§11/§3.4 を **008 後の guest**に対して
@@ -773,8 +786,9 @@ AC-11(a) の静的リテラル検査は base64 化 1 行で抜けられ、AC-11(
    セッション後に実 Groth16 → `settleWithProof` する別タスクを起こすか）と **OQ-4**（凍結後に届いた
    attempt を commit するかの Continuity 解釈）の2つだけ。**OQ-3 は裁定不要** — `008:343-349` が
    実 ELF 差分テストを既に持つので 004 は何も足さない（004 自身がその条件を書いている）
-7. spec が APPROVE になってから `reckn-codex-impl`。**実装・コントラクトは未着手**（r2 の時点でも
-   `RecknZkEscrow.sol` に変更なし）
+8. spec が APPROVE になってから `reckn-codex-impl`。**実装・コントラクトは未着手**
+   （`RecknZkEscrow.sol` は 2026-09-04 時点で無変更）。**`003` は round 6 の CHANGES により
+   実装に入っていない** — 上記4の founder 裁定が先。
 
 ## Day 1（2026-09-04）— 起点の記録
 
