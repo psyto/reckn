@@ -49,6 +49,71 @@
 | **008 verdict domain soundness** | spec | **r3** | **CHANGES** | `docs/reviews/008-spec-r3.md` |
 | **008 verdict domain soundness** | spec | **r4** | **CHANGES** | `docs/reviews/008-spec-r4.md` |
 | **008 verdict domain soundness** | spec | **r5** | **CHANGES** | `docs/reviews/008-spec-r5.md` |
+| **009 cross-VM settlement** | spec | **r1** | **CHANGES** | `docs/reviews/009-spec-r1.md` |
+
+## 009 spec review r1（2026-09-05）— **CHANGES**
+
+記録: `docs/reviews/009-spec-r1.md`（payload `/tmp/reckn-payload-009-spec-r1.md` /
+Codex raw `/tmp/reckn-codex-009-spec-r1.md`、呼び出しは 1 回・`-s read-only`）。
+対象 `docs/specs/009-cross-vm-settlement.md`（**1291 行**）は `reckn-spec`（Claude Code）起草＝
+**Codex は自分の宿題を採点していない**（payload §0 に明記）。**15 findings（BLOCKER 4 / MAJOR 6 /
+MINOR 5）**。Codex 7件のうち **5件を採用**（うち2件は severity を降格、1件は **repro を実測で却下して
+差し替え**）、**私の独立検出 4件**を追加。
+
+**★Codex の「破れなかった」リスト3件のうち2件が偽**——`§3.3` の代入数と AC のテスト名。どちらも
+Codex を読む前に機械的に検出済み。**中継でなく裁定した価値はここに出た。**
+
+**BLOCKER 4件（round 2 でこの順に閉じる）:**
+
+1. **009 が着地すると `008` が赤になる**。009 は 12 個の mutant を `zk-verdict/scripts/mutants/` に置くが、
+   `008` の `ac008-selftest.sh` step 0 は同ディレクトリの `*.patch` が**ちょうど 21 個**であることを
+   assert する（`008:2620`）→ 33 個で AC-13 失敗。さらに `008` の AC-11 は suite 総数 **18/18** を
+   evidence 行に literal で持つ（`008:2500-2508`）→ 009 が 16 テスト足して 34 で失敗。
+   **9/9 のゲートは「008 と 009 が*同時に*緑」なので、ファイル名一つで到達不能になる。**
+   009 の OQ-6 は「共有ファイルは `RecknZkEscrow.t.sol` だけ」と書くが、実際に衝突する3面
+   （mutants ディレクトリ / suite 総数 / `scripts/no-keys.sh`）は**どれも名指しされていない**。
+   **独立性を片方向でしか検定していない。**
+2. **AC-7 の 7f の数値が §3.3 自身のコントラクトに対して誤り**。仕様の規則をそのまま適用すると
+   **9 代入 / 8 ターゲット**（`Deal storage d = …` と `VerdictPublicValues memory v = …` が抜けている）。
+   manifest の evidence は `7 assignments over 6 targets` で機械比較されるので **AC-7 は初日から赤**。
+   実装者の最短経路は「7 になるまで観測者を鈍らせる」＝ **R-11(iii) の穴そのもの**。
+3. **仕様が定めたテスト名が、仕様が定めた命名 gate に落ちる**。
+   `test_AC03_settleWithProof_has_no_adjudicator_parameter` は `^test_AC[0-9]{2}[a-z]?_[a-z0-9_]+$` に
+   非適合（大文字 `W`/`P`）。AC-3 は 2/2 に到達不能。
+4. **AC-7「escrow の shape は閉じている」が閉じていない**。`fallback()` / `receive()` は
+   `function` キーワードを持たないので `no-keys.sh:46` の列挙に**見えない**。
+   `fallback() external { IERC20Min(deals[abi.decode(msg.data,(bytes32))].token).transfer(msg.sender, …); }`
+   は **no-keys.sh 全4チェックと 009 の全12 AC を通過**して任意の funded deal を抜く（実測: コンパイル成功、
+   check1 no match / check2 は列挙せず / check3 no match / check4 は 0,0 / **7f は代入ゼロで盲目**）。
+   §7g が書く残余（「代入されない state 変数」）より実際の残余がはるかに大きい。
+
+**MAJOR 6件:** §4.4 の barrier 表が製品主張を反転（**SP1 検証を "defence in depth" と書いている**）/
+`L-7`「sham verifier を選んだ buyer は自分の金しか失わない」は**プール残高＋不正確な ERC-20 で偽**
+（fee-on-transfer で他 deal の裏付けが削れる。コード修正は `003`、**偽の文は 009 のもの**）/
+T-7「あらゆる対象 EVM で到達不能」は **tier を超えた主張**（EIP-6780 の同一 tx create→fund→destroy で到達可能、
+ただし **Codex の Foundry repro は実測で再現せず**——codehash も codesize も変わらない——ので AC 化は不可）/
+§3.6 の tightening 論法は**述語としては正しい**（集合は厳密に縮む、確認済み）が結論「全ての消費者は影響を受けない」が偽
+（コメント除去器が文字列 `"//"` で破れる・check 2 は名前しか見ない）/ AC-10 の sandbox に
+**`ac009.sh` が parse する仕様ファイル自体が入っていない**ので走らない / §1.3 の「003 の再レビューは不要」が偽。
+
+**却下**（証拠付き）: Codex の overload BLOCKER の「AC-1…AC-6 は緑のまま」は**偽**——
+`escrow.settleWithProof.selector` が `Error (6675): Member "settleWithProof" not unique after
+argument-dependent lookup` でコンパイル不能（実測）。009 の gate は捕まえる、捕まえないのは
+**commit 前の儀式だけ**。Codex の T-7 repro も実測で再現せず（`evm_version` `osaka`/`shanghai` 両方で
+codehash 不変、`code.length == 129`）。
+
+**破れなかったもの（本日再測定、過去 round の数字は引用しない）**: E-3 `12` / E-4 `fdcef1bb` /
+E-5 storage 1 entry / E-8 `keccak256("")` / **E-9（immutable が違えば codehash が違い、同じなら同じ。
+address も deal が固定するので adjudicator は一意に決まる）** / E-10・E-11（`view` 型経由は STATICCALL で
+revert、非 `view` 経由は成功） / manifest 算術 12・16・6・5・12 / 7a・7c・7d / **`008` の literal はゼロ** /
+**INV-10 は 008 の再型付けを生き延びる**（メンバ名は変わらない）。
+
+**founder への論点**: **OQ-A（新規）** — finding 4 の修正は `no-keys.sh` check 2 にも入れるべきか
+（`008` が同じスクリプトを今週触る）。**推奨: 入れる**——`fallback` は生きた資金経路で、
+commit 前の儀式が今それを見られない。**OQ-1** は 009 の推奨（tightening を維持）で正しいが、
+`003` が失うものは §1.3 の1行より大きい（check 7b/8・5部構成の deployment 検査・G-33/G-37・ROLE 表）。
+**OQ-6 は「はい、ただし理由が違う」**——技術的独立性（INV-10）は**確認できた**が、
+**finding 3 を直すまでハーネス上は独立でない**。
 
 ## 003 spec review r5（2026-09-04）— **CHANGES**
 
