@@ -38,9 +38,56 @@
 |---|---|---|---|---|
 | 003 key gauntlet（001 を内包） | spec | r1 | **CHANGES** | `docs/reviews/003-spec-r1.md` |
 | 003 key gauntlet（001 を内包） | spec | **r2** | **CHANGES** | `docs/reviews/003-spec-r2.md` |
+| 003 key gauntlet（001 を内包） | spec | **r3** | **CHANGES** | `docs/reviews/003-spec-r3.md` |
 | 004 live adversarial input | spec | r1 | **CHANGES** | `docs/reviews/004-spec-r1.md` |
 | 004 live adversarial input | spec | **r2** | **CHANGES** | `docs/reviews/004-spec-r2.md` |
 | **008 verdict domain soundness** | spec | r1 | **CHANGES** | `docs/reviews/008-spec-r1.md` |
+
+## 003 spec review r3（2026-09-04）— **CHANGES**
+
+記録: `docs/reviews/003-spec-r3.md`（payload `/tmp/reckn-payload-003-spec-r3.md` /
+Codex raw `/tmp/reckn-codex-003-spec-r3.md`、呼び出しは 1 回・`-s read-only`）。
+対象 `docs/specs/003-key-gauntlet.md`（2555 行）は `reckn-spec`（Claude Code）起草＝
+**Codex は自分の宿題を採点していない**（payload §0 に明記）。Codex 3件は**全件が検証を通過**し
+採用（1件は根拠と被害経路を差し替えて強化）、**私の独立検出 5件**を追加。
+残った **8 findings（BLOCKER 3 / MAJOR 3 / MINOR 2）**。
+
+**BLOCKER 3件の性質**: r3 は禁止リストを捨てて property P（ファイル全体で呼び出し形トークンを
+許可リストに閉じる）を書いた。**方向は正しい。破れ方が一段下がっただけで、まだ開いている。**
+
+1. **`L_plain` が `transfer` を含まざるを得ず、それ自体が抜け穴**（`:795-796`, `:871`）。
+   check 12 が `IERC20Min` に `function transfer(...)` の宣言を要求する以上、その宣言行が
+   平文呼び出し `transfer(` を生むので 9b は `transfer` を拒否できない。関数型ローカルを
+   **`transfer` という名前で**宣言して `IERC20Min(token).transfer` を代入すれば、9a は
+   メンバ**参照**（`;` が続く）を見ず、9b は許可名を見る。13 チェック全通過で
+   `no-keys.sh` は exit 0。被害は同一トークンの pool 全額（`fund` で入れて即出し→無担保 deal→
+   期限後に他の deal の元本から払い戻し、原資は戻るので無料で反復可能）。
+   仕様自身の corpus E-11 が「ポインタ名が `f` だから落ちる」と書いており、**改名で無効化する**。
+2. **`fund` から他 deal の storage を書き換えられる**（`:646-649`, `:386`, `:605-610`、私の検出）。
+   `deals[dealBinding].seller = seller;` は**呼び出し形トークンを一つも生まない**ので checks 9/11/12
+   は原理的に見えない。`fund(freshId, attacker, token, 0, victimDealId)` で被害 deal の seller を
+   奪い、正規の proof が attacker に払う。**INV-2 は §4.4 で唯一 `Mechanically:` も
+   `Behaviourally:` も持たない不変条件**で、AC-11 は同一 dealId しか見ず、AC-10 の invariant には
+   「funded deal の struct は不変」が無い。§3.1.3 は class C（`fund` 経由の状態汚染）を
+   網羅したと書いているが、**別 key への書き込みは matrix に無い**。
+3. **AC-21 が空アサーションを殺せない**（`:1802`, `:1813-1814`, `:1915`, `:1941-1942`）。
+   28 列のうち **M-34（全関数 body が `revert()`）が `setUp` を壊す**ので、その列では
+   44 テスト全部が Failure になり、「1列以上で Failure」という唯一の述語が中身に関係なく充足される。
+   setUp-safe の保証は §5.4 の SW-1…SW-5 **5列にしか掛かっていない**。AC-21 自身の Falsify
+   （6本を `assertTrue(true)` にすると非ゼロ）は**成立しない**。r2 finding 2 の穴が一段上で再開。
+
+MAJOR 3件: ①M-23 は post-003 の contract では **C-5 に隠される**ので「AC-10 が C-5 と独立に殺す」は
+偽（`:531-534`, `:1397`）。r2 finding 8 の符号違いの再発。②check 11 は `src`（文字列リテラル除去済み）
+に対して**文字列を含む import 行**の完全一致を要求しており、実ファイルで通らない（`:732` vs `:822`）。
+③コメント/文字列除去器が property P 全体を支えているのに未規定で、corpus には**過剰除去の対照が無い**。
+
+**tier 違反なし**。OQ-6 の切り分けは正しい（`script/src/bin/evm.rs:25` は `verdict-program`＝
+predicate guest、`reexec.rs:41` が `verdict-program-revm`。~34 秒は前者、後者は未測定）。
+Honest scope の 2 digest は再計算して一致。文書内の算術（`T`=48 / Σ=44 / 56 / 37 行 / 20・7・10）
+も全部閉じる。`AGENTS.md` §0 の surface 変更は D-10（`:2367`）に宣言済み。
+
+**round 4 は短いはず**: BLOCKER 3件はいずれも1節＋corpus/mutant 1件の局所修正で、
+matrix・manifest・算術・開示・honest-scope 凍結は検証に耐えた。**r6 hard stop まで残り 3 周。**
 
 ## 008 spec review r1（2026-09-04）— **CHANGES**
 
