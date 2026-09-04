@@ -1,19 +1,54 @@
 # 008 — verdict domain soundness
 
-Status: spec, **round 4**. Owner: `reckn-spec`. Implementer: `reckn-codex-impl`.
+Status: spec, **round 5**. Owner: `reckn-spec`. Implementer: `reckn-codex-impl`.
 Tier: **local machine only** — `cargo test`, `forge test`, SP1 `execute`, and SP1 CPU Groth16
 for the four committed fixtures. **No anvil, no testnet, no mainnet, no network calls.**
 Nothing in this document claims anything about a deployed chain.
 
 Every fact cited below was re-checked against the files on disk on **2026-09-04**, after
-`docs/reviews/008-spec-r3.md`. Numbers from earlier rounds are **not** carried over; where an
-earlier number was wrong, the correction is named.
+`docs/reviews/008-spec-r4.md`. Numbers from earlier rounds are **not** carried over; where an
+earlier number was wrong, the correction is named. **Round 5's own new measurements**, all taken
+today and reproducible with the commands beside them: `RecknVerdictVerifier.sol`'s stripped
+identifier vocabulary (**43 tokens**, §6.4 5b), its assignment count (**5**, §6.4 5e), its
+semicolon count (**17** whole file, **2** in `verifyVerdict`'s body, §6.4 5c/5d), its zero `/*`
+and `*/` occurrences (§6.4 5a), the four file sizes in AC-13's cost model, and the four
+**zero-match** greps behind AC-14's new literal and markers 8–11. The token-set delta of the r4
+splice (**5 tokens added**) and of the deleted `verifyProof` call (**1 token removed**) were both
+computed, not reasoned about.
 
-**Round-4 summary for the reviewer — this is a narrow pass.** Seven r3 findings, all answered
-(§0.1). The r3 review's own verdict was that *"item 1 is the only true blocker; 2–3 are the same
-rewrite plus ~15 lines of honest statement; 4–8 are one sentence each"*, and that **§3, AC-1…AC-12,
-the manifest arithmetic (18 rows / 91 cargo / 6 forge / 16 mutants) and the guest freeze rule do
-not move.** They do not move here. Three things changed:
+**Round-5 summary for the reviewer — one structural change, eight local ones.** Nine r4
+findings, all answered (§0.1). **§3, §4, §5.1, AC-1…AC-12, AC-15, the test plan, the 91 cargo /
+6 forge arithmetic and the guest freeze rule do not move.** Three things changed, and only the
+first is structural:
+
+1. **`RecknVerdictVerifier.sol` enters the checked region, and 008 is the task that puts it
+   there** (r4 BLOCKER, orchestrator ruling 2026-09-04). That file is on the settlement-authority
+   path — `RecknZkEscrow.sol:99` calls `verifyVerdict` and obeys the struct it returns — **008
+   edits it** (§3.4 widens `VerdictPublicValues`), and through round 4 **nothing in this document
+   looked at it**: `scripts/no-keys.sh:19` reads one file, AC-0b pins two others, §7.1's file
+   table omitted it, and M-15 only swaps two constants. A spliced
+   `if (tx.origin == 0x…1337) { v.outcome = REPRODUCED; v.dealBinding = …; return v; }` never
+   reaches `verifyProof`, passes the binding check at `RecknZkEscrow.sol:103`, pays the seller at
+   `:109-110`, and **every round-4 acceptance criterion stays green**. `scripts/no-keys.sh` gains
+   **check 5** over that file (AC-0), stated as **five closure properties and not as a list of
+   forbidden constructs** (§6.4), and the claim it enforces is widened in the same commit
+   (`AGENTS.md` §0, `CLAUDE.md`, §9(2a)–(2c), INV-15, OQ-6 — **ruled, not open**). Two new
+   sandbox mutants, **M-17** and **M-18**, take the mutant count to **18**; AC-00 becomes a
+   mutated row and the exempt set shrinks to two.
+2. **The two half-degenerate scripts the r4 review constructed are killed** (r4 finding 2).
+   Step **8g** now requires the sandboxed `surfaces.sh` to print `computed: <64 hex>` and requires
+   it to equal the selftest's **own** digest of the mutated copy — a `grep -q` for a named comment
+   cannot produce that value. A **second sandbox phase (M-18)** mutates the copy of
+   `reexec-evm/src/lib.rs` **above line 711**, so AC-0b's second clause — the clause protecting
+   `reexec-evm::replay`, which is the **oracle INV-1 compares the guest against** — finally has a
+   mutant.
+3. **The trust root the document names is now assigned to someone** (r4 finding 3). L-3 said the
+   mutation gate rests on the implementation review reading and running two scripts; nothing
+   obliged any reviewer to. **§7.8** binds `reckn-codex-review(stage=impl)` by name, requires it to
+   run both scripts itself rather than accept pasted output, and states that **a report-only
+   acceptance of AC-13 is not an acceptance**.
+
+Round 4 changed three things, kept below so a reader of one round has the whole chain:
 
 1. **M-8 is now a sandbox mutant** (§10, OQ-5 — **ruled**, not open). It never touches
    `RecknZkEscrow.sol`; it reconstructs the layout in a temp directory, runs a **clean-copy
@@ -32,7 +67,7 @@ not move.** They do not move here. Three things changed:
    in which only the §0 violation was strong. Two §0-preserving options were missing. The record
    is kept because the *enumeration habit* is the defect, not the conclusion.
 
-Round 3 changed three things, kept below so a reader of one round has the whole chain:
+Round 3 changed three things, kept for the same reason:
 
 1. **The Δ gate moved into the guest.** Round 2 put G-1/G-2/G-3 in `to_guest_input`, a **host**
    function, while §3.2(c)(1) of the same document says the prover is the adversary and there is
@@ -60,7 +95,28 @@ other new `NoProof` transitions had no vector either. The manifest arithmetic mo
 
 ## 0. Review findings — where each one landed
 
-### 0.1 Round-3 findings (7: BLOCKER 1 / MAJOR 2 / MINOR 4)
+### 0.1 Round-4 findings (9: BLOCKER 1 / MAJOR 3 / MINOR 5)
+
+| # | sev | finding | round-5 response | where |
+|---|---|---|---|---|
+| 1 | **BLOCKER** | `zk-verdict/contracts/src/RecknVerdictVerifier.sol` is on the settlement-authority path, **008 must edit it** (§3.4), and no 008 criterion guards it. `no-keys.sh:19` reads one file; AC-0b pins two others; §7.1's table omits it; M-15 only swaps two constants. A `tx.origin` branch spliced into `verifyVerdict` returns a chosen outcome without ever calling `verifyProof`, and **every round-4 AC stays green while `no-keys.sh` exits 0**. `:1842` stated the fact — that `no-keys.sh` does not read the file — and drew the opposite conclusion from it | **Adopted, and 008 owns it** (orchestrator ruling 2026-09-04: 008 is the commit that opens the file, so a check introduced by a later task leaves the region open for two whole tasks). `scripts/no-keys.sh` gains **check 5** over that file. **Interface unchanged** — no argument, no environment variable; the script derives the second path from its own location exactly as `:17-19` already derives the first. **Closed by five properties, not by a denylist** (§6.4, and 003's **R-7**): a pinned import-only string region, a **closed identifier vocabulary** (43 tokens, transcribed into this spec), a closed declaration set, a two-statement `verifyVerdict` body pinned by form, and a closed assignment-target set. `tx.origin`, `msg.sender`, `block.*`, `if`, `for`, `while`, `assembly`, `delegatecall` and every unlisted sibling fail **together**, and none of them is named as forbidden. New sandbox mutant **M-17**; new invariant **INV-15**; AC-00 becomes a mutated row; the claim's widening is declared in the same commit (§9(2a)–(2c)) and recorded as **OQ-6, ruled**. The sentence at `:1842` is rewritten. | **§6.4 (new)**, AC-0, INV-15, N-7, N-12, INV-8, §1.3, AC-13 (M-17, mode paragraph), §6.2, §7.1, §7.3, §7.6 L-5, §8 R-10, §9(2a)–(2c), §10 OQ-6 |
+| 2 | **MAJOR** | AC-00b is satisfiable by a `surfaces.sh` that never runs `shasum` and never opens `surfaces.pinned` — a `grep -q` for the exact comment M-8 flips passes 8d, fails 8g, and is scored as a detection (**r2 finding 6 re-opened**). And **AC-0b's second clause has no mutant at all**: M-16 is deliberately below line 711, so nothing tests that the `head -710` prefix — the guard on `reexec-evm::replay`, **the oracle INV-1 compares the guest against** — is enforced | Adopted in all three parts. **(i)** Step **8g** requires the sandboxed script to print `computed: <64 hex>` for the failing clause and requires it to equal the **selftest's own** `shasum` of the mutated copy; a `grep` cannot produce that value, so the half-degenerate script is a **miss** and AC-13 fails. **(ii)** New mutant **M-18**, a second sandbox phase mutating `$S/reexec-evm/src/lib.rs` **above line 711**, with its own clean control and its own `computed:` assertion. **(iii)** *"`surfaces.sh` reads `$root/zk-verdict/scripts/surfaces.pinned` and compares against it"* is written as **requirement R5 of the Location rule**, and — because the founder's OQ-5 ruling forbids a `surfaces.pinned` mutant and this round does not re-open it — it is named in **§7.8(d)** as a property **no mutant covers**, which the stage=impl review must verify by reading. Stated, not hidden. | AC-0b (8g, R5), AC-13 (M-18), INV-14, §7.3, §7.8 |
+| 3 | **MAJOR** | L-3 names the implementation review as the mutation gate's sole remaining trust root and **installs no obligation on it**. §7.7 binds the implementer's *report*; nothing binds the reviewer; two `printf`s reproduce every evidence line §7.7 asks for | Adopted. **§7.8 is new** and binds `reckn-codex-review(stage=impl)` by name: read both harness scripts line by line, **run them itself** rather than accept pasted output, record the per-mutant lines **it observed from its own run** in `docs/reviews/008-impl-rN.md`, and verify by reading the four properties no mutant covers. **"A report-only acceptance of AC-13 is not an acceptance"** is in the spec, where implementer and reviewer both see it. | **§7.8 (new)**, §7.6 L-3, §7.7 |
+| 4 | **MAJOR** | **INV-11 and §8's preamble are false**: R-7 (`min == 0` admits a no-op) appears in **no** shipped document — `grep` finds zero matches today and zero after 008 as specified — and R-8's disclosure is in the root `README.md`, not in §9's honest scope. AC-14(ii)'s seven markers detect neither | Adopted. §9(1) gains an **R-7 sentence**; AC-14(ii) gains it as **marker 8**; **INV-11 is restated to what AC-14 enforces**, naming R-8's actual site (`README.md:566-571`, untouched by §9(3)) instead of claiming §9 carries it; §8's preamble stops asserting "verbatim, all of them" and says which residual is disclosed where. The review's correction to OQ-4's framing is taken: `zk-verdict/README.md:143` is a statement about **that fixture** (whose floor is `min ≥ 1`), not a universal impossibility claim, so the shipped exposure is smaller than round 4 wrote — **the disclosure gap is unchanged**. | INV-11, §8 preamble, §8 R-7, §9(1), AC-14(ii), §10 OQ-4 |
+| 5 | MINOR | INV-14's quantifier is false again, now for AC-00b: after round 4's rewrite M-8 mutates only the sandbox copy and step 8h asserts the four repository inputs are byte-identical, so AC-00b's `witness=` is a run-constant like AC-13's. Same species as r3 finding 2, reintroduced by its fix | Adopted. **INV-14 is restated with three named cases** instead of a quantifier plus two exceptions: (a) rows whose witness set a mutant moves at run time (five); (b) **the sandbox rows** — AC-00b, whose witness is deliberately a run-constant and whose guard is the **sandboxed script's own exit status** under M-8/M-18; and AC-00, which carries **no** `witness=` field and whose guard is M-17's sandbox; (c) **AC-13**, constant and unmutated (L-3). | INV-14, §6.2 |
+| 6 | MINOR | §6.3's canary applies `09-restore-u64low.patch` **in-tree** under a `trap`, carrying the exact `SIGKILL` residue argument the same document uses to reject in-tree M-8, and does not say so | Adopted as the review scoped it — a missing sentence, not a new risk. §6.3 now states the residue (an **unused** `fn u64_low`, no semantic change), that it makes the very next `ac008.sh AC-06` fail **loudly** by construction, and that §7.7's clean-`git status` requirement covers it. | §6.3 |
+| 7 | MINOR | OQ-2 is stale in both directions and both its cross-spec citations are wrong; 004 additionally computes `planHash` **without** `gas_limit`, which 008's AC-7a adds as a bound component | Adopted, and one more staleness found by reading 004 rather than the citation: 004's `planHash` at `004:369` omits `gas_limit`, and 004 carries a whole residual about that omission (`004:86`, `:1178`, `:1201-1204`, its §11) which 008 **resolves**, so 004 goes stale in three ways, not one. OQ-2 is restated as **answered for `003`, open only as a `004` dependency**. **Line citations into `003` are dropped rather than repaired** — `003` is being revised in parallel, a line number is not a citation, and this document must contain no literal whose truth depends on an unapproved spec. | §10 OQ-2, §1.3 |
+| 8 | MINOR | AC-14(i)'s heading says "Seven" over an eight-row table; an implementer writing `docs-check.sh` from the heading writes seven and fails against the manifest's `8/8` | Adopted. The heading is a **count** now — and it moves again this round: **9 stale literals** (the ninth is `no-keys.sh`'s own scope comment, which check 5 falsifies) and **11 replacement markers**. Every count appears in exactly two places, the heading and the manifest evidence line, and both are written here. | AC-14(i), AC-14(ii), §6.1 |
+| 9 | MINOR | `zk-verdict/README.md:97`'s "~34 s" survives 008 while §7.5 measures the same operation at 335.02 s — defensible read narrowly, read by everyone else as the cost of producing a proof, and in the flattering direction | Adopted with the coupling respected: **qualified in place, not deleted**, because a later task pins the number of occurrences of that string in that file. §9(1b) is the obligation, AC-14(ii) **marker 9** requires the qualification, and AC-14 gains a **fifth check** asserting **exactly one** `~34 s` occurrence in that file — so 008 enforces the coupling itself instead of relying on the other spec. | §9(1b), AC-14(ii), AC-14(v), §6.1 |
+
+**Not re-litigated** (r3 and r4 verified these independently; round 5 changes nothing about them and
+none of the nine responses above depends on re-opening one): **P-12**, **Δ = 9 addresses**, **G-3's
+relabel and remedy (a)**, the **`head -710`** rule, **AC-7a**, **§7.5's tier discipline**, the
+**sandbox skeleton** (control-before-mutation, four inputs, the Location rule, `rm -rf` restore),
+and **N-1's literal truth**. The mutant count moves 16 → 18 and the exempt-row count 3 → 2; that is
+new coverage, not a re-argument of §6.1's arithmetic, and §6.1 is recomputed in place.
+
+### 0.2 Round-3 findings (7: BLOCKER 1 / MAJOR 2 / MINOR 4)
 
 | # | sev | finding | round-4 response | where |
 |---|---|---|---|---|
@@ -85,7 +141,7 @@ remedy (a)**; **the `head -710` rule**; **AC-7a's restatement and its six constr
 **§7.5's tier discipline** (the single correction is finding 8 above); **§7.6's separation from
 §8**; and **the V-10 correction's direction**.
 
-### 0.2 Round-2 findings (8: BLOCKER 2 / MAJOR 4 / MINOR 2)
+### 0.3 Round-2 findings (8: BLOCKER 2 / MAJOR 4 / MINOR 2)
 
 | # | sev | finding | round-3 response | where |
 |---|---|---|---|---|
@@ -105,11 +161,11 @@ diverges (P-11 real, P-10 reason-matching); INV-2's scoping to **D** is a **shar
 weakening; `surfaces.pinned` is not a ritual; the precompile/database-read question (R-1); the
 decision (a) vs (b).
 
-### 0.3 Round-1 findings
+### 0.4 Round-1 findings
 
 | # | sev | finding | round-2 response | where |
 |---|---|---|---|---|
-| 1 | BLOCKER | the harness reads test *names*; 79 tautologies pass; AC-13 only renames | AC-13 rewritten: **4 committed mutation patches, applied in place by the gate, each required to make a named row exit non-zero** *(round 3: **16** patches — the mechanism was right and the coverage was not, §0.2 finding 2)*. A body of `assert!(true)` survives a rename but **cannot survive a mutant** — it passes the mutant too, so the row does not fail, so the selftest fails. Self-reporting deleted from §7.3. | §6 AC-13, §7.3 |
+| 1 | BLOCKER | the harness reads test *names*; 79 tautologies pass; AC-13 only renames | AC-13 rewritten: **4 committed mutation patches, applied in place by the gate, each required to make a named row exit non-zero** *(round 3: **16** patches — the mechanism was right and the coverage was not, §0.3 finding 2; round 5: **18**, §0.1 findings 1 and 2)*. A body of `assert!(true)` survives a rename but **cannot survive a mutant** — it passes the mutant too, so the row does not fail, so the selftest fails. Self-reporting deleted from §7.3. | §6 AC-13, §7.3 |
 | 2 | BLOCKER | AC-11 requires `grep vm.exists == 0` while prescribing `require(vm.exists(...))` | check restated over the **early-return pattern** `if (!vm.exists(` (7 today, all seven are that pattern — measured); `require(vm.exists(F), "…")` named as the permitted replacement | §6 AC-11 |
 | 3 | MAJOR | AC-13 has no cost model; ten sandbox copies unaffordable | sandbox copies deleted. Cost model written, with the measured numbers and a **budget with a decision rule** (§6 AC-13 "Cost"). | §6 AC-13 |
 | 4 | MAJOR | INV-2's *iff* is false: empty MPT proof accepted in-guest, refused off-chain | P-10 / P-11 added; **W-04 / W-05** added to AC-4. One correction to the finding: the *account* variant already agrees (the guest passes `Some(rlp(account))`, so an empty account proof can never return `Ok`); W-05 is kept as the control that records why, and P-10 makes the *reason* match, not just the outcome. `MissingCodeWitness` explained rather than left silent. | §4.1, §6 AC-4 |
@@ -203,9 +259,24 @@ funded escrow; while 008 is open, **no key is needed** — a proof moves it wron
   equivalence is untested. 008 puts that set **outside the domain the proof speaks about**
   (P-12 in the guest, G-2 early at the host, and the witness-closed DB for the unwitnessed
   case) but does not close the parity. Those are different claims and §9 says so.
-- **N-7. No new external / public function on any contract.** The `no-keys.sh` enumeration
-  (`fund` / `settleWithProof` / `refundAfterDeadline`) is unchanged, so `AGENTS.md` §0 does
-  not move.
+- **N-7. No new external / public function on any contract.** The `no-keys.sh` **function**
+  enumeration (`fund` / `settleWithProof` / `refundAfterDeadline`) is unchanged.
+  *(Round 5: `AGENTS.md` §0 **does** move, and in the other direction. The **checked region**
+  gains a second file — `zk-verdict/contracts/src/RecknVerdictVerifier.sol`, check 5 — because
+  008 edits that file and it is on the settlement-authority path (r4 BLOCKER, §0.1 finding 1).
+  That is a **tightening**: the set of trees the build condition accepts strictly shrinks, no
+  function surface widens, and nothing that was rejected before is accepted now. It is still a
+  change to what the central claim asserts, so §9(2a)–(2c) declare it in the same commit and
+  OQ-6 records the ruling. **Relaxing check 5 later is a founder call, not an agent's** —
+  `AGENTS.md` §0's last line already says so about this script.)*
+- **N-12. `RecknVerdictVerifier.sol` changes in exactly one way: four field widths.**
+  `VerdictPublicValues.pre` / `.post` / `.minDelta` / `.maxDelta` go `uint64` → `uint256`
+  (§3.4). 008 adds **no** function, **no** state variable, **no** constructor parameter, **no**
+  modifier, **no** import, **no** string literal and **no** statement to that file, and changes
+  neither `verifyVerdict`'s body nor the constructor's. Enforced by check 5, whose pinned
+  vocabulary and pinned statement forms are written in §6.4 and differ from today's file in
+  exactly one token (`uint64` → `uint256`). This is what makes the check writable in the same
+  round that edits the file: **a digest cannot be pinned here, and a structure can.**
 - **N-8. No cycle-count optimisation.** The guest will get slower (U256 arithmetic, a
   witness-closed DB, `k256` under a pinned spec). 008 re-measures and republishes the
   number; it does not try to improve it. SP1 crypto patches and GPU proving are out.
@@ -227,7 +298,8 @@ inherits. Two of those are load-bearing and one of them **003 must break**:
 |---|---|---|
 | `zk-verdict/scripts/surfaces.pinned` — `sha256(RecknZkEscrow.sol)` (AC-0b) | **`003`**, necessarily: `AGENTS.md` §0 enumerates `refundAfterDeadline` and the contract does not have it (today it declares `fund` and `settleWithProof` and nothing else), and `003` r1 additionally rules the discarded `transferFrom` boolean in scope | **`003` re-pins `surfaces.pinned` in the same commit that changes `RecknZkEscrow.sol`, as a visible one-line diff** (`sha256 = <old>` → `sha256 = <new>`), never by a regenerate-and-commit step whose diff a reviewer cannot read. `surfaces.sh` must therefore print both the pinned and the computed digest on failure, so the re-pin is a copy of a printed value. |
 | `zk-verdict/scripts/surfaces.pinned` — `sha256` of `reexec-evm/src/lib.rs` above the testkit `cfg` line (AC-0b) | nobody in the current order | if a later task needs it, same protocol |
-| the v2 domain tags and the new honest-scope text | `003` (pins the honest-scope digest) and `004` (quotes the v1 binding formula) | OQ-2 |
+| the v2 domain tags and the new honest-scope text | `003` (pins the honest-scope digest) and `004` (re-implements the v1 binding formula, and carries a residual about `gas_limit` that 008 resolves) | OQ-2 |
+| **`scripts/no-keys.sh` check 5 over `RecknVerdictVerifier.sol`** (AC-0, §6.4), and the second file declared in `AGENTS.md` §0 / `CLAUDE.md` (§9(2a)–(2c)) | **`003` extends it**, in its own numbering | **Orchestrator ruling, 2026-09-04: 008 introduces the check, `003` extends it.** 008 opens the file first (§3.4), and *a check that does not exist at the moment a file is first edited is not a check* — attributing it to `003` would leave the region open for the whole of 008 **and** 009, which are the two tasks the 9/9 checkpoint turns on. **008's part is the minimum that closes the splice**: one new numbered check (**5**) over one new target, with the interface unchanged. **008 does not write `003`'s extension** — the `constructor`'s semantic closure and the on-chain deployment check are `003`'s, and 008 neither specifies nor pre-empts them. `003` may renumber check 5 into its own table; renumbering is not loosening, because the set of rejected trees only grows. **No literal of `003` is copied into this document**: `003` is not APPROVEd, so its counts and strings are not facts here (§0.1 finding 7). |
 
 **This is a dependency, not a request.** 008 does not edit `003`'s spec and does not require
 `003` to be re-reviewed for it; the re-pin is one line inside a commit `003` is making anyway.
@@ -468,6 +540,14 @@ struct VerdictPublicValues {
     uint8 outcome; bytes32 traceHash; bytes32 dealBinding;
 }
 ```
+
+**That is the whole of 008's edit to `RecknVerdictVerifier.sol` — four tokens (N-12).** The file
+is on the settlement-authority path (`RecknZkEscrow.sol:99` calls `verifyVerdict` and obeys the
+struct it returns), so from this commit onward it is inside `scripts/no-keys.sh`'s checked region
+as **check 5** (AC-0, §6.4). The four widths are the only difference between the file's pinned
+structure before and after 008: the pinned identifier vocabulary of §6.4 changes by exactly one
+token, `uint64` → `uint256`. **If 008's edit cannot be expressed inside §6.4's pinned forms, stop
+and report** (`AGENTS.md` §7) — do not loosen a form to fit the edit.
 
 **Constants, not inputs** (the seller must not be able to flip them): `disable_base_fee = true`,
 `disable_nonce_check = true`, `tx.gas_price = 0`, `TxEnv { ..Default::default() }` for every
@@ -853,8 +933,12 @@ is stated here rather than buried: see R-9.
   appears nowhere under `zk-verdict/`. The tags are exactly
   `reckn/zk/{env,check,plan,bind}/evm/v2`, `reckn/zk/bind/svm/v2`,
   `reckn/zk/{reexec,verdict}/v2`.
-- **INV-8 — the on-chain surface does not move.** `RecknZkEscrow.sol` is byte-identical to
-  the 008 base commit. `scripts/no-keys.sh`'s enumerated surface is unchanged.
+- **INV-8 — the on-chain surface does not move, and the checked region does not shrink.**
+  `RecknZkEscrow.sol` is byte-identical to the 008 base commit. `scripts/no-keys.sh`'s
+  enumerated **function** surface (`fund` / `settleWithProof` / `refundAfterDeadline`) is
+  unchanged, and its checked **region** gains exactly one file (check 5, §6.4) — a strict
+  tightening: every tree `no-keys.sh` rejected at the base commit is still rejected.
+  `RecknVerdictVerifier.sol` changes only in the four field widths (N-12).
   `abi.encode(VerdictPublicValues)` is 224 bytes before and after.
 - **INV-9 — the SVM guest is semantics-preserving.** For all `(a, b, lo, hi) ∈ u64⁴`,
   `delta_outcome(U256::from(a), U256::from(b), U256::from(lo), U256::from(hi))` equals the
@@ -862,12 +946,23 @@ is stated here rather than buried: see R-9.
 - **INV-10 — one outcome mapping.** The `Verdict → u8` conversion exists in exactly one
   function. No other site compares a `verdict_lib` outcome byte with a `ReplayRecordV1`
   outcome byte.
-- **INV-11 — the honest scope is not silently widened.** Every residual in §8 that 008 does
-  not close appears verbatim in `zk-verdict/README.md`'s honest scope, and every claim 008
-  *does* close is removed from the root `README.md` "Known gaps" list in the same commit.
-  (AC-14.)
+- **INV-11 — every residual in §8 has a named disclosure site, and AC-14 checks it there.**
+  *(Restated in round 5. The round-4 form — "every residual appears **verbatim** in
+  `zk-verdict/README.md`'s honest scope" — was **false for two of the ten**: **R-7** appeared in
+  no shipped document at all, and **R-8** is disclosed in the root `README.md`'s known-gaps
+  bullet, not in the honest scope. Neither was detectable: AC-14(ii)'s markers named neither.
+  r4 finding 4.)* The invariant is now what the mechanism actually enforces:
+  **(a)** R-1…R-6, R-7, R-9 and R-10 are disclosed in `zk-verdict/README.md`'s honest scope,
+  and **the ones AC-14(ii) has a marker for are R-3 (marker 3's sentence), R-4, R-7 (marker 8)
+  and R-10 (marker 10's `AGENTS.md` §0 declaration)**;
+  **(b)** **R-8** is disclosed in the root `README.md:566-571`, which §9(3) leaves untouched and
+  AC-14 does not move; the honest scope does not repeat it;
+  **(c)** every claim 008 *does* close is removed from the root `README.md` "Known gaps" list in
+  the same commit (AC-14(i) literals 1 and 2).
+  A residual with neither a disclosure site nor a marker is a violation of this invariant, and
+  finding it is what round 5 did.
 - **INV-12 — the gate detects a wrong implementation, not a renamed one.** For each of the
-  **sixteen** committed mutants (§7.3), applying it in place makes **every** manifest row named
+  **eighteen** committed mutants (§7.3), applying it makes **every** manifest row named
   in its `target rows` column exit non-zero. A test body that asserts nothing passes the mutant,
   so it fails this invariant. (AC-13. This is the invariant round 1 was missing — `AGENTS.md` §5,
   added 2026-09-04.)
@@ -876,21 +971,54 @@ is stated here rather than buried: see R-9.
   none. There is no third category. *(Round 2 had four mutants and twelve unexamined rows; the
   hole was not that the four were weak but that nothing enumerated the other twelve — r2
   BLOCKER 2 and finding 4 are the same defect seen from two sides.)*
-- **INV-14 — a `script` row's evidence line is not a constant, with exactly two named
-  exceptions.** For every `script` row except **AC-00 and AC-13**, the evidence line contains a
-  `witness=` field that `ac008.sh` recomputes from repository bytes without invoking the row's
-  command, **and at least one AC-13 mutant changes a byte inside that row's witness set** — so
-  the value moves during the run and a hardcoded one goes stale. Six rows satisfy this:
-  AC-00b/M-8, AC-06/M-9, AC-09/M-10, AC-11/M-11, AC-14/M-12, AC-16/M-16.
-  The two exceptions, both stated rather than implied:
-  - **AC-00** carries no `witness=` field at all — `scripts/no-keys.sh` belongs to `AGENTS.md` §0
-    and 008 may not modify it (§6.2).
-  - **AC-13** carries one **and it is a constant for the whole run.** Its witness set is the
-    sixteen `mutants/*.patch` files and **no mutant modifies a patch file**, so nothing moves it
-    while the gate runs. **AC-13's own manifest row is therefore satisfiable by `echo`**, and
-    round 3 said the opposite (r3 finding 2). This is not closed here: the regress does not
-    terminate inside the repository, because whatever runs last is trusted. It is stated in
-    **L-3**, and §6.3's canary raises its cost without closing it.
+- **INV-14 — every `script` row has one of three named guards against a constant, and which
+  one it has is written down.** *(Restated in round 5. The round-4 form quantified over "every
+  `script` row except AC-00 and AC-13" and claimed a mutant moves a byte inside each remaining
+  row's witness set. That is **false for AC-00b**: after round 4's rewrite M-8 mutates only the
+  sandbox copy and step **8h** asserts the four repository inputs are byte-identical to 8a, so
+  AC-00b's `witness=` is a run-constant exactly like AC-13's. The **protection** was real and
+  written elsewhere; the invariant's stated mechanism was not the one operating. Same species as
+  r3 finding 2, reintroduced by its fix — r4 finding 5.)*
+
+  **Case (a) — the witness moves at run time.** Five rows: **AC-06/M-9, AC-09/M-10,
+  AC-11/M-11, AC-14/M-12, AC-16/M-16.** The evidence line carries a `witness=` field that
+  `ac008.sh` recomputes from repository bytes without invoking the row's command, and at least
+  one mutant changes a byte inside that row's witness set while the gate runs, so a hardcoded
+  digest goes stale mid-run.
+
+  **Case (b) — the guard is a sandboxed script's own exit status.** Two rows, both by
+  construction and both deliberate:
+  - **AC-00b** carries a `witness=` field and **it is a run-constant** — M-8 and M-18 mutate
+    only copies, and 8h/18h re-assert the repository bytes. What kills a stub here is not the
+    witness but the **sandbox**: the stubbed script is *the script the sandbox runs*, and it must
+    exit non-zero on the mutated copy (8g, 18g) **and** print a `computed:` digest equal to the
+    selftest's own digest of that copy. A heredoc script, and a `grep -q` script, both fail that.
+  - **AC-00** carries **no** `witness=` field at all. Its evidence line is `AGENTS.md` §0's
+    declared output and 008 does not restyle it (§6.2). Its guard is **M-17**, the same sandbox
+    construction applied to `scripts/no-keys.sh` and `RecknVerdictVerifier.sol`. *(Round 4 gave
+    the exemption a different reason — "008 may not modify `no-keys.sh`" — which round 5 makes
+    false: 008 adds check 5 to it. The exemption survives; its reason changed and its
+    replacement guard is now stronger than a witness field would have been.)*
+
+  **Case (c) — no guard, stated as such.** **AC-13** carries a `witness=` and it is a constant
+  for the whole run: its witness set is the eighteen `mutants/*.patch` files and **no mutant
+  modifies a patch file**. **AC-13's own manifest row is satisfiable by `echo`**, and rounds 1–3
+  said the opposite (r3 finding 2). This is not closed here — the regress does not terminate
+  inside a repository, because whatever runs last is trusted. It is stated in **L-3**, §6.3's
+  canary raises its cost without closing it, and **§7.8** assigns the residual to a named
+  reviewer instead of leaving it unowned (r4 finding 3).
+
+- **INV-15 — settlement authority in the second contract is a function of the proof alone.**
+  `RecknVerdictVerifier.verifyVerdict` reaches its `return` only by way of
+  `ISP1Verifier.verifyProof`, and the value it returns is derived from `publicValues` and from
+  nothing else. Operationally, and this is exactly what check 5 tests (§6.4): the file's
+  identifier vocabulary is closed, so **no** caller-, transaction-, block- or chain-dependent
+  value can be read anywhere in it; the body of `verifyVerdict` is two statements of pinned form,
+  so there is no branch to take and no second exit; and every assignment target in the file is
+  one of five declared names, so no field of the returned struct can be written after the decode.
+  **Without this, the escrow's `RecknZkEscrow.sol:99` trusts a struct that a resolver chose** —
+  which is `AGENTS.md` §0's failure mode reached from the one file §0 was not looking at
+  (r4 BLOCKER). Falsified by M-17.
 
 ### 5.1 The domain D over which INV-1 and INV-2 are asserted
 
@@ -936,6 +1064,14 @@ committed ones without proving.
 
 **Added in round 2:** AC-16 (r1 finding 6), W-04…W-08 (r1 findings 4, 5, 9), E-11/E-12 (r1
 finding 13).
+
+**Added in round 5:** **check 5** of `scripts/no-keys.sh` (§6.4 — the second contract in the
+settlement path, r4 BLOCKER), **M-17** and **M-18** (AC-13, both sandbox, both zero-build),
+AC-14(i) literal **9**, AC-14(ii) markers **8–11**, and AC-14 check **(v)**. AC-13's evidence line
+goes `16/16` → `18/18` and AC-14's goes `8/8 … 7/7` → `9/9 … 11/11` plus one new clause.
+**No row is added and none is removed**: the manifest stays at **18** rows, 16 criteria, 91 cargo
+tests and 6 forge tests. The three §7.1 file-table additions are a contract 008 already edits, a
+script 008 now edits, and two more `.patch` files.
 
 **Added in round 3:** **W-09** (the hand-built-`GuestInput` Δ bypass — r2 BLOCKER 1), **W-10**
 (the predicate gate, now implementable — r2 finding 3), **W-11 / W-12 / W-13** (P-9, P-7, P-8 —
@@ -999,8 +1135,8 @@ does, so AC-13 passed too. Round 1 therefore permitted an implementation that pr
 `ac008: 18/18 rows passed` while `u64_low` is still in `main.rs` and `pre = 2^64 / post = 2^64 − 1`
 still releases to the seller: the claim demonstrated while false.
 
-**Gate 3 — the gate must detect a *wrong* implementation.** AC-13 applies **sixteen** committed
-mutation patches **in place**, each to real source, and requires every manifest row named as that
+**Gate 3 — the gate must detect a *wrong* implementation.** AC-13 applies **eighteen** committed
+mutation patches — fifteen in place and three to a sandbox copy — each to real source, and requires every manifest row named as that
 mutant's target to exit non-zero. A body that asserts nothing passes the mutant, so the row stays
 green, so AC-13 fails. **This is the only check in the document that opens a test body — by
 breaking the code the body is supposed to be about.** Nothing about it is self-reported; §7.3's
@@ -1050,8 +1186,8 @@ AC-09   script  -                   bash zk-verdict/scripts/fixtures-check.sh   
 AC-10   forge   -                   _AC10_                                           4   -
 AC-11   script  -                   bash zk-verdict/scripts/no-skip.sh               -   no-skip: 0 early-return fixture gates, 18/18 forge tests ran, 0 skipped; witness={witness}
 AC-12   cargo   zk-verdict/lib      _AC12_                                           3   -
-AC-13   script  -                   bash zk-verdict/scripts/ac008-selftest.sh        -   ac008-selftest: 16/16 mutants detected; witness={witness}
-AC-14   script  -                   bash zk-verdict/scripts/docs-check.sh            -   docs: 8/8 stale claims absent, 7/7 replacements present, 0 tilde cycle literals, cycles.json matches 3/3 guests; witness={witness}
+AC-13   script  -                   bash zk-verdict/scripts/ac008-selftest.sh        -   ac008-selftest: 18/18 mutants detected; witness={witness}
+AC-14   script  -                   bash zk-verdict/scripts/docs-check.sh            -   docs: 9/9 stale claims absent, 11/11 replacements present, 0 tilde cycle literals, 1/1 qualified ~34 s site, cycles.json matches 3/3 guests; witness={witness}
 AC-15   cargo   reexec-evm          -                                               16   -
 AC-16   script  -                   bash zk-verdict/scripts/consumers-check.sh       -   consumers: binder, keeper, reckn-evm-content check --tests clean (3/3); witness={witness}
 ```
@@ -1072,8 +1208,14 @@ Arithmetic `ac008.sh --check` recomputes and a reviewer can recompute by hand:
 - `zk-verdict/contracts` = **18** forge tests = **12** pre-existing (measured 2026-09-04:
   `grep -n "function test" zk-verdict/contracts/test/*.t.sol | wc -l` → 12) + **6** new.
   AC-11 asserts 18.
-- AC-13's mutants = **16**, over **15** distinct rows; the three rows with no mutant
-  (AC-00, AC-13, AC-15) each carry a written exemption in §6.2. 15 + 3 = 18 ✓.
+- AC-13's mutants = **18**, over **16** distinct rows; the two rows with no mutant
+  (**AC-13, AC-15**) each carry a written exemption in §6.2. 16 + 2 = 18 ✓.
+  *(Round 4 had 16 mutants over 15 rows with three exemptions. Round 5 adds **M-17**
+  (`no-keys.sh` check 5 over `RecknVerdictVerifier.sol`, sandbox — §0.1 finding 1) and **M-18**
+  (AC-0b's second clause, sandbox — §0.1 finding 2). **AC-00 moves from the exempt column to
+  the mutated column**, which is the whole point of finding 1: the row that carries the central
+  claim had no mutant. Two mutants target rows that already had one — M-18 joins M-8 on AC-00b —
+  so rows go 15 → 16 and mutants 16 → 18.)*
 
 *(Round 2 had 86 cargo tests and AC-04 at 8. The +5 is AC-4's five new vectors — W-09…W-13 —
 and it is **not** funded by cutting anything: the r2 review's cut list is not taken, because the
@@ -1102,8 +1244,9 @@ echo "fixtures: 4/4 current (vkey and public values byte-identical)"
 
 and `fixtures-check.sh` is the **only** thing tying the committed Groth16 fixtures to the current
 ELF. Round 1's BLOCKER was "the harness counts test *names*"; this is the same defect one layer
-up — the harness reads a string the subject prints **about itself**. Six of the eight `script`
-rows carry load-bearing claims: AC-00b (the central claim's file guard), AC-06 (`u64_low` still
+up — the harness reads a string the subject prints **about itself**. **Seven** of the eight `script`
+rows carry load-bearing claims: **AC-00 (the central claim itself — round 5 brings its script
+inside the mutation gate, §6.4 and M-17)**, AC-00b (the pinned-file guard), AC-06 (`u64_low` still
 present), AC-09 (stale fixtures), AC-11 (restored skip gates), AC-14 (the false honest-scope text
 still shipping), AC-16 (`binder`'s test build).
 
@@ -1118,13 +1261,13 @@ which is stale the moment any witnessed byte moves.
 
 | row | witness set — `sha256` over the concatenation, in this order |
 |---|---|
-| AC-00 | **exempt, in writing.** `scripts/no-keys.sh` is pre-existing, `AGENTS.md` §0 owns it, and `STATUS.md` records that it was validated against three negative controls. 008 may not modify it (that would be a change to the central claim's guard), so 008 may not add a `witness=` field to its output either. Its evidence line stays the literal at AC-0. |
+| AC-00 | **exempt from the `witness=` field, in writing — and mutated instead.** *(Round 5: the round-4 reason for this exemption was "008 may not modify `scripts/no-keys.sh`". **That is now false** — 008 adds check 5 to it, §6.4. The exemption survives on a different and better reason.)* AC-00's evidence line is `AGENTS.md` §0's **declared output**, and every consumer of that script — the pre-commit ritual, `003`, the demo script — reads that line. 008 adds a target and a check to the script; it does **not** restyle the script's output, add a field to it, or change its arguments. What replaces the witness for this row is **M-17**: a sandbox mutant that splices a constant-address branch into a copy of `RecknVerdictVerifier.sol` and requires the **copied `no-keys.sh`** to exit non-zero. A stubbed `no-keys.sh` is the script the sandbox runs, so it exits 0 on the mutated copy, M-17 is recorded as a miss, and AC-13 fails. That is strictly stronger than a `witness=` field, which only makes a stub *stale* (§6.2(1) vs (2)). INV-14 case (b). |
 | AC-00b | `sha256(zk-verdict/contracts/src/RecknZkEscrow.sol)` ‖ `sha256(head -710 reexec-evm/src/lib.rs)` |
 | AC-06 | the four inspected files, whole, in this order: `zk-verdict/program-revm/src/main.rs`, `zk-verdict/lib/src/lib.rs`, `zk-verdict/script/src/lib.rs`, `reexec-evm/src/lib.rs` |
 | AC-09 | the four freshly-computed ELF vkeys (32 bytes each, in AC-9's fixture order) ‖ the four fixture files, whole, same order |
 | AC-11 | **every** `*.t.sol` in `zk-verdict/contracts/test/`, whole, `LC_ALL=C` sort order — **the glob, not a name list**: five files before 008, **six after** (§7.1 adds `RecknVerdictDomain.t.sol`). An implementer who hard-codes five names leaves the file 008 introduces outside the witness set on the same commit that introduces it, and M-11 would still pass because it mutates one of the original five (r3 finding 6). |
-| AC-13 | the sixteen `zk-verdict/scripts/mutants/*.patch` files, whole, `LC_ALL=C` sort order |
-| AC-14 | the five doc-set files of AC-14(iii), whole, in the order written there ‖ `zk-verdict/cycles.json` |
+| AC-13 | the **eighteen** `zk-verdict/scripts/mutants/*.patch` files, whole, `LC_ALL=C` sort order |
+| AC-14 | the five doc-set files of AC-14(iii), whole, in the order written there ‖ `zk-verdict/cycles.json` ‖ `scripts/no-keys.sh` (**added in round 5**: AC-14(i) literal 9 inspects that file's own scope comment, so it is a byte the row's claim is about) |
 | AC-16 | `sha256(reexec-evm/src/lib.rs)` ‖ `binder/Cargo.toml` ‖ `keeper/Cargo.toml` ‖ `reckn-evm-content/Cargo.toml` ‖ `binder/tests/router_two_vms.rs` |
 
 **(2) Every `script` row has an AC-13 mutant — this is what actually detects a stub.** The witness
@@ -1139,16 +1282,18 @@ witnessed byte **at run time**, when no stub author can re-hardcode. Walk M-9 (r
   fails ✓
 
 For AC-06 — and for **every `script` row whose witness set an AC-13 mutant actually moves**, i.e.
-the six named in INV-14 — all three paths end in a failure the implementer cannot remove by
-writing a constant. That is the answer to "an `echo` satisfies AC-09": under **M-10** (flip one
+the **five** named in **INV-14 case (a)** — all three paths end in a failure the implementer
+cannot remove by writing a constant. The two **sandbox** rows (AC-00, AC-00b) are guarded a
+different way and INV-14 case (b) says which; AC-13 is guarded by neither and INV-14 case (c)
+and L-3 say so. That is the answer to "an `echo` satisfies AC-09": under **M-10** (flip one
 hex byte of the fixture's `vkey`) a stubbed `fixtures-check.sh` keeps printing `4/4` and the row
 must go non-zero — it cannot.
 
 **This argument does not extend to AC-13's own row, and round 3 wrote it as though it did**
-(r3 finding 2). AC-13's witness set is the sixteen patch files and no mutant modifies a patch
+(r3 finding 2). AC-13's witness set is the eighteen patch files and no mutant modifies a patch
 file, so path 2 — "the recomputed witness has moved, the printed one has not" — never fires for
 that row: **nothing moves it**. A two-line `ac008-selftest.sh` that echoes
-`ac008-selftest: 16/16 mutants detected; witness=<the constant>` and exits 0 satisfies the row
+`ac008-selftest: 18/18 mutants detected; witness=<the constant>` and exits 0 satisfies the row
 completely, and step 0 and step 6 are *inside* the script it replaces. INV-14 names AC-13 as an
 exception, **L-3** states the residual, and §6.3 adds the one cheap thing that raises the bar.
 
@@ -1156,8 +1301,8 @@ exception, **L-3** states the residual, and §6.3 adds the one cheap thing that 
 
 | row | mutant(s) | if none, why |
 |---|---|---|
-| AC-00 | — | `AGENTS.md` §0 owns it; three negative controls recorded in `STATUS.md`; 008 must not touch it |
-| AC-00b | M-8 (**sandbox** — AC-13, mode `sandbox`; the repository's `RecknZkEscrow.sol` is never written) | |
+| AC-00 | **M-17** (**sandbox** — AC-13, mode `sandbox`; the repository's `no-keys.sh` and `RecknVerdictVerifier.sol` are never written) | |
+| AC-00b | M-8, **M-18** (both **sandbox**; the repository's `RecknZkEscrow.sol` and `reexec-evm/src/lib.rs` are never written. M-8 exercises AC-0b's **first** clause, M-18 its **second** — r4 finding 2) | |
 | AC-01 | M-2 | |
 | AC-02 | M-1, M-6 | |
 | AC-03 | M-5 | |
@@ -1185,8 +1330,8 @@ in §8, because it is a limit of this document's gate and not a claim the produc
 ### 6.3 The canary — one mutant that `ac008.sh --all` applies itself (r3 finding 2)
 
 **The problem this is a partial answer to.** Everything in §6.2 rests on `ac008-selftest.sh`
-actually applying sixteen mutants. Its own manifest row does not force it to: AC-13's witness set
-is the sixteen `.patch` files, **no mutant modifies a patch file**, so the `witness=` value is a
+actually applying eighteen mutants. Its own manifest row does not force it to: AC-13's witness set
+is the eighteen `.patch` files, **no mutant modifies a patch file**, so the `witness=` value is a
 run-constant and a two-line `echo` satisfies the row (INV-14, L-3). The regress does not
 terminate inside this repository — whatever runs **last** is trusted — so the honest goal is not
 to close it but to **move the single point of failure off a small special-purpose script and onto
@@ -1215,7 +1360,21 @@ run as passing (`AGENTS.md` §5).
 unused `fn u64_low` into `program-revm/src/main.rs`, and its target row AC-06 is
 `env-parity.sh`, which is **greps only** — no cargo build, no `sp1-build`, no `forge`. The whole
 canary is seconds, and it runs on the same warm tree. Every other zero-build mutant targets a row
-that is either the sandbox (M-8), a `forge` run (M-13, M-15) or a fixture/ELF read (M-10).
+that is either a sandbox (M-8, M-17, M-18), a `forge` run (M-13, M-15) or a fixture/ELF read (M-10).
+
+**The canary is applied *in-tree*, and that carries the residue this document rejects elsewhere —
+stated here rather than left for a reviewer to find** (r4 finding 6). Steps c1–c5 patch
+`program-revm/src/main.rs` under `trap … EXIT INT TERM`, and a `trap` does not catch `SIGKILL`.
+A hard kill between c2 and c5 leaves the file carrying a **re-inserted, unused `fn u64_low`**.
+The argument §1.2 and OQ-5 use against an in-tree M-8 does **not** transfer, and the difference is
+the whole reason the canary may stay in-tree: (i) the residue is an **unused function** — it
+changes no guest behaviour and no verdict; (ii) it fails **loudly** at the very next
+`ac008.sh AC-06`, by construction, because making AC-06 fail is the mutant's entire purpose —
+unlike M-8's comment flip, which `no-keys.sh` is comment-blind to by design
+(`scripts/no-keys.sh:28-30`); and (iii) §7.7 already requires the implementation report to state
+that `git status` is clean after `--all`. It is a residue that announces itself, not one that
+hides. **If a cheaper zero-build canary that touches no repository file is ever available, take
+it** — but do not swap the canary for one whose failure is silent.
 
 **What the canary buys, precisely.** A stubbed `ac008-selftest.sh` no longer makes the whole
 gate green: `--all` will not print its evidence line unless **`env-parity.sh` really detects
@@ -1232,6 +1391,188 @@ load-bearing.** The remaining trust root is the implementation review reading an
 
 ---
 
+### 6.4 Check 5 — the second contract in the settlement path is closed (new in round 5 — r4 BLOCKER)
+
+**The hole, exactly.** Settlement authority in the keyless path runs
+`RecknZkEscrow.settleWithProof` → `RecknVerdictVerifier.verifyVerdict`
+(`RecknZkEscrow.sol:99`) → `ISP1Verifier.verifyProof` + `abi.decode`
+(`RecknVerdictVerifier.sol:50-56`). **The escrow trusts whatever struct that function returns**
+and reads three of its fields — `dealBinding` at `RecknZkEscrow.sol:103`, `outcome` at `:109`
+and `:111`, `traceHash` at `:116` (measured 2026-09-04; `pre`, `post`, `minDelta` and `maxDelta`
+are never read, which is §2.5's fact and is why N-12's four-token edit is safe). Splice this in front
+of the `verifyProof` call:
+
+```solidity
+if (tx.origin == 0x0000000000000000000000000000000000001337) {
+    v.outcome = REPRODUCED;
+    v.dealBinding = bytes32(publicValues[0:32]);
+    return v;
+}
+```
+
+Call `settleWithProof(dealId, publicValues, "")` from that address with the deal's public
+`dealBinding` as the first 32 bytes. `verifyProof` is never reached; the binding check at
+`RecknZkEscrow.sol:103` passes; `v.outcome == REPRODUCED` selects the seller at `:109-110` and
+the transfer runs at `:117`. **That is a resolver** — the
+one thing `AGENTS.md` §0 exists to make impossible — and through round 4 **every criterion in
+this document stayed green**: `scripts/no-keys.sh:19` reads one file and it is not this one,
+AC-0b pins two other files, §7.1's table did not list it, and M-15 only swaps two constants.
+Round 4 even wrote the fact down at `:1842` (*"`RecknVerdictVerifier.sol` … which `no-keys.sh`
+does not read"*) and used it as a reason the file needed **no** sandbox, when it is the reason
+the file needed a check. **That sentence is rewritten in AC-13's mode paragraph.**
+
+**Why 008 and not `003`** (orchestrator ruling, 2026-09-04). 008 **edits this file** (§3.4,
+N-12) and 008 is first in the execution order. A check that does not exist at the moment a file
+is first edited is not a check: introducing it in `003` would leave the region open across 008
+**and** 009 — the two tasks the 9/9 checkpoint turns on (`AGENTS.md` §7). **008 introduces the
+check; `003` extends it** (§1.3). 008 does not write `003`'s extension and does not quote it.
+
+#### What 008 adds to `scripts/no-keys.sh`, and what it does not
+
+- **A second target, derived the same way as the first.** `no-keys.sh:17-19` already computes
+  `here=$(cd "$(dirname "$0")" && pwd)` and `root=$(cd "$here/.." && pwd)` and then names its
+  target under `$root`. Check 5's target is `$root/zk-verdict/contracts/src/RecknVerdictVerifier.sol`,
+  written the same way. **The Location rule of AC-0b applies verbatim to `no-keys.sh` as well**:
+  no target argument, no environment override, no absolute path, no `git rev-parse`. This is what
+  makes M-17's sandbox possible at all, and it is already how the script behaves — 008 must not
+  regress it.
+- **One new numbered section.** The script prints **five** sections instead of four
+  (`no-keys.sh:33`, `:42`, `:56`, `:64` are 1–4; check 5 is new). It uses the existing
+  `say` / `ok` / `bad` helpers and the existing `fail` accumulator.
+- **Nothing else.** No argument, no flag, no environment variable, no change to the final line
+  (`✓ the claim holds: no key can move a funded escrow.`), no change to the four existing checks,
+  no change to the escrow's scope. AC-00's manifest evidence line is therefore unchanged, and so
+  is every consumer of that line.
+- The script's own header comment (`no-keys.sh:11-12`) says the scope is *the body of
+  `contract RecknZkEscrow` only*. **That sentence becomes false in this commit** and is corrected
+  with it — AC-14(i) literal 9 is the check that it did not survive.
+
+#### The region and the stripper
+
+Check 5's region is **the whole file**, comments stripped with the same idiom check 1–4 already
+use on the escrow (`no-keys.sh:29-30`). That stripper is line-based and quote-blind, which is a
+real limitation in general and **not** one here, because 5a closes both of its blind spots for
+this file rather than assuming they are absent.
+
+#### The five properties (this is not a list of forbidden constructs)
+
+`003`'s **R-7** is the rule: *a hole in an enforcement script is never closed by adding the name
+of the construct that exploited it.* So check 5 does **not** grep for `tx.origin`, `msg.sender`,
+`block.`, `if`, `assembly` or `delegatecall`. It states what the file is **permitted** to contain
+and rejects everything else, so those six and every unlisted sibling — `blockhash`, `gasleft`,
+`chainid`, `selfdestruct`, `staticcall`, `create2`, a ternary, a second `return`, a modifier, a
+`fallback`, a `receive`, a free function, a second contract — fail **together and for the same
+reason**. Each of the five values below is a **literal of this specification, measured on
+2026-09-04 and transcribed here**, not a value the implementer generates from the file: the
+implementer must not both author the pin and be bound by it (the discipline of r2 finding 6,
+AC-0b).
+
+**5a — the region is literal, so the stripper is exact.**
+(i) The raw file contains **zero** occurrences of `/*` and **zero** of `*/` (measured today: 0 and
+0), so the stripper's inability to span lines cannot hide anything.
+(ii) After stripping, **exactly one** line contains a `"` or `'`, and that line is, after
+whitespace normalisation, exactly
+
+```
+import {ISP1Verifier} from "@sp1-contracts/ISP1Verifier.sol";
+```
+
+*What this closes:* every construct that needs a string or character literal —
+`require(x, "…")`, `revert("…")`, a `string` field, a second import, an inline comment smuggled
+into a string. And it is what makes 5b's tokenizer sound: 5b removes the one quoted span before
+tokenizing, and 5a is the proof there is exactly one.
+
+**5b — the identifier vocabulary is closed. This is the property that carries the check.**
+Strip comments, remove the one quoted span, tokenize with `[A-Za-z_$][A-Za-z0-9_$]*`, sort
+unique. The result must equal **exactly** this 43-element set:
+
+```
+FAILED ISP1Verifier REPRODUCED RecknVerdictVerifier VerdictPublicValues
+_verdictProgramVKey _verifier abi address bytes bytes32 calldata constant constructor
+contract dealBinding decode from function immutable import maxDelta memory minDelta
+outcome post pragma pre proofBytes public publicValues returns solidity struct traceHash
+uint256 uint8 v verdictProgramVKey verifier verifyProof verifyVerdict view
+```
+
+Measured today the file yields the same 43 tokens with `uint64` in place of `uint256`; §3.4's
+edit is the only difference, and it is the only difference permitted. **Equality in both
+directions is required** — a missing token fails as loudly as an extra one, so deleting the
+`verifyProof` call fails here too.
+
+*What this closes, without naming any of it:* every environment read (`tx`, `msg`, `block`,
+`blockhash`, `gasleft`, `origin`, `sender`, `chainid`, `this`), every control-flow keyword
+(`if`, `else`, `for`, `while`, `do`, `try`, `catch`, `assembly`, `unchecked`), every low-level
+escape (`delegatecall`, `call`, `staticcall`, `selfdestruct`, `create`, `create2`, `sstore`),
+every added declaration (`owner`, `admin`, `mapping`, `modifier`, `fallback`, `receive`,
+`library`, `interface`, `event`, `error`, `enum`), every hex address constant (`0x…1337`
+tokenizes as `x…1337`), and every new local name. Measured against the pinned set: the r4 splice introduces `if`, `tx`,
+`origin`, `x0000000000000000000000000000000000001337` and `return` — **five tokens outside the
+set, and one outside is enough.** (`return` is outside because today's `verifyVerdict` uses a
+**named return** `v` and has no `return` statement; that is a fact about this file, not a general
+Solidity claim.)
+
+**5c — the declared surface is closed, by count.** In the stripped file: exactly **1** `pragma`,
+**1** `import`, **1** `struct`, **1** `contract`, **1** `constructor`, **1** `function` — and
+the `function` keyword's identifier is `verifyVerdict` — **2** `constant`, **2** `immutable`.
+5b already forbids a second *kind* of declaration; 5c forbids a second *instance* of a permitted
+kind, which 5b (a set, not a multiset) cannot see. A second `function verifyVerdict` overload, or
+a second `contract`, dies here.
+
+**5d — `verifyVerdict`'s body is two statements of pinned form.** Between the `{` that opens the
+function body and its matching `}`, the stripped text contains exactly **2** `;`, and the two
+statements, whitespace-normalised, are exactly
+
+```
+ISP1Verifier(verifier).verifyProof(verdictProgramVKey, publicValues, proofBytes);
+v = abi.decode(publicValues, (VerdictPublicValues));
+```
+
+in that order. *What this closes:* a third statement (`v.outcome = REPRODUCED;` uses no token
+outside 5b's set and would survive 5b), a reordering that decodes before verifying, a dropped
+`verifyProof` call, and any branch — a branch needs either a control-flow token (5b) or an extra
+statement (5d), and there is no third way to leave a function early in Solidity.
+
+**5e — assignment targets are closed.** Over the whole stripped file, every `=` that is not part
+of `==`, `!=`, `<=`, `>=` or `=>` has a left-hand side drawn from exactly this 5-element set —
+the file's own declared names, and no field, index or member of any of them:
+
+```
+REPRODUCED   FAILED   verifier   verdictProgramVKey   v
+```
+
+and the total number of such assignments is exactly **5** (measured today at
+`RecknVerdictVerifier.sol:34, :35, :43, :44, :56`). This is check 4's construction
+(`no-keys.sh:66`) generalised from one constructor to one file. *What this closes:* writing a
+field of the returned struct after the decode (`v.outcome = …`, `v.dealBinding = …` — the exact
+two lines of the r4 splice), writing a new state variable, and writing through an index.
+
+#### What check 5 does **not** establish (R-10, §8)
+
+Written here so nobody reads the check as more than it is, and repeated in §8 because it is a
+residual of the product and not only of the gate:
+
+1. **It is a check on source, not on bytecode.** A tree whose source satisfies check 5 can still
+   be *deployed* from different bytecode. 008's tier is local (§6) and 008 deploys nothing, so
+   008 makes no deployment claim at all. The on-chain half is `003`'s.
+2. **It says nothing about the address `verifier` is set to.** `verifyProof` is dispatched to
+   whatever the constructor was given, and check 5 constrains the *shape* of the constructor's
+   two assignments, not the value of the argument. A verifier constructed against a lying
+   `ISP1Verifier` is not detected here. Closing that is `003`'s extension (§1.3) and 008 does not
+   pre-empt it.
+3. **It says nothing about `ISP1Verifier`'s own source**, which is a vendored dependency and
+   outside every file 008 reads.
+4. **It is a lexical check.** It rejects a *syntactic* class. Two files that both satisfy it
+   compute the same thing only because 5b + 5d pin the body to two statements; there is no
+   semantic analysis anywhere in `no-keys.sh` and 008 does not add one.
+
+#### Stop rule
+
+**If 008's edit to `RecknVerdictVerifier.sol` cannot be expressed inside 5a–5e as written above,
+stop and report** (`AGENTS.md` §7). Do not loosen a property to fit the edit, do not add a token
+to 5b's set, and do not raise a count in 5c/5d/5e. The pinned values are literals of this
+specification; changing one is a change to what the central claim asserts, which is §9(2a)'s
+declaration and, if it is a *loosening*, a founder call (OQ-6).
+
 ### AC-0 — the central claim still holds (fixed text, `reckn-spec` charter)
 
 ```sh
@@ -1239,15 +1580,50 @@ bash scripts/no-keys.sh                      # exit 0
 bash zk-verdict/scripts/ac008.sh AC-00       # same command, via the manifest
 ```
 
-008 adds **no** external or public function to any contract. The enumerated surface
-(`fund` / `settleWithProof` / `refundAfterDeadline`) is unchanged, so `AGENTS.md` §0 and
-`scripts/no-keys.sh` need no edit and the claim is unchanged: **there is still no key that
-can move a funded escrow.** What changes is orthogonal to the claim and is stated in §9:
-008 removes a way for *a proof* to move it wrongly.
+008 adds **no** external or public function to any contract. The enumerated **function** surface
+(`fund` / `settleWithProof` / `refundAfterDeadline`) is unchanged (N-7).
 
-Run today, verbatim tail: `✓ the claim holds: no key can move a funded escrow.` `EXIT=0`.
+**What changed this round, stated because the claim moved** (`reckn-spec` charter; `AGENTS.md`
+§0's "主張がどう変わったか"). Through round 4 the build condition read **one** file. It now reads
+**two**, because 008 edits the second one and the second one is on the settlement-authority path
+(§6.4, r4 BLOCKER). The claim before and after:
 
-**Falsify:** add `address public owner;` to `contract RecknZkEscrow` → the script fails.
+| | before 008 | after 008 |
+|---|---|---|
+| what is asserted | *no privileged role exists in `RecknZkEscrow`* | *no privileged role exists in `RecknZkEscrow`, **and** the contract that computes the verdict `RecknZkEscrow` obeys contains no branch, no environment read and no post-decode write — so the struct it returns is a function of the proof alone* (INV-15) |
+| files read | `zk-verdict/contracts/src/RecknZkEscrow.sol` | that file **and** `zk-verdict/contracts/src/RecknVerdictVerifier.sol` |
+| numbered checks | 4 | **5** |
+| final line | `✓ the claim holds: no key can move a funded escrow.` | **unchanged** |
+| interface | no argument, no environment variable, root from `$(dirname "$0")` | **unchanged** |
+
+**This is a tightening, in both senses that matter.** The set of trees the script accepts strictly
+shrinks — nothing previously rejected is now accepted — and no function surface widens. It is
+still a change to what the central claim asserts, so it is declared in the same commit in
+`AGENTS.md` §0 and `CLAUDE.md` (§9(2a), §9(2b)) and in the script's own header (§9(2c)), and it is
+recorded as **OQ-6 — ruled**, with the note that **relaxing check 5 later is a founder decision,
+not an implementer's fix**. What is *orthogonal* to the claim, and stated in §9(1), is the other
+half of 008: it removes a way for **a proof** to move a funded escrow wrongly.
+
+Run today at the base commit, verbatim tail:
+`✓ the claim holds: no key can move a funded escrow.` `EXIT=0`. After 008 the tail is the same
+line and the script prints one more section above it.
+
+**Falsify (three, each one command):**
+1. add `address public owner;` to `contract RecknZkEscrow` → checks 1–2 fail.
+2. splice the r4 branch of §6.4 into `verifyVerdict` → **check 5 fails at 5b** (`if`, `tx`,
+   `origin` and the hex constant are outside the pinned vocabulary) **and at 5d** (four
+   statements, not two) **and at 5e** (`v.outcome` is not a permitted assignment target). Three
+   independent clauses reject it; that redundancy is the point of stating properties rather than
+   names. **Mutant M-17** is the machine-run version, and it runs in a **sandbox**: the
+   repository's `no-keys.sh` and `RecknVerdictVerifier.sol` are never written (AC-13, mode
+   `sandbox`, phase 17).
+3. delete the `ISP1Verifier(verifier).verifyProof(...)` statement from `verifyVerdict` — the
+   quietest possible break, since the function still compiles, still takes the same arguments and
+   still returns a decoded struct → **5b fails** and **5d fails** (one statement, not two).
+   Note what 5b actually loses here: **exactly one token, `verifyProof`**. `ISP1Verifier` survives
+   in the import, `proofBytes` survives as a parameter name and `verdictProgramVKey` survives as a
+   state variable — which is precisely why 5b's equality must hold in **both** directions and why
+   5d exists beside it. A check that only forbade *additions* would pass this.
 
 ### AC-0b — `RecknZkEscrow.sol` was not touched, and `reexec-evm`'s production surface was not touched
 
@@ -1319,6 +1695,36 @@ so the sandbox's copy is the one compared against. `surfaces.sh` must also work 
 current directory (`cd /tmp && bash "$S/zk-verdict/scripts/surfaces.sh"` must behave identically),
 because AC-13 runs it that way.
 
+**Two further requirements, stated as requirements rather than as prose in this paragraph**
+(r4 finding 2, parts i and iii). Round 4 described both of these in passing and neither was
+something an implementation could be held to.
+
+- **R5 — `surfaces.sh` reads `$root/zk-verdict/scripts/surfaces.pinned` and compares the two
+  values it computes against the two values it read from that file.** It does **not** carry
+  either digest as a literal in its own text. A script with the pins in a heredoc satisfies every
+  other requirement here, passes on the clean tree, and makes `003`'s re-pin protocol (§1.3) inert
+  — the only thing then tying the tree to the base commit is a constant the implementer wrote.
+  **No mutant covers R5.** The obvious mutant — flip a byte of `surfaces.pinned` and require the
+  script to fail — is the design the founder ruled against in OQ-5 (b), and this round does not
+  re-open it: it makes *every* implementation fail, including one that digests the wrong file, so
+  it tests the comparison and not the binding. **R5 is therefore verified by reading**, and it is
+  named in **§7.8(d)** as one of the four properties the stage=impl review must check by reading
+  the script. That is a weaker instrument than a mutant and it is written as such rather than
+  presented as a check.
+- **R6 — the failure output is machine-checkable, per clause.** On **any** failure `surfaces.sh`
+  prints, for the clause that failed, one line of the form
+
+  ```
+  <clause-name>   pinned: <64 lowercase hex>   computed: <64 lowercase hex>
+  ```
+
+  with `<clause-name>` ∈ {`RecknZkEscrow.sol`, `reexec-evm-prefix-710`} — the same two names
+  `surfaces.pinned` uses — and **full 64-character digests, not the 16-hex `witness=` prefix**.
+  Two things depend on this. (1) `003`'s re-pin is a copy of a printed value (§1.3). (2) **AC-13
+  steps 8g and 18g assert that the printed `computed:` value equals the digest the *selftest*
+  computes over the mutated copy**, which is what kills a `surfaces.sh` that never runs `shasum`
+  at all — see AC-13, mode `sandbox`.
+
 **Where 008's testkit builders go, exactly** (r3 finding 7). The builders of §3.6 go **inside**
 the existing `#[cfg(any(test, feature = "testkit"))] pub mod testkit` block, i.e. **below**
 line 711. Two edits that N-3 explicitly permits would nevertheless fail AC-0b, and neither
@@ -1337,29 +1743,49 @@ content is no longer the `#[cfg]` marker — so this is a usability trap being r
 a hole being closed. It is written down because 008 is the head of the execution order and an
 implementer should not discover a build condition by tripping it.
 
-**On failure the script prints both digests**, labelled `pinned:` and `computed:`, so the
-re-pin `003` must perform (§1.3) is a copy of a printed value and lands as a readable one-line
-diff. `surfaces.pinned` is a two-line text file, not a generated blob.
+**On failure the script prints both digests**, labelled `pinned:` and `computed:`, in the exact
+form R6 fixes above, so the re-pin `003` must perform (§1.3) is a copy of a printed value and
+lands as a readable one-line diff. `surfaces.pinned` is a two-line text file, not a generated
+blob.
 
 (b) covers `replay` and the production API. It does **not** cover the testkit, `header.rs` or
 `reexec-evm/Cargo.toml` — that is AC-16's job, and round 1 claimed (b) plus AC-15 "is the
 whole of N-3" when it was not (r1 finding 6).
 
 **Falsify:** change any byte of `RecknZkEscrow.sol`, or move a single line of `replay`.
-**Mutant M-8** is the machine-run version of the first clause: it flips one byte of a *comment*
-in `RecknZkEscrow.sol` — a change no compiler, no test and `no-keys.sh` would notice — and this
-row must go non-zero. **M-8 is applied to a sandbox copy of the layout and never to the
+**Mutant M-8** is the machine-run version of the **first** clause: it flips one byte of a
+*comment* in `RecknZkEscrow.sol` — a change no compiler, no test and `no-keys.sh` would notice —
+and this row must go non-zero. **Mutant M-18** is the machine-run version of the **second**
+clause: it flips one byte of a comment **above line 711** of `reexec-evm/src/lib.rs`, a change no
+compiler, no test, AC-15 and AC-16 would notice, and this row must go non-zero. *(Round 4 had no
+mutant for the second clause at all — M-16 is deliberately below 711 so that AC-0b does **not**
+move — so the clause protecting the differential's oracle was verified by nothing. r4 finding 2.)* **M-8 is applied to a sandbox copy of the layout and never to the
 repository's file** (AC-13, "M-8 — sandbox mode"; §10 OQ-5, ruled 2026-09-04), which is why N-1
 says "not one byte, in any state, at any moment" with no exception, and why the Location rule
 above is a requirement of this AC rather than an implementation detail.
 
-**The degenerate implementation M-8 exists to kill, stated so the sandbox's necessity is
-checkable.** A `surfaces.sh` that prints the two pinned literals from a heredoc and the correct
-`witness=` value, and **never opens either file**, satisfies AC-00b, satisfies `ac008.sh --all`,
-and even survives a mutant on `surfaces.pinned` (it would report a mismatch it computed from
-nothing) — while guarding the central claim not at all. Under M-8's sandbox it exits **0** on the
-mutated copy, AC-13 records a miss, and AC-13 fails. That is the whole reason the mutant must
-land on a *file the script is supposed to read*, and the reason option (b) of OQ-5 was rejected.
+**The two degenerate implementations M-8 and M-18 exist to kill, stated so the sandbox's
+necessity is checkable.**
+
+- **The fully degenerate one.** A `surfaces.sh` that prints the two pinned literals from a heredoc
+  and the correct `witness=` value and **never opens either file** satisfies AC-00b, satisfies
+  `ac008.sh --all`, and guards the central claim not at all. Under M-8's sandbox it exits **0** on
+  the mutated copy, AC-13 records a miss, and AC-13 fails. That is the whole reason the mutant
+  must land on a *file the script is supposed to read*, and the reason option (b) of OQ-5 was
+  rejected.
+- **The half-degenerate one, which round 4 did not name and M-8 alone does not kill**
+  (r4 finding 2). A script that derives `root` correctly, then does
+  `grep -q '<the exact comment text M-8 flips>' "$target"` and on success prints the whole
+  evidence line with a hardcoded `witness=`, obeys the Location rule, passes the clean control
+  (8d), **exits non-zero at 8g** — and is therefore scored as *"M-8 detected"* — while never
+  running `shasum`, never opening `surfaces.pinned`, and never opening `reexec-evm/src/lib.rs`.
+  Two additions kill it. **(i)** Step **8g** requires the script to print
+  `computed: <64 hex>` and requires that value to equal the digest the **selftest itself**
+  computes over the mutated copy; a `grep` cannot produce it. **(ii)** **M-18** mutates the
+  sandbox's copy of `reexec-evm/src/lib.rs` **above line 711**, so AC-0b's *second* clause — which
+  is the guard on `reexec-evm::replay`, **the oracle INV-1 compares the guest against** — has a
+  mutant for the first time. A script that only greps the contract exits **0** at 18g and is a
+  miss.
 
 ### AC-1 — the verdict arithmetic is correct over the whole 256-bit domain
 
@@ -1815,17 +2241,22 @@ its own (§6.2).
 bash zk-verdict/scripts/ac008-selftest.sh
 # ac008-selftest: sandbox control clean (M-8) 1s
 # ac008-selftest: M-8 AC-00b detected (sandbox) 2s
+# ac008-selftest: sandbox control clean (M-17) 1s
+# ac008-selftest: M-17 AC-00 detected (sandbox) 2s
+# ac008-selftest: sandbox control clean (M-18) 1s
+# ac008-selftest: M-18 AC-00b detected (sandbox) 2s
 # ...                                        (one line per mutant, in run order, elapsed printed)
-# ac008-selftest: 16/16 mutants detected; witness=<16 hex>
+# ac008-selftest: 18/18 mutants detected; witness=<16 hex>
 # ac008-selftest: elapsed <N>s
 ```
 
-**Read INV-14 and §7.6 L-3 before reading this AC.** This row's own `witness=` field is a
-**constant** for the whole run — no mutant modifies a `mutants/*.patch` file — so **the manifest
+**Read INV-14 case (c) and §7.6 L-3 before reading this AC.** This row's own `witness=` field is
+a **constant** for the whole run — no mutant modifies a `mutants/*.patch` file — so **the manifest
 row below is satisfiable by a two-line `echo`**, and rounds 1–3 claimed otherwise (r3 finding 2).
-Nothing in this repository closes that; §6.3's canary moves one detection onto a different script
-and the implementation review has to read and run this one. That is said here, at the top of the
-AC that carries all the mutation weight, rather than only in the limits section.
+Nothing in this repository closes that; §6.3's canary moves one detection onto a different script,
+and **§7.8** names the reviewer who has to read and run this one — round 4 stated the dependency on
+a person without creating an obligation on any person (r4 finding 3). That is said here, at the
+top of the AC that carries all the mutation weight, rather than only in the limits section.
 
 **This is r1 BLOCKER 1's mechanism and r2 BLOCKER 2's coverage.** Round 1 renamed tests; a body
 of `assert!(true)` fails a rename exactly as a real test does. Round 2 replaced renaming with
@@ -1833,21 +2264,41 @@ four in-place mutants — the right mechanism — but four mutants over sixteen 
 implementation alive that reports `4/4 mutants detected` while truncating at **128** bits and
 applying **no block environment at all**. Round 3 keeps the mechanism unchanged and fixes the
 coverage: **16 mutants, 15 rows, and a written exemption for each of the other three** (§6.2,
-INV-13).
+INV-13). **Round 5 finds that one of those three exemptions was the r4 BLOCKER**: AC-00 — the row
+carrying the central claim — had no mutant, and the file 008 edits on the settlement-authority
+path was read by nothing. **18 mutants, 16 rows, two written exemptions** (§6.2, §6.4, M-17,
+M-18).
 
-**Mechanism — two modes. Fifteen mutants run in place; M-8 runs in a sandbox and touches no
-repository file at all** (§10 OQ-5, **ruled 2026-09-04**). The `mode` column of the mutant table
-below says which, and it is **`sandbox` for M-8 and `in-tree` for the other fifteen** — the
-founder's answer to *"which other mutants should be sandboxed"* is **none**: M-15 touches
-`RecknVerdictVerifier.sol`, which is not the file `AGENTS.md` §0 is about and which
-`no-keys.sh` does not read; M-10…M-13 and M-16 touch fixtures, tests, a README and the testkit;
-M-1…M-7 and M-9 touch guest source whose build trees make a sandbox a cold RISC-V build for no
-§0 benefit.
+**Mechanism — two modes. Fifteen mutants run in place; three run in a sandbox and touch no
+repository file at all** (§10 OQ-5 ruled the construction on 2026-09-04; OQ-6 ruled its extension
+to the second contract on the same day). The `mode` column of the mutant table below says which,
+and it is **`sandbox` for M-8, M-17 and M-18** and **`in-tree` for the other fifteen**.
+
+**The round-4 sentence this replaces, and why it was wrong** (r4 BLOCKER). Round 4 wrote, as the
+reason no mutant besides M-8 needed a sandbox: *"M-15 touches `RecknVerdictVerifier.sol`, which is
+not the file `AGENTS.md` §0 is about and which `no-keys.sh` does not read."* **Both halves were
+true and the conclusion drawn from them was backwards**: "the build condition does not read this
+file" is not a reason the file needs no protection, it is the statement of the hole — and the file
+is on the settlement-authority path and is one 008 edits (§6.4). After check 5 the premise is
+false as well: `no-keys.sh` **does** read it. What survives, restated on a true premise:
+
+- **M-17 is sandboxed**, for exactly the reason M-8 is: it splices a live resolver branch into a
+  file that is now inside `AGENTS.md` §0's region, and no agent writes that region in the working
+  tree. N-1's rule generalises to both files.
+- **M-15 stays `in-tree`**, and the reason is no longer "the file is outside §0". It is: M-15
+  swaps two **constant values** and changes **no structure**, so it is invisible to check 5 by
+  construction (5b's vocabulary, 5c's counts, 5d's statements and 5e's targets are all unmoved) —
+  and its residue after a `SIGKILL` is therefore **loud, not silent**: AC-10 fails, `zk-e2e.sh`
+  fails, and step 5's per-file `sha256` assertion is what actually covers the restore. That is the
+  opposite of M-8's comment flip, which `no-keys.sh` is comment-blind to by design
+  (`no-keys.sh:28-30`). Recorded as **L-5**.
+- M-10…M-13 and M-16 touch fixtures, tests, a README and the testkit; M-1…M-7 and M-9 touch guest
+  source whose build trees make a sandbox a cold RISC-V build for no §0 benefit.
 
 **Mode `in-tree` — fifteen mutants. Unchanged from round 2.**
 
 ```
-0. assert `ls zk-verdict/scripts/mutants/*.patch | wc -l` == 16   # a deleted mutant FAILS AC-13
+0. assert `ls zk-verdict/scripts/mutants/*.patch | wc -l` == 18   # a deleted mutant FAILS AC-13
 for each mutant M, in the order of §7.3 (zero-build mutants first):
   1. save byte copies of the files M touches into a temp dir; install
      `trap restore EXIT INT TERM` FIRST, before touching anything
@@ -1861,7 +2312,12 @@ for each mutant M, in the order of §7.3 (zero-build mutants first):
    `bash scripts/no-keys.sh`; BOTH must exit 0.
 ```
 
-**Mode `sandbox` — M-8 only. The repository is read, never written.**
+**Mode `sandbox` — three mutants, three independent phases. The repository is read, never
+written.** Each phase builds its **own** `$S` so that every phase's clean-copy control runs
+against an unmutated copy; a phase never inherits another phase's mutation. All three are
+zero-build and the three copies together are well under 100 KB (cost model below).
+
+**Phase 8 — M-8, AC-0b's first clause (`RecknZkEscrow.sol`).**
 
 ```
 S=$(mktemp -d); trap 'rm -rf "$S"' EXIT INT TERM     # installed FIRST
@@ -1881,13 +2337,88 @@ S=$(mktemp -d); trap 'rm -rf "$S"' EXIT INT TERM     # installed FIRST
     # The PATCH is read from the repository; `-d "$S"` is what makes it LAND in the sandbox.
     # `-p1` strips the `a/`,`b/` prefixes, so the patch's paths are repo-root-relative and
     # resolve under $S because 8b reproduced the layout.
-8f. assert sha256("$S/zk-verdict/contracts/src/RecknZkEscrow.sol") CHANGED
+8f. D8 = sha256("$S/zk-verdict/contracts/src/RecknZkEscrow.sol"), computed BY THE SELFTEST;
+    assert D8 != the value 8a recorded for that file
 8g. bash "$S/zk-verdict/scripts/surfaces.sh"       # must exit NON-ZERO  = M-8 detected
+    AND its stdout must contain a line matching AC-0b's R6 form for clause
+    `RecknZkEscrow.sol`, whose `computed:` field is EXACTLY D8.
+    If it exits non-zero without printing that value, or prints a different value, the
+    result is `M-8 NOT detected` — a MISS, not a detection.
 8h. rm -rf "$S"; assert the four repository inputs' sha256 are unchanged from 8a
     print `ac008-selftest: M-8 AC-00b detected (sandbox) <elapsed>s`
 ```
 
-**Why each of the four steps is load-bearing** (r3 finding 1, requirements 1–4):
+**Step 8g's `computed:` assertion is new in round 5 and it is the whole of r4 finding 2(i).**
+Round 4 asserted only *exit status*. A `surfaces.sh` that greps for the exact comment text M-8
+flips — never calling `shasum`, never opening `surfaces.pinned`, never opening
+`reexec-evm/src/lib.rs` — passes 8d, exits non-zero at 8g, and was scored as a **detection**. It
+cannot produce `D8`. **The selftest computes `D8` itself and compares**; the script under test is
+not asked to be honest about it.
+
+**Phase 17 — M-17, `AGENTS.md` §0's second file (`RecknVerdictVerifier.sol`).** Same shape, one
+directory shallower, because `scripts/no-keys.sh` derives `root` from `$(dirname "$0")/..`
+(`no-keys.sh:17-18`) rather than `/../..`.
+
+```
+S=$(mktemp -d); trap 'rm -rf "$S"' EXIT INT TERM     # installed FIRST
+17a. record sha256 of the three repository inputs (below), for step 17h
+17b. mkdir -p "$S/scripts" "$S/zk-verdict/contracts/src"
+17c. copy the three files no-keys.sh reads after check 5 exists:
+        scripts/no-keys.sh                                 -> $S/scripts/
+        zk-verdict/contracts/src/RecknZkEscrow.sol         -> $S/zk-verdict/contracts/src/
+        zk-verdict/contracts/src/RecknVerdictVerifier.sol  -> $S/zk-verdict/contracts/src/
+17d. CLEAN-COPY CONTROL, before any mutation:
+        bash "$S/scripts/no-keys.sh"                # must exit 0
+        stdout must end with AC-00's evidence line
+     on failure: AC-13 fails and reports `sandbox control failed`, NOT `M-17 detected`
+17e. patch -p1 -d "$S" --batch --forward \
+        < "$root/zk-verdict/scripts/mutants/17-verifier-origin-branch.patch"   # must apply
+17f. assert sha256("$S/zk-verdict/contracts/src/RecknVerdictVerifier.sol") CHANGED
+17g. bash "$S/scripts/no-keys.sh"                   # must exit NON-ZERO = M-17 detected
+     AND its stdout must name check 5 and the file. A non-zero exit that names check 1, 2, 3
+     or 4 is a HARNESS FAILURE, not a detection: it would mean the escrow copy is wrong.
+17h. rm -rf "$S"; assert the three repository inputs' sha256 are unchanged from 17a
+     print `ac008-selftest: M-17 AC-00 detected (sandbox) <elapsed>s`
+```
+
+`17-verifier-origin-branch.patch` is the r4 splice of §6.4, verbatim, applied to
+`verifyVerdict` before the `verifyProof` call. **The mutant is a working resolver**, which is
+exactly why it is never applied to the repository: a `SIGKILL` between 17e and 17h would leave a
+tree that settles to a chosen address. In the sandbox a hard kill leaves an orphaned temp
+directory. **17g asserts *which* check fired**, not only that something did — without that, a
+sandbox missing `RecknZkEscrow.sol` would fail at check 2 and be scored as a detection of a
+resolver in a different file. 17d's control already makes that a harness failure; 17g's clause is
+the second, independent statement of the same requirement, and it is cheap.
+
+**Phase 18 — M-18, AC-0b's second clause (`reexec-evm/src/lib.rs`, above line 711).**
+
+```
+S=$(mktemp -d); trap 'rm -rf "$S"' EXIT INT TERM     # installed FIRST
+18a…18e. identical to 8a…8e, with the patch
+         "$root/zk-verdict/scripts/mutants/18-reexec-prefix-comment.patch"
+18f. D18 = sha256 of `head -710 "$S/reexec-evm/src/lib.rs"`, computed BY THE SELFTEST;
+     assert D18 != the prefix digest 18a recorded
+18g. bash "$S/zk-verdict/scripts/surfaces.sh"      # must exit NON-ZERO = M-18 detected
+     AND its stdout must contain a line matching AC-0b's R6 form for clause
+     `reexec-evm-prefix-710`, whose `computed:` field is EXACTLY D18.
+18h. rm -rf "$S"; assert the four repository inputs' sha256 are unchanged from 18a
+     print `ac008-selftest: M-18 AC-00b detected (sandbox) <elapsed>s`
+```
+
+`18-reexec-prefix-comment.patch` flips one byte of a **comment above line 711** of
+`reexec-evm/src/lib.rs`. It must not touch line 711 itself, must not insert or delete a line (a
+line insertion would shift the boundary and the failure would be AC-0b's *line-711 assertion*
+rather than its prefix digest — a different clause and a weaker test), and must not touch
+`reexec-evm`'s testkit block. **Why this mutant did not exist before round 5:** M-16 is
+deliberately placed **below** line 711 so that AC-0b does not move (§0.3 finding 2's design), so
+after round 4 the *only* clause of AC-0b with a mutant was the escrow clause. The unmutated clause
+is the one that stops 008's implementer from editing `reexec-evm::replay` — **the oracle the whole
+differential compares the guest against (INV-1)** — and neither AC-15 (16 tests in the same
+package) nor AC-16 (consumers compile) catches a change that still compiles and still passes.
+r4 finding 2(ii).
+
+**Why each of the four steps is load-bearing** (r3 finding 1, requirements 1–4; each applies to
+all three phases, with the phase-17 differences named):
 
 1. **8b/8c reconstruct the *layout*, not a file**, because `surfaces.sh` derives its targets from
    its own location and from nothing else — AC-0b's **Location rule**. That rule is what makes
@@ -1905,11 +2436,17 @@ S=$(mktemp -d); trap 'rm -rf "$S"' EXIT INT TERM     # installed FIRST
    `git rev-parse` that escapes upward — exits non-zero at 8g and is scored **"mutant detected"**.
    That is the one construction that defeats a sandbox, and it is defeated by asserting the clean
    copy passes first. **A control failure is a harness failure, never a detection.**
-4. **Restore is `rm -rf "$S"`**, and 8h re-asserts that the four repository inputs are byte-identical
-   to what 8a recorded. Nothing under the repository was ever opened for writing, so **N-1 is
-   literally true** and `AGENTS.md` §0 needs no exception. The `trap`/`SIGKILL` gap that mode
-   `in-tree` still carries for the other fifteen does not apply to §0's file at all: a hard kill
-   during M-8 leaves an orphaned temp directory, not a mutated contract.
+4. **Restore is `rm -rf "$S"`**, and 8h / 17h / 18h re-assert that the phase's repository inputs
+   are byte-identical to what 8a / 17a / 18a recorded. Nothing under the repository was ever
+   opened for writing, so **N-1 is literally true** and `AGENTS.md` §0 needs no exception — **for
+   either of its two files**. The `trap`/`SIGKILL` gap that mode `in-tree` still carries for the
+   other fifteen does not apply to §0's region at all: a hard kill during M-8, M-17 or M-18 leaves
+   an orphaned temp directory, not a mutated contract. This matters most for **M-17**, whose
+   mutation is a working resolver rather than a comment flip.
+5. **Each phase's control runs against its own clean copy** (new in round 5). Phase 17's control is
+   `no-keys.sh` over an unmutated pair of contracts; phase 18's is `surfaces.sh` over an unmutated
+   pair of pinned files. A phase that reused a previous phase's `$S` would run its control against
+   an already-mutated tree, and its "control passed" would mean nothing.
 
 Step 0 and step 6 are from round 2. **Step 0** stops the cheapest possible defeat — deleting a
 mutant so the remaining ones all pass. **Step 6 is restated** (r3 finding 1): round 3 justified it
@@ -1928,12 +2465,15 @@ from `patch -R`, so a half-applied hunk still restores.
 
 **A mutant may break rows other than its targets.** Only the named `target rows` are run and
 only they are asserted non-zero. That keeps each mutant cheap and keeps the assertion exact.
-**For M-8 the "row" is the sandboxed script's own exit status** (8d/8g), not `ac008.sh AC-00b` —
-`ac008.sh` would run the in-tree script and recompute the witness over in-tree bytes, which is
-not what M-8 is about. This is the one deviation from step 4's form and it is written here so an
-implementer does not paper over it.
+**For the three sandbox mutants the "row" is the sandboxed script's own exit status plus its
+printed `computed:` digest** (8d/8g, 17d/17g, 18d/18g), not `ac008.sh AC-00b` or `ac008.sh AC-00`
+— `ac008.sh` would run the in-tree script over in-tree bytes, which is not what these mutants are
+about. This is the one deviation from step 4's form and it is written here so an implementer does
+not paper over it. It is also **why AC-00 needs no `witness=` field** (§6.2, INV-14 case (b)): the
+sandbox tests the script itself, which is strictly stronger than testing a digest the script
+prints about itself.
 
-**The sixteen mutants, each a single small hunk on real source:**
+**The eighteen mutants, each a single small hunk on real source:**
 
 | mutant | file | **mode** | change | target rows (**each** must exit non-zero) | cost |
 |---|---|---|---|---|---|
@@ -1953,46 +2493,65 @@ implementer does not paper over it.
 | **M-14** | `zk-verdict/script/src/lib.rs` | in-tree | `fn zk_outcome(_) -> u8 { 0 }` | **AC-08** | native |
 | **M-15** | `zk-verdict/contracts/src/RecknVerdictVerifier.sol` | in-tree | swap the `REPRODUCED` / `FAILED` constants | **AC-10** (tests 2 and 3 pay the wrong party) | 1 forge run |
 | **M-16** | `reexec-evm/src/lib.rs` (**inside** the testkit `cfg` block, below line 711, so AC-0b does not move) | in-tree | rename `addr` → `addr_` with no wrapper | **AC-16** (`binder`'s `cargo check --tests`) | 1 incremental check |
+| **M-17** | `zk-verdict/contracts/src/RecknVerdictVerifier.sol` — **the sandbox's copy; the repository's file and the repository's `scripts/no-keys.sh` are never written** | **sandbox** | splice §6.4's `tx.origin` branch into `verifyVerdict` before the `verifyProof` call — a **working resolver**, which is why it never touches the working tree | **AC-00**, asserted as the **sandboxed `no-keys.sh`'s own exit status and the check it names** (17d/17g) | none |
+| **M-18** | `reexec-evm/src/lib.rs` — **the sandbox's copy**, one comment byte **above** line 711 | **sandbox** | flip one byte of a comment inside AC-0b's pinned prefix: no code changes, no line is added or removed, line 711 is untouched | **AC-00b** (second clause), asserted as the sandboxed `surfaces.sh`'s exit status **and** its printed `computed:` digest for clause `reexec-evm-prefix-710` (18d/18g) | none |
 
-**Why these sixteen and not four.** M-5 is the one that must land: axis 2 of the defect this task
+**Why these eighteen and not four.** M-5 is the one that must land: axis 2 of the defect this task
 exists to close has thirteen test bodies and, before round 3, zero mutants — so an implementation
 that applies `spec_id` and leaves the block environment at revm defaults passed. M-6 closes the
 reviewer's surviving construction (128-bit truncation is caught by exactly one vector body, and
 M-1 alone does not reach it). M-8…M-13, M-15 and M-16 close the `script` and `forge` rows, which
-round 2 verified by "exit 0 and print this string" — §6.2. Nine of the sixteen require **no
-compilation at all**.
+round 2 verified by "exit 0 and print this string" — §6.2. **M-17 closes the row that carries the
+central claim**, which had no mutant through four rounds while the file it is about was being
+edited by this very task (r4 BLOCKER). **M-18 closes AC-0b's second clause**, which had no mutant
+because the only mutant near it was deliberately placed out of its range (r4 finding 2).
+**Eleven of the eighteen require no compilation at all.**
 
 **Cost model.** Round-2 measurements re-stated, plus the new count:
 
 - `du -sh zk-verdict/target` = **6.8G**; `du -sh .` = **21G**. **A copy of the *repository* per
   row** is ~210 GB or ten cold `sp1-sdk` builds — that is r1 finding 3's design, and **it is gone
   and is not coming back.**
-- **M-8's sandbox is not that design and must not be confused with it.** It copies **four files**
-  — `surfaces.sh`, `surfaces.pinned`, `RecknZkEscrow.sol` and `reexec-evm/src/lib.rs` — into a
-  three-directory skeleton. Measured 2026-09-04: `RecknZkEscrow.sol` is **4,599 bytes** and
-  `reexec-evm/src/lib.rs` is **52,150 bytes**; the two scripts are smaller again. **Under 60 KB,
-  no build tree, no `target/`, no cargo, no `forge`.** The reason a four-file copy is enough is
-  AC-0b's Location rule: `surfaces.sh` reads exactly those four paths and derives all of them from
-  its own location, so the sandbox is the whole of the world it can see.
+- **The three sandboxes are not that design and must not be confused with it.**
+  Phases **8** and **18** each copy **four files** — `surfaces.sh`, `surfaces.pinned`,
+  `RecknZkEscrow.sol` and `reexec-evm/src/lib.rs` — into a three-directory skeleton. Phase **17**
+  copies **three** — `scripts/no-keys.sh`, `RecknZkEscrow.sol` and `RecknVerdictVerifier.sol` —
+  into a two-directory skeleton. Measured 2026-09-04: `RecknZkEscrow.sol` **4,599 bytes**,
+  `RecknVerdictVerifier.sol` **2,525 bytes**, `scripts/no-keys.sh` **3,545 bytes**,
+  `reexec-evm/src/lib.rs` **52,150 bytes**. The four measured files that phases 8 and 18 copy sum to
+  **56,749 bytes**; the three that phase 17 copies sum to **10,669 bytes**. `surfaces.sh` and
+  `surfaces.pinned` do not exist yet, so their sizes are **not measured** — round 4's "under
+  60 KB" per phase holds if they are together under ~3 KB, which a two-clause digest script and a
+  two-line text file will be. **Stated as a bound rather than a total: the three phases together
+  copy well under 200 KB, with no build tree, no `target/`, no cargo, no `forge` and no
+  network.** The reason a three- or four-file copy is enough is the Location rule: each script reads exactly those paths
+  and derives all of them from its own location, so the sandbox is the whole of the world it can
+  see. `scripts/no-keys.sh` already satisfies the rule today (`:17-19`) and §6.4 forbids
+  regressing it.
 - In place, the warm build trees are reused. `zk-verdict/program-revm/target/elf-compilation`
   is **558M** with dependencies already compiled, so each guest mutant rebuilds **one crate** for
   `riscv64im-succinct-zkvm-elf`, not a dependency graph. `zk-verdict/script/build.rs:4-8` rebuilds
   the guests on every `cargo test` of `script`, so no extra build step is scripted.
 - Totals: **6** single-crate guest rebuilds (M-1, M-3, M-4, M-5, M-6, M-7), **2** native rebuilds
   (M-2, M-14), **2** `forge` runs (M-13, M-15), **1** incremental cross-crate check (M-16), and
-  **5** mutants with no build at all (M-8…M-12) — of which M-8 additionally does a <60 KB
-  four-file copy and an `rm -rf`.
-- **Ordering:** the five zero-build mutants run **first**, so a broken harness is discovered in
-  seconds instead of after the first RISC-V rebuild. **M-8 is first of the five**, so its
-  clean-copy control is the first thing the whole gate proves — a sandbox that cannot reproduce a
-  passing AC-00b is a harness failure worth finding in second one, not in minute thirty.
+  **7** mutants with no build at all (M-8…M-12, M-17, M-18) — of which three additionally do a
+  small file copy and an `rm -rf`.
+- **Ordering:** the seven zero-build mutants run **first**, so a broken harness is discovered in
+  seconds instead of after the first RISC-V rebuild. **The three sandbox phases are first of the
+  seven, in the order M-8, M-17, M-18**, so their clean-copy controls are the first thing the whole
+  gate proves — a sandbox that cannot reproduce a passing AC-00b or AC-00 is a harness failure
+  worth finding in second one, not in minute thirty. Round 5 adds no measurable time to this
+  phase: two more `mktemp -d`s, five more file copies, two more grep-only script runs.
 - **§6.3's canary** adds one `patch`, one grep-only `ac008.sh AC-06`, and one restore to
   `ac008.sh --all`. It is not part of AC-13's 40-minute budget because it is not run by
   `ac008-selftest.sh`; it costs seconds and it is measured in `--all`'s own wall time.
 
-**Budget and decision rule — re-priced for 16, with the stop kept.** Round 2's 20 minutes was
-computed for 3 guest rebuilds + 1 native and was itself an estimate. The dominant term doubles
-(3 → 6 guest rebuilds) and the additions are cheap, so the budget is **40 minutes**.
+**Budget and decision rule — priced for 18, with the stop kept and the number unchanged.**
+Round 2's 20 minutes was computed for 3 guest rebuilds + 1 native and was itself an estimate.
+Round 3 doubled the dominant term (3 → 6 guest rebuilds) and set **40 minutes**. **Round 5's two
+new mutants add no build of any kind** — three script runs over ~120 KB of copied text — so the
+budget stays **40 minutes**. It is not raised to absorb them, and it is not lowered on an estimate
+nobody has run.
 
 - `ac008-selftest.sh` prints **per-mutant elapsed seconds** and a total. The per-mutant line is
   what replaces this extrapolation with measurement; the implementation report must paste it.
@@ -2005,30 +2564,46 @@ computed for 3 guest rebuilds + 1 native and was itself an estimate. The dominan
   mutant is wrong.
 
 **Falsify:** replace every `test_AC02_*` body with `assert!(true);` — M-1 and M-6 no longer make
-AC-02 fail and the selftest reports `14/16`. Or stub `env-parity.sh` to `echo` its evidence line —
+AC-02 fail and the selftest reports `16/18`. Or stub `env-parity.sh` to `echo` its evidence line —
 M-9 is no longer detected **by this script, and also not by §6.3's canary, which is the second
-place it now has to survive**. Or delete one `.patch` file — step 0 fails. Or make a mutant a
-no-op — step 3 fails. Or write a `surfaces.sh` that prints the two pinned literals from a heredoc
-without opening either file — the clean control (8d) passes, step 8g exits **0**, M-8 is recorded
-as a **miss**, and AC-13 fails. Or copy only `RecknZkEscrow.sol` into the sandbox — the clean
-control (8d) fails and AC-13 reports `sandbox control failed`, which is **not** a detection.
+place it now has to survive**. Or delete one `.patch` file — step 0 fails (18 expected). Or make a
+mutant a no-op — step 3 (or 8f / 17f / 18f) fails. Or write a `surfaces.sh` that prints the two
+pinned literals from a heredoc without opening either file — the clean control (8d) passes, step
+8g exits **0**, M-8 is a **miss**, and AC-13 fails. **Or write the half-degenerate `surfaces.sh`
+that greps for M-8's comment text instead of hashing** — it exits non-zero at 8g but prints no
+`computed:` digest equal to the selftest's `D8`, so it is a **miss** (round 4 scored it as a
+detection), and it exits **0** at 18g, so M-18 is a second miss. Or copy only `RecknZkEscrow.sol`
+into a sandbox — the clean control fails and AC-13 reports `sandbox control failed`, which is
+**not** a detection. **Or ship a `no-keys.sh` whose check 5 greps for `tx.origin` instead of
+implementing §6.4's properties** — M-17's patch is caught, so this Falsify needs its own witness:
+apply the same splice with the branch condition written as `block.chainid == 31337` or as an
+`assembly { … origin() … }` block, and the name-based check passes it while 5b rejects it. **The
+implementation report must state which of §6.4's five clauses fired for M-17**, and if the answer
+is "a grep for `tx.origin`", check 5 is not the check this document specifies.
 
 **Falsify — of this AC's own row, stated because it is true:** replace `ac008-selftest.sh` with
 `#!/usr/bin/env bash` plus one `echo` of the evidence line carrying the current patch-set witness.
-The row passes. `ac008.sh --all` does **not** print `18/18`, because §6.3's canary is applied by
-`ac008.sh` and not by this script — but every mutant except M-9 goes unrun and nothing in the
-repository notices. **This is the residual, not a falsification the gate performs** (L-3).
+The row passes. `ac008.sh --all` does **not** print `18/18 rows passed`, because §6.3's canary is
+applied by `ac008.sh` and not by this script — but every mutant except M-9 goes unrun and nothing
+in the repository notices. **This is the residual, not a falsification the gate performs** (L-3),
+and **§7.8 is who is responsible for it** — a named reviewer running this script itself, which
+round 4 relied on without asking anyone to do it (r4 finding 3).
 
 ### AC-14 — the documents moved in the same commit
 
 ```sh
 bash zk-verdict/scripts/docs-check.sh
-# docs: 8/8 stale claims absent, 7/7 replacements present, 0 tilde cycle literals, cycles.json matches 3/3 guests; witness=<16 hex>
+# docs: 9/9 stale claims absent, 11/11 replacements present, 0 tilde cycle literals, 1/1 qualified ~34 s site, cycles.json matches 3/3 guests; witness=<16 hex>
 ```
 
-**Digests are gone** (§0). Four checks, all over content.
+**Digests are gone** (§0). **Five** checks, all over content.
 
-**(i) Seven stale claims must be absent** — fixed-string `grep -F`, each in the named file:
+**(i) Nine stale claims must be absent** — fixed-string `grep -F`, each in the named file.
+*(The heading is a count and it has been wrong once: round 2 added the eighth literal and left the
+heading at seven, so an implementer writing `docs-check.sh` from the heading would have written
+seven and either failed against the manifest's `8/8` or printed a number it had not checked —
+r4 finding 8. The count now appears in exactly two places, here and §6.1's evidence line, and both
+say **nine**.)*
 
 | # | file | literal (must not match) |
 |---|---|---|
@@ -2041,9 +2616,11 @@ bash zk-verdict/scripts/docs-check.sh
 | 7 | `zk-verdict/program-revm/src/main.rs` | ``` Values map to `u64` to reuse ``` (the module doc comment at `:14`, which states the defect as a design choice) |
 | **8** | `zk-verdict/README.md` | `stays gated on the fixture's presence` (**r2 finding 8** — measured today at `zk-verdict/README.md:108`. AC-11 replaces every `if (!vm.exists(F)) return;` with a `require`, so after 008 nothing is gated on fixture presence and this sentence is false as written. Nobody is harmed in practice — all four fixtures are committed and AC-9 keeps them current — but AC-14 exists precisely to stop a document describing a mechanism that no longer exists, and round 2's seven-literal list did not contain it.) |
 
-All eight were confirmed present today by `grep -rn -F`, so all eight are real removals.
+| **9** | `scripts/no-keys.sh` | ``the body of `contract RecknZkEscrow` only`` (**new in round 5** — the script's own scope comment at `no-keys.sh:11-12`. Check 5 makes it false in the same commit that adds the check, and a build condition whose header misdescribes its own region is the "documentation drifted from code" failure `CLAUDE.md:41-43` records this repository committing twice. §9(2c).) |
 
-**(ii) Seven replacement sentences must be present** — the marker substrings from §9:
+All nine were confirmed present today by `grep -rn -F`, so all nine are real removals.
+
+**(ii) Eleven replacement sentences must be present** — the marker substrings from §9:
 
 | # | file | literal (must match) |
 |---|---|---|
@@ -2054,12 +2631,20 @@ All eight were confirmed present today by `grep -rn -F`, so all eight are real r
 | 5 | `AGENTS.md` | `precompile は in-guest でも` |
 | 6 | `README.md` | `In-guest precompiles run on different backends, and parity is unverified` |
 | **7** | `zk-verdict/README.md` | `a missing fixture is a hard failure` (§9(1a) — the replacement for literal 8) |
+| **8** | `zk-verdict/README.md` | `a floor of zero is satisfied by doing nothing` (**new in round 5** — the disclosure of **R-7**, §9(1). Round 4's INV-11 asserted every §8 residual appeared verbatim in the honest scope; `grep -rn 'min == 0\|zero floor\|minDelta == 0' README.md zk-verdict/README.md CLAUDE.md SUBMISSION.md` returned **0 matches** today and would have returned 0 after 008 as specified. r4 finding 4.) |
+| **9** | `zk-verdict/README.md` | `the gnark wrap alone` (**new in round 5** — the qualification of the `~34 s` figure at `zk-verdict/README.md:97`, §9(1b). §7.5 measures the same end-to-end operation at 335.02 s, roughly 10×, and the unqualified sentence errs in the flattering direction. r4 finding 9.) |
+| **10** | `AGENTS.md` | `RecknVerdictVerifier.sol` (**new in round 5** — §0's declaration of the second file in the checked region, §9(2a). Without this marker the claim widens in the code and not in the document that states it.) |
+| **11** | `CLAUDE.md` | `RecknVerdictVerifier.sol` (**new in round 5** — the 中心主張 block, §9(2b). `CLAUDE.md:16-18` names one file as *the* file the claim lives in; after check 5 that is incomplete.) |
 
 Marker 6 is **already present** (`README.md:572`, landed in `9ac4545` on 2026-09-04, *after*
 the 008 spec commit `d4f59ba`). Its obligation in §9(3) is therefore **"verify unchanged"**,
 not "correct it" — r1 finding 8, which also caught that round 1's `AC-14(i)` would have passed
 even if 008 changed nothing, because it only required the digest to *differ* and it already
 did.
+
+Markers 8–11 were each confirmed **absent** today, so each is a real addition:
+`grep -rn 'a floor of zero\|the gnark wrap alone' zk-verdict/README.md` → 0 matches;
+`grep -rn 'RecknVerdictVerifier' AGENTS.md CLAUDE.md` → 0 matches.
 
 **(iii) No tilde cycle literal survives.** Over the fixed **doc set**
 
@@ -2109,10 +2694,34 @@ said, not claims being made; `STATUS.md:95` quotes `~180k` as a description of t
   are **deleted**, not re-measured — 008 does not invent a measurement (N-8). Check (iii)
   enforces the deletion: they are 2 of its 14 matches.
 
+**(v) The `~34 s` figure is qualified in place, and there is still exactly one of it.**
+
+```sh
+grep -c -F '~34 s' zk-verdict/README.md      # must be exactly 1
+grep -F  '~34 s' zk-verdict/README.md | grep -q -F 'the gnark wrap alone'   # must succeed
+```
+
+`zk-verdict/README.md:97` says a real Groth16 proof was generated *"~34 s once the artifacts are
+local"*. §7.5 measured the end-to-end regeneration of one fixture at **`real 335.02 s`** and the
+gnark wrap alone at **31.71 s** — so the sentence is defensible read narrowly ("the gnark prover")
+and is read by everyone else as the cost of producing a proof, which is **roughly 10× wrong in the
+flattering direction** (`AGENTS.md` §5). §9(1b) qualifies it.
+
+**Two constraints on the fix, and they pull against each other, so both are written.**
+**(a) Do not delete the figure and do not add a second occurrence** — a later task in the
+execution order pins the *number of occurrences* of that string in that file, so a deletion and a
+duplication both break it. That is why this is a **count** check and not only a marker.
+**(b) Do not restate it as a new measurement** — 31.71 s is the measured gnark-wrap time from
+§7.5 and 335.02 s is the measured end-to-end time; 008 measures nothing new here (N-8).
+
 **Falsify:** leave `~410k` anywhere in the doc set (check iii); leave `~**410k` in
 `zk-verdict/README.md:142` and use the naive `~[0-9]` regex (check iii, by construction, misses
 it — which is why the regex is written out above rather than described); leave the honest-scope
-section unchanged (checks i and ii); publish a rounded cycle figure (check iv).
+section unchanged (checks i and ii); publish a rounded cycle figure (check iv); **delete the
+`~34 s` sentence instead of qualifying it, or add a second `~34 s` elsewhere in the file — check
+(v)'s count goes to 0 or 2 and the row exits non-zero**; **ship without R-7's disclosure sentence
+— marker 8 is absent** (this is the one round 4 shipped, and it was invisible because no marker
+existed); **declare check 5 in the script and not in `AGENTS.md` §0 — marker 10 is absent.**
 
 ### AC-15 — `reexec-evm` still passes, with the same number of tests
 
@@ -2172,8 +2781,10 @@ prefix digest deliberately does **not** move and the failure is isolated to this
 | `zk-verdict/script/tests/binding.rs` | AC-7a, 18 components |
 | `zk-verdict/script/tests/outcome_map.rs` | AC-8, 6 |
 | `zk-verdict/contracts/test/RecknVerdictDomain.t.sol` | AC-7b (2), AC-10 (4) |
+| `zk-verdict/contracts/src/RecknVerdictVerifier.sol` | **modified — four tokens, and nothing else** (§3.4, N-12): `VerdictPublicValues.pre` / `.post` / `.minDelta` / `.maxDelta` go `uint64` → `uint256`. *(Round 4 changed this file in §3.4 and did not list it here, in §6.2's coverage table, or in `no-keys.sh` — the r4 BLOCKER. It is on the settlement-authority path: `RecknZkEscrow.sol:99`.)* |
+| `scripts/no-keys.sh` | **modified — one new numbered section, check 5** (§6.4). Second target derived from `$root` exactly as the first is (`:17-19`); the four existing checks, the arguments, and the final line are unchanged. The header comment at `:11-12` is corrected in the same edit (AC-14(i) literal 9). **This is `AGENTS.md` §0's script**: the change is a tightening, it is declared in §9(2a)–(2c), and **relaxing it later is a founder call** (OQ-6). |
 | `zk-verdict/scripts/{ac008,surfaces,env-parity,fixtures-check,no-skip,ac008-selftest,docs-check,consumers-check}.sh` | the harness (**8** scripts — `no-truncation.sh` is gone, folded into `env-parity.sh`; `consumers-check.sh` is new) |
-| `zk-verdict/scripts/mutants/*.patch` | the **sixteen** committed mutants (AC-13), named `01-truncate`, `02-const-reproduced`, `03-open-db`, `04-drop-envhash`, `05-drop-blockenv`, `06-truncate-128`, `07-drop-checkhash`, `08-escrow-comment`, `09-restore-u64low`, `10-fixture-vkey`, `11-restore-skip-gate`, `12-tilde-cycles`, `13-alt-binding-self`, `14-const-zk-outcome`, `15-swap-outcome-consts`, `16-testkit-signature`. `ac008-selftest.sh` step 0 requires exactly 16. **`08-escrow-comment.patch` is applied only with `-d "$S"`, inside the sandbox of AC-13's mode `sandbox`; it is never applied to the repository.** `09-restore-u64low.patch` is applied twice per full run — once by `ac008-selftest.sh` and once by `ac008.sh --all` as the §6.3 canary. |
+| `zk-verdict/scripts/mutants/*.patch` | the **eighteen** committed mutants (AC-13), named `01-truncate`, `02-const-reproduced`, `03-open-db`, `04-drop-envhash`, `05-drop-blockenv`, `06-truncate-128`, `07-drop-checkhash`, `08-escrow-comment`, `09-restore-u64low`, `10-fixture-vkey`, `11-restore-skip-gate`, `12-tilde-cycles`, `13-alt-binding-self`, `14-const-zk-outcome`, `15-swap-outcome-consts`, `16-testkit-signature`, **`17-verifier-origin-branch`**, **`18-reexec-prefix-comment`**. `ac008-selftest.sh` step 0 requires exactly 18. **`08-…`, `17-…` and `18-…` are applied only with `-d "$S"`, inside AC-13's three sandbox phases; none of them is ever applied to the repository.** `17-verifier-origin-branch.patch` is a **working resolver** and the repository must never carry it, not even transiently. `09-restore-u64low.patch` is applied twice per full run — once by `ac008-selftest.sh` and once by `ac008.sh --all` as the §6.3 canary. |
 | `zk-verdict/cycles.json`, `zk-verdict/scripts/surfaces.pinned` | committed measurements and the two code digests |
 
 ### 7.2 Positive path (must pass), and the guest-freeze rule
@@ -2205,41 +2816,45 @@ four. The ordering that makes this one regeneration instead of one per round:
 
 ### 7.3 Negative controls
 
-**Measured, by the gate, on every run** — these are AC-13's sixteen mutants, plus §6.3's canary
+**Measured, by the gate, on every run** — these are AC-13's eighteen mutants, plus §6.3's canary
 which `ac008.sh --all` applies itself. Nothing about them is self-reported *(with the one honest
 exception that the script doing the measuring is trusted — L-3)*. **Run order is zero-build
 first**, so a broken harness fails in seconds:
 
 | # | mutant | break | rows that must go non-zero | build |
 |---|---|---|---|---|
-| 1 | M-8 (**sandbox**) | flip one byte of a comment in **the sandbox's copy** of `RecknZkEscrow.sol`; the repository's file is never written (§10 OQ-5, ruled) | the sandboxed `surfaces.sh`'s exit status — **preceded by the clean-copy control, which must exit 0** | — |
-| 2 | M-9 | re-insert `fn u64_low` into `program-revm/src/main.rs` | AC-06 | — |
-| 3 | M-10 | flip one hex byte of the headline fixture's `vkey` | AC-09 | — |
-| 4 | M-11 | restore one `if (!vm.exists(F)) return;` | AC-11 | — |
-| 5 | M-12 | insert a `~410k` line into `zk-verdict/README.md` | AC-14 | — |
-| 6 | M-13 | `alt-binding.json` := the headline fixture's own binding | AC-07b | forge |
-| 7 | M-15 | swap `REPRODUCED` / `FAILED` in `RecknVerdictVerifier.sol` | AC-10 | forge |
-| 8 | M-2 | `delta_outcome` returns `REPRODUCED` unconditionally | AC-01, AC-12 | native |
-| 9 | M-14 | `fn zk_outcome(_) -> u8 { 0 }` | AC-08 | native |
-| 10 | M-16 | rename a testkit builder with no wrapper | AC-16 | cross-crate check |
-| 11 | M-1 | re-truncate the verdict to limb 0 | AC-02 | guest |
-| 12 | M-6 | truncate at **128** bits instead of 64 | AC-02 | guest |
-| 13 | M-5 | **delete the block-environment application** | AC-03 | guest |
-| 14 | M-3 | restore `InMemoryDB::default()` | AC-04 | guest |
-| 15 | M-4 | drop `env_hash` from the `dealBinding` preimage | AC-07a | guest |
-| 16 | M-7 | drop `check_hash` from the `dealBinding` preimage | AC-07a | guest |
+| 1 | M-8 (**sandbox**) | flip one byte of a comment in **the sandbox's copy** of `RecknZkEscrow.sol`; the repository's file is never written (§10 OQ-5, ruled) | the sandboxed `surfaces.sh`'s exit status **and its printed `computed:` digest for clause `RecknZkEscrow.sol`** — preceded by the clean-copy control, which must exit 0 | — |
+| 2 | **M-17** (**sandbox**) | splice §6.4's `tx.origin` branch into **the sandbox's copy** of `RecknVerdictVerifier.sol`; the repository's file and the repository's `no-keys.sh` are never written (§10 OQ-6, ruled) | the sandboxed `no-keys.sh`'s exit status **and the fact that it names check 5** — preceded by the clean-copy control, which must exit 0 | — |
+| 3 | **M-18** (**sandbox**) | flip one byte of a comment **above line 711** in the sandbox's copy of `reexec-evm/src/lib.rs` | the sandboxed `surfaces.sh`'s exit status **and its printed `computed:` digest for clause `reexec-evm-prefix-710`** — preceded by its own clean-copy control | — |
+| 4 | M-9 | re-insert `fn u64_low` into `program-revm/src/main.rs` | AC-06 | — |
+| 5 | M-10 | flip one hex byte of the headline fixture's `vkey` | AC-09 | — |
+| 6 | M-11 | restore one `if (!vm.exists(F)) return;` | AC-11 | — |
+| 7 | M-12 | insert a `~410k` line into `zk-verdict/README.md` | AC-14 | — |
+| 8 | M-13 | `alt-binding.json` := the headline fixture's own binding | AC-07b | forge |
+| 9 | M-15 | swap `REPRODUCED` / `FAILED` in `RecknVerdictVerifier.sol` (**values only — no structural change, so check 5 is silent by construction and AC-10 is the instrument; L-5**) | AC-10 | forge |
+| 10 | M-2 | `delta_outcome` returns `REPRODUCED` unconditionally | AC-01, AC-12 | native |
+| 11 | M-14 | `fn zk_outcome(_) -> u8 { 0 }` | AC-08 | native |
+| 12 | M-16 | rename a testkit builder with no wrapper | AC-16 | cross-crate check |
+| 13 | M-1 | re-truncate the verdict to limb 0 | AC-02 | guest |
+| 14 | M-6 | truncate at **128** bits instead of 64 | AC-02 | guest |
+| 15 | M-5 | **delete the block-environment application** | AC-03 | guest |
+| 16 | M-3 | restore `InMemoryDB::default()` | AC-04 | guest |
+| 17 | M-4 | drop `env_hash` from the `dealBinding` preimage | AC-07a | guest |
+| 18 | M-7 | drop `check_hash` from the `dealBinding` preimage | AC-07a | guest |
 
-Fifteen of the eighteen manifest rows appear above. The three that do not — AC-00, AC-13, AC-15 —
-carry a **written exemption** in §6.2, which is why INV-13 says "mutated or exempt in writing" and
-not "mostly mutated". **AC-13's exemption is the weakest of the three and round 4 stopped calling
-it a guard**: its row is `echo`-satisfiable (INV-14, L-3), and what stands in place of a mutant is
-§6.3's canary plus a human reading the script.
+**Sixteen** of the eighteen manifest rows appear above. The two that do not — **AC-13 and
+AC-15** — carry a **written exemption** in §6.2, which is why INV-13 says "mutated or exempt in
+writing" and not "mostly mutated". *(Round 4 had three: **AC-00 was in that list**, and its
+exemption was the reason the r4 BLOCKER could exist. M-17 moves it into this table.)*
+**AC-13's exemption is the weaker of the two and round 4 stopped calling it a guard**: its row is
+`echo`-satisfiable (INV-14 case (c), L-3), and what stands in place of a mutant is §6.3's canary
+plus **a named reviewer** — §7.8, which is the part round 4 left unassigned.
 
-**Row 17, run by `ac008.sh --all` rather than by the selftest:**
+**Row 19, run by `ac008.sh --all` rather than by the selftest:**
 
 | # | mutant | break | rows that must go non-zero | build |
 |---|---|---|---|---|
-| 17 | M-9, **as the §6.3 canary** | re-insert `fn u64_low` into `program-revm/src/main.rs` | AC-06, checked by `ac008.sh --all` **before** it may print its evidence line | — |
+| 19 | M-9, **as the §6.3 canary** | re-insert `fn u64_low` into `program-revm/src/main.rs` | AC-06, checked by `ac008.sh --all` **before** it may print its evidence line | — |
 
 **Argued, not measured.** What remains below is a *reading* of the acceptance criteria, not a
 transcript. Round 1 said the remaining families would be "run once by hand and their output
@@ -2284,10 +2899,12 @@ implementer wants any of them to be a *claim*, it becomes a seventeenth mutant, 
   Round 3 named three substitutes — step 0, §6.2's `witness`, step 6 — and let the reader infer
   they close the gap; **they do not, and two of the three are inside the script a stub replaces**
   (r3 finding 2). What is written instead: §6.3's canary, which is applied by a *different*
-  script, and **L-3**, which states in one sentence that AC-13's row is `echo`-satisfiable and
-  that the gate's integrity rests on a person reading and running the script. **No fourth
-  ceremony is added**, because a fourth ceremony inside the same repository would relocate the
-  trust root again rather than close it.
+  script; **L-3**, which states in one sentence that AC-13's row is `echo`-satisfiable and that
+  the gate's integrity rests on a person reading and running the script; and — new in round 5 —
+  **§7.8, which names that person and states what they must do** (r4 finding 3: round 4 asserted
+  a trust root and assigned it to nobody). **No fourth ceremony is added**, because a fourth
+  ceremony inside the same repository would relocate the trust root again rather than close it.
+  §7.8 is not a ceremony; it is an obligation on an agent outside this script.
 
 ### 7.5 The Groth16 regeneration — measured, budgeted, ordered
 
@@ -2391,11 +3008,11 @@ They are written down because an unstated limit is indistinguishable from a miss
   `sp1-build`. The guards are AC-14(iv)'s `elf_sha256` equality against a freshly built ELF and
   `ac008.sh`'s `unset` of every `SP1_*` skip variable (§3.6.4). **Guards, not proofs** (§6.2).
 - **L-3 — AC-13's own manifest row is satisfiable by `echo`, and nothing inside this repository
-  closes that.** Its witness set is the sixteen `mutants/*.patch` files and **no mutant modifies a
-  patch file**, so the `witness=` value is a constant for the whole run; step 0 (the patch count
-  must be 16) and step 6 (AC-00b and `no-keys.sh` green after the last restore) are **inside the
+  closes that.** Its witness set is the eighteen `mutants/*.patch` files and **no mutant modifies
+  a patch file**, so the `witness=` value is a constant for the whole run; step 0 (the patch count
+  must be 18) and step 6 (AC-00b and `no-keys.sh` green after the last restore) are **inside the
   script a stub replaces**. A two-line `ac008-selftest.sh` that echoes
-  `ac008-selftest: 16/16 mutants detected; witness=<that constant>` passes the row. Rounds 1–3
+  `ac008-selftest: 18/18 mutants detected; witness=<that constant>` passes the row. Rounds 1–3
   named those three things as substitutes and let the reader infer they closed the gap; **they do
   not, and round 3 additionally asserted at §6.2 that no `script` row could be satisfied by a
   constant, which was false for exactly this row** (r3 finding 2).
@@ -2405,9 +3022,29 @@ They are written down because an unstated limit is indistinguishable from a miss
   and will not print its evidence line unless AC-06 detects it, so the cheapest stub now has to
   cover two scripts instead of one. **That is a higher bar, not a closure**, and this document
   does not claim otherwise. The regress does not terminate inside a repository: whatever runs
-  last is trusted.
+  last is trusted. **What round 5 adds is not a mechanism but an owner**: §7.8 binds
+  `reckn-codex-review(stage=impl)` to read both scripts and run them itself, and says that a
+  report-only acceptance of AC-13 is not an acceptance. A trust root that is asserted and never
+  assigned is not a trust root (r4 finding 3).
 - **L-4 — every number in §7.5 for the predicate and SVM guests is unmeasured.** Only the
   re-execution guest's 335.02 s exists. `4 × 335.02 s` is arithmetic on one measurement.
+- **L-5 — check 5 is a source-level, lexical check, and three in-tree mutants now run inside
+  `AGENTS.md` §0's widened region.** Two limits, both new with §6.4 and both stated rather than
+  discovered later.
+  **(i)** What check 5 does not establish is enumerated in §6.4 and repeated as **R-10** in §8:
+  it says nothing about deployed bytecode, nothing about the *address* `verifier` holds, nothing
+  about `ISP1Verifier`'s own source, and it performs no semantic analysis. 008's tier is local and
+  008 deploys nothing, so 008 makes no deployment claim at all; the on-chain half belongs to a
+  later task (§1.3).
+  **(ii)** `RecknVerdictVerifier.sol` is now inside §0's region, and **M-15 still mutates it
+  in-tree** under a `trap` that does not catch `SIGKILL`. That is deliberate and the reason is
+  the *kind* of residue: M-15 swaps two **constant values**, changing no token, no count, no
+  statement and no assignment target, so check 5 is silent on it **by construction** — and its
+  residue is therefore **loud** everywhere else (AC-10 red, `zk-e2e.sh` red), unlike M-8's
+  comment flip, which `no-keys.sh` is comment-blind to by design. Its restore is asserted by step
+  5's per-file `sha256` and by step 6's `no-keys.sh` re-run, and §7.7 requires a clean
+  `git status`. **A mutant on that file that changed its *structure* would have to be a sandbox
+  mutant** — which is what M-17 is.
 
 ### 7.7 What the implementation report must state honestly
 
@@ -2415,9 +3052,9 @@ They are written down because an unstated limit is indistinguishable from a miss
   copied from `cycles.json`.
 - **The four Groth16 regeneration wall times, individually**, and the number of regeneration
   rounds `R` actually performed (§7.2, §7.5). If `R ≥ 2`, why.
-- **`ac008-selftest.sh`'s per-mutant lines and total elapsed, verbatim** — including the
-  `sandbox control clean (M-8)` line, which is what distinguishes a real M-8 detection from a
-  sandbox that failed for the wrong reason. If the total exceeded 40 minutes: a **stop**, not a
+- **`ac008-selftest.sh`'s per-mutant lines and total elapsed, verbatim** — including **all three**
+  `sandbox control clean (M-8 / M-17 / M-18)` lines, which are what distinguish a real detection
+  from a sandbox that failed for the wrong reason. If the total exceeded 40 minutes: a **stop**, not a
   trimmed mutant list. If any mutant went undetected: a **stop**, not a deleted mutant. If the
   sandbox control failed: a **stop**, and it must be reported as a **harness failure**, never as
   a detection.
@@ -2426,7 +3063,16 @@ They are written down because an unstated limit is indistinguishable from a miss
   reported as a pass.
 - **That `git status` is clean after `ac008-selftest.sh` and after `ac008.sh --all`**, and that
   `zk-verdict/contracts/src/RecknZkEscrow.sol`'s `sha256` is still
-  `07d649c2…33e45b`. M-8 never writes it; this is the cheap statement of that fact.
+  `07d649c2…33e45b`. M-8 never writes it; this is the cheap statement of that fact. The same
+  statement is required for **`scripts/no-keys.sh`** and **`zk-verdict/contracts/src/RecknVerdictVerifier.sol`**
+  after the run — M-17 never writes either, and the mutant it applies is a **working resolver**,
+  so "the tree does not contain it" is the one sentence that must not be assumed.
+- **Which of §6.4's five clauses fired for M-17**, quoted from the sandboxed `no-keys.sh`'s own
+  output. If the answer is that a name grep for `tx.origin` fired, check 5 is not the check this
+  document specifies and that is a **stop**, not a note (§6.4, AC-13 Falsify, `003`'s **R-7**).
+- **The `computed:` digests observed at 8g and 18g**, and the fact that they equalled the
+  selftest's own `D8` / `D18`. A run that reports `M-8 detected` without that comparison is
+  reporting round 4's weaker assertion.
 - If the exclusion-proof builder (V-14, §3.6) does not work as assumed: a **stop**, not a
   workaround and not a dropped vector.
 - If `BLOCKHASH(n−1)` does not reach either database (W-12): a **stop** — the vector's premise
@@ -2438,10 +3084,93 @@ They are written down because an unstated limit is indistinguishable from a miss
 
 ---
 
+### 7.8 What the stage=impl review of 008 must do itself (new in round 5 — r4 finding 3)
+
+**Why this section exists.** L-3 states that the mutation gate's integrity rests on the
+implementation review opening `ac008-selftest.sh` and `ac008.sh`, reading them, and running them —
+not on a mechanism. Round 4 wrote that in four places and **created no obligation on anyone**.
+§7.7 binds the implementer's *report*; `AGENTS.md` §2 names the review stage but says nothing about
+what it must open. With
+
+```sh
+# ac008-selftest.sh
+printf 'ac008-selftest: 18/18 mutants detected; witness=<constant>\n'
+# ac008.sh --all
+printf 'ac008: 18/18 rows passed; canary M-9 detected by AC-06\n'
+```
+
+**every evidence line §7.7 asks for can be pasted verbatim into an implementation report, no
+mutant runs, and no acceptance criterion in this document fails.** A trust root that is asserted
+but not assigned is not a trust root.
+
+**Who.** `reckn-codex-review`, at `stage=impl` for task 008 (`AGENTS.md` §2's cycle). Named,
+because "someone should read it" is what round 4 already said.
+
+**What, four obligations. All four are reported in `docs/reviews/008-impl-rN.md`.**
+
+**(a) Read both scripts line by line.** `zk-verdict/scripts/ac008-selftest.sh` and
+`zk-verdict/scripts/ac008.sh`, in full, not by grep. The specific things to read for are that step
+0 counts **18** patches; that each of the three sandbox phases builds its **own** `$S`, runs its
+clean control **before** its mutation, and scores a control failure as a **harness failure and
+never as a detection**; that 8g and 18g compare the script's printed `computed:` against a digest
+**the selftest computed itself**; that 17g asserts *which* check fired; and that no path under the
+repository is ever opened for writing.
+
+**(b) Run both, itself.** Not accept pasted output. `bash zk-verdict/scripts/ac008-selftest.sh`
+and `bash zk-verdict/scripts/ac008.sh --all`, from a clean tree, with `git status` observed before
+and after. **`AGENTS.md` §5: 走らせていないものを passing と書かない** applies to the reviewer
+exactly as it applies to the implementer.
+
+**(c) Record what it observed, from its own run.** The **per-mutant lines**, verbatim, from the
+reviewer's own execution — including the three `sandbox control clean` lines and the per-mutant
+elapsed times — and `--all`'s evidence line including the canary clause. Numbers copied from the
+implementation report are not observations and may not be presented as the review's evidence
+(`AGENTS.md` §5, and the same rule the founder applies to this spec's own numbers).
+
+**(d) Verify by reading the four properties no mutant covers**, and say so explicitly rather than
+letting the reader assume the gate covered everything:
+1. **AC-13's own row** — `echo`-satisfiable, INV-14 case (c), L-3. The reviewer's own run under
+   (b) is what stands in for the missing mutant.
+2. **AC-0b requirement R5** — that `surfaces.sh` genuinely reads
+   `$root/zk-verdict/scripts/surfaces.pinned` and does not carry the digests as literals in its
+   own text. No mutant covers this, because the obvious one (mutating the pin) is the design the
+   founder ruled against in OQ-5(b) and round 5 does not re-open it.
+3. **AC-15** — a no-change criterion with a written exemption (§6.2).
+4. **§6.4's five clauses as implemented** — that check 5 states properties and does not grep for
+   the names of the constructs that exploit it (`003`'s **R-7**). M-17's patch is one input; a
+   name-based check passes M-17 if it happens to grep for `tx.origin`. The reviewer applies the
+   two witnesses named in AC-13's Falsify (`block.chainid`, and an `assembly` block reaching
+   `origin()`) or reads the implementation and states that it is closed by vocabulary rather than
+   by names.
+
+**A report-only acceptance of AC-13 is not an acceptance.** If (b) was not performed, the review
+records AC-13 as **unverified** and says so in its verdict line's body; it does not report it as
+green on the strength of the implementer's transcript. If the review cannot run the scripts (no
+SP1 toolchain, no `forge`), that is a **stop and report** to the founder under `AGENTS.md` §7 —
+not a softer verdict, and not a green one.
+
+---
+
 ## 8. Residuals — what 008 does not close
 
-Each appears verbatim in the rewritten honest scope (§9), because a residual that is only in
-the spec is not disclosed.
+**A residual that is only in the spec is not disclosed, so each one below names its disclosure
+site and AC-14 checks it there.** *(Round 4's preamble said all of them appear verbatim in the
+rewritten honest scope (§9). That was **false for two of ten**, and nothing detected it: **R-7**
+appeared in no shipped document at all —
+`grep -rn 'min == 0\|zero floor\|minDelta == 0' README.md zk-verdict/README.md CLAUDE.md SUBMISSION.md`
+returns **0 matches** today and would have returned 0 after 008 as round 4 specified — and
+**R-8** is disclosed in the root `README.md:566-571`, not in the honest scope. AC-14(ii)'s seven
+markers named neither. r4 finding 4; INV-11 is restated to what the mechanism enforces.)*
+
+| residual | disclosure site | checked by |
+|---|---|---|
+| R-1, R-2, R-5, R-6 | `zk-verdict/README.md` honest scope, §9(1) | the section is rewritten wholesale; markers 1–3 pin its shape |
+| R-3 | same, §9(1) — the **Not:** bullet | AC-14(i) literals 4–5, AC-14(ii) markers 3, 5, 6 |
+| R-4 | same, §9(1) — the qualified header sentence | §9(1)'s round-4 note; no marker (stated) |
+| **R-7** | same, §9(1) — **new sentence** | **AC-14(ii) marker 8** (new in round 5) |
+| **R-8** | root `README.md:566-571`, which §9(3) leaves **untouched** | not moved by 008; INV-11(b) |
+| R-9 | `zk-verdict/README.md` honest scope, §9(1) — the **Not:** bullet's restriction sentence | AC-14(ii) marker 3's neighbourhood |
+| **R-10** | `AGENTS.md` §0 and the honest scope, §9(2a) / §9(1) | **AC-14(ii) marker 10** (new in round 5) |
 
 - **R-1 — `DIFFICULTY` (0x44 pre-Merge) and `BLOBBASEFEE` (0x4a) are not anchored.** Both
   engines leave `BlockEnv::difficulty` and `blob_excess_gas_and_price` at
@@ -2482,7 +3211,14 @@ the spec is not disclosed.
 - **R-7 — `min == 0` still admits a no-op.** `delta_outcome(x, x, 0, max) = REPRODUCED`, so a
   buyer who funds a zero floor pays for nothing. That is the buyer's predicate choice and 008
   does not override it, but it sits directly under the "a no-op cannot fake the credit"
-  headline. See OQ-4.
+  headline. **Disclosed in `zk-verdict/README.md`'s honest scope by §9(1), checked by AC-14(ii)
+  marker 8.** *(Round 4 listed this residual and shipped no disclosure of it anywhere — the §8
+  preamble asserted otherwise and no criterion could see the difference. r4 finding 4.)*
+  **One correction to round 4's framing, in the honest direction:** OQ-4 called this "the attack
+  `zk-verdict/README.md:143` advertises as impossible". Line 143 reads *"A no-op (`--credit 42`)
+  → delta 0 → `Failed`"* — a statement about **that fixture**, whose floor is `min ≥ 1`, not a
+  universal claim. **The shipped exposure is smaller than round 4 wrote; the disclosure gap is
+  the same size.** See OQ-4.
 - **R-8 — the escrow still has no timeout.** If P-1…P-11 make a proof impossible, a funded
   deal stays funded. That is `003`, not 008, and 008 *increases* the set of inputs for which
   no proof exists (P-5…P-11, plus the three gate refusals), which strengthens the case for
@@ -2495,12 +3231,25 @@ the spec is not disclosed.
   the honest reading of what "the same engine" means today. Round 1 stated INV-2 as an
   unconditional biconditional and it was false in both directions; round 2 scoped it to D but
   enforced one of D's clauses only on the prover's own machine.
+- **R-10 — check 5 constrains the verifier contract's *source*, and only lexically** (new in
+  round 5, §6.4). 008 brings `RecknVerdictVerifier.sol` inside the build condition because 008
+  edits it and it is on the settlement-authority path. Four things that check does **not**
+  establish, stated here because they are limits of the product's claim and not only of the gate
+  (L-5): it says nothing about the **bytecode actually deployed** (008's tier is local and 008
+  deploys nothing, so 008 makes no deployment claim); nothing about the **address** the
+  constructor was given, so a verifier pointed at a lying `ISP1Verifier` is not detected here;
+  nothing about **`ISP1Verifier`'s own source**, a vendored dependency outside every file 008
+  reads; and it performs **no semantic analysis** — it rejects a syntactic class, and the reason
+  that is enough for INV-15 is that 5b + 5d pin the body to two statements rather than reasoning
+  about what a body means. Closing the first two is a later task's (§1.3); 008 neither closes them
+  nor implies it has.
 
 ---
 
 ## 9. Documentation obligations (same commit, no exceptions)
 
-Six documents move with the code. AC-14 enforces (1), (1a), (2), (3) and (4) mechanically.
+Documents move with the code. AC-14 enforces (1), (1a), **(1b)**, (2), **(2a)**, **(2b)**,
+**(2c)**, (3) and (4) mechanically — nine numbered obligations with a marker or a literal each.
 
 **(1) `zk-verdict/README.md`, "Honest scope of the re-execution guest"** — replaced. The
 section today is 11 lines (`8f65b75f…9a6cac1`, unchanged since round 1). The new text must
@@ -2526,10 +3275,22 @@ contain the three marker substrings AC-14(ii) greps for, shown in **bold**:
 >   on the missing witness. That is a restriction on which plans are provable, **not** a claim
 >   that the two backends compute the same thing — their equivalence is still untested. `BLOCKHASH` is unavailable to both. `DIFFICULTY` and
 >   `BLOBBASEFEE` read a fixed default on both sides and are not anchored to a real block.
->   One CALL, one delta check. **The typed host conversion refuses an anchor that carries a
+>   One CALL, one delta check. The predicate's floor is the buyer's choice, and
+>   **a floor of zero is satisfied by doing nothing**: `min = 0` makes the delta check vacuous,
+>   because `post ≥ pre` holds when nothing happened. The causal-delta property — a seller who
+>   does nothing, or who reduces the checked slot, is refused — holds **for every `min ≥ 1`, at
+>   every magnitude**, which is what task 008 closed; it is not a property of `min = 0`, and the
+>   guest does not refuse `min = 0` because the off-chain predicate accepts it. **The typed host conversion refuses an anchor that carries a
 >   header; a raw `GuestInput` has no header field to carry, so the guest neither sees nor
 >   checks one — the `state_root`↔header binding stays off-chain**, in the
 >   `reexec-evm::header` layer. Agreement is with `reexec-evm`, not with mainnet.
+
+*(Round-5 change, r4 finding 4: the `min = 0` sentence is **new**. It is the disclosure of R-7,
+which round 4 listed as a residual and shipped nowhere — measured: zero matches in every published
+document. AC-14(ii) marker 8 is `a floor of zero is satisfied by doing nothing`. The sentence also
+states the property that **is** true, so the disclosure does not read as a retraction of what 008
+actually closed: the round-4 honest scope's own `pre = 2^64 / post = 2^64 − 1` sentence is
+untouched.)*
 
 *(Round-4 change, r3 finding 4: round 3's last sentence read "an anchor that carries a header is
 refused rather than silently stripped", with no subject. Against the adversary §3.2(c)(1) names —
@@ -2549,6 +3310,21 @@ AC-14(ii) marker 7 requires the replacement:
 > `RecknVerdictVerifierFixture.t.sol` reads the committed fixture directly. All four fixtures are
 > in the repository and AC-9 keeps them current, so **a missing fixture is a hard failure**, not a
 > skipped test.
+
+**(1b) `zk-verdict/README.md:97`, the `~34 s` figure** — **qualified in place, not deleted**
+(r4 finding 9). The sentence today reads *"a **real Groth16 proof** of the verdict was generated
+on CPU (the gnark prover, ~15.9M constraints, ~34 s once the artifacts are local)"*. §7.5 measured
+the **gnark wrap alone** at 31.71 s and the **end-to-end regeneration of one fixture** at
+`real 335.02 s` — roughly 10×. Narrowly read the sentence is defensible; read by anyone else it is
+the cost of producing a proof, and the error is in the flattering direction (`AGENTS.md` §5).
+Append, inside the same parenthesis so the file still contains **exactly one** `~34 s`:
+
+> (the gnark prover, ~15.9M constraints, ~34 s once the artifacts are local — **the gnark wrap
+> alone**; end-to-end regeneration of one fixture measured at 335 s, §7.5 of `docs/specs/008-*`)
+
+AC-14(ii) marker 9 is `the gnark wrap alone`; AC-14(v) asserts the occurrence count is **1**.
+**Do not delete the figure and do not add a second occurrence** — a later task in the execution
+order pins how many times that string appears in that file (§1.3), so both directions break it.
 
 **(2) `AGENTS.md` §5** — two bullets replaced. §5 gained a third bullet on 2026-09-04
 ("受入条件は「名前」でなく「本体」を検定する"); 008 does **not** touch it — it is the reason
@@ -2580,6 +3356,37 @@ The other §5 bullets (one CALL + one delta check; the `state_root`↔header lay
 "tier を超えない / 走らせていないものを passing と書かない" discipline; and the new
 "名前でなく本体" discipline) are unchanged.
 
+**(2a) `AGENTS.md` §0 — the enumerated surface gains a second file.** This is the declaration
+`AGENTS.md` §0 itself demands of any agent that changes what the build condition asserts, and
+`reckn-spec`'s charter demands of any change to the claim. **What changed, in the words §0 uses:**
+
+> `bash scripts/no-keys.sh` が読むのは `RecknZkEscrow.sol` **と
+> `zk-verdict/contracts/src/RecknVerdictVerifier.sol` の二つ**になった。二つ目は決済権限の
+> 経路上にあり（`RecknZkEscrow.sol:99` が `verifyVerdict` を呼び、返る struct を信じる）、
+> **task 008 がこのファイルを編集する**ため、008 が検査を入れる。検査は**禁止語の列挙ではなく
+> 閉包性質**（識別子語彙・宣言数・本体の文形・代入先）で、`verifyVerdict` に分岐も環境読みも
+> 追加できない。**これは緩和ではなく締め付け**で、列挙された関数面
+> （`fund` / `settleWithProof` / `refundAfterDeadline`）は変わらない。
+> **check 5 を緩める変更は founder 判断。**
+
+AC-14(ii) marker 10 is the substring `RecknVerdictVerifier.sol` in `AGENTS.md`; measured today it
+appears **0** times in that file. 008 does **not** touch §0's other rules, does not touch §5's
+three bullets beyond (2), and does not touch §3, §7 or §8.
+
+**(2b) `CLAUDE.md`, the 中心主張 block (`:16-18`)** — same declaration, one sentence.
+`CLAUDE.md:16` names `RecknZkEscrow.sol` as *the* file the claim lives in; after check 5 that is
+incomplete rather than false, and an incomplete statement of the central claim in the file every
+agent reads first is exactly the drift `CLAUDE.md:41-43` records this repository shipping twice.
+AC-14(ii) marker 11 is the substring `RecknVerdictVerifier.sol` in `CLAUDE.md`; measured today it
+appears **0** times.
+
+**(2c) `scripts/no-keys.sh`'s own header comment (`:11-12`)** — the scope sentence *"the body of
+`contract RecknZkEscrow` only, with comments stripped"* becomes false in this commit. Replace it
+with the two-file region and the one-line reason for the second file. **AC-14(i) literal 9** is
+the check that the old sentence did not survive; there is no marker for the replacement text
+because check 5's own existence is what AC-13's M-17 verifies, and a marker on a comment would be
+the "名前でなく本体" pattern `AGENTS.md` §5 forbids.
+
 **(3) Root `README.md`, "Known gaps (not closed)"** — line ranges **re-measured today**
 (round 1's three ranges were all wrong, r1 finding 8; the section is now 44 lines,
 `222eeeb84230c54050e9db26c9c070e1425ac3c9d92e4193a98431dca05ef99f`):
@@ -2605,7 +3412,9 @@ the polarity reversed.
 
 **(6) `STATUS.md`** — a row recording that 008 landed, that the fixtures were regenerated,
 that the binding domain tag moved `v1 → v2`, that `surfaces.pinned` now exists and `003` must
-re-pin it (§1.3), and the two documentation drifts 008 cannot fix itself (OQ-1, OQ-2).
+re-pin it (§1.3), **that `scripts/no-keys.sh` now checks two files and that check 5 is 008's
+minimal form which the next task extends (§1.3, OQ-6)**, and the two documentation drifts 008
+cannot fix itself (OQ-1, OQ-2).
 
 **(7) Not edited by any agent:** `docs/ethonline-2026/PLAN.md` and `DISCLOSURE.md`
 (`AGENTS.md` §8). `PLAN.md:20-21` becomes stale — OQ-1. And **not edited by 008 at all:**
@@ -2623,23 +3432,37 @@ re-pin it (§1.3), and the two documentation drifts 008 cannot fix itself (OQ-1,
   **Recommendation: (a)** — PLAN.md is the document the Continuity narrative is built from,
   and a stale binding formula there is exactly the kind of thing a judge can check.
 
-- **OQ-2 — 008 lands before `003` and `004` and touches three things they depend on.**
-  Two are documentation, one is a **build condition 003 must break** (r1 finding 7, and §1.3):
-  1. `003`'s AC-16 pins the honest-scope digest `8f65b75f…9a6cac1`, which 008 must change;
-  2. `003:341` and `004:171` quote the v1 binding formula, which 008 replaces;
-  3. **`zk-verdict/scripts/surfaces.pinned` pins `sha256(RecknZkEscrow.sol)`, and `003`
-     necessarily changes that file** (`refundAfterDeadline`; plus the discarded `transferFrom`
-     boolean `003` r1 ruled in scope). Round 1 enumerated (1) and (2) and was silent on (3).
+- **OQ-2 — answered for `003`; open only as a `004` dependency.** *(Restated in round 5.
+  Round 4 called this "the one open question that needs an answer before implementation starts";
+  it is not, any more. `003`'s current revision answers all three couplings on its side — the
+  honest-scope digest is no longer a literal it carries, it no longer quotes the v1 binding
+  preimage, and it re-pins `surfaces.pinned` in the same commit that changes the contract, with
+  the path corrected to `zk-verdict/scripts/`. r4 finding 7.)*
 
-  Options: (a) 008 lands and `003`/`004` re-pin in their next round, with **`003` re-pinning
-  `surfaces.pinned` in the same commit that changes the contract, as a visible one-line diff**
-  (`surfaces.sh` prints both digests on failure so the re-pin is a copy of a printed value);
-  (b) 008 holds its documentation changes until `003` lands.
-  **Recommendation: (a).** (b) would ship the code fix with the false honest-scope text still
-  in the repository, which is the failure mode `AGENTS.md` §5 exists to prevent. Cost is one
-  line in `STATUS.md` and one line in `003`'s commit.
-  **This is the one open question that needs an answer before implementation starts**, because
-  it changes what `003` must do, and `003` is being revised by another agent right now.
+  **Both of round 4's cross-spec line citations were stale, and round 5 does not repair them —
+  it drops them.** A line number in a document another agent is revising this hour is not a
+  citation, and this specification must contain **no literal whose truth depends on a spec that is
+  not APPROVEd**. Where 008 needs to refer to a neighbouring spec it does so by **content and by
+  the founder/orchestrator ruling that created the coupling**, never by line or by quoted string.
+
+  **What remains open, and it is `004`'s, not `003`'s.** `004` re-implements the v1 preimages
+  inside `live-input/`. Read today, it goes stale in **three** ways, not the one round 4 named:
+  1. the **domain tag** moves `v1 → v2` (`004:370`);
+  2. the **encoding rule** changes — `004:372` uses `le64(MIN_OUT)` / `le64(MAX_DELTA)` and §3.3
+     makes every preimage fixed-width **big-endian**, so the widths and the byte order both move;
+  3. **`gas_limit` becomes a bound component.** `004:369` computes
+     `planHash = keccak256(caller ‖ target ‖ calldata ‖ value)` **without** `gas_limit`, and `004`
+     carries a whole residual about that omission (`004:86` defers it, `004:1178` and `:1201-1204`
+     state it as an invariant and a limit). **008's `plan_hash` includes `gas_limit:u64BE`**
+     (§3.5) and AC-7a tests it as one of the 18 bound components — so 008 **resolves** `004`'s
+     residual, and `004`'s text describing it as open becomes false. Round 4 named only (1).
+
+  Options, unchanged in shape: **(a)** 008 lands and `004` updates its preimage section in its
+  next round; **(b)** 008 holds its documentation changes until `004` lands.
+  **Recommendation: (a).** (b) would ship the code fix with the false honest-scope text still in
+  the repository, which is the failure mode `AGENTS.md` §5 exists to prevent, and `004` is behind
+  `003` in the execution order anyway. Cost is one line in `STATUS.md` and a section rewrite `004`
+  must do regardless. **008 does not edit `004`** (N-11).
 
 - **OQ-3 — precompile backend parity (R-3) is a production performance decision.** 008 puts Δ
   outside D, which is enough for INV-1/INV-2 but is a *liveness* restriction: a future plan
@@ -2666,6 +3489,14 @@ re-pin it (§1.3), and the two documentation drifts 008 cannot fix itself (OQ-1,
   it must be refused at the **domain gate** (a fourth `OutOfDomain` variant), not in the guest,
   so both sides stay consistent. AC-1 tests 3 and 4 already pin the current behaviour either
   way.
+  **Two round-5 corrections to this question** (r4 finding 4). **(i)** The sentence above claimed
+  `zk-verdict/README.md:143` *"advertises as impossible"* what R-7 permits. It does not: line 143
+  reads *"A no-op (`--credit 42`) → delta 0 → `Failed`"*, a statement about **that fixture**, whose
+  floor is `min ≥ 1`. It is not a universal claim, so **the shipped exposure is smaller than round
+  4 wrote**. **(ii)** The recommendation says *"disclose R-7"* and round 4 gave that recommendation
+  **no implementing obligation anywhere** — so accepting the recommended option would have shipped
+  nothing. It now has one: §9(1)'s sentence and AC-14(ii)'s marker 8. **Accepting the
+  recommendation is now the default path; overriding it is what needs the founder.**
 
 - **OQ-5 — RULED 2026-09-04. M-8 becomes a sandbox mutant; `RecknZkEscrow.sol` is never
   written.** *(No longer open. Kept in §10 rather than deleted because the record of **how the
@@ -2724,7 +3555,46 @@ re-pin it (§1.3), and the two documentation drifts 008 cannot fix itself (OQ-1,
   it: a hard kill during M-8 leaves an orphaned temp directory. Round 3 priced (a) without this,
   which is a third instance of the same direction of error in the same section.
 
-**Not open, recorded so round 5 does not re-open it:** the M-8 mechanism (founder ruled the
+- **OQ-6 — RULED 2026-09-04. `AGENTS.md` §0's checked region gains a second file, and 008 is
+  the task that adds it.** *(Not open. Recorded here, in OQ-5's form, because the **shape of the
+  mistake** is worth keeping: the fact that made the hole findable was written into round 4's own
+  text and used as an argument in the opposite direction.)*
+
+  **The question, as the r4 review put it:** whether `AGENTS.md` §0's enumerated surface gains a
+  second file is a founder-level decision and should not be made silently by an agent.
+
+  **The ruling** (orchestrator, 2026-09-04): **yes, and it is 008's.** Three reasons, in the order
+  they bind:
+  1. **008 edits the file** (§3.4, N-12). An agent editing a settlement-path contract that the
+     build condition does not read is `AGENTS.md` §0's failure mode arriving through the door §0
+     was not watching.
+  2. **A check that does not exist when a file is first opened is not a check.** The execution
+     order is `008 → 009 → 003`. Attributing the check to a later task leaves the region open
+     across the two tasks the **9/9 checkpoint** turns on (`AGENTS.md` §7).
+  3. **It is a tightening.** The set of trees `no-keys.sh` accepts strictly shrinks; no function
+     surface widens; the script's interface, arguments and final line are unchanged. §0's own rule
+     that *loosening this check is a founder decision* is untouched — and **relaxing check 5 later
+     is exactly such a decision, not an implementer's fix.**
+
+  **What 008 writes and what it does not.** 008 writes the **minimum that closes the splice**: one
+  new numbered check over one new target, five closure properties (§6.4), one sandbox mutant
+  (M-17), one invariant (INV-15), and the declaration in `AGENTS.md` §0 / `CLAUDE.md` /
+  the script's own header (§9(2a)–(2c)). 008 does **not** write the extension — the constructor's
+  semantic closure and the on-chain deployment check belong to the next task (§1.3) — and 008
+  copies **no literal** from that task's spec, which is not APPROVEd.
+
+  **The record of how the hole survived four rounds, which is the part worth keeping.** Round 4
+  wrote, verbatim, that `RecknVerdictVerifier.sol` *"is not the file `AGENTS.md` §0 is about and
+  which `no-keys.sh` does not read"* — and used it as the reason the file needed **no** sandbox.
+  The same sentence is the statement of the hole. This is the third instance in this document of
+  the pattern OQ-5 already records: **an enumeration or a justification built in the direction
+  that flatters the option being defended** (r1 finding 12, OQ-5's three-option set, and now
+  this). `AGENTS.md` §5's *"数字が製品に都合よく転んだときこそ疑う"* applies to **reasons**, not
+  only to numbers and option sets. The operational form of the rule, for whoever writes round 6:
+  **when this document states a fact about what a check does not cover, ask whether the sentence
+  is a defence or a finding before deciding which.**
+
+**Not open, recorded so round 6 does not re-open it:** the M-8 mechanism (founder ruled the
 sandbox on 2026-09-04; OQ-5 above is the record, not a question) and which other mutants are
 sandboxed (**none**); that **P-12 closes G-2's soundness half** — the four call opcodes share one
 account-loading path (`revm-interpreter-35.0.1/src/instructions/contract.rs:158,203,248,293` →
@@ -2741,4 +3611,9 @@ unwitnessed Δ case depends on it); the empty-MPT-proof asymmetry (008 was right
 r2 verified it independently and Codex agreed); whether scoping INV-2 to **D** is a weakening
 (r2: it is a **sharpening**); whether `surfaces.pinned` is a ritual (r2: no — its one defect was
 that the digests were unstated, and AC-0b now states them); and whether the r2 cut list should be
-taken (no — §7.5 measured the regeneration and the binding constraint is `R`, not test count).
+taken (no — §7.5 measured the regeneration and the binding constraint is `R`, not test count);
+and, added after round 4: **P-12, Δ = 9, G-3, the `head -710` rule, AC-7a, §7.5's tier discipline,
+the sandbox skeleton and N-1's literal truth** (the r4 review re-verified each independently);
+**that `surfaces.pinned` must not be mutated** (OQ-5(b)'s rejection stands, which is why AC-0b's
+R5 is verified by reading and says so — §7.8(d)); and **that 008 introduces check 5 rather than a
+later task** (OQ-6 above).
