@@ -37,7 +37,66 @@
 | task | stage | round | verdict | 記録 |
 |---|---|---|---|---|
 | 003 key gauntlet（001 を内包） | spec | r1 | **CHANGES** | `docs/reviews/003-spec-r1.md` |
+| 003 key gauntlet（001 を内包） | spec | **r2** | **CHANGES** | `docs/reviews/003-spec-r2.md` |
 | 004 live adversarial input | spec | r1 | **CHANGES** | `docs/reviews/004-spec-r1.md` |
+
+## 003 spec review r2（2026-09-04）— **CHANGES**
+
+記録: `docs/reviews/003-spec-r2.md`（payload `/tmp/reckn-payload-003-spec-r2.md` /
+Codex raw `/tmp/reckn-codex-003-spec-r2.md`、呼び出しは 1 回・`-s read-only`）。
+対象 `docs/specs/003-key-gauntlet.md`（931 → **1642 行**）は `reckn-spec`（Claude Code）起草＝
+Codex は自分の宿題を採点していない。Codex 4件 → 全件をディスクに当てて再現・採用（1件は severity を
+証拠付きで BLOCKER→MAJOR に降格、1件は repro をより強い経路に差し替え）、**私の独立検出 10件**を追加。
+残った **14 findings（BLOCKER 2 / MAJOR 7 / MINOR 5）**。
+
+**founder 不確実点①（AC の5ゲートが「0件一致で緑」を構造的に不可能にしたか）は「半分」。**
+5ゲートは*テストが0件*を不可能にしたが、*表明が0件*は通す——**ゲートはテスト名しか読まず、本体を
+一度も開かない**。`test_AC02_G01_…() { assertTrue(true); }` を6本書けば AC-02 は緑で、**manifest も
+総数も一切触らずに済む**（Σ=42 も AC-17=54 も保たれる）。仕様自身の AC-18 観測5（`:1157-1159`）が
+「本体を `assertTrue(true)` にしても落ちる」と書いているが**それは偽**。実際に効いているのは AC-14
+（mutation）だけで、文書はその逆を書いている。しかも **AC-8 だけが kill table に mutant を持たない**
+（M-21 が `:782` と `:901` で別の変異を指し、`:1240` は AC-2 に割り当て）——C-4＝同一トークン drain の
+修正を守る AC が、唯一 mutation の届かない AC になっている。**AC-18 は自己言及**でもある（`ac.sh` が
+`ac-selftest.sh` を呼ぶので、退化した `ac.sh` は自分で自分を緑にできる。AC-0 のような直接実行行が無い）。
+
+**founder 不確実点②（checks 9/10 が主張を弱めずに穴を塞いだか）は否。** 検査は**2つのメソッド名を
+数えているだけ**で、資金は今も2経路で出る。①`fund` 内の
+`if (amount == 0) { IERC20Min(token).approve(seller, type(uint256).max); }` — `msg.sender` も新関数も
+継承も無く、**10検査すべてを通す**（本日サンドボックスで実測: `.transfer(`=2 / `transferFrom(`=1 /
+fund 内 `.transfer(`=0 / fund 内 `msg.sender`=3、すべて適合、`no-keys.sh` exit 0）。攻撃者は
+`fund(freshId, attacker, USDC, 0, binding)` で無限 allowance を得て、トークンを直接叩いて
+**そのトークンの全 deal を proof も deadline も無しに抜く**。②`scripts/no-keys.sh:29` の走査は
+`^contract RecknZkEscrow` から始まるので、**宣言より上に置いた library / file-level function の
+`.transfer(` は本文カウントに映らない**（file 3 / body 2 を実測）。仕様は C-4 でこの死角を
+**意図的に利用**（interface を上に置く）しながら §3.1:245 で「出口は増やせない」と書いている。
+= **r1 finding 3 のメソッド名を1つ替えただけの再発**。なお**6検査の追加自体は既定挙動を緩めていない**
+（interface / default target / exit semantics / 検査1-4の文面は不変、check 3 は check 7 と併存、
+追加行は最終行の前）。N-9（target 引数を足さない）は正しい判断。
+
+**その他の主要 finding**: ③§1.3 の exact-transfer 定義が**エスクロー側しか見ていない**ので、
+受取側手数料トークンは定義を満たしたまま `amount − fee` しか払わず `Settled` になる（Codex 検出）。
+④§2.3 は「deployer が選ぶ3つ」に**エスクロー bytecode を挙げておきながら**、直後の3点チェックから
+落としている＝正規 verifier/vkey を晒した偽エスクローが seller の点検を通る。加えて `d.token` は
+buyer が deal ごとに選び seller の受取可否を決めるのに点検に無く、**seller にとっては
+「pre-funding」ではあり得ない**（terms は `Funded` イベントでしか届かない、OQ-4 が自認）。
+⑤**OQ-6 の事実主張が偽** — 「この repo に実測 Groth16 proving wall-clock は無い」と書くが
+`zk-verdict/README.md:97` に **~34 s**（同日の 004 r1 レビューが既に実測として引用済み）。
+向きは珍しく**否定方向の過剰主張**だが §5 違反であることは同じ。
+⑥C-5 の exact 一致を正当化する「M-23 を止めるのは upper bound」は、**§5.3:1245 が M-23 を AC-10 に
+割り当てている**ことと矛盾（多 deal invariant が契約側の上限と無関係に殺す）。**exact を維持する結論は
+支持するが、G-34/G-35 という 003 が作った恒久ロックを、文書自身が反証する論拠で正当化している。**
+⑦N-5 の「seller-acceptance も trigger を持つ＝鍵だ」は広すぎる。**入る同意は結果を決める権限ではない**
+（accept しない seller の帰結＝今日の「何もしない seller」と同一）。G-33 を disclosed に留める**結論は
+003 の scope 内で正しい**が、OQ-4 が偽の前提（「中心主張の形が変わる」）に乗っており、founder が
+将来これを見直せなくなる。
+
+**tier 違反は発火せず**: 全 AC が Foundry/シェル、AC-16 は Honest scope 2ブロックを digest で凍結、
+003 は1つも解消していない。⑤は実測値を**落としている**のであって tier を上げてはいない。
+
+**算術は AC-14 以外すべて再計算一致**（35行 / 20-7-8 / manifest 21件 / Σforge tests=42 / 既存 suite=12 で
+AC-17 の 54 が閉じる / `RecknZkEscrow.t.sol` は4テスト）。**forge 1.7.1 の挙動は本日再実測**
+（`--list --json` は3階層・`invariant_*` を列挙・`--match-test` が一致・no-match で `{}`、run の key は
+`name(sig)`）＝§5.0 のゲートは設計通り動く。落ちないのは AC-14 の数字だけ（41 / 42 / 46 の三重不一致）。
 
 **003 spec r1（2026-09-04）— CHANGES。** Codex を独立レビュアとして1回呼び、5 findings を受領。
 自分で行単位に裁定し、**12 findings（BLOCKER 3 / MAJOR 6 / MINOR 3）**を残した。Codex 由来は
@@ -108,13 +167,19 @@ AC-11(a) の静的リテラル検査は base64 化 1 行で抜けられ、AC-11(
 
 1. **founder**: ETHOnline に応募（<https://ethglobal.com/events/ethonline2026>）
 2. **founder**: 9/4 に `DISCLOSURE.md` を ETHGlobal へ送付
-3. **`reckn-spec`**: `docs/reviews/003-spec-r1.md` の「What must change before round 2」12項目を
-   `docs/specs/003-key-gauntlet.md` に反映 → `reckn-codex-review`(stage=spec, r2)
+3. **`reckn-spec`**: `docs/reviews/003-spec-r2.md` の「What must change before round 3」10項目を
+   `docs/specs/003-key-gauntlet.md` に反映 → `reckn-codex-review`(stage=spec, **r3**)。
+   **blocking は2つだけ**: ①allowance 出口と走査域外出口を塞ぐ（or 出口が列挙されているという主張を
+   取り下げる）②AC-18 観測5の偽文を削り、「format はテスト0件を防ぐが表明0件は防がない」と明記し、
+   AC-18 に `ac.sh` 外の直接実行行を与え、全 forge AC に mutant を1つ以上持たせる
 4. **`reckn-spec`**: `docs/reviews/004-spec-r1.md` の「004 に戻すときに直すもの」12項目を
    `docs/specs/004-live-adversarial-input.md` に反映 → `reckn-codex-review`(stage=spec, r2)
-5. **founder 裁定**: OQ-2（`cli` 実モデル経路の可否。**004 の見出し主張がこれに依存**）／
+5. **founder 裁定（003 r2 追加）**: G-33 を disclosed に留めるのは**コストの判断であって
+   中心主張の形の判断ではない**（finding 9）。OQ-6 は「実測が無い」ではなく「**~34 s は predicate guest の
+   実測、`program-revm` は未測**」を前提に問い直す。OQ-1/OQ-2/OQ-3/OQ-5 は r2 で不変。
+6. **founder 裁定**: OQ-2（`cli` 実モデル経路の可否。**004 の見出し主張がこれに依存**）／
    `u64`/`U256` 偽 release を**タスク 002 の前に閉じるか**（deferred D-2）
-6. spec が APPROVE になってから `reckn-codex-impl`。**実装・コントラクトは未着手**（r1 の時点で
+7. spec が APPROVE になってから `reckn-codex-impl`。**実装・コントラクトは未着手**（r2 の時点でも
    `RecknZkEscrow.sol` に変更なし）
 
 ## Day 1（2026-09-04）— 起点の記録
