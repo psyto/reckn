@@ -195,14 +195,38 @@ during the event, so the boundary is stated here rather than reconstructed later
 | Pre-event product work ends at | `a122b44` (2026-08-02) |
 | Commits dated 2026-09-03 | harness, planning and documentation only — no product feature |
 | **Event work** | **commits dated 2026-09-04 or later — the date is primary, not the hash** |
-| `EVENT_START` | recorded in [`STATUS.md`](STATUS.md) at the first commit on 9/4 |
+| `EVENT_START` | `121194ca3e25bab4ec92aaa4da1277f3a60b8421`, recorded in [`STATUS.md`](STATUS.md) |
+| Accepted | 2026-09-04, **Continuity Track** |
+| Retreat checkpoint | 9/9 — tasks 008 and 009 both green, or the founder decides |
 | Freeze | 9/12 |
 
 **Every feature described in this README is pre-event work**, disclosed to
-ETHGlobal in advance. Nothing here is claimed as event-day work. What the event is
-for is listed as tasks in [`AGENTS.md`](AGENTS.md) §3 — beginning with the gap this
-README states openly [below](#known-gaps-not-closed): the keyless escrow has no
-timeout.
+ETHGlobal in advance. Nothing here is claimed as event-day work, and nothing below
+is described as finished before it is.
+
+What the event is for, in execution order ([`AGENTS.md`](AGENTS.md) §3):
+
+1. **008 — verdict domain soundness.** Close the false release described
+   [below](#known-gaps-not-closed): the guest judges the balance delta on the low 64
+   bits while the off-chain engine uses the full `U256`, so a *decrease* proves as a
+   maximal credit. Also make "the same engine runs in-guest" checkable rather than
+   assumed.
+2. **009 — cross-VM settlement.** Settle an EVM escrow on a *Solana* proof. Today an
+   SVM verdict is verified on-chain by the same generic verifier, but only EVM proofs
+   reach `settleWithProof`. This is the event's headline: a payment escrowed on one
+   chain, disputed over work performed on another, settled by a proof — no resolver
+   on either side, and no bridge or light client in the adjudication path.
+3. **003 — key gauntlet.** Publish every party's private key and demonstrate with a
+   test matrix that every theft path reverts, folding in the keyless timeout so a
+   funded deal with no proof cannot lock forever.
+4. **004 — live adversarial input.** Open the seller's delivery claim to free-form
+   text so anyone watching can try to talk the judge into approving, and watch
+   re-execution refuse to be talked into anything.
+
+Each task goes through a written spec with mechanically checkable acceptance
+criteria and an adversarial review by a second model before any implementation. The
+specs and every review verdict are committed under [`docs/specs/`](docs/specs) and
+[`docs/reviews/`](docs/reviews) — including the ones that failed.
 
 The repository is developed by an autonomous harness — `reckn-spec` (frame-thin:
 closes the frame) → `reckn-codex-review` (adversarial, second model) →
@@ -590,6 +614,18 @@ is closed by anything above; the honest scope in
   spec with a zeroed block env, while `reexec-evm` pins `anchor.spec_id` (`CANCUN`
   in the current fixture) and the full environment. The two may disagree on any
   opcode whose behaviour is fork-dependent.
+- **⚠ The build condition reads one file, and settlement authority leaves it**
+  (found 2026-09-04; task 008 closes it). `scripts/no-keys.sh` checks
+  `RecknZkEscrow.sol` only, but `settleWithProof` obeys the struct returned by
+  `RecknVerdictVerifier` — a different file in the same deployment, on the same
+  authority path. A constant-keyed branch there is a resolver, and it passed every
+  check we had. The claim is that no key can judge; the region we were checking was
+  one file.
+- **⚠ `fallback()` and `receive()` are invisible to the enumeration**
+  (found 2026-09-05; task 009 closes it). Neither carries the `function` keyword, so
+  the state-changing surface check cannot see them. Measured: a `fallback` that
+  drains any funded deal compiles and passes all four checks. Nothing exploitable
+  ships today — the contract has neither — but the guarantee did not cover the shape.
 - **Scale.** The guest proves one CALL plus one delta check. A full block or an
   arbitrary contract set is more cycles on the same architecture — but that is a
   claim about architecture, not a measured result.

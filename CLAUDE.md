@@ -51,6 +51,33 @@ optimistic 系=bonded resolver / feedback 系=投票者）。**アーキテク�
 - **本プロジェクトは一度もハッカソンに提出されていない。** `SUBMISSION.md` のプリフライトで
   "Repo public" と "Submission form" が未チェック、リポジトリは今も private。
 
+## 検証済みの事実（2026-09-04 / 09-05 に追加、いずれも実測）
+
+- **`no-keys.sh` が読むのは `RecknZkEscrow.sol` 1本だけ**。だが `settleWithProof` は
+  `RecknVerdictVerifier.verifyVerdict` が返す struct に従う（`RecknZkEscrow.sol:99`）。
+  **同じデプロイの内側にある別ファイルが決済権限を持っている。** → task 008 が閉じる。
+- **`fallback()` / `receive()` は列挙に映らない**（`function` キーワードを持たないため）。
+  **任意の funded deal を抜く fallback が4検査を全部通ることを実測。** → task 009 が閉じる。
+- **`forge test --match-test` も `cargo test <filter>` も、一致ゼロで exit 0**（forge 1.7.1 実測）。
+  **終了ステータスだけで判定する受入条件は、テストを1本も書かない実装で緑になる。**
+- **`zk-verdict/scripts/zk-e2e.sh:83` は `forge test | grep … || true`** で終了ステータスを捨てる。
+  README がワンコマンドのデモとして宣伝しているものが、**テストが落ちても緑に見える**。
+- **Groth16 fixture 1本の end-to-end 再生成 = 335.02 s**（2026-09-04 実測、warm build、
+  制約 15,972,262、うち証明生成 31.71 s）。`zk-verdict/README.md:97` の「~34秒」は
+  **gnark wrap の部分だけ**で、しかも **predicate guest** のもの。re-execution guest は別物。
+- **`RecknVerdictVerifier` の `verdictProgramVKey` は immutable で1つだけ**（`:40`）。
+  1つの verifier は1つの guest しか裁定できない。009 はこれを**エスクロー側の immutable を消す**ことで回避する。
+
+## この repo で成立した規則（仕様レビューが生んだもの。AC を書く前に読め）
+
+- **R-7**: 禁止リストを書くな。**性質で閉じろ。** 名前を1つ足せば破れる検査は検査でない。
+- **R-8**: **呼び出し箇所の字句検査は被演算子を縛らない。**
+- **R-9**: **自分の観測器を壊すことで満たされる基準は、基準ではない。**
+- **R-10**: 検査の連鎖は repo の内側では終わらない。**どこで人に乗るのかを名指しで書け。**
+- **R-11**: **攻撃者は観測器の存在を条件に分岐できる**（テストがローカルチェーンで走るなら、
+  ローカルでない時だけ悪さをする実装は全テストを緑にする）。**除外で範囲を述べた検査は穴が空いている。
+  左辺だけの pin は pin ではない。**
+
 ## 環境
 
 - **`codex` は PATH に無い。** 実体は `/Applications/ChatGPT.app/Contents/Resources/codex`

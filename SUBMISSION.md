@@ -4,14 +4,22 @@ Paste-source for the ETHGlobal / Arc submission form, a 60–90s demo-video scri
 and a pre-flight checklist. Keep this in sync with `README.md`; the README is the
 canonical technical doc, this is the pitch surface.
 
-> **Status (2026-09-03).** This kit was written for the earlier ETHGlobal / Arc
-> form and has never been submitted anywhere — the pre-flight below is still
-> unchecked on *Repo public* and *Submission form*, and the repository is private.
-> The live entry is **ETHOnline 2026, Continuity — Ship a Feature**; its plan and
-> the advance disclosure are founder documents in `docs/ethonline-2026/`, and the
-> boundary that governs what may be claimed as event work is `AGENTS.md` §4.
-> Copy below describes **pre-event** capability. Before submitting, re-check every
-> number against a run — do not paste a figure this file inherited.
+> **Status (updated 2026-09-05).** This kit was written for an earlier ETHGlobal /
+> Arc form. The live entry is **ETHOnline 2026, Continuity Track** — applied and
+> **accepted on 2026-09-04**, RSVP and stake complete. The repository was made
+> **public on 2026-09-04** so the application could be reviewed against the source,
+> so the pre-flight's *Repo public* item is done; *Submission form* is not, and
+> submissions are not yet open.
+>
+> The plan and the advance disclosure are founder documents in
+> `docs/ethonline-2026/`; the disclosure's §3 lists what is being built during the
+> event, and `AGENTS.md` §4 governs what may be claimed as event work.
+>
+> **Copy below describes pre-event capability only.** The event's own work — the
+> soundness fix and cross-VM settlement — is not in it. Before submitting, re-check
+> every number against a run rather than pasting a figure this file inherited; the
+> counts were last re-measured on 2026-09-04 and are recorded in
+> `_applications/2026-09-04-ethonline-application.md`.
 
 ---
 
