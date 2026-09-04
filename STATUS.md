@@ -12,7 +12,7 @@
 | 当日作業の定義 | **日付が 2026-09-04 以降の commit のみ**（ハッシュでなく日付が一次） |
 | 中心主張 | 判定する鍵が存在しない — `bash scripts/no-keys.sh` **PASS** |
 | 凍結予定 | **9/12**（9/13–15 は R[3]sidency 締切 9/15 に明け渡す） |
-| 撤退可能点 | **9/9** — **003（001 の受入条件を内包）が緑**でなければ founder 判断（`AGENTS.md` §7、2026-09-04 の実行順裁定に合わせる。旧文言「001/002 が緑」は使わない） |
+| 撤退可能点 | **9/9** — **`008` と `003`（001 の受入条件を内包）の両方が緑**でなければ founder 判断（`AGENTS.md` §7 の文言に合わせて 008 を補った。2026-09-04 の実行順裁定で 008 が先頭。旧文言「001/002 が緑」は使わない） |
 
 ## 完了
 
@@ -40,6 +40,94 @@
 | 003 key gauntlet（001 を内包） | spec | **r2** | **CHANGES** | `docs/reviews/003-spec-r2.md` |
 | 004 live adversarial input | spec | r1 | **CHANGES** | `docs/reviews/004-spec-r1.md` |
 | 004 live adversarial input | spec | **r2** | **CHANGES** | `docs/reviews/004-spec-r2.md` |
+| **008 verdict domain soundness** | spec | r1 | **CHANGES** | `docs/reviews/008-spec-r1.md` |
+
+## 008 spec review r1（2026-09-04）— **CHANGES**
+
+記録: `docs/reviews/008-spec-r1.md`（payload `/tmp/reckn-payload-008-spec-r1.md` /
+Codex raw `/tmp/reckn-codex-008-spec-r1.md`、呼び出しは 1 回・`-s read-only`）。
+対象 `docs/specs/008-verdict-domain-soundness.md`（1239 行）は `reckn-spec`（Claude Code）起草＝
+**Codex は自分の宿題を採点していない**（payload に明記）。Codex 5件 → **1件を証拠付きで却下・
+1件は前提が偽なので狭めて採用・1件は理由を差し替えて降格・2件を採用**、**私の独立検出 10件**を追加。
+残った **15 findings（BLOCKER 2 / MAJOR 8 / MINOR 5）**。
+
+**BLOCKER 2件はどちらも「仕様が名前しか読まない」型**:
+
+1. **AC 群は全部テスト**名**しか見ない。79個の命名済み tautology で `ac008: 18/18 rows passed` が出る。**
+   §6.0 の件数ゲートは「0件で緑」は確かに殺す（本日再実測: forge 1.7.1 / commit `4072e487…`、
+   `--match-test` 無一致で **EXIT=0**、`--fail-on-no-tests` は存在しない）が、**0 assertion は殺さない**。
+   唯一の自動防御 AC-13 は**テストを rename するだけ**（`:955`）で本体を一度も開かず、
+   `assert!(true)` × 14 は AC-02 も AC-13 も通る。mutation 群 NC-1…NC-18 は `:1054` が
+   「**残りは手で1回走らせて出力を報告に貼る**」＝ビルド条件でなく自己申告。
+   → `u64_low` が残ったまま緑で出荷できる＝**製品の定義された失敗形そのもの**。
+   **本 repo 3周連続の同型**（003 r1 finding 1 / 003 r2 の `assertTrue(true)`）。Codex も独立に到達。
+2. **AC-11 が自己矛盾で実装不能。** `:921-922` は `grep -c 'vm.exists'` を **0** と要求し、
+   `:923-924` は「gate を `require(vm.exists(FIXTURE), "…")` にする」と書く。後者は前者を不可能にする。
+   `AGENTS.md` §7 の「仕様が本当に曖昧」に該当し、**実行順の先頭・9/9 チェックポイントの4日前**に停止を招く。
+
+**MAJOR の中身（要点）**: ③AC-13 の sandbox 10コピーに**コスト見積が無い**
+（本日実測 `zk-verdict/target` = **6.8G**、repo = **21G**、`zk-verdict/script` は `sp1-sdk` 依存）
+④**INV-2 の iff が偽** — 空 MPT proof を guest は**受理**する（`alloy-trie-0.9.5/src/proof/verify.rs:29-43`
+が空 proof + `EMPTY_ROOT_HASH` + 値なしで `Ok(())`）のに off-chain は `EmptyStorageProof` で `Err`
+（`reexec-evm/src/lib.rs:352-356`）。P 表 P-1…P-9 は `EmptyAccountProof`/`EmptyStorageProof` を欠く
+⑤`anchor.block_header = Some(_)` は `to_guest_input` の exclusion set で黙って落ちるが off-chain は
+`HeaderMismatch` で `Err`（Codex の BLOCKER を**偽解放ではない**ので MAJOR へ降格。`state_root` は
+buyer が funding 時に固定するため）⑥**N-3 の `binder` 保証を強制する AC がゼロ** —
+`binder/Cargo.toml:26` が `features = ["testkit"]`、`binder/tests/router_two_vms.rs:13` が
+`testkit::{addr, anchored_identity_witness}` を使うのに、AC-0b の digest は testkit 行より**上**しか見ない
+⑦**AC-0b が `003` の破らねばならないビルド条件を設置**（`surfaces.pinned`）していて OQ-2 に記載が無い
+⑧**3つ目の pinned digest が既に陳腐化**（本日再計算 `222eeeb8…f99b` / 44行 vs 仕様の `04f567a3…` / 38行）。
+原因は 008 の spec commit `d4f59ba` の**後**に入った `9ac4545`（README precompile 訂正）。
+結果、§9(3) の3義務のうち**1つは既に完了済み**で、引用行番号3つとも誤り（実際は 572-579 / 580-587 / 588-592）
+⑨**domain D は記述であって強制でない** — AC-4 の「precompile 越境は両側で loudly に落ちる」は
+**witness に無い場合だけ**成立する。
+
+**却下（証拠付き）**: Codex の BLOCKER「precompile は warm 扱いで DB を叩かないから witness-closed DB は
+効かない」は**前提が偽**。`revm-context-16.0.1/src/journal/inner.rs:920-927` で `Entry::Vacant` は
+`warm_addresses` から `is_cold` を得た**後に `db.basic(address)?` を無条件に呼ぶ**（warm は EIP-2929 の
+gas だけ）。top-level は `revm-handler-18.1.0/src/execution.rs:20-22`、nested は
+`revm-interpreter-35.0.1/src/instructions/contract.rs:157-158` → `call_helpers.rs:73` で必ず到達し、
+`frame.rs:203` の `precompiles.run` は**その後**。狭めた版を finding 9 として残した。
+ほかに Codex の「(b) のコスト記述が逆」（`:202-204` が実際には predicate/SVM fixture を既に credit している）と
+INV-8/INV-10 の「存在するだけ」判定、tier 指摘を証拠付きで却下。
+
+**tier 違反は発火せず。** 008 は自分の header（`:3-6`）で local 限定を宣言し、cycles は
+**再測定を義務づける方向**（AC-14(ii)、`~180k` の未計測 sub-figure 2件を削除）に動いている。
+Honest scope の残余は §9(1) が R-1…R-6 を逐語で保持。
+
+**再litigate 不要（検証済みで健全）**: 欠陥の再現は正確（`main.rs:31-33`/`:163-166` vs
+`reexec-evm/src/lib.rs:647`）／revm 引用は**全件行単位で一致**（`hardfork.rs:76-77`、
+`block.rs:116-122`、`cfg.rs:120-121`/`:50`/`:329`）／testkit 引用も全件一致（`:737`〜`:745`）／
+**precompile 訂正は正しく、逆方向にも踏み込んでいない**（`bn`/`p256-aws-lc-rs` は両側とも非有効なので
+modexp/bn254/sha256/ripemd/blake2f/secp256r1 は両側同一コード＝除外集合 `0x01`/`0x0a`/`0x0b`–`0x11` は完全）／
+§6.1 の算術は全項再計算一致（18行・cargo 8行79件・forge 2行6件・script 8行・11+52+16=79・12+6=18・AC-13=10）／
+基礎件数も実測一致（reexec-evm 10+6=16、forge 12、`vm.exists` 7件/4ファイル）／
+AC-14 の 12 cycle sites は**全部実在し漏れも無い**／digest 3件中2件は一致。
+**scope 拡大は正当**（しかも仕様自身の理由より強い）: witness-closed DB が無いと seller は account を
+**省略**して `dealBinding` を変えずに verdict を変えられる＝**INV-5 が偽**になる。`plan.gas_limit` も同様。
+003 の scope 線と整合。
+
+**founder 不確実点① — (a) は正しい。(b) へ切り替えるな。切るのは harness であって fix ではない。**
+(b) は完了状態ですらない: `RecknZkEscrow` に timeout が無い（宣言は `fund`/`settleWithProof` のみ）ので
+窃取が**恒久ロック**に変わり、002 は 18 decimals で構造的に不可能（RAY は常に定義域外）。
+ただし**仕様は fix より大きく、私の 15 findings のうち 8 件はその余剰部分に居る**。
+**保持**: AC-1 / AC-2 / AC-3 / AC-4(+空 proof 2 vector) / AC-7a / AC-7b / AC-9 / AC-10.3 / AC-0・AC-0b。
+**縮小**: AC-13 は sandbox 10コピー → **in-place semantic mutation（NC-1/5/9/10）+ 保証付き revert・3行**（より厳しく、かつ安い）／
+AC-14 は 12箇所 exact 整数 → `cycles.json` + `~NNNk` 不在の grep ／AC-6 は網羅 destructure の
+**コンパイルエラー**が強い半分なので bash の Rust struct parser は落とす／AC-5 は AC-6 に畳む。
+**追加（安価）**: `binder`/`keeper`/`reckn-evm-content` を建てる manifest 1行、空 proof の W-04/W-05、
+`to_guest_input` が `Some(block_header)` を拒否。これで 9/12 内どころか 9/9 前に閉じられると判断する。
+**現状のままでは判断しない。** Codex も独立に同じ結論（(a) 維持、AC-13 と cycle gate を切る）。
+
+**founder 不確実点② — 4層は閉じていない。全層を通過して食い違う経路が4本ある。**
+①`TxEnv`（どの層にも無い。今日は両側一致なので慣行であって data ではない）
+②`anchor.block_header = Some(_)`（層1の exclusion set、層2/3 は `GuestEnv` のみ、層4 は vector が無い）
+③空 MPT proof（層1-3 は環境フィールドしか見ず、W-01…W-03 に無い）
+④precompile backend（層1-3 は dispatch を模さず、E-01…E-10 は一度も入らず、D は強制されない）。
+**「層4 が都合のよいビルドを見ていないか」は否**: `script/build.rs:4-8` が毎ビルドで3つの guest ELF を
+生成し `include_elf!` が拾うので AC-9 の vkey 照合は循環しない。ただし **`sp1-build 6.3.1` の source が
+ローカル registry に無く skip-build 環境変数の有無を検証できなかった**——これは finding ではなく
+**suspicion として記録**（保険: `ac008.sh` が `SP1_*` を unset し、ELF の sha256 を `cycles.json` に残す）。
 
 ## 003 spec review r2（2026-09-04）— **CHANGES**
 
@@ -237,21 +325,30 @@ AC-11(a) の静的リテラル検査は base64 化 1 行で抜けられ、AC-11(
 
 1. **founder**: ETHOnline に応募（<https://ethglobal.com/events/ethonline2026>）
 2. **founder**: 9/4 に `DISCLOSURE.md` を ETHGlobal へ送付
-3. **`reckn-spec`**: `docs/reviews/003-spec-r2.md` の「What must change before round 3」10項目を
+3. **`reckn-spec`（最優先・実行順の先頭）**: `docs/reviews/008-spec-r1.md` の
+   「What must change before round 2」15項目を `docs/specs/008-verdict-domain-soundness.md` に反映 →
+   `reckn-codex-review`(stage=spec, **r2**)。**blocking は2つ**: ①AC-13 を rename から
+   **semantic mutation（NC-1/5/9/10）+ in-place & 保証付き revert・3行**へ置換し、
+   §7.3 の「残りは手で走らせて貼る」をビルド条件に格上げする ②AC-11 の自己矛盾
+   （`vm.exists` 0件要求 vs `require(vm.exists(...))`）を early-return パターンの検査に書き直す。
+   **併せて「Founder uncertainty 1」の cut list を適用**（AC-13 縮小 / AC-14 の12箇所 exact 整数を撤回 /
+   AC-6 の bash struct parser 撤回 / AC-5 を AC-6 に畳む）。適用しない場合は**規模の判断を founder に上げる**
+   ——9/9 チェックポイントの対象タスク。
+4. **`reckn-spec`**: `docs/reviews/003-spec-r2.md` の「What must change before round 3」10項目を
    `docs/specs/003-key-gauntlet.md` に反映 → `reckn-codex-review`(stage=spec, **r3**)。
    **blocking は2つだけ**: ①allowance 出口と走査域外出口を塞ぐ（or 出口が列挙されているという主張を
    取り下げる）②AC-18 観測5の偽文を削り、「format はテスト0件を防ぐが表明0件は防がない」と明記し、
    AC-18 に `ac.sh` 外の直接実行行を与え、全 forge AC に mutant を1つ以上持たせる
-4. **`reckn-spec`**: `docs/reviews/004-spec-r2.md` の「round 3 で直すもの」9項目を
+5. **`reckn-spec`**: `docs/reviews/004-spec-r2.md` の「round 3 で直すもの」9項目を
    `docs/specs/004-live-adversarial-input.md` に反映 → `reckn-codex-review`(stage=spec, **r3**)。
    **blocking は2つだけ**: ①§4.1/§4.3/AC-6/AC-7(d)/AC-20/INV-2/§11/§3.4 を **008 後の guest**に対して
    書き直す（式を参照で定義し、literal hex を "pre-008" と明示し、AC-7(d) の組み直しを構成子名で固定しない）
    ②`negative-controls` を 25 番目の gate にし、NC-25（gate 本体を成功行の印字に置換）を足し、
    §6.1 の「2つ目のエンジン」を削り、**1 gate の入力集合を実行時 seed にする**
-5. **founder 裁定（003 r2 追加）**: G-33 を disclosed に留めるのは**コストの判断であって
+6. **founder 裁定（003 r2 追加）**: G-33 を disclosed に留めるのは**コストの判断であって
    中心主張の形の判断ではない**（finding 9）。OQ-6 は「実測が無い」ではなく「**~34 s は predicate guest の
    実測、`program-revm` は未測**」を前提に問い直す。OQ-1/OQ-2/OQ-3/OQ-5 は r2 で不変。
-6. **founder 裁定（004 r2 更新）**: OQ-2 は**決着済み**（見出しは判事非依存に書き換え済み）。
+7. **founder 裁定（004 r2 更新）**: OQ-2 は**決着済み**（見出しは判事非依存に書き換え済み）。
    `u64`/`U256` 偽 release は **008 が引き取り済み**。004 で残る裁定は **OQ-1**（観客 attempt を
    セッション後に実 Groth16 → `settleWithProof` する別タスクを起こすか）と **OQ-4**（凍結後に届いた
    attempt を commit するかの Continuity 解釈）の2つだけ。**OQ-3 は裁定不要** — `008:343-349` が
