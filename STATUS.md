@@ -536,7 +536,17 @@ AC-11(a) の静的リテラル検査は base64 化 1 行で抜けられ、AC-11(
 ## 次
 
 1. **founder**: ETHOnline に応募（<https://ethglobal.com/events/ethonline2026>）
-2. **founder**: 9/4 に `DISCLOSURE.md` を ETHGlobal へ送付
+2. ~~**founder**: 9/4 に `DISCLOSURE.md` を ETHGlobal へ送付~~ → **この指示は実行不能だった**。
+   受理前の時点で送付先が存在しない（Discord 接続は受理後、提出フォームは提出時）。
+   **実質的な開示は 9/4 の応募 Q1 で既に済んでいる**（一度も提出していないこと、製品作業が
+   `a122b44`/08-02 で停止していること、以降が tooling/planning/docs であること）。
+   `DISCLOSURE.md` 自身の指定は「ETHGlobal チームへハック開始前／開始時に送り、**提出時の
+   description に全文を再掲する**」なので、残る実行項目は次の2つ:
+   - **受理後**: Discord 接続時に全文を主催者へ渡す
+   - **提出時（9/16 まで）**: submission description に全文を再掲
+   - ⚠ **その前に `DISCLOSURE.md:21-22` を修正すること**。「the repository is still private」は
+     2026-09-04 の public 化で**偽になった**。開示文書に偽の一文を残して送らない。
+     founder 文書なのでエージェントは書き換えない（`AGENTS.md` §8）。
 3. **`reckn-spec`（最優先・実行順の先頭）**: `docs/reviews/008-spec-r1.md` の
    「What must change before round 2」15項目を `docs/specs/008-verdict-domain-soundness.md` に反映 →
    `reckn-codex-review`(stage=spec, **r2**)。**blocking は2つ**: ①AC-13 を rename から
