@@ -40,11 +40,93 @@
 | 003 key gauntlet（001 を内包） | spec | **r2** | **CHANGES** | `docs/reviews/003-spec-r2.md` |
 | 003 key gauntlet（001 を内包） | spec | **r3** | **CHANGES** | `docs/reviews/003-spec-r3.md` |
 | 003 key gauntlet（001 を内包） | spec | **r4** | **CHANGES** | `docs/reviews/003-spec-r4.md` |
+| 003 key gauntlet（001 を内包） | spec | **r5** | **CHANGES** | `docs/reviews/003-spec-r5.md` |
 | 004 live adversarial input | spec | r1 | **CHANGES** | `docs/reviews/004-spec-r1.md` |
 | 004 live adversarial input | spec | **r2** | **CHANGES** | `docs/reviews/004-spec-r2.md` |
 | **008 verdict domain soundness** | spec | r1 | **CHANGES** | `docs/reviews/008-spec-r1.md` |
 | **008 verdict domain soundness** | spec | r2 | **CHANGES** | `docs/reviews/008-spec-r2.md` |
 | **008 verdict domain soundness** | spec | **r3** | **CHANGES** | `docs/reviews/008-spec-r3.md` |
+
+## 003 spec review r5（2026-09-04）— **CHANGES**
+
+記録: `docs/reviews/003-spec-r5.md`（payload `/tmp/reckn-payload-003-spec-r5.md` /
+Codex raw `/tmp/reckn-codex-003-spec-r5.md`、呼び出しは 1 回・`-s read-only`）。
+対象 `docs/specs/003-key-gauntlet.md`（**4245 行**）は `reckn-spec`（Claude Code）起草＝
+**Codex は自分の宿題を採点していない**（payload §0 に明記）。Codex 5件のうち **4件が検証を通過**
+（うち2件は **repro を却下して私の repro に差し替え**、1件は severity 主張を却下）、**私の独立検出 1件**を追加。
+残った **6 findings（BLOCKER 2 / MAJOR 2 / MINOR 2）**。**round 6 が hard stop**（`AGENTS.md` §7）。
+
+**r5 は r4 の 11件に全部答えており、答えは散文でなく機構だった。**手で再測定して確認: check 14 は
+r4 の「found sound」注記が増えただけ、**9c / 9b-range は 1バイトも動いていない**、§5.4a は r4 finding 5 が
+要求した箇所（**contract 単位の probe** / `--match-test` + **parsed JSON** / `^SweepProbe_` を column read から除外）
+だけが変わっている。**「本体機構は触っていない」という自己申告は本当**。文書内算術も全部閉じる
+（matrix **39**行 = 21/7/10/1、`T` = **59** = 1+19+25+14、forge AC の `tests` 合計 **46**、
+manifest の rows union は matrix の 39 id と集合一致、corpus **19**+control **4**、sweep columns **29**）。
+**008 由来の literal は 1つも残っていない**（digest / suite 数 / binding 前像 / 幅、全て `{P}` `{S}` と
+`docs/gauntlet.base.json` への参照に置換済み）。
+
+**それでも CHANGES。決定的な2件は、どちらも「境界が閉じたのでなく動いただけ」。**
+
+1. **[BLOCKER] check 15 は代入の*左辺*しか縛らず、`constructor` を明示的に除外している**
+   （`docs/specs/003-key-gauntlet.md:1528-1552`）。`verifyVerdict` が呼ぶ `ISP1Verifier` の**アドレスは
+   constructor で選ばれる**（`RecknVerdictVerifier.sol:38,42-45`）。15c は `verifyVerdict` の本体だけ、
+   15e は「constructor と verifyVerdict の外」、15f の denylist に `if` / `?` / `block.` / アドレス即値は無い。
+   → `constructor { if (block.chainid == 31337) { verifier = _verifier; } else { verifier = 0x…1337; } … }`
+   は **15a〜15f を全部通り、しかもデモ chain では正直に振る舞うのでローカルのテスト行列も全部緑**。
+   別 chain では鍵無しの偽 verifier が全 deal の verdict を決める。P5 の
+   *「定数アドレスが住める分岐は存在しない」*（`:1478-1483`）は**偽**——分岐は constructor にある。
+   §2.3(A) の4点デプロイ検査に `RecknVerdictVerifier.verifier()` が**入っていない**ので人の検査でも捕まらない。
+   **これは r4 finding 1 の一段外での再発**（r4=決済権限が検査対象ファイルの外へ出た /
+   r5=ファイルは入れたが**信頼する呼び先を選ぶ領域**が中に残った）。
+   閉じ方は round 6 で足りる: 15c と同じ形を constructor に当てる＋デプロイ検査を**5点**にする
+   （＋`gauntlet.json` と money-shot に SP1 verifier アドレスを印字）＋corpus/mutant 各1＋count 3つ再導出。
+   ついでに **check 8 も同型**（エスクロー側 constructor も左辺しか見ていない）。
+
+2. **[BLOCKER] 洗浄防止機構が「上書きを拒否」で、洗浄経路は `rm`。しかも AC-16 の `Falsify:` が
+   逆の結果を主張している**（`:281-284`, `:2659-2662`, `:3884-3886`, `:4196`）。
+   README を緩めて **commit → `rm docs/gauntlet.base.json` → `--measure`** で、
+   working tree / `git show <base_commit>:…` / 記録値の**三者が全部新しい基準で一致**し、
+   `base_commit` は当然 HEAD の祖先なので AC-16 は緑になる。`--measure` は存在しないファイルを
+   上書きできない。**R-6 は全 `Falsify:` を実行して非ゼロを観測する義務**を課すので、
+   結果が逆の `Falsify:` は誤記でなく**壊れた計器**。§9.1 P0 は「削除して測り直すな」と*指示*しているが、
+   **R-10(i) が要求しているのは機構**。Codex の「これは founder 判断が要り 003 単独では閉じられない」は**却下**——
+   `git log --diff-filter=D/A` で「base file は一度だけ追加され一度も削除されていない」を assert し、
+   `--measure` に**クリーンツリー条件**を付ければ閉じる（後者は今の設計だと汚れたツリーで P0 を回せてしまい、
+   赤くなるのが P8 まで遅れる問題も同時に消す）。
+
+MAJOR 2件: ③**AC-17 は既存テストの「件数」と 4つの「名前」しか pin していない**ので、
+`RecknReexecVerdict.t.sol:47` の改竄検知テストを消して同ファイルに通るテストを1本足せば `{S}` も status も
+名前4つも無傷で緑（P0 は既に `--list --json` を回しているので**テスト id の集合**を記録するだけで閉じる）。
+④**stripper の「バックスラッシュ escape を尊重する」節だけ corpus witness が無い**——
+`string memory ref = "a \" // b"; IERC20Min(token).transfer(seller, amount);` は escape を見ない
+one-pass scanner で `.transfer(` が消え、E-17 と同じ結果になる（**Codex の repro は exit を次行に置いており
+`//` は行末までしか消さないので却下**、同一行の形に差し替えた）。
+
+MINOR 2件: ⑤§8 の*「"impossible" は §5.0.1 とその再掲にしか現れない」*は Appendix C を書いた本 round で偽になった
+（4122/4125/4181/4243）——**実質的な規律は健全**で、位置の主張が drift しただけ。
+⑥`no-keys.sh` の check 15 と `gauntlet.sh --check` の check 15 が**別物なのに同じ名前**で相互参照されている。
+
+**健全と確認して記録（round 6 で再審理しない）**: (a)/(b) の判断は正当
+（適用した基準＝*製品上の理由で remedy を選んでよいのは開示集合が縮まない時だけ*。(b) の開示文は
+§8 / §2.3(A) / §7.2 に**全部残っている**）。check 15 の 008 安定性の主張は正しい
+（008 は struct の**数値幅4つだけ**を順序を変えずに変更し、15a は header 行、15e は contract 内部しか見ない）。
+observer 4件の答え（witness / outside-in control / parsed JSON / 式による class count）は機構であって文章ではない。
+§8 の*「003 は証拠を捏造する実装者に対する防御ではない」*は**正直さであって穴の正当化ではない**
+（末端の artefact 1つを名指しし、R-10(iii) がそれを要求している）。**ただし finding 2 は別物**——
+あちらは「機構が塞いでいる」と*主張*しており、それは許されない手。R-8/R-9/R-10 は互いに矛盾しない
+（**finding 1 は R-8 の反例でなく実例**）。timeout 設計は不変（`refundAfterDeadline` は誰でも呼べる、
+G-16/G-17 で settle と排他、G-11 が期限境界を fuzz）。tier 違反なし。
+
+**OQ-8（008 が着地しなかったら）の整理は正しく、founder に渡す形として十分。**
+§1.5 の測定機構により 003 はどちらのツリーでも正しい。ただし2点だけ足す:
+(a) を選ぶ場合の*「truncation を画面に出す」*は**まだどこの義務でもない**（§7.2 に行が無く、
+AC-16 は「変えていない」しか pin しない）ので round 6 で §7.2 に書く必要がある。
+そして*「003 の主張は鍵についてであり 008 と独立」*は真だが、これは `AGENTS.md` §5 が警告する
+「主張を後から狭める」型そのものなので、**壇上で言えるかを決めるのは founder であってエージェントではない**
+（r5 はそれを決めなかった。正しい）。
+
+**round 6 で閉じるのは上の6件だけ。** これ以外の新しい機構設計を開いたら §7 の hard stop で
+論点を開いたまま founder に返す。
 
 ## 003 spec review r4（2026-09-04）— **CHANGES**
 
