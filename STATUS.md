@@ -49,7 +49,79 @@
 | **008 verdict domain soundness** | spec | **r3** | **CHANGES** | `docs/reviews/008-spec-r3.md` |
 | **008 verdict domain soundness** | spec | **r4** | **CHANGES** | `docs/reviews/008-spec-r4.md` |
 | **008 verdict domain soundness** | spec | **r5** | **CHANGES** | `docs/reviews/008-spec-r5.md` |
+| **008 verdict domain soundness** | spec | **r6（hard stop / 時刻上限）** | **APPROVE** | `docs/reviews/008-spec-r6.md` |
 | **009 cross-VM settlement** | spec | **r1** | **CHANGES** | `docs/reviews/009-spec-r1.md` |
+
+## 008 spec review r6（2026-09-05）— **APPROVE**（実装開始可）
+
+記録: `docs/reviews/008-spec-r6.md`（payload `/tmp/reckn-payload-008-spec-r6.md` /
+Codex raw `/tmp/reckn-codex-008-spec-r6.md`、**呼び出しは 1 回・`-s read-only`**）。
+対象 `docs/specs/008-verdict-domain-soundness.md`（**4283 行**）は `reckn-spec`（Claude Code）起草＝
+**Codex は自分の宿題を採点していない**（payload §0 に明記）。Codex は 3 findings（BLOCKER 1 /
+MINOR 2）と 8 件の確認を返し、**BLOCKER は severity を再導出して採用、MINOR 1件は枠組みを証拠付きで
+却下し鋭い半分だけ採用**、私の独立検出 4 件を追加。**残った 6 findings（MAJOR 1 / MINOR 5）**。
+
+**`AGENTS.md` §7 の round 6 hard stop、かつ 9/5 founder 裁定の時刻上限下。round 7 は無い**ので、
+verdict より重要なのは分類。判定基準は founder が与えた
+*「実装者がこの文書だけを読んで作業した結果、中心主張が偽のまま緑になる経路が残っているか」*。
+
+**答えは No。推論でなく実行して確かめた。** §6.4 5f の5段抽出規則を文面から実装し、現物に
+§3.4 の `uint64`→`uint256` を当てて走らせた結果:
+
+- **20片が転記どおりの順序で完全一致**、5b の**43 トークン**も一致。
+- R-10 item 7 の2つの構成（`{ }` 挿入 / contract を早く閉じて `verifyVerdict` を自由関数化）が
+  **どちらも20片と43トークンを完全再現**——起草側の自己申告どおり。
+- **M-15 は発火する**: `reexec-groth16-fixture.json` の `trace_hash`(`0x4e7b1345…`) ≠
+  `deal_binding`(`0x81899ffc…`) なので、member 入れ替えで `v.dealBinding` が ABI word 5 を
+  decode し `RecknZkEscrow.sol:103` が `BindingMismatch` で revert する。
+- **r5 の代案却下は正しい**: `RecknReexecVerdict.t.sol:27-30` / `RecknZkEscrow.t.sol:43-47` は
+  JSON から fixture バイトを読む＝**Rust encoder の変更は forge に届かない**（AC-09 が赤になるだけ）。
+- M-21 は 5f を分離している（`minDelta`/`maxDelta` は escrow もテストも読まない）。
+- manifest 算術（18行 / cargo 91 / forge 6 / script 8）を手で再計算し全部閉じる。tier 違反なし。
+
+**それでも MAJOR 1件。決定的なのは「限界の記述」がまた一箇所だけ偽だったこと。**
+
+1. **[MAJOR / 実装中に必ず閉じる] `:3582` と `:4242` の残余の見積もりが偽。** 両方が
+   *「permuted struct は通さない、M-21 が piece 5,6 を M-15 が 8,9 を動かすから」*と書くが、
+   これは**位置比較**にしか成り立たない。**隣接関係**で書いた 5f——片数20と
+   (`minDelta`,`maxDelta`) / (`traceHash`,`dealBinding`) の隣接だけを見る実装——は
+   **M-15 も M-21 も落としながら、`uint8 outcome` を先頭へ動かす金の動く順列を通す**。
+   実測（`full-5f` = 仕様どおり / `degenerate-5f` = 隣接版）:
+   `outcome-to-head` は 5b **PASS** / full-5f **REJECT** / degenerate-5f **PASS**。
+   → 正直な `Failed` の proof が seller に払い、`no-keys.sh` は 0 で抜ける
+   （`AGENTS.md` §6 の commit 儀式は `forge` を走らせない）。
+   **BLOCKER にしなかった理由**（Codex は BLOCKER と主張、severity のみ却下）: 仕様本文
+   `:1683-1684` / `:1710` / stop rule `:1839-1846` は**曖昧さなく完全な順序付き等式**を命じており、
+   `full-5f` 列は全順列で REJECT。**仕様どおりに書いた実装からは緑かつ偽の木に到達できない**。
+   穴は「実装が仕様に従わなかった場合を gate が捕まえられない」側にあり、**§7.7 `:3624-3628` と
+   §7.8(d′) はその degenerate をすでに名指しし、抽出コードの貼付を義務づけている**。
+   偽なのは**残余の見積もり**であって機構ではない——そして founder はその文で **OQ-7** を裁定する。
+2. **[MINOR ×5]** `:3338`/`:2807` の「M-19 は denylist を落とす唯一の mutant」は偽（**M-21 も落とす**
+   ＝過小申告方向の誤り）／`:3821` §8 R-10 が「**Six** things」と書いて **7項目**を列挙
+   （§9 が honest scope へ**逐語コピー**する対象）、同段落の「Two of the three regions」も
+   「None」が正しい／`:3527` L-3 が step 0 のパッチ数を **18** と書く（`:2660` と `:3296` は **21**）／
+   `:3684` §7.8(c) が `sandbox control clean` を **3行**と書く（§7.7 `:3596` は **6行**）／
+   `:1325` の「sandbox は1つ」と、M-19 が名乗ってよい clause の §7.3 row 4（5b/5d）と
+   phase 19g（5b/5d/**5f**）の食い違い。
+
+**実装者への義務（仕様はもう直せないので、レビューが代替）**: ①5f は**添字付き20要素等式＋長さ表明**で
+書く（隣接・部分集合・部分文字列検索は不可）②check 5 が `skeleton:` digest を印字し、selftest が
+**自分で** `$S` から計算して照合（8g/18g/20g と同じ器具。ただし**印字だけでは不十分**——Codex の
+指摘どおり、正しく抽出して印字しつつ部分集合で判定できる）③phase 21 に**生成した位置ごとの摂動**
+（i と i+1 を入れ替えて 20 回、パッチファイル0本・ビルド0・数秒）を足す＝**OQ-7 の (b) が 65 mutants と
+値付けした性質を、ほぼ無料で買う**④impl review は 5f の**実コードを引用**して pass/fail で書く
+⑤実装報告に `:3582`/`:4242` が偽だったことと訂正文を書く。
+
+**却下した findings**: Codex の BLOCKER severity と「OQ-7 の選択肢集合の不完全さ自体が blocker」
+（証拠: `full-5f` は全順列で REJECT、仕様本文が完全等式を命じている）／Codex の
+「denylist は round 6 後は 18 行を通らないので `:2814` が誤り」（証拠: `:2814` は M-19 導入の
+反実仮想で、**同じ段落の次の文が M-19 で落ちると書いている**。真の誤りは `:3338` の唯一性主張）／
+**私自身の payload 仮説**（「skeleton digest を印字させれば OQ-7 は安く閉じる」）——**Codex が正しく反証**
+（印字は判定を縛らない）。記録に残す。／brace nesting が悪用可能という説（両モデルとも構成できず。
+起草側の `:1833-1841` の両方向の書き方は**正しい**）／`remappings.txt` は R-10 item 3 で開示済み。
+
+**founder が実装前に答える必要があるもの**: **OQ-7（ただし訂正後の残余で）**、OQ-1、OQ-2、OQ-3、
+OQ-4（OQ-4 は round 5 で実装義務が付いたので**受諾が既定**、override だけが founder 判断）。
 
 ## 009 spec review r1（2026-09-05）— **CHANGES**
 
