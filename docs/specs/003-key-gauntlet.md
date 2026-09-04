@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| Status | **DRAFT — round 3.** Responds to all 14 findings in `docs/reviews/003-spec-r2.md` (`VERDICT: CHANGES`), which responded to `docs/reviews/003-spec-r1.md`. Response table: **Appendix A**. |
+| Status | **DRAFT — round 4.** Responds to all 8 findings in `docs/reviews/003-spec-r3.md` (`VERDICT: CHANGES`, BLOCKER 3 / MAJOR 3 / MINOR 2). Response table: **Appendix B**. Round 3's response to r2 is **Appendix A** and is not re-opened. |
 | Owner | `reckn-spec` (frame thin). Implementation is `reckn-codex-impl`. |
 | Supersedes | task `001` (keyless timeout) — folded in per founder ruling, `AGENTS.md` §3 |
 | Tier claimed | **local anvil / Foundry only.** No testnet, no mainnet, no real funds. |
-| Surface touched | `zk-verdict/contracts/src/RecknZkEscrow.sol`, `zk-verdict/contracts/test/`, `zk-verdict/contracts/foundry.toml`, `scripts/no-keys.sh` (**additive checks only** — §4.5), `scripts/` (new: `ac.sh`, `ac-selftest.sh`, `no-keys-selftest.sh`, `mutation-kill.sh`, `degeneracy-sweep.sh`, `gauntlet.sh`), `zk-verdict/scripts/zk-e2e.sh` (**one line**, S-1), `docs/gauntlet.json` (new), `README.md`, `CLAUDE.md`, `AGENTS.md`, `STATUS.md`, `SUBMISSION.md`, `zk-verdict/README.md` (**not** its Honest-scope blocks) |
+| Surface touched | `zk-verdict/contracts/src/RecknZkEscrow.sol`, `zk-verdict/contracts/test/`, `zk-verdict/contracts/foundry.toml`, `scripts/no-keys.sh` (**additive checks only** — §4.5), `scripts/` (new: `ac.sh`, `ac-selftest.sh`, `no-keys-selftest.sh`, `mutation-kill.sh`, `degeneracy-sweep.sh`, `gauntlet.sh`), `zk-verdict/scripts/zk-e2e.sh` (**one line**, S-1), `docs/gauntlet.json` (new), `README.md`, `CLAUDE.md`, `AGENTS.md`, `STATUS.md`, `SUBMISSION.md`, `zk-verdict/README.md` (**not** its Honest-scope blocks), `surfaces.pinned` (**re-pinned, not authored** — task `008`'s artefact; §1.5, D-11) |
 | Surface **not** touched | `contracts/RecknEscrow*` (optimistic path, `AGENTS.md` §8), `zk-verdict/program-revm`, `zk-verdict/program-svm`, `zk-verdict/lib`, `zk-verdict/script`, `docs/ethonline-2026/*` (founder documents), `docs/specs/004-*`, `docs/specs/008-*`, `docs/reviews/*` |
 
 Section numbering is normative. Task `004` must reuse this structure: §1 claim/non-goals,
@@ -37,6 +37,28 @@ check for the same reason, and so does the construct nobody has thought of yet �
 §4.5, AC-1. Round 3 also adds **AC-21**, which opens test bodies behaviourally: every
 gauntlet test must be observed *failing* against at least one mutant, so the six-stub
 attack of r2 finding 2 (`assertTrue(true)` with correct names) is named rather than green.
+
+### What round 4 changes, in one paragraph
+
+Round 3's property P constrains **where calls appear**. r3 found that it does not constrain
+**what the permitted calls' operands resolve to**, and broke it twice from that one seam:
+a function-type local *named* `transfer` (whose name check 9b is forced to admit, because
+check 12 pins the very declaration line that produces that token), and a plain assignment
+`deals[dealBinding].seller = seller;` inside `fund`, which contains **no call-shaped token
+at all** and therefore no lexical call check can see. Round 4 does not extend a syntax
+check to chase either construct (R-7, and it would be r2's mistake one level down). It adds
+**one property per seam**: check 9 closes the **`function` keyword** itself, so nothing new
+can become callable under any name; and **check 14** closes the set of **assignment
+targets** per function range — the same shape check 8 already uses for the constructor —
+so no storage other than `deals[dealId]`, `d.state` and locals can be written at all.
+Behind the lexical checks, **INV-2c** states the runtime fact that neither check can prove
+(*a `Funded` deal's struct changes only through the two exits, and then only in `state`*)
+and AC-10's new invariant and AC-11's new row **G-38** test it. Round 4 also makes **AC-21
+non-vacuous**: M-34 (every body `revert()`) broke every `setUp`, so its column marked all
+44 tests `Failure` and satisfied AC-21 for all of them at once — it is removed from the
+columns by a pinned exclusion and, more importantly, every column must now pass a
+**setUp probe** before it may be read (§5.4a). R-8 records the general rule: *a lexical
+check on call sites never constrains operands.*
 
 ---
 
@@ -176,6 +198,41 @@ by 003** — it exists in the contract as it stands today and 003 discloses it. 
   direction — every rejection is a build failure a human reads, never a silent pass. 003
   does not add a Solidity parser, an AST tool, or a new toolchain dependency.
 
+### 1.5 Dependency on `008`, and the three things that move together
+
+**Execution order is `008` → `003` (`AGENTS.md` §3), so 008's build conditions already
+exist when 003 edits the contract.** One of them binds 003 directly.
+
+Task `008` introduces a build condition `surfaces.pinned`, which pins
+`sha256(zk-verdict/contracts/src/RecknZkEscrow.sol)`. **003 necessarily breaks that pin**:
+C-1…C-7 add `refundAfterDeadline`, add `State.Refunded`, and stop ignoring `transferFrom`'s
+return value. This is expected, not a conflict — the pin exists so that a contract edit is
+never invisible.
+
+> **A surface change moves three things, in one commit, always together:**
+>
+> 1. `AGENTS.md` §0's enumerated function surface (`fund` / `settleWithProof` /
+>    `refundAfterDeadline`) — the claim itself;
+> 2. `scripts/no-keys.sh` — the build condition that enforces the claim (003 adds checks
+>    5–14 and one output line, §4.5, D-10);
+> 3. **`surfaces.pinned`** — 008's digest of the contract source (D-11).
+>
+> Splitting these across commits is what makes a claim change invisible, which is the one
+> thing `AGENTS.md` §0 exists to prevent.
+
+**How the re-pin is performed, and how it is not.** `surfaces.sh` prints **both** the old
+and the new digest when the pin fails. The implementer **copies the printed new value**
+into `surfaces.pinned`. **No agent computes a digest by hand and no step of this spec asks
+for one** — a hand-transcribed hash is a silent mismatch waiting to happen, and a
+recomputation performed by the party being checked is not a check.
+
+**Honest note on ordering.** At the time this spec is written, neither `scripts/surfaces.sh`
+nor `surfaces.pinned` exists in the tree (`ls scripts/` → `anvil-e2e.sh`, `no-keys.sh`,
+2026-09-04). They are 008's deliverable and 008 lands first. If 008 lands **without** them,
+D-11 is a no-op and the implementer records that it was a no-op — it is not licence to skip
+step 2 or step 3 of any pin that does exist. **003 does not edit `docs/specs/008-*`**
+(§9, "not to be edited").
+
 ---
 
 ## 2. Attacker model
@@ -205,7 +262,7 @@ holds the key that decides the dispute. Here the gauntlet publishes their key an
 that it buys **exactly what `STRANGER`'s key buys: nothing beyond the ability to relay a
 proof that already carries its own authority.**
 
-**What the gauntlet actually exercises.** The 37 rows run in Foundry, where `vm.prank`
+**What the gauntlet actually exercises.** The 38 rows run in Foundry, where `vm.prank`
 impersonates an **address without touching its private key**. The rows therefore
 demonstrate address-level behaviour. The published keys are printed so a judge can verify
 they derive to those addresses; unless OQ-1's signed mode is built, **no published key
@@ -342,7 +399,9 @@ name: `increaseAllowance`, `permit`, `Address.functionCall`, `payable(x).transfe
 #### 3.1.2 What round 3 states instead — a closed allowlist over the whole file
 
 `scripts/no-keys.sh` gains four checks whose **scan region is the entire file**, not the
-contract body (§4.5, checks 9, 11, 12, 13). Together they state one property:
+contract body (§4.5, checks 9, 11, 12, 13) — and, in r4, a fifth (check 14) whose region is
+the contract body split by function range. The four state one property, P; check 14 states
+P3 (below):
 
 > **P — closed call surface.** After comments and string literals are stripped, every
 > *call-shaped token* in `RecknZkEscrow.sol` — a member call `X.name(`, a member call with
@@ -372,8 +431,36 @@ in that table is rejected by a name-specific rule** — the entries are conseque
 >
 > It is also **not** the case that P is a proof about the compiled bytecode. P is lexical.
 > It over-approximates in the safe direction — it rejects legal code that is not on the
-> list — and the one thing it cannot see is a construct that moves value **without any
-> call-shaped token at all**. §8 names what that leaves open.
+> list. Two things it does not see, both found by r3: a construct that moves value
+> **without any call-shaped token at all**, and — the larger one — an **assignment that
+> corrupts the operand a permitted call reads**. §8 names both.
+
+**What P does not say, stated here rather than discovered later (r3 findings 1 and 2).**
+P is a property of **call sites**. It says every call-shaped token is allowlisted; it says
+**nothing** about what the allowlisted calls' operands resolve to. Both permitted exits read
+their destination and their amount from storage — `.transfer(to, d.amount)` and
+`.transfer(d.buyer, d.amount)` — so an attacker who cannot add a call can still redirect
+one, either by making the *name* being called resolve to something else (a function-type
+local named `transfer`, which check 9b is **forced** to admit because check 12 pins the
+interface line that produces that same token) or by rewriting the storage the permitted
+call reads (`deals[victimId].seller = attacker;`, which produces no call-shaped token and
+is invisible to every call check). Round 4 closes the seam with **two further properties,
+not with two further names** (R-7, R-8):
+
+> **P2 — closed callables.** Every `function` token in the file is one of the **six**
+> pinned declarations (three in `IERC20Min` via check 12, three in the contract via check
+> 2). A function-type variable, parameter, return, or mapping value, and a file-level
+> function, all cease to exist together — whatever they are named. This also closes check
+> 2's own whitespace gap: `scripts/no-keys.sh:46` greps `function +[a-zA-Z_]`, and
+> `function(address,` has no space, so today it is invisible to check 2. §4.5.3 (9c).
+>
+> **P3 — closed assignment targets.** Inside every function range, the set of permitted
+> assignment left-hand sides is fixed, and the enumeration of source constructs that can
+> write storage (assignment, compound assignment, `++`/`--`, `delete`, `assembly`'s
+> `sstore`) is closed with it. `deals[k]` for any `k` other than the `dealId` being funded,
+> and `d.<field>` for any field other than `state`, both fail — including from inside the
+> only writing entry point. This is the same construction check 8 already applies to the
+> constructor, widened to the three functions. §4.5.6 (check 14).
 
 #### 3.1.3 The cross product
 
@@ -383,7 +470,9 @@ state that L1 and L2 read (`d.seller`, `d.buyer`, `d.amount`, `d.state`, `d.fund
 `d.dealBinding`). The matrix is the cross product of:
 
 - **exit** × **actor** × **precondition**, for L1 and L2 (classes A and B)
-- **state corruption** through the only writing entry point, `fund` (class C)
+- **state corruption** through the only writing entry point, `fund` (class C) — including
+  a write from inside `fund` to a **different deal's** storage (**G-38**, r3 finding 2),
+  which is a class-C attack that produces no call-shaped token
 - **control-flow** attacks that interleave with an exit (class D)
 - **out-of-band** value movement that does not go through an entry point (class E)
 - **choices made before the deal exists** — deployment parameters and deployment code
@@ -444,10 +533,11 @@ The block between the two markers below is machine-read by `scripts/gauntlet.sh 
 | G-35 | disclosed | anyone | `settleWithProof` / `refundAfterDeadline` | **rebasing / share-accounted** token; the escrow's balance moved between `fund` and payout | revert `PayoutFailed` (or `UnderFunded` at `fund` if the drift is downward before funding completes); state stays `Funded`; permanently stuck. Residual created by C-5 |
 | G-36 | disclosed | anyone | `settleWithProof` / `refundAfterDeadline` | **recipient-side fee** token: debits the escrow exactly `d.amount`, credits the destination `d.amount − fee` (§1.3 d) | **the call succeeds**, the deal becomes terminal, and the authorized destination receives **less than `d.amount`**. C-5 measures the escrow side and cannot see this. Disclosed, not fixed |
 | G-37 | disclosed | `BUYER` or attacker | deploys a **look-alike** escrow with the genuine `verifier`, the genuine vkey and an in-range `refundDelay`, but **different bytecode** | — | the round-2 three-part check passes and the seller is outside the claim. Detected only by comparing `extcodehash(escrow)` with the audited build — part 1 of the four-part deployment check (§2.3 A). The honest escrow's deals are untouched |
+| G-38 | theft | fuzzed caller | `fund` | a **fresh** `dealId`, `amount = 0`, `dealBinding` set to a **victim deal's `dealId`** (readable from the indexed `Funded` event) | the victim's stored `Deal` is **bytewise identical** afterwards and an honest `Reproduced` proof still pays the seller the victim was funded with. `fund` writes `deals[dealId]` and nothing else — check 14, INV-2c |
 
 <!-- END MATRIX -->
 
-**37 rows. 20 theft, 7 authorized, 10 disclosed** — the counts are checked mechanically
+**38 rows. 21 theft, 7 authorized, 10 disclosed** — the counts are checked mechanically
 (AC-13), so this table cannot drift from the tests.
 
 ---
@@ -528,10 +618,21 @@ result — the scope line from r1. Anything not listed here must not change.
   > (`decrease >= d.amount`) is a solvency check for this deal and a drain licence for the
   > others.
 
-  For the record, and so the founder can re-examine this later: **M-23 is killed by AC-10's
-  multi-deal invariant independently of C-5's on-chain bound** (AC-10 runs ≥ 3 deals in ≥ 2
-  tokens; M-23 breaks INV-4 on the first such sequence). C-5's bound is not needed to kill
-  M-23 and is not justified by it.
+  **What round 3 wrote here was wrong in the other direction, and is deleted (r3 finding
+  4).** Round 3 added: *"M-23 is killed by AC-10's multi-deal invariant independently of
+  C-5's on-chain bound."* That is false **of the contract that is actually mutated**.
+  Mutants are patches against a sandbox copy of the real post-003 source, and the real
+  post-003 source contains C-5. A `refundAfterDeadline` that transfers
+  `balanceOf(address(this))` therefore measures a decrease of the whole balance, finds it
+  `!= d.amount`, reverts `PayoutFailed()`, and **rolls back both the transfer and the
+  terminal state** — INV-4 is never violated and the mutant cannot be killed by a solvency
+  invariant at any handler width. C-5 **masks** it.
+
+  **The consequence, taken rather than argued around:** M-23 is redefined in §5.3 as the
+  **compound** patch — pay `balanceOf(address(this))` **and** drop C-5's check in that one
+  function — which is the patch that actually performs the drain the runtime reason above
+  describes. C-5's own justification is unchanged and is still the runtime one; it is
+  simply not evidenced by a mutant that C-5 itself neutralizes.
 
   **The cost, admitted:** the check is the same condition as §1.3(b)+(c), so a token that
   funds cleanly but does not move exactly `d.amount` outward **bricks both exits forever**
@@ -612,6 +713,7 @@ Enumerated so that "we forgot one" is falsifiable:
 | `Funded → *` with value leaving through an allowance the escrow granted | check 9's member-call allowlist contains no allowance mutator, check 12 forbids `IERC20Min` from declaring one, and check 11 forbids a second interface or library that could declare one | AC-1 |
 | **terminal-but-unpaid** (`Settled`/`Refunded` with no value moved) | C-5 reverts unless the balance fell by exactly `d.amount` | G-18 |
 | **funded-but-unfunded** (`Funded` with no value received) | C-4 reverts unless the balance rose by exactly `amount` | G-20, G-21 |
+| **`Funded` → `Funded` with different fields** (a funded deal's stored fields mutated with no state transition at all, from any entry point) | check 14 closes the set of assignment left-hand sides per function range: `fund` may write `deals[dealId]` and locals, `settleWithProof` and `refundAfterDeadline` may write `d.state`, `to` and locals, and nothing may write `deals[k]` for `k ≠ dealId`. Behaviourally INV-2c | **G-38**, G-19, AC-10, AC-11 |
 
 And the reachable stuck / degraded states, listed here rather than hidden:
 
@@ -647,6 +749,33 @@ stuck: `refundAfterDeadline` is callable by anyone forever after the deadline (G
   `d.amount` of `d.token` to an address stored in the deal at funding time
   (`d.seller` or `d.buyer`). No destination is ever taken from calldata at settlement time,
   from `msg.sender`, or from `tx.origin`.
+  **Mechanically (added in r4 — this was the one invariant in §4.4 with no instrument at
+  all, r3 finding 2):** check 9a pins both `transfer` call sites to the literal argument
+  forms `\.transfer\(to, *d\.amount\)` and `\.transfer\(d\.buyer, *d\.amount\)`, and
+  check 7 forbids `msg.sender` in those two ranges — that closes *where the destination is
+  read from*. **Check 14** closes *who may write what it is read from*: `to` is assigned
+  only in `settleWithProof`, only from `d.seller` / `d.buyer`, and no function may assign
+  to `d.seller`, `d.buyer`, `d.amount`, `d.token`, `d.dealBinding` or `d.fundedAt` at all.
+  **Behaviourally:** AC-3, AC-7, AC-20, and INV-2c's instruments below.
+  **Named limit:** both mechanisms are lexical. INV-2c is the runtime statement neither of
+  them proves, which is why it is tested rather than asserted.
+- **INV-2c (a funded deal's terms are immutable, new in r4 — r3 finding 2).** Once
+  `deals[id].state == Funded`, the stored `Deal` struct changes **only** through the two
+  exits, and then **only** in its `state` field. There is no path — through `fund`, through
+  either exit, from any caller, at any time, for any `dealId` — that changes a funded
+  deal's `buyer`, `seller`, `token`, `amount`, `dealBinding` or `fundedAt`.
+  **Mechanically:** check 14 (closed assignment targets per function range, §4.5.6) plus
+  check 6/13's ban on `assembly`, which together close the enumeration of source constructs
+  that write storage in this file.
+  **Behaviourally:** AC-11's `G-38` test (the targeted redirect: `fund` a fresh deal whose
+  `dealBinding` is a victim's `dealId`, then settle the victim and observe the original
+  seller paid) and AC-10's `invariant_AC10_G38_funded_structs_immutable`, which snapshots
+  every deal's ABI-encoded struct when it first becomes `Funded` and re-checks it after
+  **every** handler call. The invariant is what catches the *unguarded* variant of the
+  write, which no caller fuzz can reach because it is not keyed on the caller at all (R-5).
+  **Why this is not implied by AC-11's existing G-19 test:** that test fuzzes `fund` against
+  an **existing** `dealId`, which reverts `DealExists` before any such write could run, and
+  asserts about `deals[dealId]` — not about `deals[<some other key>]`.
 - **INV-2b (the escrow grants no standing authority over its own balance).** The escrow
   never calls an allowance mutator, never delegates, and never leaves a third party able to
   move its tokens after a call returns. **Mechanically:** check 9's member-call allowlist is
@@ -717,7 +846,8 @@ here.
 
 **One scope change, and it is a tightening.** Checks 1–4 keep their existing region — the
 contract body isolated by `awk '/^contract RecknZkEscrow/{f=1} f'` (`scripts/no-keys.sh:29`)
-— **byte-identically**. Checks 9, 11, 12 and 13 read the **whole file**. Nothing that the
+— **byte-identically**. Checks 9, 11, 12 and 13 read the **whole file**; check 14 (new in
+r4) reads `body`, per function range, and so introduces no region change at all. Nothing that the
 script rejected before is accepted now; the set of rejected inputs strictly grows. That is
 what makes r2 finding 1's route B (a `library` above the `contract` declaration) visible,
 and it is what removes 003's own dependence on the blind spot (C-4). D-10 records the
@@ -725,13 +855,41 @@ change in the same commit, per §0.
 
 #### 4.5.1 Shared preprocessing
 
-Two derived texts, both computed once:
+**Round 3 defined one derived text and gave it to two kinds of check that need different
+ones (r3 finding 5).** Check 11 pins the `import` line *including its path string*, and
+check 9 needs string literals gone. With strings stripped, the pinned import line reads
+`import {RecknVerdictVerifier, VerdictPublicValues} from ;` and check 11 **cannot match the
+real file** — it fails M-0, the control that must be accepted. Three texts, therefore, each
+computed once, each with exactly one purpose:
 
-- `body` — as today (`:29-30`): from `^contract RecknZkEscrow` to end of file, with `//`
-  and single-line `/* */` comments stripped. **Unchanged.**
-- `src` — the **whole file** with `//` comments, `/* … */` comments (including multi-line)
-  and string literals removed, then newlines collapsed to single spaces for tokenization,
-  so a member call split across two lines (`X\n    .transfer(`) is still one token.
+| text | region | comments | string literals | newlines | read by |
+|---|---|---|---|---|---|
+| `body` | `^contract RecknZkEscrow` → EOF (`:29-30`) | stripped | kept | kept | checks 1–4, 5–8, 10, **14** — **byte-identical to today** |
+| `src_calls` | whole file | stripped | **removed** | collapsed to single spaces | checks **9**, **13** |
+| `src_decl` | whole file | stripped | **kept** | kept | checks **11**, **12** |
+
+`src_calls` collapses newlines so a member call split across two lines
+(`X\n    .transfer(`) is still one token. `src_decl` keeps them because checks 11 and 12
+compare **whole lines**; the import path is pinned there, in the text that still contains it.
+
+**The stripper's obligation, stated as a property (r3 finding 6).** Both derived texts are
+only as sound as the stripper, and the corpus tested it in one direction only.
+
+> A call-shaped token that is **in code** must survive stripping. A call-shaped token that
+> is **inside a comment or inside a string literal** must not.
+
+The failing direction is **over**-stripping, because that direction hides code rather than
+raising a false alarm. A greedy line rule — `s/".*"//` or `s:/\*.*\*/::`, the obvious
+one-liners, and the second of which is what `scripts/no-keys.sh:30` uses today — deletes
+everything between the *first* and the *last* delimiter on a line, so
+`bytes32 a = keccak256("x"); IERC20Min(token).transfer(seller, amount); bytes32 b = keccak256("y");`
+loses the `.transfer(` **and** the `keccak256(` that would otherwise have failed 9b. The
+stripper must therefore be **token-wise, not line-wise**: scan left to right, track whether
+the cursor is inside `//`…EOL, `/*`…`*/`, `"`…`"` or `'`…`'` (honouring backslash escapes
+inside the two string forms), and remove exactly those spans. Corpus entries **E-15** and
+**E-16** are the over-stripping controls (required verdict: **REJECTED**) and control
+**C-S** is the under-stripping control (required verdict: **ACCEPTED**), so the stripper
+cannot pass E-15/E-16 by refusing all strings.
 
 #### 4.5.2 The check table
 
@@ -745,11 +903,12 @@ Two derived texts, both computed once:
 | 6 | **no unenumerated entry point, escape hatch, or ETH surface** — must not contain `fallback`, `receive`, `assembly`, `tx.origin`, `.call(`, `.call{`, `staticcall`, `payable` | `body` | r2, **retained** | a `fallback()` is an entry point check 2's grep cannot see |
 | 7 | **`msg.sender` only inside `fund`** — split `body` at `function ` boundaries; the ranges beginning `function settleWithProof` and `function refundAfterDeadline` must contain zero occurrences of `msg.sender` | `body` | r2 | INV-1a. Covers check 3's blind spot (`require(x == msg.sender)`) |
 | 8 | **the constructor assigns only permitted immutables** — the left-hand side of every assignment inside the constructor body ∈ `{verifier, refundDelay}` | `body` | r2 | no stored authority |
-| 9 | **closed call surface (property P)** — see §4.5.3 | **`src` (whole file)** | **rewritten in r3** | §3.1.2, INV-2, INV-2b |
+| 9 | **closed call surface (property P)** — 9a member calls, 9b plain calls, **9c the `function` keyword** — see §4.5.3 | **`src_calls` (whole file)** | rewritten in r3; **9b range-restricted and 9c added in r4** | §3.1.2, P2, INV-2, INV-2b |
 | 10 | **`fund`'s use of `msg.sender` is pinned** — exactly 3 occurrences inside `fund`'s range, matching once each: `buyer: msg.sender`, `emit Funded(dealId, msg.sender,`, `transferFrom(msg.sender,` | `body` | r2 | INV-1b |
-| 11 | **the file's top-level declarations are closed** — see §4.5.4 | **`src` (whole file)** | **new in r3** | r2 finding 1 route B; removes C-4's dependence on the blind spot |
-| 12 | **`IERC20Min`'s declared function set is closed** — see §4.5.5 | **`src` (whole file)** | **new in r3** | r2 finding 1 route A at the declaration site |
-| 13 | **whole-file escape-hatch ban** — the file-wide superset of check 6: `assembly`, `delegatecall`, `staticcall`, `.call(`, `.call{`, `.send(`, `selfdestruct`, `payable`, `receive`, `fallback`, `tx.origin`, `{value:`, `ecrecover`, `create2`, `using` | **`src` (whole file)** | **new in r3** | redundant backstop only — see the warning in §4.5.6 |
+| 11 | **the file's top-level declarations are closed** — see §4.5.4 | **`src_decl` (whole file)** | new in r3; region corrected in r4 | r2 finding 1 route B; removes C-4's dependence on the blind spot |
+| 12 | **`IERC20Min`'s declared function set is closed** — see §4.5.5 | **`src_decl` (whole file)** | new in r3; region corrected in r4 | r2 finding 1 route A at the declaration site |
+| 13 | **whole-file escape-hatch ban** — the file-wide superset of check 6: `assembly`, `delegatecall`, `staticcall`, `.call(`, `.call{`, `.send(`, `selfdestruct`, `payable`, `receive`, `fallback`, `tx.origin`, `{value:`, `ecrecover`, `create2`, `using` | **`src_calls` (whole file)** | **new in r3** | redundant backstop only — see the warning in §4.5.7 |
+| 14 | **closed assignment targets** — see §4.5.6 | `body`, per function range | **new in r4** | r3 finding 2; P3, INV-2, **INV-2c** |
 
 Function ranges (checks 7, 9, 10) are obtained the same way the existing script isolates
 the body: strip comments, then split at lines matching
@@ -759,7 +918,7 @@ the body: strip comments, then split at lines matching
 
 #### 4.5.3 Check 9 — closed call surface
 
-Over `src`, a **call-shaped token** is any match of
+Over `src_calls`, a **call-shaped token** is any match of
 
 ```
 (\.[[:space:]]*)?[A-Za-z_][A-Za-z0-9_]*[[:space:]]*(\{[^}]*\})?[[:space:]]*\(
@@ -785,7 +944,7 @@ name in a wrong place, a wrong count, or a wrong argument shape fails too.
 allowlist `L_plain`, held literally in `scripts/no-keys.sh`:
 
 - *language*: `if` `else` `for` `while` `do` `return` `returns` `revert` `require` `assert`
-  `emit` `try` `catch` `new` `function` `constructor` `modifier` `mapping` `enum` `struct`
+  `emit` `try` `catch` `new` `constructor` `modifier` `mapping` `enum` `struct`
   `event` `error` `interface` `contract` `pragma` `import` `type` `unchecked`
 - *declarators that can precede a paren*: `external` `internal` `public` `private` `view`
   `pure` `memory` `calldata` `storage` `indexed` `immutable` `constant` `override`
@@ -800,20 +959,50 @@ allowlist `L_plain`, held literally in `scripts/no-keys.sh`:
 
 Any plain-call name outside `L_plain` fails, printing the name and line.
 
-**Why (9b) matters and is not decoration.** It is what closes the two routes an allowlist
-over *member* calls alone would leave open:
+**(9b-range) The four token names are permitted as plain calls only where they are
+declared (new in r4 — r3 finding 1).** `transfer`, `transferFrom`, `balanceOf` and
+`verifyVerdict` are in `L_plain` **only** because check 12 pins three `IERC20Min`
+declaration lines whose own text produces the plain-call tokens `transferFrom(`,
+`transfer(` and `balanceOf(`. That admission is not a licence to call them by those names
+anywhere: a plain call with one of those four names is permitted **only inside
+`IERC20Min`'s declaration range** (checks 11 and 12's region) and is a **failure anywhere
+else** — the same "0 elsewhere" shape 9a already uses for `transfer`. Without this clause,
+naming a function-type local `transfer` makes the drain of E-14 pass 9b **by the same name
+the interface is required to declare**.
+
+**(9c) The `function` keyword is closed (new in r4 — r3 finding 1, property P2).** Over
+`src_calls`, the number of `\bfunction\b` occurrences is exactly **six**, and each is
+followed — after optional whitespace — by one of exactly six declared names:
+`transferFrom`, `transfer`, `balanceOf` (check 12's three interface signatures) and `fund`,
+`settleWithProof`, `refundAfterDeadline` (check 2's three contract declarations). Anything
+else fails, printing the occurrence and line.
+
+This is what makes a **callable** something that cannot be created rather than something
+that must be named to be forbidden. It kills, together and for one reason: a function-type
+local (`function(address,uint256) external returns (bool) x = …`), a function-type
+parameter, a function-type return, a function-type mapping value, a file-level function, an
+added `internal` helper, and an added `view` helper (N-3). It also closes a real gap in
+check 2, which greps `function +[a-zA-Z_]` — **one or more spaces**
+(`scripts/no-keys.sh:46`) — and therefore cannot see `function(address,` at all.
+
+**Why (9b) and (9c) matter and are not decoration.** They close the routes an allowlist
+over *member* calls alone leaves open:
 
 - a **function-type variable**: `function(address,uint256) external returns (bool) f =
   IERC20Min(token).transfer; f(seller, amount);` — the assignment has no `(` after
-  `transfer`, so (9a) never sees it, but `f(` is a plain call whose name is not in
-  `L_plain`;
+  `transfer`, so (9a) never sees it. Round 3 rejected this by `f` not being in `L_plain`,
+  **which only worked because the author happened to name it `f`**; renaming the local to
+  `transfer` defeated that reasoning entirely (r3 finding 1). Under r4 the name is
+  irrelevant: **9c** rejects the `function` token, **9b-range** rejects the call
+  `transfer(` outside the interface range, and **check 14** rejects the assignment's
+  left-hand side. Three independent rejections, none of them a name;
 - **inline assembly**: `assembly { pop(call(gas(), t, 0, 0, 0, 0, 0)) }` — assembly emits
   no member call, but `pop(`, `call(`, `gas(` are all plain calls outside `L_plain`.
 
 #### 4.5.4 Check 11 — the file's top-level declarations are closed
 
-Over `src` *before* newline collapsing, the lines whose **first non-blank character is at
-column 0** and which match
+Over `src_decl` (comments stripped, **string literals kept**, newlines kept — §4.5.1), the
+lines whose **first non-blank character is at column 0** and which match
 `^(pragma|import|using|library|abstract|interface|contract|function|struct|enum|error|event|type|constructor|modifier)\b`
 must be exactly these four, in this order (whitespace-normalized, compared as full lines):
 
@@ -824,15 +1013,19 @@ interface IERC20Min {
 contract RecknZkEscrow {
 ```
 
-A `library`, a second `interface`, a second `import`, a file-level `function`, a
-`using … for`, an `abstract contract`, or any other top-level declaration fails, printing
-the line. This is r2 finding 1 route B, closed **structurally** rather than by extending a
+**The `import` path is pinned here**, in the only text that still contains it: reading this
+check over a string-stripped text would compare against
+`import {RecknVerdictVerifier, VerdictPublicValues} from ;` and could never match the real
+file (r3 finding 5). A `library`, a second `interface`, a second `import`, a file-level
+`function`, a `using … for`, an `abstract contract`, or any other top-level declaration
+fails, printing the line. This is r2 finding 1 route B, closed **structurally** rather than by extending a
 count, and it is what makes "the whole file" a well-defined region.
 
 #### 4.5.5 Check 12 — `IERC20Min`'s declared function set is closed
 
-The lines between `^interface IERC20Min {` and the next line that is exactly `}` at column
-0 must contain exactly three `function` declarations, whitespace-normalized equal to:
+Over `src_decl`, the lines between `^interface IERC20Min {` and the next line that is
+exactly `}` at column 0 must contain exactly three `function` declarations,
+whitespace-normalized equal to:
 
 ```
 function transferFrom(address from, address to, uint256 value) external returns (bool);
@@ -846,11 +1039,72 @@ so they cannot be *called* through this interface — independently of check 9. 
 third of the three independent rejections of r2's route A, and it is the one the founder
 asked to be considered explicitly.
 
-#### 4.5.6 Which check rejects what, and which of them carry the claim
+#### 4.5.6 Check 14 — closed assignment targets (new in r4 — r3 finding 2)
+
+**The seam this closes.** Checks 9/11/12/13 are checks on **calls**. The line
+`deals[dealBinding].seller = seller;`, spliced anywhere into `fund`, contains **no
+call-shaped token at all** — `deals[` is followed by `[`, `.seller` by ` =` — so no call
+check can see it, and neither can checks 1–8 or 10 (no new function, no new declaration, no
+`msg.sender`, no forbidden token, interface unchanged). With it in place,
+`fund(freshId, attacker, anyToken, 0, victimDealId)` costs **zero tokens** and makes an
+honest `Reproduced` proof pay the attacker instead of the seller. Check 14 is the property
+that makes it and its unlisted siblings fail together.
+
+**Storage-writing constructs, enumerated (this is what makes "closed" mean something).**
+In Solidity source, a state variable of this contract can be written only by: an
+assignment `=`; a compound assignment (`+= -= *= /= %= |= &= ^= <<= >>=`); an increment or
+decrement (`++`, `--`); `delete`; or `sstore` inside `assembly`. The last is already dead
+twice over (checks 6 and 13 ban `assembly`; `sstore(` is a plain call outside `L_plain`).
+Check 14 closes the other four.
+
+**Definition.** Over `body`, split into the constructor range and the three function ranges
+by the same splitter checks 7, 9 and 10 use:
+
+- **(14a)** The tokens `++`, `--`, `delete` and every compound assignment operator must not
+  occur in any range. (They occur nowhere in the real file; this is a closure, not a fix.)
+- **(14b)** An **assignment site** is a single `=` that is not part of `==`, `!=`, `<=`,
+  `>=`, `=>` or a compound operator. Its **left-hand side** is the whitespace-normalized
+  text from the preceding `;`, `{`, `}` or `(` up to the `=`.
+- **(14c)** Every assignment site's left-hand side must be in **that range's** fixed set:
+
+| range | permitted left-hand sides | pinned counts |
+|---|---|---|
+| `constructor` | `verifier`, `refundDelay` | check 8, unchanged |
+| `fund` | `deals[dealId]`; a **local declaration** `D`; a **bare local** `L` | `deals[dealId]` exactly **1**; **0** occurrences of `d.` anything, `deals[` anything else, `Deal storage` anything |
+| `settleWithProof` | `Deal storage d` — only as the whole-statement form `Deal storage d = deals[dealId]`; `VerdictPublicValues memory v`; `d.state`; `D`; `L` | `Deal storage d` exactly **1**; `d.state` exactly **1** |
+| `refundAfterDeadline` | `Deal storage d` — same pinned whole-statement form; `d.state`; `D`; `L` | `Deal storage d` exactly **1**; `d.state` exactly **1** |
+
+where
+
+- **`D` (local declaration)** matches
+  `^(uint8|uint64|uint256|address|bool|bytes32|string memory|bytes memory) [A-Za-z_][A-Za-z0-9_]*$`
+  — a value type or a memory type, which cannot name storage. `string memory` and
+  `bytes memory` are present so that control **C-S** (§5.2.1) is admissible; they add no
+  storage reach.
+- **`L` (bare local)** is a single identifier for which the **same range** contains a
+  declaration matching `D` for that name. `to = d.seller;` is permitted in
+  `settleWithProof` because `address to;` is declared there; the same assignment in
+  `fund` fails, because `to` is not declared in `fund`.
+
+**Anything else fails, printing the left-hand side and the line.** In particular:
+`deals[dealBinding]`, `deals[victimId]`, `deals[k]` for any `k` that is not the literal
+token `dealId`, `deals[dealId].seller`, `d.seller`, `d.buyer`, `d.amount`, `d.token`,
+`d.dealBinding`, `d.fundedAt`, a second `Deal storage` binding, a `Deal storage` bound to
+anything but `deals[dealId]`, and a function-type local declaration (whose left-hand side
+begins `function(`, matching neither `D` nor `L` — the third independent rejection of
+E-14).
+
+**What check 14 is not.** It is lexical, like every other check here (N-10). It constrains
+the **source text** of one file; it is not a proof about the compiled bytecode, and it does
+not say the assignments it permits are *correct* — `d.state = State.Settled` could be
+written in the wrong branch and check 14 would not notice. That is what INV-2c's two
+behavioural instruments are for, and §8 says so.
+
+#### 4.5.7 Which check rejects what, and which of them carry the claim
 
 **Warning, so this is not misread as another name list.** Check 13 is a **denylist and a
 backstop only**. If check 13 were deleted, every construct in the table below would still
-be rejected by checks 9, 11 or 12. The claim rests on the allowlists (9, 11, 12); 13 exists
+be rejected by checks 9, 11, 12 or 14. The claim rests on the allowlists (9, 11, 12, 14); 13 exists
 because a redundant fast rejection with a clear message is cheap, and because it keeps
 check 6's existing wording meaningful at file scope.
 
@@ -868,28 +1122,37 @@ check 6's existing wording meaningful at file scope.
 | `payable(x).transfer(address(this).balance)` | **9a** (`.transfer` count and pinned argument form) | 6, 13 (`payable`) |
 | `new Drain{value: 0}(t)` | **9b** (`Drain` not in `L_plain`) | 13 (`{value:`) |
 | `assembly { pop(call(gas(), …)) }` | **9b** (`pop`, `call`, `gas` not in `L_plain`) | 6, 13 (`assembly`) |
-| `function(address,uint256) external returns (bool) f = IERC20Min(t).transfer; f(x, y);` | **9b** (`f` not in `L_plain`) | — |
+| `function(address,uint256) external returns (bool) f = IERC20Min(t).transfer; f(x, y);` | **9c** (the `function` token is not one of the six pinned declarations) | 9b (`f` not in `L_plain`), 14 (the LHS matches neither `D` nor `L`) |
+| the same, with the local **named `transfer`** so that 9b's allowlist admits it (r3 finding 1) | **9c** — the rejection does not depend on the name | 9b-range (`transfer(` outside `IERC20Min`'s range), 14 |
+| `deals[victimId].seller = attacker;` inside `fund` — **no call-shaped token at all** (r3 finding 2) | **14** (`deals[victimId].seller` is not a permitted left-hand side in `fund`) | nothing else — 9a/9b/9c never see this line, and that is the point |
+| `delete deals[id];` / `d.amount -= x;` / `d.state++;` | **14a** (the constructs are closed, not the identifiers) | — |
 | `selfdestruct(payable(x))` | **9b** (`selfdestruct` not in `L_plain`) | 1, 13 |
 | **a construct not in this table** | **9a** or **9b**, because the allowlists are closed over the syntactic category, not over the vocabulary | — |
 
-**The last row is the whole point of the rewrite, and it is also the honest limit:** the
-allowlists cover any construct that produces a call-shaped token. §8 names what remains
-outside — a value movement expressed with **no** call-shaped token at all, and the fact
-that the check is lexical rather than a property of the compiled bytecode.
+**A `modifier` is closed too, and it is worth one sentence** because the table does not
+show it: `modifier onlyX() {` yields the plain-call token `onlyX(`, which 9b rejects, and
+its `modifier` keyword is not `function`, so it also cannot re-enter through 9c.
 
-#### 4.5.7 The one additive output line
+**The last row is the whole point of the rewrite, and it is also the honest limit:** the
+call allowlists cover any construct that produces a call-shaped token, and check 14 covers
+the storage-writing constructs that produce none. §8 names what remains outside — the fact
+that all of it is lexical rather than a property of the compiled bytecode, and the fact
+that a permitted assignment can still be *wrong* (checked behaviourally by INV-2c's
+instruments, not here).
+
+#### 4.5.8 The one additive output line
 
 Immediately *before* the existing final success line (which stays byte-identical), the
 script prints:
 
 ```
-checks: 13/13 passed
+checks: 14/14 passed
 ```
 
 This exists so AC-0 cannot be satisfied by a script that ran nothing. It adds a line; it
 changes no existing line, no argument, no target, and no exit code.
 
-#### 4.5.8 Self-testing without a target argument (N-9, r1 finding 12)
+#### 4.5.9 Self-testing without a target argument (N-9, r1 finding 12)
 
 `no-keys-selftest.sh` reconstructs the *layout* the script expects in a temp directory —
 `$T/scripts/no-keys.sh` and `$T/zk-verdict/contracts/src/RecknZkEscrow.sol` — because the
@@ -899,13 +1162,16 @@ by the same code path. **No argument, no environment variable, no default change
 
 It runs three things (AC-1):
 
-1. the **16 source-text mutants** of §5.3, each rejected, each by a **named** check;
-2. the **exit corpus** of §5.2.1 — 13 value-exit constructs spliced into the real file,
-   each rejected, each by a named check — which is the *witness* that property P covers the
-   family, **not** the definition of the property;
-3. two controls: the unmodified copy (**M-0**) must be **accepted**, and a **prose control**
-   — the comment `// never call approve(), permit(), or .call{value:}()` spliced into
-   `fund` — must also be **accepted**, proving the checks read code and not text.
+1. the **18 source-text mutants** of §5.3, each rejected, each by a **named** check;
+2. the **exit corpus** of §5.2.1 — 16 constructs spliced into the real file, each rejected,
+   each by a named check — which is the *witness* that properties P, P2 and P3 cover the
+   family, **not** the definition of the properties;
+3. **three controls**, all of which must be **accepted**: the unmodified copy (**M-0**); the
+   **prose control** **C-P** — the comment `// never call approve(), permit(), or
+   .call{value:}()` spliced into `fund` — proving the checks read code and not text; and the
+   **string control** **C-S** — `string memory sA = "a"; string memory sB = "b";` spliced
+   into `fund`, two legitimate string literals on one line with no call between them —
+   proving the stripper does not pass E-15/E-16 by refusing all strings (§4.5.1).
 
 ---
 
@@ -1013,13 +1279,24 @@ asserts nothing.**
 So, stated once and referenced from §8:
 
 > **The five gates make *zero tests* impossible. They do not make *zero assertions*
-> impossible.** Two instruments cover that, and they are the only two:
+> impossible.** Two instruments narrow the gap, and they are the only two — but note
+> **exactly what they narrow it to** (r3 finding 7): AC-21 detects *zero **sensitivity***,
+> which is a strictly smaller target than *zero assertions*. A body of
+> `vm.warp(deadline); escrow.refundAfterDeadline(id);` asserts **nothing** and is still
+> `Failure` under SW-1 (which reverts on that path), so it passes AC-21. The
+> `assertTrue(true)` stub is the only zero-assertion shape AC-21 was designed to catch.
 >
 > - **AC-21 (new in r3) — the kill matrix.** Every gauntlet test must be observed
 >   **failing** against at least one mutant. A body of `assertTrue(true)` passes against
->   every mutant, so it is green in every column of the matrix and AC-21 names it and
->   exits non-zero. This is a *behavioural* body check: it never reads the source of a
+>   every admitted mutant, so it is green in every column of the matrix and AC-21 names it
+>   and exits non-zero. This is a *behavioural* body check: it never reads the source of a
 >   test, it observes whether the test is sensitive to the contract at all.
+>   **This holds only because a column that breaks `setUp` is refused (§5.4a).** Round 3
+>   put **M-34** (every function body `revert()`) in the columns; under it every `setUp`
+>   that funds a deal reverts, Foundry marks the whole file failed, and that one column
+>   satisfied "`Failure` in at least one column" for **all 44 tests at once** — AC-21 was
+>   vacuous and its own Falsify could not be observed non-zero (r3 finding 3). Fixed in
+>   §5.4a and AC-21.
 > - **AC-14 — per-AC mutation coverage.** Every forge AC must own **at least one** mutant
 >   in §5.3, and `gauntlet.sh --check` asserts that mechanically (check 8). Round 2 left
 >   **AC-8 with no mutant at all** because M-21 was written twice for two different
@@ -1075,8 +1352,8 @@ appear in that AC's test names; `-` if none), `evidence` (verbatim stdout line r
 `script`/`suite` kinds; `-` otherwise). Tab- or multi-space-separated; `#` starts a comment.
 
 ```ac-manifest
-AC-00  script  scripts/no-keys.sh                 -   -                                        checks: 13/13 passed
-AC-01  script  scripts/no-keys-selftest.sh        -   -                                        selftest: 16 source mutants, 16 rejected; exit-corpus 13/13 rejected; 2 controls accepted
+AC-00  script  scripts/no-keys.sh                 -   -                                        checks: 14/14 passed
+AC-01  script  scripts/no-keys-selftest.sh        -   -                                        selftest: 18 source mutants, 18 rejected; exit-corpus 16/16 rejected; 3 controls accepted
 AC-02  forge   _AC02_                             6   G-01,G-02,G-05,G-06,G-08,G-09            -
 AC-03  forge   _AC03_                             4   G-10,G-12,G-13,G-14                      -
 AC-04  forge   _AC04_                             2   G-11                                     -
@@ -1085,28 +1362,29 @@ AC-06  forge   _AC06_                             2   G-03                      
 AC-07  forge   _AC07_                             3   G-04,G-05,G-06                           -
 AC-08  forge   _AC08_                             3   G-20,G-21                                -
 AC-09  forge   _AC09_                             3   G-24,G-25,G-26                           -
-AC-10  forge   _AC10_                             4   G-27,G-28,G-32                           -
-AC-11  forge   _AC11_                             2   G-19,G-22                                -
+AC-10  forge   _AC10_                             5   G-27,G-28,G-32,G-38                      -
+AC-11  forge   _AC11_                             3   G-19,G-22,G-38                           -
 AC-12  forge   _AC12_                             2   G-31                                     -
-AC-13  script  scripts/gauntlet.sh --check        -   -                                        manifest: 37 rows, 22 acceptance criteria, 3 sources agree
-AC-14  script  scripts/mutation-kill.sh           -   -                                        mutation: 48 mutants, 47 killed, 1 control survived
-AC-15  script  scripts/gauntlet.sh                -   -                                        37/37 rows as specified.
+AC-13  script  scripts/gauntlet.sh --check        -   -                                        manifest: 38 rows, 22 acceptance criteria, 3 sources agree
+AC-14  script  scripts/mutation-kill.sh           -   -                                        mutation: 52 mutants, 51 killed, 1 control survived
+AC-15  script  scripts/gauntlet.sh                -   -                                        38/38 rows as specified.
 AC-16  script  scripts/gauntlet.sh --check        -   -                                        honest-scope: 2/2 digests unchanged
-AC-17  suite   -                                  56  -                                        suite: 56/56 passed
+AC-17  suite   -                                  58  -                                        suite: 58/58 passed
 AC-18  script  scripts/ac-selftest.sh             -   -                                        ac-selftest: 13 forge ACs, 13 observed failing when their tests are absent; degenerate dispatcher rejected
 AC-19  forge   _AC19_                             8   G-18,G-23,G-29,G-33,G-34,G-35,G-36,G-37  -
 AC-20  forge   _AC20_                             1   G-30                                     -
-AC-21  script  scripts/degeneracy-sweep.sh        -   -                                        sweep: 44/44 gauntlet tests accounted for; control 56/56 pass
+AC-21  script  scripts/degeneracy-sweep.sh        -   -                                        sweep: 46/46 gauntlet tests accounted for; control 58/58 pass
 ```
 
 Arithmetic that `gauntlet.sh --check` recomputes and that a reviewer can recompute by hand:
 
 - **22** acceptance criteria (AC-00 … AC-21).
-- **13** `forge` ACs; their `tests` column sums to **44** — the number of gauntlet tests.
-  `6+4+2+4+2+3+3+3+4+2+2+8+1 = 44`.
-- AC-17's `tests` = **56** = 44 gauntlet + **12** pre-existing (measured 2026-09-04, §1.2).
-- The union of the `rows` column is exactly the **37** ids of §3.2, each appearing at least
-  once. (Rows may appear in more than one AC; G-05 and G-06 appear in AC-02 and AC-07.)
+- **13** `forge` ACs; their `tests` column sums to **46** — the number of gauntlet tests.
+  `6+4+2+4+2+3+3+3+5+3+2+8+1 = 46`.
+- AC-17's `tests` = **58** = 46 gauntlet + **12** pre-existing (measured 2026-09-04, §1.2).
+- The union of the `rows` column is exactly the **38** ids of §3.2, each appearing at least
+  once. (Rows may appear in more than one AC; G-05 and G-06 appear in AC-02 and AC-07, and
+  **G-38** appears in AC-10 and AC-11 — the invariant and the targeted test of INV-2c.)
 - Every one of the 13 `forge` ACs appears in at least one `killed-by` cell of §5.3
   (`gauntlet.sh --check` check 8 — the rule r2 finding 2(d) required).
 - AC-14's evidence line is **derived, not literal**: `gauntlet.sh --check` recomputes
@@ -1118,7 +1396,7 @@ Arithmetic that `gauntlet.sh --check` recomputes and that a reviewer can recompu
 #### AC-0 — the central claim still holds (fixed text, `reckn-spec` charter)
 
 ```sh
-bash scripts/ac.sh AC-00   # runs `bash scripts/no-keys.sh`; exit 0 and `checks: 13/13 passed`
+bash scripts/ac.sh AC-00   # runs `bash scripts/no-keys.sh`; exit 0 and `checks: 14/14 passed`
 bash scripts/no-keys.sh    # exit 0 — the founder's own command, unchanged
 ```
 The state-changing surface becomes `fund` / `settleWithProof` / `refundAfterDeadline` —
@@ -1150,21 +1428,25 @@ bash "$S/scripts/no-keys.sh"; echo $?      # must be non-zero
 bash scripts/ac.sh AC-01     # runs scripts/no-keys-selftest.sh
 bash scripts/no-keys-selftest.sh   # direct — the founder's own command
 ```
-`scripts/no-keys.sh` gains checks 5–13 and the two-sided check 2 exactly as tabulated in
+`scripts/no-keys.sh` gains checks 5–14 and the two-sided check 2 exactly as tabulated in
 §4.5. **No interface change (N-9).** `scripts/no-keys-selftest.sh` builds the sandbox
-layout described in §4.5.8, applies each artefact to the copy, runs the copied script, and
+layout described in §4.5.9, applies each artefact to the copy, runs the copied script, and
 asserts:
 
-- the **16** source-text mutants (M-1, M-13…M-19, M-35…M-38, M-41, M-42, M-A, M-F) are each
-  **rejected** (exit non-zero), each by a **named** check — the selftest records which check
-  fired and fails if a mutant is rejected by no check or by an unexpected one;
-- the **13** entries of the **exit corpus** (§5.2.1) are each **rejected**, each by a named
+- the **18** source-text mutants (M-1, M-13…M-19, M-35…M-38, M-41, M-42, **M-46**, **M-47**,
+  M-A, M-F) are each **rejected** (exit non-zero), each by a **named** check — the selftest
+  records which check fired and fails if a mutant is rejected by no check or by an
+  unexpected one;
+- the **16** entries of the **exit corpus** (§5.2.1) are each **rejected**, each by a named
   check;
 - the **control M-0** (unmodified copy) is **accepted** (exit 0);
-- the **prose control** (a comment naming `approve()`, `permit()` and `.call{value:}()`
+- the **prose control C-P** (a comment naming `approve()`, `permit()` and `.call{value:}()`
   spliced into `fund`) is **accepted**, so the checks cannot be passing by grepping English;
+- the **string control C-S** (two legitimate string literals on one line, no call between
+  them) is **accepted**, so the stripper cannot pass E-15/E-16 by deleting every line that
+  contains a quote (§4.5.1);
 - it prints
-  `selftest: 16 source mutants, 16 rejected; exit-corpus 13/13 rejected; 2 controls accepted`.
+  `selftest: 18 source mutants, 18 rejected; exit-corpus 16/16 rejected; 3 controls accepted`.
 
 **Kills:** M-1 `if (msg.sender == 0x5E11E5) { to = d.seller; }` inside `settleWithProof`
 — **by check 7, structurally.**
@@ -1192,28 +1474,50 @@ IERC20Min(token).approve(seller, type(uint256).max); }` inside `fund`, with the 
 `library Sweep { function pull(address t, address to) internal { IERC20Min(t).transfer(to,
 IERC20Min(t).balanceOf(address(this))); } }` above the contract declaration plus
 `Sweep.pull(token, seller);` inside `fund` — rejected by check 11 at the declaration and by
-check 9a at the call.
+check 9a at the call;
+**M-46** *(new in r4 — r3 finding 1)* `function(address, uint256) external returns (bool)
+transfer = IERC20Min(token).transfer; transfer(seller, amount);` inside `fund` — the
+function-pointer alias **named after the very method check 12 forces `L_plain` to admit**,
+rejected by **check 9c** at the `function` token (and, independently, by 9b-range at the
+call and by check 14 at the assignment). Its round-3 ancestor E-11 was rejected only
+because its author named the local `f`; **M-46 exists to prove the rejection does not
+depend on the name**;
+**M-47** *(new in r4 — r3 finding 2)* `deals[dealBinding].seller = seller;` inside `fund`,
+guarded on a hardcoded constant — a full redirect of another deal's payout that contains
+**no call-shaped token at all** and is therefore invisible to checks 9a/9b/9c. Rejected by
+**check 14**, and by nothing else; per R-5 its killer must be structural, because a fuzz
+draws its constant with probability ~2^-160.
 The selftest also re-runs M-13, M-A and M-F, which §5.3 assigns to **AC-0** because the
 script's *original* checks 1/2/4 already reject them; they are exercised here, not claimed
 here.
 
-**What AC-1 does and does not establish.** It establishes that the 16 mutants and the 13
-corpus constructs are rejected, and that two controls are accepted. It does **not**
-establish property P — P is established by the *closedness* of the three allowlists (checks
-9, 11, 12), and the corpus is evidence that the closedness is real rather than an
-aspiration. A 14th construct nobody listed is rejected because it must produce a
-call-shaped token, not because it is on a list. §8 restates the limit.
+**What AC-1 does and does not establish.** It establishes that the 18 mutants and the 16
+corpus constructs are rejected, and that three controls are accepted. It does **not**
+establish P, P2 or P3 — those are established by the *closedness* of the four allowlists
+(checks 9, 11, 12, 14), and the corpus is evidence that the closedness is real rather than
+an aspiration. A seventeenth construct nobody listed is rejected because it must either
+produce a call-shaped token or write storage through one of the five source constructs
+that can (§4.5.6), not because it is on a list. §8 restates the limit.
 
 **Falsify:**
 
 ```sh
-# minimal: delete check 9 alone. M-35/M-36/M-37 survive (M-41 still dies at check 12,
-# M-42 still dies at check 11), so the evidence line reads
-#   "selftest: 16 source mutants, 13 rejected; ..."
+# minimal A: delete check 9 alone. M-35/M-36/M-37 survive (M-41 still dies at check 12,
+# M-42 at check 11, M-46 at check 14), so the evidence line reads
+#   "selftest: 18 source mutants, 15 rejected; ..."
 # which is not the manifest's string, so `ac.sh AC-01` exits non-zero.
 #
-# full: delete checks 9, 11 and 12. M-35/M-36/M-37/M-41/M-42 survive and the line reads
-#   "selftest: 16 source mutants, 11 rejected; exit-corpus 0/13 rejected; ..."
+# minimal B (new in r4, and the only falsifier for the operand seam): delete check 14
+# alone. M-47 survives; M-46 still dies at 9c. The line reads
+#   "selftest: 18 source mutants, 17 rejected; ..."   -> non-zero.
+#
+# broad: delete checks 9, 11 and 12. At minimum M-35/M-36/M-37/M-41/M-42 survive, so the
+# printed count is <= 13 and the exit-corpus count is far below 16. NOTE: r3 asserted an
+# exact residue here ("11 rejected; exit-corpus 0/13") which is not defensible -- E-9,
+# E-10 and E-13 are also rejected by checks 6/13, which this deletion leaves in place.
+# The falsifier does not need an exact number: any count other than the manifest's
+# literal makes `ac.sh AC-01` exit non-zero. The two minimal falsifiers above carry
+# exact numbers and are the ones R-6 requires to be run and observed.
 ```
 
 #### AC-2 — settlement authority is caller-independent (fuzzed)
@@ -1378,42 +1682,97 @@ and the interleaved-`fund` case reverts `UnderFunded` with neither deal created.
 #### AC-10 — solvency and isolation under random call sequences
 
 ```sh
-bash scripts/ac.sh AC-10   # 4 tests ; rows G-27,G-28,G-32
+bash scripts/ac.sh AC-10   # 5 tests ; rows G-27,G-28,G-32,G-38
 ```
-Two Foundry invariants over a handler exposing `fund`, `settleWithProof`,
+**Three** Foundry invariants over a handler exposing `fund`, `settleWithProof`,
 `refundAfterDeadline`, `donate`, and `warp`, across **≥ 3 deals in ≥ 2 tokens** and a
 fuzzed actor set — `invariant_AC10_G27_no_payout_exceeds_amount` (INV-3, INV-4, INV-6,
-INV-7) and `invariant_AC10_G32_cross_token_isolation` (INV-5) — plus two unit tests:
+INV-7), `invariant_AC10_G32_cross_token_isolation` (INV-5) and
+**`invariant_AC10_G38_funded_structs_immutable`** (INV-2c) — plus two unit tests:
 `test_AC10_G27_donation_unrecoverable` and `test_AC10_G28_forced_eth_moves_nothing`.
 `runs` / `depth` are pinned in `zk-verdict/contracts/foundry.toml`, and the values used
 are printed into `gauntlet.json` (AC-15).
 
-**Kills:** M-23 `refundAfterDeadline` pays `token.balanceOf(address(this))` instead of
-`d.amount` — drains other deals and donations, and passes every single-deal test. **AC-10
-kills M-23 with or without C-5's on-chain upper bound**, because the handler runs ≥ 3 deals
-in ≥ 2 tokens and M-23 breaks INV-4 on the first such sequence; C-5's justification is
-therefore the runtime one in §4.1, not this mutant (r2 finding 8).
+**`invariant_AC10_G38_funded_structs_immutable`, stated exactly** (new in r4 — r3 finding
+2). The handler records, for every `dealId` the moment it is first observed `Funded`, the
+snapshot `S(id) = abi.encode(deals[id])`. After **every** handler call, for every recorded
+`id`:
 
-**Falsify:** reduce the handler to one deal in one token → M-23 survives AC-14.
-Set `invariant_runs = 0` in `foundry.toml` → forge reports the invariants without executing
-them and AC-14 fails; `gauntlet.json`'s printed `fuzz` block makes the setting visible.
+- if `deals[id].state == Funded` → `abi.encode(deals[id]) == S(id)`, bytewise;
+- if `deals[id].state ∈ {Settled, Refunded}` → the encoding equals `S(id)` **with only the
+  `state` field replaced**, i.e. every other field is bytewise unchanged;
+- `state == None` for a recorded `id` is a failure (nothing deletes a deal).
+
+**Two handler obligations without which this invariant is decoration, stated so they cannot
+be dropped quietly.** (i) The handler's `fund` action must draw `dealBinding` from
+`{a fresh pseudorandom value, the `dealId` of an already-`Funded` deal}` with **both**
+branches reachable — otherwise a mutant that writes `deals[dealBinding]` only ever corrupts
+`deals[<random 32 bytes>]`, which stays in state `None` and breaks nothing. (ii) The
+handler must be able to call `fund` with `amount == 0`, because that is the entry condition
+that costs the attacker nothing.
+
+**Kills:** **M-23** *(redefined in r4 — r3 finding 4)* the **compound** patch:
+`refundAfterDeadline` pays `IERC20Min(d.token).balanceOf(address(this))` instead of
+`d.amount` **and** drops C-5's payout check in that function. Killed by
+`invariant_AC10_G27_no_payout_exceeds_amount` (INV-4) once the handler holds more than one
+deal in the token.
+
+**Why M-23 is defined as a compound patch, and what round 3 got wrong.** Mutants are
+applied to a sandbox copy of the **real post-003 source**, which contains C-5. The
+single-line version of M-23 therefore transfers the whole balance, C-5 measures a decrease
+`!= d.amount`, reverts `PayoutFailed()` and rolls the transfer back — **INV-4 is never
+violated at any handler width**, and round 3's sentence *"AC-10 kills M-23 independently of
+C-5's bound"* was false of the contract actually being mutated. C-5's justification remains
+the runtime one in §4.1; it is simply not evidenced by a mutant C-5 neutralizes.
+
+**Falsify:** (a) reduce the handler to one deal in one token → M-23 survives, because with a
+single deal and no donation `balanceOf(this) == d.amount` and the drain is invisible.
+(b) restrict the handler's `dealBinding` to fresh values only → **M-48 survives this
+invariant** (its recorded killer is AC-11's targeted test, which is why the kill table
+assigns it there and not here). (c) set `invariant_runs = 0` in `foundry.toml` → forge
+reports the invariants without executing them and AC-14 fails; `gauntlet.json`'s printed
+`fuzz` block makes the setting visible.
 
 #### AC-11 — a funded deal's terms are immutable
 
 ```sh
-bash scripts/ac.sh AC-11   # 2 tests ; rows G-19,G-22
+bash scripts/ac.sh AC-11   # 3 tests ; rows G-19,G-22,G-38
 ```
 For a fuzzed caller and fuzzed `(seller, token, amount, binding)`, `fund` on an existing
 `dealId` reverts `DealExists` and the stored `Deal` is **bytewise identical** before and
 after (compare the full ABI-encoded struct, not field-by-field spot checks) (G-19).
 Second test: `dealBinding == bytes32(0)` reverts `ZeroBinding` and creates nothing (G-22).
 
+**Third test, new in r4 (G-38, INV-2c) —
+`testFuzz_AC11_G38_foreign_binding_cannot_redirect`.** Fund a victim deal
+`(buyer B, seller S, token T, 1000)`. Then, from a **fuzzed** caller, call
+`fund(freshId, attacker, T, 0, victimDealId)` — a fresh `dealId`, zero tokens, and a
+`dealBinding` equal to the victim's `dealId`, which is public in the indexed `Funded`
+event. Assert **both**:
+
+1. `abi.encode(deals[victimDealId])` is bytewise identical to the snapshot taken before the
+   call (the whole struct, not spot checks — the same discipline as G-19); **and**
+2. the victim then settles with a genuine `Reproduced` proof and **`S`** receives 1000,
+   `attacker` receives 0.
+
+Assertion 2 is what makes this a *theft* test rather than a storage-equality test: the harm
+r3 demonstrated is not that a slot changed, it is that an honest proof paid the wrong
+address three blocks later. **R-2 applies:** both balances are compared against the deal's
+own `d.amount` and `d.seller`, never against a literal repeated from the setup.
+
 **Kills:** M-25 the `DealExists` guard is removed; M-26 the guard is
 `if (deals[dealId].state == State.Settled) revert` (so a **Funded** deal can be overwritten
-with a new seller — the redirect attack).
+with a new seller — the redirect attack); **M-48** *(new in r4)* `fund` ends with
+`deals[dealBinding].seller = seller;`, **unguarded** — the behavioural twin of source-text
+mutant M-47. It is not keyed on a constant, so a deterministic test is a legitimate primary
+killer under R-5; M-47, which *is* keyed on a constant, is killed structurally by check 14
+instead.
 
-**Falsify:** compare three fields instead of the encoded struct and mutate a fourth → M-26
-survives.
+**Falsify:** (a) compare three fields instead of the encoded struct and mutate a fourth →
+M-26 survives. (b) drop assertion 2 from the G-38 test and keep only the struct comparison
+→ still kills M-48, but a variant that writes `d.seller` **during** `settleWithProof`
+instead of during `fund` would pass; the two assertions are kept because the invariant is
+about the payout, not about the slot.
 
 #### AC-12 — an unfunded deal has no behaviour
 
@@ -1460,10 +1819,10 @@ The `ac-manifest` fenced block of §5.1 is located by its info string.
 
 1. §3.2's `G-NN` ids ↔ the `G` ids embedded in test names on disk ↔ `rows[].id` in
    `docs/gauntlet.json`;
-2. §3.2's per-class counts (20 theft / 7 authorized / 10 disclosed / 37 total) recomputed
+2. §3.2's per-class counts (21 theft / 7 authorized / 10 disclosed / 38 total) recomputed
    from the table and from the JSON;
 3. §5.1's per-AC `tests` column ↔ the actual `--list --json` count for each selector;
-4. Σ(`tests` over `forge` ACs) = 44, and AC-17's `tests` = 44 + 12 = 56;
+4. Σ(`tests` over `forge` ACs) = 46, and AC-17's `tests` = 46 + 12 = 58;
 5. the union of §5.1's `rows` column = §3.2's id set;
 6. the number of manifest entries = 22;
 7. `docs/gauntlet.json` contains no `target override` string, no `signed_rows`
@@ -1493,10 +1852,15 @@ The `ac-manifest` fenced block of §5.1 is located by its info string.
     re-execution guest's proving measurement is `null`;
 13. `SWEEP_EXEMPT.txt` (AC-21) contains at most **2** names, every one of them declared in
     `zk-verdict/contracts/test/KeyGauntletStructural.t.sol`, and every one carrying a
-    reason line.
+    reason line;
+14. **the sweep's column arithmetic (new in r4)**: `sweep.columns` in `docs/gauntlet.json`
+    equals `(behavioural mutants in §5.3) − |§5.4a's pinned exclusion list| + (sweep mutants
+    in §5.4)` = `24 − 1 + 5` = **28**, and `sweep.excluded_columns` equals §5.4a's pinned
+    list exactly (today `["M-34"]`). A column silently added or dropped changes one of the
+    two and fails here.
 
 Any mismatch exits non-zero and names the missing ids. On success it prints
-`manifest: 37 rows, 22 acceptance criteria, 3 sources agree`.
+`manifest: 38 rows, 22 acceptance criteria, 3 sources agree`.
 
 **Kills:** M-28 a hand-edited `gauntlet.json` with a row deleted; M-29 a test file where a
 row's test exists but is named without its ID; M-30 a §3.2 row added to this document
@@ -1535,7 +1899,7 @@ All mutants are **patches applied to a sandboxed copy of the real source**:
   killed, the harness is broken.
 
 The script prints a table `mutant | class | killed-by | status` and the evidence line
-`mutation: 48 mutants, 47 killed, 1 control survived`. It exits non-zero if any mutant
+`mutation: 52 mutants, 51 killed, 1 control survived`. It exits non-zero if any mutant
 survives, if M-0 is reported killed, or if the printed count differs from `T` recomputed
 from §5.3's `KILLTABLE` region.
 
@@ -1644,11 +2008,11 @@ bash scripts/ac.sh AC-17
 bash zk-verdict/scripts/zk-e2e.sh   # exit 0 (after S-1; today its exit status is discarded)
 ```
 `ac.sh AC-17` runs the whole `zk-verdict/contracts` suite with `--json`, and requires:
-**56** test results in total (44 gauntlet + 12 pre-existing, both counted mechanically),
+**58** test results in total (46 gauntlet + 12 pre-existing, both counted mechanically),
 every status `Success`, and the four pre-existing `RecknZkEscrowTest` names of §1.2
 present — in particular `test_real_proof_settles_to_seller`, which settles a **real
 Groth16 proof**. Those four may change only in the constructor's new `refundDelay`
-argument. It prints `suite: 56/56 passed`.
+argument. It prints `suite: 58/58 passed`.
 
 **S-1 is a precondition of the second command being evidence.**
 `zk-verdict/scripts/zk-e2e.sh:84-85` pipes `forge test` into `grep … || true`, which
@@ -1660,8 +2024,11 @@ discards the exit status (`bash -c 'set -euo pipefail; (exit 7) | grep -E x || t
 fixture stop settling. **M-34** — a contract whose every function body is `revert()`. It
 fails AC-17's `Success` requirement and every authorized row, which is exactly the point: a
 gauntlet made only of "must revert" rows would be satisfied by universal denial.
+**M-34 stays here and is excluded from AC-21's columns (§5.4a).** AC-17 is a *whole-suite*
+criterion, which is the right instrument for a mutant that makes the whole suite fail; as a
+*sensitivity* column it proved everything and therefore nothing (r3 finding 3).
 
-**Falsify:** add a fifth test to `RecknZkEscrow.t.sol` → 57 ≠ 56 → non-zero (drift is
+**Falsify:** add a fifth test to `RecknZkEscrow.t.sol` → 59 ≠ 58 → non-zero (drift is
 caught; the number is normative and changing it means editing this spec).
 
 #### AC-18 — the AC dispatcher cannot be satisfied by an empty implementation
@@ -1799,19 +2166,34 @@ they are sensitive to the contract at all.
 `scripts/degeneracy-sweep.sh` builds a **kill matrix** whose columns are mutants and whose
 rows are the **44** gauntlet tests:
 
-- **columns**: the **23 behavioural** mutants of §5.3 (the sandboxes `mutation-kill.sh`
-  already builds — the two scripts share one builder) plus the **5 sweep mutants** of §5.4;
-- for each column, one sandbox suite run: `forge test --root <sandbox> --json`, recording
-  every test's status;
-- one **control column**, the unmodified sandbox, in which all **56** tests must be
+- **columns**: the **admitted** columns of §5.4a — the **24 behavioural** mutants of §5.3
+  minus the pinned exclusion list `{M-34}`, plus the **5 sweep mutants** of §5.4 =
+  **28** (the sandboxes `mutation-kill.sh` already builds — the two scripts share one
+  builder);
+- **before any column is read, its setUp probe must pass** (§5.4a). A column whose probe
+  fails and which is not in the pinned exclusion list makes `degeneracy-sweep.sh` exit
+  non-zero, naming the column. It is never dropped silently and never counted;
+- for each admitted column, one sandbox suite run: `forge test --root <sandbox> --json`,
+  recording every test's status;
+- one **control column**, the unmodified sandbox, in which all **58** tests must be
   `Success`.
 
 **The assertion:**
 
-> Every gauntlet test must be `Failure` in **at least one** column.
+> Every gauntlet test must be `Failure` in **at least one admitted** column.
 
 A body of `assertTrue(true)` is `Success` in every column, so the six stub tests of §5.0.1
 are named and `degeneracy-sweep.sh` exits non-zero.
+
+**The word "admitted" is load-bearing, and round 3 did not have it (r3 finding 3).** Round
+3's columns included **M-34**, whose patch makes every function body `revert()`. Every
+gauntlet `setUp()` funds a deal, so under M-34 `setUp` reverts and Foundry reports **every
+test in the file** as a failure. In that one column all 44 tests were `Failure` **whatever
+their bodies contained** — which satisfied "at least one column" for all of them at once.
+AC-21 was vacuous, its stated consequence (*"a body of `assertTrue(true)` is `Success` in
+every column"*) was false, and its own **Falsify could not be observed non-zero**, which
+R-6 requires before the AC may be reported green. Round 3 named this exact hazard and then
+guaranteed against it only for the 5 sweep mutants, not for the 23 behavioural ones.
 
 **The one permitted exception, bounded so it cannot be widened privately.** A test may be
 exempt only if it is listed in `zk-verdict/contracts/test/SWEEP_EXEMPT.txt`, one name per
@@ -1828,7 +2210,7 @@ hashes and no mutation of the contract can change the *relation* it asserts. The
 slot is margin. **If the implementer needs a third, AC-21 fails and the founder decides**;
 it is not an edit the implementer may make.
 
-It prints `sweep: 44/44 gauntlet tests accounted for; control 56/56 pass` followed by the
+It prints `sweep: 46/46 gauntlet tests accounted for; control 58/58 pass` followed by the
 matrix and the killed/exempt split. **The evidence string deliberately does not carry the
 killed/exempt split**, because that split is not knowable before implementation and a
 literal that cannot be predicted is r2 finding 7 all over again. The two numbers it does
@@ -1844,20 +2226,28 @@ the hole.
 its assertions are *correct*. A test that asserts the wrong thing but observes the contract
 is red in some column and passes AC-21. §8 says so.
 
-**Falsify:** replace the six `_AC02_` bodies with `assertTrue(true)` and run
-`bash scripts/degeneracy-sweep.sh` → non-zero, naming all six. Delete the control column →
-the sweep can no longer distinguish "the whole tree is broken" from "the mutants worked", so
-the script must refuse to run without it (assert `control 56/56` before anything else).
-Add a third name to `SWEEP_EXEMPT.txt` → non-zero.
+**Falsify:** (a) replace the six `_AC02_` bodies with `assertTrue(true)` and run
+`bash scripts/degeneracy-sweep.sh` → non-zero, naming all six. **This one must be run and
+observed non-zero (R-6); under round 3's column set it exited zero, which is why AC-21 was
+not a criterion.** (b) Delete the control column → the sweep can no longer distinguish "the
+whole tree is broken" from "the mutants worked", so the script must refuse to run without it
+(assert `control 58/58` before anything else). (c) **New in r4:** put `M-34` back in the
+column list → its setUp probe fails and the script exits non-zero naming the column
+(mutant **M-49**); delete the probe assertion as well and (a) exits **zero** with the six
+stubs unnamed, which is exactly the round-3 defect reproduced on demand. (d) Add a third
+name to `SWEEP_EXEMPT.txt` → non-zero.
 
 ### 5.2.1 The exit corpus (AC-1's witness that property P covers the family)
 
 Each entry is spliced into the real file in a sandbox and must be **rejected**, with the
 rejecting check recorded. **The corpus does not define the property.** Property P (§3.1.2)
-is defined by the closedness of the three allowlists; the corpus is thirteen witnesses that
-the closedness is real. Adding a fourteenth construct to this list costs nothing and proves
-nothing new; a construct *not* on this list is rejected for the same reason the ones on it
-are.
+is defined by the closedness of the allowlists (checks 9, 11, 12 and, for P3, check 14);
+the corpus is sixteen witnesses that the closedness is real. Adding a seventeenth construct
+to this list costs nothing and proves nothing new; a construct *not* on this list is
+rejected for the same reason the ones on it are. **E-14, E-15 and E-16 are new in r4** and
+each exists because r3 produced a construct the corpus did **not** cover: an alias whose
+rejection depended on the author's choice of local name, and a stripper that could be made
+to delete the exit along with the evidence.
 
 | # | splice | rejected by |
 |---|---|---|
@@ -1871,9 +2261,12 @@ are.
 | E-8 | `(bool s, ) = token.call(abi.encodeWithSelector(0xa9059cbb, seller, amount));` in `fund` | 9a, 13 |
 | E-9 | `payable(seller).transfer(address(this).balance);` in `refundAfterDeadline` | 9a, 6, 13 |
 | E-10 | `assembly { pop(call(gas(), sload(0), 0, 0, 0, 0, 0)) }` in `fund` | 9b, 6, 13 |
-| E-11 | `function(address,uint256) external returns (bool) f = IERC20Min(token).transfer; f(seller, amount);` in `fund` | 9b, 9a |
+| E-11 | `function(address,uint256) external returns (bool) f = IERC20Min(token).transfer; f(seller, amount);` in `fund` | **9c**, 14, 9b |
 | E-12 | `interface IERC20Full { function approve(address,uint256) external returns (bool); }` at top level + `IERC20Full(token).approve(seller, amount);` | 11, 9a, 9b |
 | E-13 | `new Drain{value: 0}(token);` in `fund` (with `contract Drain` at top level) | 11, 9b, 13 |
+| **E-14** | the same construct as E-11 with the local **named `transfer`**: `function(address, uint256) external returns (bool) transfer = IERC20Min(token).transfer; transfer(seller, amount);` in `fund`. **Round 3 rejected E-11 only because its author wrote `f`**; `transfer` is in `L_plain` and must stay there, because check 12 pins the interface line that produces that token (r3 finding 1) | **9c**, **9b-range**, 14 |
+| **E-15** | a value exit hidden **between two same-line string literals**: `bytes32 memoA = keccak256("a"); IERC20Min(token).transfer(seller, amount); bytes32 memoB = keccak256("b");` in `fund`. A greedy `s/".*"//` deletes the exit **and** the `keccak256(` that would have failed 9b | **9a** (`.transfer` count/range) — and it is the **stripper** that is on trial: a line-wise stripper makes this construct invisible and the corpus entry green-by-blindness (§4.5.1) |
+| **E-16** | the same exit hidden **between two same-line block comments**: `/* a */ IERC20Min(token).transfer(seller, amount); /* b */` in `fund`, against `scripts/no-keys.sh:30`'s existing `s:/\*.*\*/::` | **9a**, same reasoning |
 
 **Controls (must be ACCEPTED):**
 
@@ -1881,16 +2274,20 @@ are.
 |---|---|---|
 | C-M0 | nothing (the unmodified file) | the selftest cannot pass by rejecting everything |
 | C-P | `// never call approve(), permit(), or .call{value:}()` inside `fund` | the checks read code, not English. A check that fails on this is grepping prose |
+| **C-S** | `string memory sA = "a"; string memory sB = "b";` inside `fund` — two legitimate string literals on one line, **no call between them** | the **under**-stripping control. Without it, a stripper could pass E-15 by deleting every line containing a quote, which would blind checks 9 and 13 to any code an attacker chooses to put on a quoted line |
 
-E-1 and E-5 are also registered in §5.3 as **M-41** and **M-42**, because r2 named exactly
-those two routes as the blocker; they are counted once in each counter and the two counters
-are printed on the same line (AC-1's evidence string).
+E-1, E-5 and **E-14** are also registered in §5.3 as **M-41**, **M-42** and **M-46**,
+because r2 and r3 named exactly those routes as blockers; they are counted once in each
+counter and the two counters are printed on the same line (AC-1's evidence string). **M-47**
+(the operand-corruption write) is a source-text mutant with **no** corpus entry, because the
+corpus's subject is value **exits** and M-47 adds none — it redirects one. That asymmetry is
+deliberate and is the whole content of r3 finding 2.
 
 ### 5.3 The kill table (source of truth for AC-14's arithmetic)
 
 `T` — the number of distinct ids matching `^M-([0-9]+|A|F)$` between the two **anchored**
 markers below (`^<!-- BEGIN KILLTABLE -->$` … `^<!-- END KILLTABLE -->$`; see AC-13's marker
-rule) — is **48**. One of them (M-0) must survive; the other **47** must be killed. Every id appears in
+rule) — is **52**. One of them (M-0) must survive; the other **51** must be killed. Every id appears in
 exactly one `killed-by` cell. `scripts/mutation-kill.sh` and `scripts/gauntlet.sh --check`
 both parse the region between the markers, and **nothing but table rows may appear between
 them**.
@@ -1900,7 +2297,7 @@ them**.
 | class | ids | count | driven by | killed by |
 |---|---|---|---|---|
 | control | M-0 | 1 | both harnesses | **nothing — must survive** |
-| source-text | M-1, M-13, M-14, M-15, M-16, M-17, M-18, M-19, M-35, M-36, M-37, M-38, M-41, M-42, M-A, M-F | 16 | `no-keys-selftest.sh` | AC-0 (M-13, M-A, M-F), AC-1 (the rest) |
+| source-text | M-1, M-13, M-14, M-15, M-16, M-17, M-18, M-19, M-35, M-36, M-37, M-38, M-41, M-42, M-46, M-47, M-A, M-F | 18 | `no-keys-selftest.sh` | AC-0 (M-13, M-A, M-F), AC-1 (the rest) |
 | behavioural | M-21, M-24 | 2 | sandbox forge | AC-2 |
 | behavioural | M-3, M-4, M-5 | 3 | sandbox forge | AC-3 |
 | behavioural | M-6, M-7 | 2 | sandbox forge | AC-4 |
@@ -1910,7 +2307,7 @@ them**.
 | behavioural | M-40 | 1 | sandbox forge | AC-8 |
 | behavioural | M-22 | 1 | sandbox forge | AC-9 |
 | behavioural | M-23 | 1 | sandbox forge | AC-10 |
-| behavioural | M-25, M-26 | 2 | sandbox forge | AC-11 |
+| behavioural | M-25, M-26, M-48 | 3 | sandbox forge | AC-11 |
 | behavioural | M-27 | 1 | sandbox forge | AC-12 |
 | behavioural | M-33, M-34 | 2 | sandbox forge | AC-17 |
 | behavioural | M-39 | 1 | sandbox forge | AC-19 |
@@ -1919,22 +2316,32 @@ them**.
 | harness / document | M-31 | 1 | `mutation-kill.sh` | AC-15 |
 | harness / document | M-32 | 1 | `mutation-kill.sh` | AC-16 |
 | harness / document | M-43 | 1 | `ac-selftest.sh` | AC-18 |
-| harness / document | M-44 | 1 | `degeneracy-sweep.sh` | AC-21 |
+| harness / document | M-44, M-49 | 2 | `degeneracy-sweep.sh` | AC-21 |
 
 <!-- END KILLTABLE -->
 
-Sum: `1 + 16 + (2+3+2+2+2+2+1+1+1+2+1+2+1+1) + (4+1+1+1+1) = 1 + 16 + 23 + 8 = 48`.
-Killed = **47**.
+Sum: `1 + 18 + (2+3+2+2+2+2+1+1+1+3+1+2+1+1) + (4+1+1+1+2) = 1 + 18 + 24 + 9 = 52`.
+Killed = **51**.
+
+**The four ids added in r4, and which review finding each answers:** **M-46** (the
+function-pointer alias named `transfer`, source-text, check 9c — finding 1); **M-47** (the
+foreign-key write guarded on a constant, source-text, check 14 — finding 2); **M-48** (the
+same write unguarded, behavioural, AC-11's G-38 test — finding 2's behavioural half); and
+**M-49** (a `degeneracy-sweep.sh` whose column list re-admits a setUp-breaking mutant and
+whose probe assertion is deleted, harness, AC-21 — finding 3). M-46/M-47 are keyed on
+constants and are therefore killed **structurally**, per R-5; M-48 is not, and is killed by
+a deterministic test.
 
 **Every one of the 13 `forge` ACs owns at least one mutant** — AC-2 (M-21, M-24), AC-3,
-AC-4, AC-5, AC-6, AC-7, **AC-8 (M-40)**, AC-9, AC-10, AC-11, AC-12, AC-19, AC-20. AC-13
+AC-4, AC-5, AC-6, AC-7, **AC-8 (M-40)**, AC-9, AC-10, **AC-11 (M-25, M-26, M-48)**, AC-12,
+AC-19, AC-20. AC-13
 check 8 asserts this mechanically. Round 2 failed it at AC-8 (r2 finding 6).
 
 **Excluded from `T` by construction:** the lettered sub-mutants `M-31b`, `M-31c`, `M-31d`,
 `M-32b` are harness self-checks inside AC-13 / AC-15 / AC-18. They do not match
 `^M-([0-9]+|A|F)$`, so no rule has to remember to exclude them. The **five sweep mutants**
-of §5.4 use the `SW-` prefix for the same reason, and the **thirteen exit-corpus entries**
-of §5.2.1 use `E-`; only E-1 and E-5 have kill-table identities (M-41, M-42).
+of §5.4 use the `SW-` prefix for the same reason, and the **sixteen exit-corpus entries**
+of §5.2.1 use `E-`; only E-1, E-5 and E-14 have kill-table identities (M-41, M-42, M-46).
 
 ### 5.4 The sweep mutants (AC-21's columns; not counted in `T`)
 
@@ -1942,6 +2349,10 @@ Five patches against the real source, chosen so that **each leaves `setUp()` abl
 deal** — a mutant that breaks `setUp` makes every test fail for the wrong reason and would
 turn the sweep into a rubber stamp. They live in
 `zk-verdict/contracts/test/mutants/SW-N.patch`.
+
+**That guarantee is a design intention, and round 3 applied it to these five only — which
+is how M-34 got into the columns and made AC-21 vacuous (r3 finding 3). §5.4a turns it into
+a mechanical precondition on *every* column, these five included.**
 
 | id | patch | what it makes insensitive tests visible |
 |---|---|---|
@@ -1962,6 +2373,70 @@ indistinguishable from the real reverts and half the sweep would be blind. `gaun
 --check` check 11 greps for `vm.expectRevert()` with empty arguments in the gauntlet test
 files and fails on any hit.
 
+### 5.4a Column admissibility — the setUp probe (new in r4 — r3 finding 3)
+
+**The defect this closes.** AC-21's assertion is *"every gauntlet test is `Failure` in at
+least one column"*. A column in which the test contract's `setUp()` reverts reports **every
+test in that contract as a failure**, for a reason that has nothing to do with any test
+body. One such column satisfies AC-21 for the entire suite at once, and the criterion stops
+being a criterion. Round 3 guaranteed setUp-safety for the five `SW-` patches and left the
+23 behavioural columns unguarded — and M-34, defined as *"a contract whose every function
+body is `revert()`"*, is exactly such a column.
+
+**Two devices, and the second is the one that generalizes.**
+
+**(1) A pinned exclusion list.** `{M-34}` — one id, held in this section **and** in
+`scripts/degeneracy-sweep.sh`, and printed as `sweep.excluded_columns` in
+`docs/gauntlet.json`. M-34 keeps its kill-table cell under **AC-17**, a whole-suite
+criterion, which is the right instrument for a mutant that makes the whole suite fail.
+Adding an id to this list is a **spec edit**, checked by AC-13 check 14; the implementer
+cannot do it privately. Because the list is pinned, `sweep.columns` is a **predictable
+number** (`24 − 1 + 5 = 28`) rather than whatever survived at runtime.
+
+**(2) A setUp probe, per column, per test file.** The exclusion list only covers the
+setUp-breaking mutants somebody thought of. The probe covers the next one.
+
+For each gauntlet test file `F` (`KeyGauntlet.t.sol`, `KeyGauntletFuzz.t.sol`,
+`KeyGauntletInvariant.t.sol`, `KeyGauntletStructural.t.sol`), `degeneracy-sweep.sh`
+generates into **the sandbox only** a file `SweepProbe_F.t.sol`:
+
+```solidity
+import {FTest} from "./F.t.sol";                 // F's own test contract
+contract SweepProbe_F is FTest {
+    function test_probe_setup_ok() public { assertTrue(true); }
+}
+```
+
+It inherits `F`'s `setUp()` rather than copying it, so the probe cannot drift from the thing
+it is probing. Then, for every candidate column, **before** the column's statuses are read:
+
+```sh
+forge test --root "$sandbox" --match-contract '^SweepProbe_' --json
+```
+
+- every `test_probe_setup_ok` **`Success`** → the column is **admitted**;
+- any of them **`Failure`** → the mutant broke that file's `setUp`. If the column's id is in
+  the pinned exclusion list, that is the expected outcome and it is recorded; **if it is
+  not, `degeneracy-sweep.sh` exits non-zero naming the column**. It is never dropped
+  silently and never counted.
+
+`assertTrue(true)` is the correct probe body here precisely because it is insensitive to
+everything except whether `setUp` ran — the property AC-21 forbids in a *gauntlet* test is
+the property that makes a *probe* valid. The probe files exist only inside sandboxes, so
+AC-17's suite total (58) and AC-21's row count (46) are unaffected.
+
+**Consequences that must be checked at implementation time, not assumed.** **M-33** (a
+change to the `VerdictPublicValues` decode order) will fail the probe for any test file
+whose `setUp` settles the real fixture proof. If it does, M-33 is **not** silently dropped:
+the sweep exits non-zero, and closing it is either (a) moving that settlement out of
+`setUp` into the test that needs it, or (b) a founder-visible addition to the pinned
+exclusion list. **(a) is the preferred resolution** — a `setUp` that settles a deal is doing
+work that belongs in a test. This is written down because "the implementer will work it out"
+is how r2 finding 6's cell got rescued privately.
+
+**OQ-7 (the exemption budget) is answerable only now.** A vacuous matrix made the budget
+moot; with §5.4a in place the budget question is real again.
+
 ---
 
 ## 6. Test plan
@@ -1972,7 +2447,7 @@ files and fails on any hit.
 |---|---|---|
 | `zk-verdict/contracts/test/KeyGauntlet.t.sol` | the unit rows, named `test_AC05_G07_…` etc. | AC-5, AC-8, AC-9, AC-10 (units), AC-12, AC-19, AC-20 |
 | `zk-verdict/contracts/test/KeyGauntletFuzz.t.sol` | caller / time / parameter fuzz | AC-2, AC-3, AC-4, AC-6, AC-7, AC-11 |
-| `zk-verdict/contracts/test/KeyGauntletInvariant.t.sol` + handler | random call sequences over ≥ 3 deals in ≥ 2 tokens | AC-10 (invariants) |
+| `zk-verdict/contracts/test/KeyGauntletInvariant.t.sol` + handler | random call sequences over ≥ 3 deals in ≥ 2 tokens; the handler's `fund` action draws `dealBinding` from **{fresh, an existing deal's `dealId`}** and may pass `amount == 0` (AC-10's two handler obligations) | AC-10 (3 invariants) |
 | `zk-verdict/contracts/test/KeyGauntletStructural.t.sol` | **at most 2** tests whose assertions no contract mutation can change; the only file whose tests may be sweep-exempt | AC-19 (G-37), AC-21 |
 | `zk-verdict/contracts/test/SWEEP_EXEMPT.txt` | the exemption list, one `name # reason` per line, ≤ 2 lines | AC-21, AC-13 check 13 |
 | `zk-verdict/contracts/test/mutants/M-*.patch` | one patch per kill-table mutant, applied to a **sandbox copy of the real source** | AC-1, AC-14 |
@@ -1988,7 +2463,7 @@ files and fails on any hit.
 | `scripts/ac-selftest.sh` | negative control on `ac.sh`, including the degenerate dispatcher | AC-18 |
 | `scripts/no-keys-selftest.sh` | sandboxed source-text mutants + the exit corpus vs the **unmodified** `no-keys.sh` | AC-1 |
 | `scripts/mutation-kill.sh` | applies `M-*.patch` to sandboxes, prints the kill table | AC-14 |
-| `scripts/degeneracy-sweep.sh` | builds the kill matrix over 23 behavioural + 5 sweep mutants + control | AC-21 |
+| `scripts/degeneracy-sweep.sh` | builds the kill matrix over the **28 admitted columns** (24 behavioural − the pinned exclusion `{M-34}` + 5 sweep) plus the control column; generates the sandbox-only `SweepProbe_*.t.sol` and gates every column on its probe (§5.4a) | AC-21 |
 | `scripts/gauntlet.sh` | judge-facing runner + `docs/gauntlet.json` generator + `--check` | AC-13, AC-15, AC-16 |
 
 **Deleted from round 1:** `zk-verdict/contracts/test/mutants/MutantZkEscrow.sol` and
@@ -2014,8 +2489,8 @@ asserted:
 
 1. **M-0 survives.** The unmodified contract passes every AC. If the harness reports M-0
    killed, the harness is broken (AC-14). The sweep's control column is the same idea for
-   AC-21: 56/56 must pass before any column is interpreted.
-2. **Each of the 47 mutants is killed by the AC named in §5.3** (AC-14, AC-1).
+   AC-21: 58/58 must pass before any column is interpreted.
+2. **Each of the 51 mutants is killed by the AC named in §5.3** (AC-14, AC-1).
 3. **The empty implementation.** With every gauntlet test file absent, each of the 13
    `forge` ACs exits non-zero — thirteen recorded observations (AC-18). *Control on r1
    finding 1.*
@@ -2038,6 +2513,18 @@ asserted:
 11. **A manifest entry set to `tests = 0`** is refused by `ac.sh` (AC-18 observation 3).
 12. **A third name in `SWEEP_EXEMPT.txt`** makes AC-21 exit non-zero (the exemption budget
     cannot be widened by the implementer).
+13. **The operand seam, both halves.** M-47 (`deals[dealBinding].seller = seller;` guarded
+    on a constant) turns **AC-1** red at check 14; M-48 (the same write, unguarded) turns
+    **AC-11** red at the G-38 test. *Control on r3 finding 2 — a state change carrying no
+    call-shaped token.*
+14. **The stripper, in the direction that hides code.** E-15 and E-16 must be **rejected**
+    and control C-S must be **accepted**; a line-wise stripper fails one or the other.
+    *Control on r3 finding 6.*
+15. **A setUp-breaking column is refused, not counted.** M-49 — `degeneracy-sweep.sh` with
+    M-34 re-admitted to the columns and the probe assertion deleted — makes AC-21's own
+    Falsify (a) exit **zero** with the six stubs unnamed. That is the round-3 defect
+    reproduced on demand, and the sweep must be observed refusing it. *Control on r3
+    finding 3.*
 
 ### 6.4 Anti-degeneracy rules (this project has opened the same hole four times)
 
@@ -2072,6 +2559,20 @@ Binding on the implementation:
   state the property that makes `X` and its unlisted siblings fail together, and add `X`
   only as a witness in the corpus. r1 and r2 both violated this rule (§3.1.1); it is written
   down so round 4 cannot.
+- **R-8** *(new in r4 — r3 findings 1 and 2)* **A lexical check on call sites never
+  constrains what the permitted calls' operands resolve to.** Whenever this document says a
+  check "pins" a value movement, ask the two follow-up questions before believing it:
+  (i) *can the name being called be made to resolve to something else?* — closed by 9c and
+  9b-range; (ii) *can the storage the permitted call reads be written from somewhere else?*
+  — closed by check 14 and tested by INV-2c. A check that answers neither is a check on
+  syntax that has been mistaken for a check on behaviour. Round 3 stated a property and
+  still lost on both questions; the rule exists so round 5 asks them first.
+- **R-9** *(new in r4 — r3 finding 3)* **A mutant that breaks `setUp` is not a sensitivity
+  column.** Any matrix whose columns are mutants must assert, per column and before reading
+  it, that the harness itself still runs — otherwise "every test failed in some column" is
+  satisfied by a column in which every test failed for the same irrelevant reason. §5.4a is
+  this rule's mechanization; the general form is: **a criterion that is satisfied by
+  breaking the thing that observes it is not a criterion.**
 
 ---
 
@@ -2116,8 +2617,9 @@ hand-edit it.
   ],
   "signed_rows": [],
   "sweep": {
-    "gauntlet_tests": 44, "killed": 43, "exempt": ["test_AC19_G37_lookalike_code_hash_differs"],
-    "columns": 28, "control_suite": 56
+    "gauntlet_tests": 46, "killed": 45, "exempt": ["test_AC19_G37_lookalike_code_hash_differs"],
+    "columns": 28, "excluded_columns": ["M-34"], "probe": "SweepProbe_*:test_probe_setup_ok",
+    "control_suite": 58
   },
   "rows": [
     { "id": "G-03", "class": "theft", "actor": "SELLER",
@@ -2132,10 +2634,10 @@ hand-edit it.
     { "id": "AC-06", "kind": "forge", "tests_expected": 2, "tests_ran": 2, "passed": 2 }
   ],
   "totals": {
-    "rows": 37, "theft": 20, "authorized": 7, "disclosed": 10,
-    "as_specified": 37, "keys_that_helped": 0,
-    "acceptance_criteria": 22, "gauntlet_tests": 44, "suite_tests": 56,
-    "mutants": 48, "mutants_killed": 47, "control_survived": true
+    "rows": 38, "theft": 21, "authorized": 7, "disclosed": 10,
+    "as_specified": 38, "keys_that_helped": 0,
+    "acceptance_criteria": 22, "gauntlet_tests": 46, "suite_tests": 58,
+    "mutants": 52, "mutants_killed": 51, "control_survived": true
   }
 }
 ```
@@ -2153,6 +2655,12 @@ hand-edit it.
   `len(signed_rows)` disagree.
 - `sweep.exempt` mirrors `SWEEP_EXEMPT.txt`; `len(exempt) ≤ 2` and
   `killed + len(exempt) == gauntlet_tests` are both asserted (AC-13 check 13, AC-21).
+- **`sweep.excluded_columns` and `sweep.probe` are new in r4** (r3 finding 3).
+  `excluded_columns` must equal §5.4a's pinned list exactly, and `columns` must equal
+  `24 − len(excluded_columns) + 5` (AC-13 check 14). A column that was dropped at runtime
+  rather than by the pinned list makes those two disagree; a sweep that stopped probing
+  makes `probe` absent. **The judge can see how many mutants the matrix was allowed to
+  ignore**, which is the same discipline `exempt` applies to tests.
 - **`proving` (r2 finding 5 — round 2's OQ-6 asserted an absence the repo contradicts).**
   Two guests, two fields:
   - `predicate_guest_wrap_seconds: 34` — **a real measurement in this repo**, of the gnark
@@ -2205,11 +2713,12 @@ hand-edit it.
   G-36   disclosed   anyone     settleWithProof       settles, seller UNDERPAID settles, seller UNDERPAID ✓
   G-37   disclosed   BUYER      deploy look-alike     only codehash differs     only codehash differs     ✓
 
-  37/37 rows as specified.
+  38/38 rows as specified.
   Keys published: 5.  Addresses exercised: 5.  Addresses that helped: 0.
   Transactions signed by a published key: 0 — Foundry impersonates addresses (vm.prank);
   no published key signed anything. See §8 of docs/specs/003-key-gauntlet.md.
-  Gauntlet tests: 44.  Failing under at least one mutant: 43.  Sweep-exempt: 1 (structural).
+  Gauntlet tests: 46.  Failing under at least one mutant: 45.  Sweep-exempt: 1 (structural).
+  Sweep columns: 28 admitted, 1 excluded (M-34 breaks setUp; it is AC-17's mutant).
 ```
 
 **The money-shot's third line** is mandatory and its number is derived from `signed_rows`.
@@ -2217,7 +2726,9 @@ If OQ-1's signed mode is built it reads
 `Transactions signed by a published key: 3 (G-03, G-13, G-14).`
 
 **The money-shot's fourth line is new in r3.** It publishes the sweep split, so a growing
-exemption list is on screen rather than in a file nobody opens.
+exemption list is on screen rather than in a file nobody opens. **The fifth line is new in
+r4** and publishes the *column* split for the same reason: a matrix that quietly stopped
+counting columns is the shape r3 finding 3 exploited, and it now has to say so on screen.
 
 ### 7.3 What `reckn-demo` must say out loud
 
@@ -2258,9 +2769,14 @@ Written here so that no one has to say it under questioning.
   did (AC-18 observation 5) and the claim was false. Two instruments cover the gap and only
   two: **AC-21**, which requires every gauntlet test to be observed *failing* against at
   least one mutant, and **AC-14**, which requires every forge AC to own at least one mutant.
-- **AC-21 proves sensitivity, not correctness.** A test that observes the contract and
-  asserts the wrong thing is red in some column and passes AC-21. Up to two tests may be
-  sweep-exempt, and the exemption is printed on screen (§7.2) rather than hidden.
+- **AC-21 proves sensitivity, not correctness — and "sensitivity" is narrower than "has an
+  assertion."** A test that observes the contract and asserts the wrong thing is red in some
+  column and passes AC-21. So is a test with **no assertion at all** whose call simply
+  reverts under some mutant (r3 finding 7). The `assertTrue(true)` stub is the one
+  zero-assertion shape AC-21 catches. Up to two tests may be sweep-exempt and one mutant is
+  excluded from the columns (`M-34`, §5.4a); both numbers are printed on screen (§7.2)
+  rather than hidden, because **a criterion satisfied by breaking its own observer is not a
+  criterion** (R-9), and round 3's version of AC-21 was exactly that.
 - **The matrix is exhaustive with respect to §3.1's enumeration** (two exits, one inward
   site, one writing entry point, reentrancy, out-of-band value, deployment choice, token
   behaviour). It is **not** exhaustive with respect to attacks outside that frame —
@@ -2281,10 +2797,27 @@ Written here so that no one has to say it under questioning.
     growing it *silently*; `AGENTS.md` §0 makes the edit a declared claim change. Round 1
     and round 2 both wrote the stronger sentence and both were wrong; it is not written
     here.
-  - that a value movement expressed with **no call-shaped token at all** would be caught.
-    The authors of r3 know of no such construct in Solidity that reaches an ERC-20 balance,
-    but "we could not think of one" is not a proof and is not claimed as one.
-- **Foundry `vm.prank` impersonates an address without using its private key.** The 37 rows
+  - that a value movement expressed with **no call-shaped token at all** would be caught by
+    checks 9/11/12/13. We know of no such construct in Solidity that reaches an ERC-20
+    balance, but "we could not think of one" is not a proof and is not claimed as one.
+  - **anything about the operands the permitted calls read.** This was round 3's actual
+    hole, not a hypothetical one: `deals[victimId].seller = attacker;` inside `fund`
+    contains no call-shaped token, passed all thirteen of round 3's checks, and made an
+    honest proof pay an attacker (r3 finding 2). **Check 14 closes it by closing assignment
+    targets**, and INV-2c tests the runtime statement. What check 14 still does not
+    establish is that the assignments it *permits* are the right ones — `d.state` could be
+    set in the wrong branch and it would not notice. That is what AC-3, AC-5, AC-7 and
+    AC-11 are for.
+- **What check 14 establishes and does not** (§4.5.6, INV-2c). It establishes that, in the
+  source text of this one file, the only assignment targets are `deals[dealId]` in `fund`,
+  `d.state` in the two exits, `to`, and locals of value or memory type; and that the four
+  other source constructs that can write storage (`++`, `--`, `delete`, compound
+  assignment) do not occur, with `assembly`'s `sstore` already closed by checks 6 and 13.
+  It does **not** establish anything about the compiled bytecode, and it is an enumeration
+  of **Solidity source constructs** — a future language version that adds a fifth way to
+  write storage would need this enumeration re-opened, and this sentence is here so that a
+  reader knows to check.
+- **Foundry `vm.prank` impersonates an address without using its private key.** The 38 rows
   demonstrate **address-level** behaviour. Unless `signed_rows` is non-empty, no published
   key was exercised, and the money-shot says so (§7.2, r1 finding 8).
 - **Token honesty is assumed, and the supported class is narrow.** INV-4/INV-6 hold for
@@ -2296,8 +2829,13 @@ Written here so that no one has to say it under questioning.
   (G-34, G-35). This is asymmetric with the inbound case, which fails closed at `fund`
   (G-21) with no principal at risk. It is the price of INV-6's upper bound. **The upper
   bound's justification is the runtime one in §4.1 C-5** — an unbounded outward transfer is
-  paid out of other deals' principal in the same token — **not** "it kills M-23"; M-23 is
-  killed by AC-10's multi-deal invariant independently of any on-chain bound (r2 finding 8).
+  paid out of other deals' principal in the same token — **not** "it kills M-23" (r2
+  finding 8). **And not the converse either** (r3 finding 4): round 3 asserted that AC-10
+  kills M-23 *independently* of C-5's bound, which is false of the contract that is actually
+  mutated, because C-5 is in it and reverts the over-payment before any invariant can see
+  it. M-23 is therefore defined as the **compound** patch (over-pay **and** drop C-5 in that
+  function), and the honest statement is: **C-5's bound is justified at runtime and is not
+  evidenced by a mutant, because C-5 masks the mutant that would evidence it.**
   **003 does not close the residual**, and the honest gap list in `README.md` must say so
   (D-1).
 - **C-5 cannot see the recipient's side** (r2 finding 3, row G-36). A token that debits the
@@ -2364,7 +2902,8 @@ that r2 corrected are corrected again where r2's own replacement was off (D-4).
 | D-7 | `STATUS.md:15` | 撤退可能点 wording, already aligned with `AGENTS.md` §7 | **Round 2 also cited `STATUS.md:39-40` as holding a pointer to a `docs/specs/001-keyless-timeout.md`. It does not: `:39-40` is the review table, and the string `001-keyless-timeout` occurs nowhere in `STATUS.md` (`grep -rn "001-keyless-timeout" STATUS.md docs`, re-run 2026-09-04 — the only occurrences are inside this spec and inside `docs/reviews/003-spec-r2.md`). There is nothing to fix there.** The real obligation is to add the 003 round-3 row to the review table and record the surface change |
 | D-8 | `SUBMISSION.md:156-160` | ZK settlement bullet | Add the gauntlet and the timeout; keep the SVM/EVM honest-scope sentences intact |
 | D-9 | `README.md:67` | "the enumerated `fund` / `settleWithProof` / `refundAfterDeadline`" | Already correct — add that all three must now be **present**, not merely permitted (two-sided check 2), and that the value exits are pinned by a **closed allowlist over the whole file**, not by a list of forbidden method names |
-| D-10 | `AGENTS.md` §0 | "列挙された関数面 … を増やすなら" | The permitted function set does not change, but the **script gains checks 5–13, one output line, and a scan region that is the whole file for checks 9/11/12/13**; and `IERC20Min` gains one declared function (`balanceOf`, C-4). Record all of that in the same commit, per §0's own instruction, and state that the interface was **not** changed (N-9) and that the scope widening is a **tightening** (§4.5) |
+| D-10 | `AGENTS.md` §0 | "列挙された関数面 … を増やすなら" | The permitted function set does not change, but the **script gains checks 5–14, one output line, and a scan region that is the whole file for checks 9/11/12/13**; and `IERC20Min` gains one declared function (`balanceOf`, C-4). Record all of that in the same commit, per §0's own instruction, and state that the interface was **not** changed (N-9) and that the scope widening is a **tightening** (§4.5) |
+| **D-11** | `surfaces.pinned` (introduced by task `008`; **does not exist in the tree as of 2026-09-04** — §1.5) | pins `sha256(zk-verdict/contracts/src/RecknZkEscrow.sol)` as a build condition | **003 necessarily breaks this pin** (C-1…C-7). **Re-pin it in the same commit that changes the contract** — not a follow-up commit. The re-pin is a **copy of the value `surfaces.sh` prints on failure**; **no step of this spec asks anyone to compute a digest by hand**, and no agent recomputes it in another way. If 008 landed without `surfaces.pinned`, D-11 is a no-op and the implementation report says so explicitly. **`docs/specs/008-*` is not edited** (see below) |
 
 | ID | file:line | change |
 |---|---|---|
@@ -2381,14 +2920,17 @@ do not fix it.** The same applies to `docs/ethonline-2026/DISCLOSURE.md`,
 Each part must end green. Do not merge them into one Codex call.
 
 1. **P1** — C-1…C-7 in `RecknZkEscrow.sol` + minimal adjustment of the four existing
-   `RecknZkEscrowTest` tests to the new constructor. Ends green on `forge test`.
+   `RecknZkEscrowTest` tests to the new constructor. **The same commit re-pins
+   `surfaces.pinned` (D-11, §1.5) by copying the digest `surfaces.sh` prints**; the contract
+   change and the pin never live in different commits. Ends green on `forge test`.
 2. **P2** — `scripts/ac.sh` + `scripts/ac-selftest.sh` (§5.0/§5.1). **Built before any
    gauntlet test exists**, and its first demonstration is that every `forge` AC is
    **red** (AC-18 observation 1). Ends green on AC-18's control (observation 6) only after
    P3/P4.
-3. **P3** — `scripts/no-keys.sh` checks 5–13, two-sided check 2, the `checks: 13/13 passed`
-   line, `scripts/no-keys-selftest.sh` with the sandbox layout, the 16 source-text mutants
-   and the 13-entry exit corpus with its two controls. Ends green on AC-0, AC-1.
+3. **P3** — `scripts/no-keys.sh` checks 5–14, two-sided check 2, the token-wise stripper
+   and the three derived texts (§4.5.1), the `checks: 14/14 passed` line,
+   `scripts/no-keys-selftest.sh` with the sandbox layout, the 18 source-text mutants and the
+   16-entry exit corpus with its **three** controls. Ends green on AC-0, AC-1.
    **This part is the round-3 blocker; do it before the test-writing parts** so that
    AC-14's Falsify (apply M-41 to the live tree → AC-0 and AC-1 red) can be run early.
 4. **P4** — mocks (including `RecipientFeeERC20`) + `KeyGauntlet.t.sol` +
@@ -2402,7 +2944,11 @@ Each part must end green. Do not merge them into one Codex call.
    forced `forge build` of this project measured ~0.9 s on 2026-09-04, but the sandbox path
    has not been run and this spec makes **no** claim about the total.
 7. **P7** — `test/mutants/SW-*.patch` + `scripts/degeneracy-sweep.sh` reusing P6's sandbox
-   builder. Ends green on AC-21. **Expect this part to fail first**: it is designed to find
+   builder, **including §5.4a's `SweepProbe_*` generator, the pinned exclusion list and the
+   per-column probe gate**. Ends green on AC-21. **Run AC-21's Falsify (a) and observe it
+   non-zero before reporting AC-21 green** (R-6) — under round 3's design it exited zero,
+   which is the whole of r3 finding 3. If M-33's probe fails, resolve it as §5.4a specifies
+   (move the fixture settlement out of `setUp`), and report it either way. **Expect this part to fail first**: it is designed to find
    tests written in P4/P5 that assert nothing, and finding some is the intended outcome, not
    an error in the sweep.
 8. **P8** — `scripts/gauntlet.sh`, `docs/gauntlet.json`, the digest check, the gag-rule
@@ -2415,7 +2961,7 @@ Each part must end green. Do not merge them into one Codex call.
 
 Genuinely undecided. **Do not guess; bring these back rather than inventing an answer.**
 
-- **OQ-1 — Do the published keys have to actually sign?** (r1 finding 8.) The 37 rows run
+- **OQ-1 — Do the published keys have to actually sign?** (r1 finding 8.) The 38 rows run
   in Foundry, where `vm.prank` impersonates an address **without using its private key**.
   §8 and the money-shot are already honest about it, so **the spec is correct either way**;
   the question is only whether to buy the extra credibility.
@@ -2454,8 +3000,19 @@ Genuinely undecided. **Do not guess; bring these back rather than inventing an a
   - add a fourth state and a fourth set of matrix rows (what happens to a never-accepted
     deal, to an acceptance after the deadline, to an acceptance of a deal in a hostile
     token);
-  - close **G-33** by letting the seller decline a deployment whose clock is too short
-    *before* doing the work, rather than relying on the off-chain check of §2.3(A).
+  - buy **one thing that does not exist today**: a recorded, on-chain point at which the
+    seller attests to having read the §2.3(B) terms. That is a demo asset (the timeline gets
+    a seller-side event), not a new guarantee.
+
+  **What it does *not* buy, corrected in r4 (r3 finding 8).** Round 3's third bullet claimed
+  acceptance would *"close G-33 by letting the seller decline a short clock before doing the
+  work"*. **It would not**, and the founder must not price it against that. `refundDelay` is
+  a `uint64 public immutable` construction parameter (C-2), so it is readable **before any
+  deal exists** — it is already part 4 of the deployment check the spec tells the seller to
+  perform (§2.3 A). A seller who wants to decline a short clock declines by not working,
+  with or without an on-chain step. And acceptance does **not** gate `refundAfterDeadline`:
+  a seller who accepts and then delivers is refunded out from under exactly as before. The
+  benefit for G-33 is **zero**.
 
   *Recommendation:* **not in 003** — it is outside the scope line (G-33 has a true expected
   result today, so no matrix row is missing an answer), and the surface count is worth more
@@ -2466,7 +3023,7 @@ Genuinely undecided. **Do not guess; bring these back rather than inventing an a
   12.) 003 **does not add one** (N-9): `AGENTS.md` §0 reserves that script's semantics
   to the founder, and "no-keys.sh passed" must keep meaning one specific file. r2 confirmed
   this is the right call. The sandbox-layout self-test achieves the same coverage with zero
-  interface change (§4.5.8, verified 2026-09-04). **Returned to the founder as a question,
+  interface change (§4.5.9, verified 2026-09-04). **Returned to the founder as a question,
   not implemented:** is a positional override wanted later (e.g. for CI matrix runs), and
   if so, with what guarantee that an override's output can never be pasted as evidence for
   the claim?
@@ -2504,7 +3061,10 @@ Genuinely undecided. **Do not guess; bring these back rather than inventing an a
   instead of by a forge test, say so and the row moves out of AC-19 into §7.2 alone.
   **Founder call. Recorded rather than decided, because it is a taste question about how
   much slack the harness gives the implementer, and this project's failures have all come
-  from slack.**
+  from slack.** *(r4: this question was unanswerable while AC-21 was vacuous — a budget on
+  a criterion that everything satisfies is meaningless. §5.4a makes it answerable, and adds
+  a second, adjacent budget the founder may want to look at at the same time: the pinned
+  **column** exclusion list, today `{M-34}`, one entry.)*
 
 ---
 
@@ -2517,7 +3077,7 @@ as an open question.
 
 | # | sev | finding | disposition | where |
 |---|---|---|---|---|
-| 1 | **BLOCKER** | checks 9/10 count two method names → `approve` route A and out-of-body route B both drain; §3.1:245 and §8:1464-1466 are false; the spec relies on the blind spot at C-4 while denying it exists | **stronger.** Not "add `approve`/`increaseAllowance`/`decreaseAllowance`/`permit` to check 6" — that is the same denylist one name later (R-7). Check 9 is **rewritten as a closed allowlist over the whole file** (property P): 10 permitted member calls with pinned forms and ranges, plus a plain-call allowlist that catches function pointers and assembly opcodes. **Check 11** closes the file's top-level declarations (route B, structurally). **Check 12** closes `IERC20Min`'s declared function set (route A at the declaration). Check 13 is an explicitly-labelled redundant backstop and carries none of the claim. **C-4's blind-spot sentence is deleted** and the contradiction resolved: the interface is now inside the checked region. Mutants **M-41** (route A) and **M-42** (route B) added under AC-1; a **13-entry exit corpus** with a **prose control** is the witness that the property covers the family. §3.1 and §8 re-worded to the earned statement | §3.1.1, §3.1.2, §4.5.3–§4.5.6, §5.2.1, AC-1, AC-14 Falsify, §5.3, §8, R-7 |
+| 1 | **BLOCKER** | checks 9/10 count two method names → `approve` route A and out-of-body route B both drain; §3.1:245 and §8:1464-1466 are false; the spec relies on the blind spot at C-4 while denying it exists | **stronger.** Not "add `approve`/`increaseAllowance`/`decreaseAllowance`/`permit` to check 6" — that is the same denylist one name later (R-7). Check 9 is **rewritten as a closed allowlist over the whole file** (property P): 10 permitted member calls with pinned forms and ranges, plus a plain-call allowlist that catches function pointers and assembly opcodes. **Check 11** closes the file's top-level declarations (route B, structurally). **Check 12** closes `IERC20Min`'s declared function set (route A at the declaration). Check 13 is an explicitly-labelled redundant backstop and carries none of the claim. **C-4's blind-spot sentence is deleted** and the contradiction resolved: the interface is now inside the checked region. Mutants **M-41** (route A) and **M-42** (route B) added under AC-1; a **13-entry exit corpus** with a **prose control** is the witness that the property covers the family. §3.1 and §8 re-worded to the earned statement | §3.1.1, §3.1.2, §4.5.3–§4.5.7, §5.2.1, AC-1, AC-14 Falsify, §5.3, §8, R-7 |
 | 2 | **BLOCKER** | the five gates never open test bodies; 6 stubs make AC-02 green; AC-18 observation 5 is false; AC-8 has no mutant; AC-18 is self-referential | **stronger, four parts.** (a) Observation 5 **deleted**; the stub attack is quoted verbatim in §5.0.1 as a thing the format does **not** stop. (b) §5.0.1 and §8 state plainly that the format prevents *zero tests*, not *zero assertions*. (c) **AC-21 (new)** — the kill matrix: every gauntlet test must be `Failure` in ≥ 1 of 28 columns (23 behavioural mutants + 5 sweep mutants), with a control column, an exemption budget of **2** confined to one file and printed in the money-shot. A stub is green in every column and is named. Mutant **M-44** is the stub suite itself. R-2b forbids bare `vm.expectRevert()`, without which SW-1's column would be blind. (d) **AC-8 given M-40** (M-21 split), and "every forge AC owns ≥ 1 mutant" is now **AC-13 check 8**, mechanical. (e) AC-18's self-reference cut three ways: a direct founder command, `gauntlet.sh` invoking the harness scripts **directly**, and observation 5 replaced by a **degenerate-dispatcher** detector (M-43) that a degenerate `ac.sh` cannot survive | §5.0.1, AC-18, **AC-21**, §5.3, §5.4, R-2b, AC-13 checks 8/11/13, §6.3, §8 |
 | 3 | MAJOR | §1.3 defines "exact-transfer" only on the escrow's side; a recipient-fee token underpays and still terminates | **adopted.** Clause **(d)** added; row **G-36** added as `disclosed` with the honest expected value (*the call succeeds and the seller is underpaid*); `RecipientFeeERC20` mock; AC-19's count 6 → **8**; §8 states that **C-5 cannot detect this from the escrow side**, so it is a disclosure, not a fix; INV-6 re-worded to be explicitly about the escrow's side only | §1.3(d), G-36, §4.3, AC-19, INV-6, §6.1, §6.2, §8 |
 | 4 | MAJOR | §2.3 lists the escrow bytecode and then omits it from its own three-part check; `d.token` is not checkable before funding but §2.2 says it is | **adopted.** The check is now **four-part** (`extcodehash` first), `contract.code_hash` is printed in `gauntlet.json` and in the banner, and **M-45** kills a JSON written without it. Row **G-37** added for the look-alike deployment. §2.3 is split into **(A) deployment check, before funding** and **(B) terms check, after the `Funded` event**; §2.2's `SELLER` row and `BUYER` row are corrected accordingly | §2.2, §2.3, G-37, §7.1, §7.2, AC-19, M-45 |
@@ -2527,7 +3087,7 @@ as an open question.
 | 8 | MAJOR | C-5's justification ("the upper bound is what kills M-23") is refuted by §5.3, which assigns M-23 to AC-10 | **adopted; the decision is unchanged, the reason is replaced.** C-5 now carries the **runtime** reason (an unbounded outward transfer is paid out of other deals' principal in the same token, and the contract would still write the terminal state), and states explicitly that **M-23 is killed by AC-10's multi-deal invariant independently of C-5's bound**. AC-10 and §8 say the same. `>=` is separately rejected because it does not rescue G-34 and would let an outbound-fee token over-pay | C-5, AC-10, §8 |
 | 9 | MAJOR | N-5's "seller-acceptance is a key" is too broad, and OQ-4 rests on it | **adopted.** N-5 is narrowed to *authority over the outcome of an already-funded deal*; **seller-acceptance is listed separately as consent to enter, explicitly not an outcome key**, and excluded **on scope grounds, not on claim grounds**. OQ-4 is rewritten so the founder decides on cost and demo surface (a fourth function is a declared surface change; a fourth state adds rows) instead of on a false claim-shape argument | N-5, N-6, OQ-4 |
 | 10 | MINOR | AC-13's marker-uniqueness assertion is false against this document | **adopted, and hardened one level further.** Round 3's first draft repeated the defect at the next level: the *full* `<!-- BEGIN MATRIX -->` string now occurs 3 times in this document (marker + AC-13's prose + this table) and the `KILLTABLE` one 4 times, so a substring count is wrong too. The rule is therefore **anchored to a whole line** (`^<!-- BEGIN MATRIX -->$` etc.), for both the uniqueness assertion and the extraction; measured 2026-09-04: anchored `1/1/1/1`, unanchored `3/3/4/4`. AC-14's reproduction command carries the anchors and a note saying why | AC-13, AC-14 |
-| 11 | MINOR | AC-1's Falsify arithmetic is wrong on both numbers | **adopted, and re-derived for the new checks.** The source-text set is **16**; deleting check 9 alone leaves M-35/M-36/M-37 surviving (M-41 still dies at check 12, M-42 at check 11), so the line reads `16 source mutants, 13 rejected`. The three-check deletion is given as the full falsifier: `16 source mutants, 11 rejected; exit-corpus 0/13 rejected` | AC-1 |
+| 11 | MINOR | AC-1's Falsify arithmetic is wrong on both numbers | **adopted, and re-derived for the new checks.** The source-text set is **16**; deleting check 9 alone leaves M-35/M-36/M-37 surviving (M-41 still dies at check 12, M-42 at check 11), so the line reads `16 source mutants, 13 rejected`. The three-check deletion is given as the full falsifier: `16 source mutants, 11 rejected; exit-corpus 0/13 rejected`. **r4 correction:** that broad falsifier's exact residue was **not** defensible — E-9/E-10/E-13 are also rejected by checks 6/13, which the deletion leaves in place — and it is replaced in AC-1 by two minimal falsifiers carrying exact, runnable numbers | AC-1 |
 | 12 | MINOR | D-4 and D-7 cite wrong lines | **adopted, with r2's own correction corrected.** `grep -n "12 tests" README.md` → **706**, not 700 (r2's replacement) and not 669 (r2's original); the first site spans **`:550-551`**. D-7: `STATUS.md:39-40` is the review table and `001-keyless-timeout` occurs nowhere in `STATUS.md` — **there is nothing to fix there**, so D-7's obligation is rewritten to what is actually needed | D-4, D-7 |
 | 13 | MINOR | the gag rule is an unspecified grep | **adopted.** A literal case-insensitive ERE is given in §7.1, together with the exact files it is run over. The substance (refusing to claim the window covers proving time) is kept, and is now **more** necessary, not less, because a number exists for the wrong guest | §7.1 |
 | 14 | MINOR | termination is left open for AC-15 | **adopted.** §5.0.2 pins the whole call graph as a DAG, forbids `ac.sh --all` inside `gauntlet.sh`, limits `gauntlet.sh` to the 13 forge ACs individually, requires the five harness scripts to be invoked **directly**, states the maximum depth (3), and makes `gauntlet.sh --check` (check 10) assert the rules mechanically. The same rule does double duty as part of AC-18's self-reference fix | §5.0.2, AC-13 check 10, AC-18 |
@@ -2553,3 +3113,59 @@ strongest sentence in this document about the value exits is *"the enumeration c
 without a visible edit to `scripts/no-keys.sh`"*, and §8 states three specific things that
 sentence does not cover. The word "impossible" occurs only in §5.0.1's claim about a
 script's exit condition and in §8's restatement of it, and §8 says so explicitly.
+
+---
+
+## Appendix B — response to `docs/reviews/003-spec-r3.md` (round 4)
+
+All 8 findings (BLOCKER 3 / MAJOR 3 / MINOR 2), with where each landed. Same vocabulary as
+Appendix A: `adopted` = the reviewer's required change is implemented as written;
+`stronger` = a change that meets the stated requirement and goes further, with the reason;
+`founder` = returned as an open question.
+
+| # | sev | finding | disposition | where |
+|---|---|---|---|---|
+| 1 | **BLOCKER** | `L_plain` is **forced** to contain `transfer` / `transferFrom` / `balanceOf` (check 12 pins the declaration lines that produce those tokens), so a function-type local *named* `transfer` passes all 13 checks and drains the same-token pool; corpus E-11 passed only because its author named the local `f` | **stronger — both of the reviewer's candidates, not one.** (a) **9c**: the `function` keyword is closed to the six pinned declarations, so a function-type variable, parameter, return, mapping value and a file-level function die together **whatever they are named**; this also closes check 2's own `function +` whitespace gap (`scripts/no-keys.sh:46`). (b) **9b-range**: the four token names are permitted as *plain* calls only inside `IERC20Min`'s declaration range, the same "0 elsewhere" shape 9a already uses. (c) A third, independent rejection falls out of check 14 (the LHS `function(…) transfer` matches neither `D` nor `L`). **E-11's stated reason is corrected** to 9c/14/9b and the name-dependence is called out; the splice is added as corpus **E-14** and as source-text mutant **M-46**, whose stated purpose is that the rejection does not depend on the name. `L_plain` keeps the three token names (check 12 needs them) and **loses** `function`, which 9c makes unreachable | §3.1.2 (P2), §4.5.3 (9b-range, 9c), §4.5.7, E-14, M-46, AC-1, R-8 |
+| 2 | **BLOCKER** | a funded deal's fields can be rewritten from `fund` with **no call-shaped token at all** (`deals[victimDealId].seller = attacker;` via `fund(freshId, attacker, token, 0, victimDealId)`); INV-2 is the only invariant in §4.4 with neither instrument; AC-11 looks only at the same `dealId`; no AC says a `Funded` deal's struct is immutable | **adopted, all three parts, plus the invariant the reviewer asked for.** (a) **Mechanical:** **check 14** closes assignment targets per function range — the same construction check 8 uses for the constructor — together with **14a**, which closes the *enumeration of storage-writing source constructs* (`=`, compound assignment, `++`/`--`, `delete`; `assembly`'s `sstore` was already dead at checks 6/13). This is a property, not a name list: `deals[k]` for any `k ≠ dealId`, and `d.<field>` for any field but `state`, fail together. Lexical, no parser (N-10). (b) **Behavioural:** new invariant **INV-2c** (*a `Funded` deal's struct changes only through the two exits, and then only in `state`*) with two instruments — AC-10's `invariant_AC10_G38_funded_structs_immutable` over the existing handler, and AC-11's targeted `G-38` test, which asserts **both** struct identity **and** that the honest proof still pays the original seller. Two **handler obligations** are written down (the `fund` action must draw `dealBinding` from existing dealIds; `amount == 0` must be reachable) without which the invariant is decoration. (c) **Matrix and enumeration:** row **G-38** (class C, theft) and the §4.3 non-transition row *`Funded → Funded` with different fields*; §3.1.3's class-C bullet names the foreign-key write. Mutants **M-47** (guarded, killed structurally per R-5) and **M-48** (unguarded, killed by AC-11). §8 gains a bullet for what check 14 does and does not establish | §3.1.2 (P3), §3.1.3, G-38, §4.3, **INV-2 instruments**, **INV-2c**, **§4.5.6**, AC-10, AC-11, M-47, M-48, §6.3, §8, R-8 |
+| 3 | **BLOCKER** | M-34 (every body `revert()`) breaks `setUp`, so its column marks all 44 tests `Failure` and satisfies AC-21 for all of them at once; AC-21's own Falsify cannot be observed non-zero; setUp-safety was guaranteed for 5 of 28 columns | **adopted, with the mechanical half the reviewer asked for.** **§5.4a** makes setUp-safety a **precondition on membership**, two ways: a **pinned exclusion list** `{M-34}` (held in the spec *and* the script, printed as `sweep.excluded_columns`, checked by AC-13 check 14 — so `sweep.columns` stays a predictable `24 − 1 + 5 = 28`), and a **setUp probe** per column per test file — a sandbox-only `SweepProbe_F` that *inherits* `F`'s `setUp()` and contains one `assertTrue(true)` test. A column whose probe fails and which is not on the pinned list makes the sweep **exit non-zero naming the column**; it is never dropped silently and never counted. M-34 keeps its kill-table cell under **AC-17**, which is a whole-suite criterion and the right instrument for it. AC-21's Falsify gains case (c) — re-admit M-34 and delete the probe assertion — as mutant **M-49**, and P7 is instructed to run Falsify (a) and observe it non-zero before reporting green (R-6). **M-33 is examined rather than assumed**: if any `setUp` settles the real fixture proof, M-33's probe fails, and §5.4a states the preferred resolution (move the settlement out of `setUp`) and forbids a silent drop. General rule recorded as **R-9** | **§5.4a**, AC-21, AC-17, §5.4, §7.1, §7.2, AC-13 check 14, M-49, §6.3, §8, R-9, OQ-7 |
+| 4 | MAJOR | C-5 **masks** M-23, so "AC-10 kills M-23 independently of C-5's bound" is false of the contract actually mutated; AC-10's Falsify is false too | **adopted, option (c).** M-23 is redefined as the **compound** patch: pay `balanceOf(address(this))` **and** drop C-5's check in that function, so the drain is real and INV-4 genuinely breaks. The false parenthetical at C-5 is **deleted** and replaced by the reviewer's own mechanism (C-5 reverts the over-payment and rolls back the terminal state, so no invariant at any handler width can see it). AC-10's Falsify is re-derived: one deal in one token ⇒ `balanceOf(this) == d.amount` and the drain is invisible. §8's bullet is rewritten to the honest statement: **C-5's bound is justified at runtime and is not evidenced by a mutant, because C-5 masks the mutant that would evidence it.** Appendix A row 8 is left as the round-3 record and this row is its correction | C-5, AC-10, §8, §5.3 |
+| 5 | MAJOR | one `src` serves two checks that need two: check 11 pins the `import` line **including its path string**, which string-stripping deletes, so check 11 cannot pass on the real file and M-0 must be accepted | **adopted.** §4.5.1 defines **three** texts in a table — `body` (unchanged), **`src_calls`** (strings removed, newlines collapsed; checks 9, 13) and **`src_decl`** (strings kept, newlines kept; checks 11, 12) — says which check reads which, and states that the import path is pinned in `src_decl`, in the only text that still contains it. The check table's scope column is updated for 9/11/12/13 | §4.5.1, §4.5.2, §4.5.3, §4.5.4, §4.5.5 |
+| 6 | MAJOR | the stripper carries the whole of property P and is specified in one sentence; the corpus tests only **under**-stripping (C-P), never **over**-stripping, which is the direction that hides code | **adopted.** §4.5.1 states the stripper's obligation as a **property** (*a call-shaped token in code must survive stripping; one inside a comment or a string literal must not*), derives from it that the stripper must be **token-wise, not line-wise**, and names the existing line-wise rule at `scripts/no-keys.sh:30` as the thing being replaced. Corpus **E-15** (exit hidden between two same-line string literals) and **E-16** (between two same-line block comments) must be **REJECTED**; control **C-S** (two legitimate string literals, no call between them) must be **ACCEPTED**, so the stripper cannot pass E-15/E-16 by refusing all strings. Controls go 2 → **3** and the evidence string carries the new count | §4.5.1, §5.2.1 (E-15, E-16, C-S), §4.5.9, AC-1, §6.3 |
+| 7 | MINOR | §5.0.1 says AC-21 covers "zero assertions" (it covers zero *sensitivity*); §8's residual for property P is stated too narrowly | **adopted.** §5.0.1 is brought down to *zero sensitivity* **with the counter-example spelled out** (`vm.warp(deadline); escrow.refundAfterDeadline(id);` asserts nothing and is `Failure` under SW-1, so it passes AC-21). §8's residual is widened to name **operand corruption** alongside token-free value movement, and — because check 14 now exists — §8 also states what check 14 itself does not establish, so the residual does not silently shrink to zero on paper | §5.0.1, §8 |
+| 8 | MINOR | OQ-4's third bullet credits seller-acceptance with closing G-33, and it does not | **adopted.** The bullet is replaced: acceptance buys a **recorded on-chain attestation point** (a demo asset), and the text now states explicitly that the G-33 benefit is **zero**, with the reason — `refundDelay` is an immutable construction parameter readable before any deal exists (part 4 of §2.3 A), and acceptance does not gate `refundAfterDeadline`. N-5's narrowing is untouched | OQ-4 |
+
+**Also landed in round 4, from the orchestrator's ruling of 2026-09-04** (not a review
+finding): **§1.5** and **D-11**. Execution order is `008 → 003`, so 008's `surfaces.pinned`
+(a pinned `sha256` of the contract source) already exists when 003 edits the contract, and
+003 necessarily breaks it. The rule is stated once, in one place: **a surface change moves
+three things in one commit — `AGENTS.md` §0's enumerated surface, `scripts/no-keys.sh`, and
+`surfaces.pinned`** — and the re-pin is a **copy of the digest `surfaces.sh` prints**, never
+a hand computation. `docs/specs/008-*` is not edited.
+
+**Explicitly not re-litigated** (r3 "Checked and found sound", re-read before writing this
+round): OQ-6's guest split and the gag rule; the two Honest-scope digests; the internal
+arithmetic method (`T` by the anchored expression, Σ by the manifest column, the anchored
+marker counts); the fact that the pinned call counts do **not** over-forbid the correct
+implementation (001's refund path is already inside `transfer: 2` / `balanceOf: 6`);
+inheritance, `using for`, `receive`/`fallback`, `constructor` and `modifier` closure; N-5's
+narrowing; D-10's surface declaration; the timeout design and 001's four acceptance
+conditions; INV-9's binding formula and the `u64_low` assignment to task 008. The one
+addition to that list is a **sentence**, not a mechanism: §4.5.7 now says out loud why a
+`modifier` is closed, which r3 noted was true but unstated.
+
+**What changed in size (round 3 → round 4):** matrix rows 37 → **38** (theft 20 → **21**);
+acceptance criteria **22** (unchanged); mutant ids 48 → **52**; `no-keys.sh` checks 13 →
+**14**; derived texts 2 → **3**; exit-corpus entries 13 → **16**; selftest controls 2 →
+**3**; gauntlet tests 44 → **46**; suite total 56 → **58**; sweep columns **28** (23
+behavioural + 5 sweep → 23 admitted behavioural + 5 sweep, with one excluded by a pinned
+list); numbered anti-degeneracy rules R-1…R-7 → **R-1…R-9** (plus R-2b, unchanged).
+Every one of those numbers except the rule count is recomputed by
+`scripts/gauntlet.sh --check` (AC-13), so this paragraph cannot drift either.
+
+**Three things round 4 refused to do.** (1) **Extend a syntax check to chase the two
+exploits.** Both are closed by a new *property* (P2: nothing new can become callable; P3:
+nothing else can be assigned to) and both exploits appear only as witnesses — R-7, and R-8
+now records the diagnosis that produced them. (2) **Rescue AC-21 by narrowing its
+assertion.** The assertion is unchanged; what changed is which columns may be read, and the
+gate is mechanical and printed. (3) **Say that anything is impossible.** §8 gained two
+residuals in this round and lost none.
