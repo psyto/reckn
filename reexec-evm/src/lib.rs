@@ -727,6 +727,25 @@ pub mod testkit {
     // (loads calldata[0:32] as the value, pushes slot 7, SSTOREs, halts).
     pub const SSTORE_SLOT7_RUNTIME: [u8; 6] = [0x5f, 0x35, 0x60, 0x07, 0x55, 0x00];
 
+    pub struct PrestateSpec {
+        pub caller: Address,
+        pub target: Address,
+        pub caller_nonce: u64,
+        pub target_code: Bytes,
+        pub coinbase: Address,
+        pub slot7: SlotSpec,
+        pub extra_accounts: Vec<(Address, U256, Bytes)>,
+        pub extra_slots: Vec<(Address, U256, U256)>,
+        pub empty_account_proof_for: Option<Address>,
+    }
+
+    #[derive(Clone, Copy)]
+    pub enum SlotSpec {
+        Value(U256),
+        AbsentWithExclusionProof,
+        EmptyProofZero,
+    }
+
     pub fn addr(b: u8) -> Address {
         Address::from([b; 20])
     }
@@ -800,12 +819,7 @@ pub mod testkit {
         target: Address,
         caller_nonce: u64,
     ) -> (EvmAnchorV1, PrestateWitnessV1) {
-        anchored_witness_with_code(
-            caller,
-            target,
-            caller_nonce,
-            Bytes::from_static(&IDENTITY_RUNTIME),
-        )
+        anchored_witness_with_code(caller, target, caller_nonce, Bytes::from_static(&IDENTITY_RUNTIME))
     }
 
     /// A prestate whose `target` runs the SSTORE fixture, so a plan's calldata
@@ -815,12 +829,7 @@ pub mod testkit {
         caller: Address,
         target: Address,
     ) -> (EvmAnchorV1, PrestateWitnessV1) {
-        anchored_witness_with_code(
-            caller,
-            target,
-            0,
-            Bytes::from_static(&SSTORE_SLOT7_RUNTIME),
-        )
+        anchored_witness_with_code(caller, target, 0, Bytes::from_static(&SSTORE_SLOT7_RUNTIME))
     }
 
     /// Shared body behind the identity/SSTORE fixtures: `target` runs
@@ -832,12 +841,81 @@ pub mod testkit {
         caller_nonce: u64,
         target_code: Bytes,
     ) -> (EvmAnchorV1, PrestateWitnessV1) {
-        let coinbase = addr(0xc0);
+        anchored_witness(PrestateSpec {
+            caller,
+            target,
+            caller_nonce,
+            target_code,
+            coinbase: addr(0xc0),
+            slot7: SlotSpec::Value(U256::from(42u64)),
+            extra_accounts: vec![],
+            extra_slots: vec![],
+            empty_account_proof_for: None,
+        })
+    }
+
+    /// Build a proof-carrying prestate from an explicit fixture description.
+    pub fn anchored_witness(spec: PrestateSpec) -> (EvmAnchorV1, PrestateWitnessV1) {
+        let PrestateSpec {
+            caller, target, caller_nonce, target_code, coinbase, slot7,
+            extra_accounts, extra_slots, empty_account_proof_for,
+        } = spec;
         let storage_slot = U256::from(7u64);
-        let storage_value = U256::from(42u64);
         let storage_key = keccak256(storage_slot.to_be_bytes::<32>());
-        let (target_storage_root, storage_proofs) =
-            trie_with_proofs(vec![(storage_key, alloy_rlp::encode(storage_value))]);
+        let mut storage_entries = Vec::new();
+        let (storage_value, target_storage_root, slot7_proof) = match slot7 {
+            SlotSpec::Value(value) => {
+                storage_entries.push((storage_key, alloy_rlp::encode(value)));
+                for (address, slot, value) in &extra_slots {
+                    if *address == target {
+                        storage_entries.push((keccak256(slot.to_be_bytes::<32>()), alloy_rlp::encode(*value)));
+                    }
+                }
+                let (root, proofs) = trie_with_proofs(storage_entries);
+                (value, root, proofs[&storage_key].clone())
+            }
+            SlotSpec::AbsentWithExclusionProof => {
+                let other_slot = U256::from(9u64);
+                storage_entries.push((keccak256(other_slot.to_be_bytes::<32>()), alloy_rlp::encode(U256::ONE)));
+                for (address, slot, value) in &extra_slots {
+                    if *address == target {
+                        storage_entries.push((keccak256(slot.to_be_bytes::<32>()), alloy_rlp::encode(*value)));
+                    }
+                }
+                let (root, proof) = trie_with_exclusion_proof(storage_entries, storage_key);
+                (U256::ZERO, root, proof)
+            }
+            SlotSpec::EmptyProofZero => (U256::ZERO, EMPTY_ROOT_HASH, vec![]),
+        };
+
+        let mut target_storage = vec![StorageWitnessV1 {
+            slot: storage_slot,
+            value: storage_value,
+            proof: slot7_proof,
+        }];
+        for (address, slot, value) in &extra_slots {
+            if *address == target {
+                let key = keccak256(slot.to_be_bytes::<32>());
+                let proof = match slot7 {
+                    SlotSpec::EmptyProofZero => vec![],
+                    _ => {
+                        let mut entries = Vec::new();
+                        match slot7 {
+                            SlotSpec::Value(value) => entries.push((storage_key, alloy_rlp::encode(value))),
+                            SlotSpec::AbsentWithExclusionProof => entries.push((keccak256(U256::from(9u64).to_be_bytes::<32>()), alloy_rlp::encode(U256::ONE))),
+                            SlotSpec::EmptyProofZero => {}
+                        }
+                        for (other_address, other_slot, other_value) in &extra_slots {
+                            if *other_address == target {
+                                entries.push((keccak256(other_slot.to_be_bytes::<32>()), alloy_rlp::encode(*other_value)));
+                            }
+                        }
+                        trie_with_proofs(entries).1[&key].clone()
+                    }
+                };
+                target_storage.push(StorageWitnessV1 { slot: *slot, value: *value, proof });
+            }
+        }
 
         let caller_code = Bytes::new();
         let caller_account = TrieAccount {
@@ -863,14 +941,26 @@ pub mod testkit {
         let caller_key = keccak256(caller.as_slice());
         let target_key = keccak256(target.as_slice());
         let coinbase_key = keccak256(coinbase.as_slice());
-        let (state_root, account_proofs) = trie_with_proofs(vec![
+        let mut account_entries = vec![
             (caller_key, alloy_rlp::encode(caller_account)),
             (target_key, alloy_rlp::encode(target_account)),
             (coinbase_key, alloy_rlp::encode(coinbase_account)),
-        ]);
+        ];
+        let mut extra_witnesses = Vec::new();
+        for (address, balance, code) in extra_accounts {
+            let account = TrieAccount {
+                nonce: 0,
+                balance,
+                storage_root: EMPTY_ROOT_HASH,
+                code_hash: keccak256(code.as_ref()),
+            };
+            let key = keccak256(address.as_slice());
+            account_entries.push((key, alloy_rlp::encode(account)));
+            extra_witnesses.push((address, account, code, key));
+        }
+        let (state_root, account_proofs) = trie_with_proofs(account_entries);
 
-        let witness = PrestateWitnessV1 {
-            accounts: vec![
+        let mut accounts = vec![
                 AccountWitness {
                     address: caller,
                     balance: caller_account.balance,
@@ -889,11 +979,7 @@ pub mod testkit {
                     code_hash: target_account.code_hash,
                     code: target_code,
                     account_proof: account_proofs[&target_key].clone(),
-                    storage: vec![StorageWitnessV1 {
-                        slot: storage_slot,
-                        value: storage_value,
-                        proof: storage_proofs[&storage_key].clone(),
-                    }],
+                    storage: target_storage,
                 },
                 AccountWitness {
                     address: coinbase,
@@ -905,9 +991,53 @@ pub mod testkit {
                     account_proof: account_proofs[&coinbase_key].clone(),
                     storage: vec![],
                 },
-            ],
-        };
-        (anchor(state_root), witness)
+            ];
+        for (address, account, code, key) in extra_witnesses {
+            accounts.push(AccountWitness {
+                address,
+                balance: account.balance,
+                nonce: account.nonce,
+                storage_root: account.storage_root,
+                code_hash: account.code_hash,
+                code,
+                account_proof: account_proofs[&key].clone(),
+                storage: vec![],
+            });
+        }
+        if let Some(address) = empty_account_proof_for {
+            accounts.push(AccountWitness {
+                address,
+                balance: U256::ZERO,
+                nonce: 0,
+                storage_root: EMPTY_ROOT_HASH,
+                code_hash: keccak256([]),
+                code: Bytes::new(),
+                account_proof: vec![],
+                storage: vec![],
+            });
+        }
+        let mut result_anchor = anchor(state_root);
+        result_anchor.coinbase = coinbase;
+        (result_anchor, PrestateWitnessV1 { accounts })
+    }
+
+    fn trie_with_exclusion_proof(entries: Vec<(B256, Vec<u8>)>, target: B256) -> (B256, Vec<Bytes>) {
+        let mut entries = entries;
+        entries.sort_unstable_by_key(|(key, _)| *key);
+        let mut builder = HashBuilder::default().with_proof_retainer(ProofRetainer::from_iter([
+            Nibbles::unpack(target),
+        ]));
+        for (key, value) in &entries {
+            builder.add_leaf(Nibbles::unpack(*key), value);
+        }
+        let root = builder.root();
+        let proof: Vec<Bytes> = builder.take_proof_nodes().matching_nodes_sorted(&Nibbles::unpack(target))
+            .into_iter().map(|(_, node)| node).collect();
+        assert!(
+            verify_proof(root, Nibbles::unpack(target), None, proof.iter()).is_ok(),
+            "testkit exclusion proof must verify"
+        );
+        (root, proof)
     }
 }
 
@@ -1354,4 +1484,5 @@ mod tests {
         assert_eq!(a.trace_hash, b.trace_hash, "same inputs -> same trace hash");
         assert_eq!(a.result_hash, b.result_hash);
     }
+
 }

@@ -46,6 +46,19 @@ pub struct GuestPlan {
     pub gas_limit: u64,
 }
 
+/// The committed EVM block environment the guest applies before replay.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct GuestEnv {
+    pub chain_id: u64,
+    pub spec_id: u8,
+    pub block_number: u64,
+    pub timestamp: u64,
+    pub base_fee: u64,
+    pub block_gas_limit: u64,
+    pub coinbase: [u8; 20],
+    pub prevrandao: [u8; 32],
+}
+
 /// A causal delta check on one storage slot: after execution, `post - pre`
 /// (saturating) must lie in `[min, max]`. `pre` is the committed prestate value
 /// of the slot; `post` is what the guest's re-execution produces.
@@ -53,15 +66,15 @@ pub struct GuestPlan {
 pub struct DeltaCheck {
     pub address: [u8; 20],
     pub slot: [u8; 32],
-    pub min: u64,
-    pub max: u64,
+    pub min: [u8; 32],
+    pub max: [u8; 32],
 }
 
 /// Everything the guest needs to prove prestate authenticity, re-execute, and
 /// adjudicate one deal.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct GuestInput {
-    pub chain_id: u64,
+    pub env: GuestEnv,
     /// The committed anchor state root the prestate is proven against, and which
     /// the verdict's trace hash binds — so the proof is *about a specific state*.
     pub state_root: [u8; 32],
