@@ -39,10 +39,85 @@
 | 003 key gauntlet（001 を内包） | spec | r1 | **CHANGES** | `docs/reviews/003-spec-r1.md` |
 | 003 key gauntlet（001 を内包） | spec | **r2** | **CHANGES** | `docs/reviews/003-spec-r2.md` |
 | 003 key gauntlet（001 を内包） | spec | **r3** | **CHANGES** | `docs/reviews/003-spec-r3.md` |
+| 003 key gauntlet（001 を内包） | spec | **r4** | **CHANGES** | `docs/reviews/003-spec-r4.md` |
 | 004 live adversarial input | spec | r1 | **CHANGES** | `docs/reviews/004-spec-r1.md` |
 | 004 live adversarial input | spec | **r2** | **CHANGES** | `docs/reviews/004-spec-r2.md` |
 | **008 verdict domain soundness** | spec | r1 | **CHANGES** | `docs/reviews/008-spec-r1.md` |
 | **008 verdict domain soundness** | spec | **r2** | **CHANGES** | `docs/reviews/008-spec-r2.md` |
+
+## 003 spec review r4（2026-09-04）— **CHANGES**
+
+記録: `docs/reviews/003-spec-r4.md`（payload `/tmp/reckn-payload-003-spec-r4.md` /
+Codex raw `/tmp/reckn-codex-003-spec-r4.md`、呼び出しは 1 回・`-s read-only`）。
+対象 `docs/specs/003-key-gauntlet.md`（3171 行）は `reckn-spec`（Claude Code）起草＝
+**Codex は自分の宿題を採点していない**（payload §0 に明記）。Codex 4件は**全件が検証を通過**し
+採用（2件は訂正・拡張のうえ）、**私の独立検出 7件**を追加。
+残った **11 findings（BLOCKER 2 / MAJOR 4 / MINOR 5）**。
+
+**r4 は、エスクロー本体の縫い目が初めて再び開かなかった回。** r3 finding 1/2/3 への3つの閉鎖
+（check 9c＝`function` キーワードの閉鎖 / check 14＝代入左辺の閉鎖 / §5.4a＝setUp probe）は、
+`RecknZkEscrow.sol` の内側では**手検証で破れなかった**（`using for` / 継承 / library / `type(…)` /
+`abi.encodeWithSelector` / modifier（`deals` と命名したものを含む）/ 関数型 struct フィールド /
+2つ目の `Deal storage` を全て個別に当てた。**どの棄却も名前に依存していない**）。
+
+**そして今回の決定的な2件は、その本体の話ではない。枠の縁で破れている。**
+
+1. **[BLOCKER] 決済権限の経路が、検査対象のファイルの外に出る。**
+   `scripts/no-keys.sh:19` の対象は `RecknZkEscrow.sol` **1本だけ**。しかし `settleWithProof` は
+   `RecknVerdictVerifier.verifyVerdict`（`RecknVerdictVerifier.sol:50-57`、同じディレクトリ、
+   **監査対象のデプロイの内側**）が返す struct に従う。そこに定数キーの分岐を1つ足せば、
+   名指しされた1アドレスが**任意の funded deal を proof 無しで両方向どちらにも決済できる**＝
+   resolver そのもの。14 checks 全通過・18 source mutants 全通過・16 corpus 全通過・
+   fuzz は 2^-160（**R-5 自身の規則**）・kill table に当該ファイルの mutant は**ゼロ**。
+   G-29 は「**自分で**別のエスクローをデプロイ」の行、G-37 は「別 bytecode のエスクロー」で、
+   どちらも**この経路ではない**。§8 の「this file の外は frame の外」の一文だけが掠っており、
+   ファイル名を書いておらず、money-shot には反映されていない。
+   → 閉じ方は2択（(a) check 15 を追加＝`no-keys.sh` は自分の位置から target を導出しているので
+   **引数追加ではなく N-9 に触れない** / (b) frame 外と裁定するなら §8・§2.3(A)・§7.2 に明記）。
+   **どちらでもよいが、無言は不可。**
+
+2. **[BLOCKER] 003 は「008 の後に走る」と自分で書きながら、008 以前のツリーに対して書かれている。**
+   `AGENTS.md` §3 の実行順は `008` → `003`。008 の OQ-2 は
+   *「これは実装開始前に答えが要る唯一の未決。003 がやることを変えるから」*と 003 に宛てて書いている。
+   003 の §1.5 は**3つのうち1つ（`surfaces.pinned`）にしか答えておらず、しかもパスが違う**
+   （008 は `zk-verdict/scripts/` に置く。003 は `ls scripts/` を見て「存在しない」と書いた）。
+   実測で確認した食い違い: **既存テスト数 12 → 18**（008 が 6本追加。003 の 58 は **64** になる。
+   `suite: 58/58 passed` と `control 58/58 pass` は `ac.sh` が**逐語比較**する manifest 文字列）、
+   **Honest-scope digest**（008 が書き換えると明言。003 の AC-16 は旧値を literal で pin し
+   「003 では変わらない」と書いている＝初日に赤、しかも通す唯一の道が「pin した digest を編集する」
+   ＝AC-16 が禁じている当のこと）、**binding が v1 → v2** で式の形自体が変わる（003 の INV-9）、
+   **`VerdictPublicValues` が `uint64` → `uint256`** で `u64_low` 切り捨てが消える
+   （003 の INV-10 と §8 の「003 の後も全く同じに真」）。後半3つは**何にも検査されない散文**として出荷される。
+   → 修正は「008 の数値を貼る」ではない（008 は審査中で、その literal はまだ事実でない）。
+   **003 側を測定に変える**: §1.5 に再測定義務、AC-16 の digest は base commit で印字、
+   AC-17/AC-21/§7.1 の総数は `46 + <測定値>`、INV-9/INV-10/§8 は参照で書く。
+
+**MAJOR 4件**（いずれも「観測する側」の欠陥。R-9 が言う *criterion satisfied by breaking its own
+observer* の形）: ③ `script` AC の evidence 規則にある *「何も走らせていないスクリプトはこれを
+印字できない」*（`:1236-1237`）が**偽**——2行の echo で `mutation-kill.sh` と
+`degeneracy-sweep.sh` を置換すると **AC-14 と AC-21 が緑**になる。この2つは §5.0.1 が
+*「gap を狭める道具はこの2つだけ」*と名指ししている当のもの。r2 finding 2 で削除した文と
+**同型の文が一段上に再発**（AC-1 は AC-14 の Falsify で守られている＝Codex の主張を1件訂正）。
+④ **stripper の2つの区切り族が互いに当てられていない**——コーパス E-15/E-16/C-S は
+文字列だけ・コメントだけで、実際のバグ族である**交差**（文字列の中の `//`、コメントの中の `"`）が
+無い。`string memory ref = "https://reckn.dev"; IERC20Min(token).transfer(seller, amount);`
+は、コメント先・文字列後の2パス実装（**今日の `no-keys.sh:30` がまさにその形**）で `.transfer(` が
+消え、**14 checks 全通過のまま `fund` から資金が出る**。⑤ `SweepProbe_F is FTest` は
+**継承したテストも全部走る**ので probe を exit status で読めず、pin された `control 58/58` も
+到達不能。⑥ AC-14 の mutant クラス内訳（23/16/8）と**レビュア再現コマンドの注記 `# 48`** が
+1ラウンド古い（実測 `T` = **52**、§5.4a は 24 と書いていて文書内で矛盾）。
+
+**MINOR 5件**: AC-21 散文の 44/56 と D-4 の「expected 56」/ §4.5.1 の3操作の順序と check 9 の
+range が collapsed テキスト上で未定義 / 列除外リストに上限が無い（`SWEEP_EXEMPT.txt` は 2 で上限）/
+§8 の *「C-5 がその mutant を隠すから証拠は無い」*は事実より強い（`==`→`>=` ＋ outbound-fee token は
+**隠れない**。§4.1 が既にそう書いている）/ AC-10 の handler 義務2つに instrument が無い。
+
+**却下ゼロ。訂正2件**（Codex の「AC-1 も同型」は誤り＝AC-14 の Falsify が守る。
+Codex は 008 依存の**最大の項目である既存テスト数**を落としていた）。
+
+**残り 2 round。** 本体の機構が破れなかったのは初めてで、findings 1/2 はどちらも縁の編集で
+範囲が限定されている。r5 で閉じられる形。ただし **MAJOR 3〜6 は全て「観測者」に関する主張**であり、
+この文書の履歴では観測者こそ次の層が隠れている場所。
 
 ## 003 spec review r3（2026-09-04）— **CHANGES**
 
