@@ -515,4 +515,8 @@ AC-11(a) の静的リテラル検査は base64 化 1 行で抜けられ、AC-11(
 ## 未送付 / 未実行
 
 - 事前開示の送付（founder の手）
-- `psyto/reckn` の public 化（**提出時**、founder の合図で）
+- ~~`psyto/reckn` の public 化~~ → **2026-09-04 実施済み**（founder の合図により、提出時でなく
+  応募審査のために前倒し。ETHOnline の Hack on Existing Project は「提供された情報のみ」で
+  審査されるため、source link が機能しないと審査が成立しない）。公開前に走査済み:
+  `.env` / 秘密鍵 / keypair / mnemonic / PEM いずれも追跡下に無し、`.DS_Store` 未追跡、
+  LICENSE は Apache-2.0。
