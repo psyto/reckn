@@ -42,6 +42,7 @@
 | 004 live adversarial input | spec | r1 | **CHANGES** | `docs/reviews/004-spec-r1.md` |
 | 004 live adversarial input | spec | **r2** | **CHANGES** | `docs/reviews/004-spec-r2.md` |
 | **008 verdict domain soundness** | spec | r1 | **CHANGES** | `docs/reviews/008-spec-r1.md` |
+| **008 verdict domain soundness** | spec | **r2** | **CHANGES** | `docs/reviews/008-spec-r2.md` |
 
 ## 003 spec review r3（2026-09-04）— **CHANGES**
 
@@ -88,6 +89,95 @@ Honest scope の 2 digest は再計算して一致。文書内の算術（`T`=48
 
 **round 4 は短いはず**: BLOCKER 3件はいずれも1節＋corpus/mutant 1件の局所修正で、
 matrix・manifest・算術・開示・honest-scope 凍結は検証に耐えた。**r6 hard stop まで残り 3 周。**
+
+## 008 spec review r2（2026-09-04）— **CHANGES**
+
+記録: `docs/reviews/008-spec-r2.md`（payload `/tmp/reckn-payload-008-spec-r2.md` /
+Codex raw `/tmp/reckn-codex-008-spec-r2.md`、呼び出しは 1 回・`-s read-only`）。
+対象 `docs/specs/008-verdict-domain-soundness.md`（**1731 行**）は `reckn-spec`（Claude Code）起草＝
+**Codex は自分の宿題を採点していない**（payload の 1 行目に明記）。Codex 3件（BLOCKER 2 / MAJOR 1）
+→ **3件とも採用**（うち2件は呼び出し前に私も独立に到達、1件＝AC-7a は私が見落としていた）。
+**私の独立検出 5件**を追加。残った **8 findings（BLOCKER 2 / MAJOR 4 / MINOR 2）**。
+**Codex 却下ゼロ** — r1 では BLOCKER 1件が偽の前提だったが、今回は反証できた主張が無い。
+
+**BLOCKER 2件は同じ種**:
+
+1. **G-1/G-2/G-3 は prover のマシン上のチェック**（`to_guest_input` は host 関数）。
+   仕様自身が `:308-311` で「**prover が敵対者であり、guest との間に sanitiser は無い**」と
+   書いている。既存の `zk-verdict/script/src/bin/reexec.rs:123-140,164-166` が
+   `GuestInput` を構造体リテラルで組んで `stdin.write` しており、**host 関数を呼ばない prover は
+   何も失わない**。実害があるのは G-2 だけ（G-1/G-3 は迂回しても新しい能力を与えない）:
+   seller は witness の中身を選べ、`dealBinding` は**どの account が witness に入るかを縛らない**。
+   結果、**「Δ = `0x01`/`0x0a`/`0x0b`–`0x11` は到達不能」は偽**であり、その偽の文が
+   `:1602-1607`（§9(1)）経由で **`zk-verdict/README.md` の honest scope に出荷される予定**だった。
+   = 製品の定義上の失敗形（閉じていない健全性主張を閉じたものとして公開）。
+   修正は guest 内 P-12（`GuestInput` に対する構文チェック、実行トレース不要）＋ W-09。
+   **P-9（`:583`）が既に「off-chain analogue が無い panic」の正しい書き方の雛形になっている。**
+2. **AC-13 の 4 mutant は 16 AC のうち 4 しか守らない。**とくに **AC-3（13 tests）＝軸2
+   （「guest は `chain_id` しか設定していない＝同じ EVM を走らせていない」）に mutant がゼロ**。
+   軸1 には M-1/M-2 の 2つ。Codex が「**64 bit でなく 128 bit で切り詰める**」実装を構成し、
+   V-11 だけがそれを捕まえる唯一の body である一方 M-1 は依然 V-03 を反転させるので
+   `4/4 mutants detected` が出ることを示した（私が再検算して成立を確認）。
+   加えて **`kind = script` 行 8本は `echo` 一行で通る**（`:779-781` の契約が
+   「exit 0 かつ stdout に evidence 行」だけ）。委員会的に重いのは `fixtures-check.sh` —
+   r1 が「committed fixture を現行 guest に繋ぐ唯一のもの」と記録した行がスタブで通る。
+   → **M-5（env 適用の抹消→AC-03、guest 再ビルド1回）** と、
+   **コンパイル不要の M-8/M-9/M-10/M-12**（`RecknZkEscrow.sol` のコメント1バイト→AC-00b /
+   `u64_low` 再挿入→AC-06 / fixture の vkey 1バイト→AC-09 / `~410k` 挿入→AC-14）。
+   **これは文書中で最も安いリゴア**であり、vector を削る前に買うべき。
+
+**MAJOR 4件**: ③ G-3 は署名（`check: (Address,U256,U256,U256)` を取り `PredicateV1` を見ない）から
+**実装不能**で、D の第1節は enum variant が**存在する**ことだけで "enforced" になっている
+＝`AGENTS.md` §5 の「名前でなく本体」を仕様レベルで犯した ④ script 行の自己申告（上記）
+⑤ AC-7a の `state_root` 成分は「1成分だけ変えて実 ELF を2回」では**原理的に実行できない**
+（`main.rs:95-99` が binding より前に MPT 検証する）。加えて `plan.caller`/`plan.target`/
+`coinbase`/`check.address`/`check.slot` の5成分は witness-closed DB のせいで P-5/P-8 に落ちる
+（仕様は E-05 で同じ罠を自分で発見していたのに AC-7a に持ち込んでいない）
+⑥ `surfaces.pinned` は**それに縛られる実装者自身が作る**（仕様に期待 digest が無い）＋
+「testkit の `cfg` 行の**上**」が 711 行を含むか曖昧。→ 実測値を仕様に literal で書く:
+`RecknZkEscrow.sol` = `07d649c2…33e45b`、`head -710 reexec-evm/src/lib.rs` = `b4fd62d5…b29d1`。
+
+**MINOR 2件**: ⑦ AC-2 の V-10 の「guest today」が誤り（`2^128`→`2^128+1` は limb 0 が 0→1 で
+`Reproduced`＝**今日の guest は一致する**）。`u64` で表現できない `min`/`max` の扱いも
+V-13 と V-08/V-03/V-11 で不統一 ⑧ AC-11 が `zk-verdict/README.md:105-108`（「fixture の
+有無で gate されるので `forge test` は緑」）を偽にするのに AC-14 の削除リストに無い。
+
+**健全と確認したもの（round 3 で再審しない）**: r1 の 15件は**全部**答えられている。
+`vm.exists` 7件＝早期 return 7件（実測、両カウントは今日一致）、README の 3 行域
+（572-579 / 580-587 / 588-592）、AC-14(i) の 7 literal は**全部今日 grep で 1 件ヒット**、
+tilde regex は 14 件（naive は 12 件）、manifest 算術は 86 = 11+59+16 で閉じる、
+`binder` の testkit 依存（`Cargo.toml:26` / `tests/router_two_vms.rs:13`）、root `Cargo.toml` 不在。
+**空 MPT proof の訂正は 008 が正しく r1 の私が間違っていた** — `alloy-trie-0.9.5/src/proof/verify.rs:29-43`
+は空 proof でも `expected_value` が `Some` なら必ず `Err`、guest は account には常に
+`Some(rlp(TrieAccount))` を渡す（`main.rs:58-60`）ので **account 側は既に一致、storage 側だけが乖離**。
+Codex も独立に同じ結論。**tier 違反は発火せず**（AC-14(iv) は逆に cycle 数の持ち越しを禁止し
+ELF の sha256 まで要求している）。
+
+**9/9 に間に合うか（founder 判断の材料）**: 「縮んだのはカレンダーだけ」という主張は**概ね真**。
+sandbox 10コピー（実測 `du -sh .` = **21G** / `zk-verdict/target` = **6.8G**）→ in-place patch、
+12箇所の行番号 → 2 grep（実測で naive 版は 14 件中 2 件を取り逃す）、digest 2本 → literal 文。
+**86 テストは律速ではない**（59 本は4つの vector 表の行、被験コードは `main.rs` 202 行 /
+`lib.rs` 113 行 / `reexec-io` 72 行 / `.t.sol` 5本で 401 行）。Codex も独立に同じ判断。
+**律速は値段のついていない Groth16 再生成**: AC-9 は 4本すべてが**最終**の guest ELF と
+一致することを要求するので、guest に触る impl round のたびに 4本が無効化される。
+repo 内の唯一のコスト実測は `zk-verdict/README.md:97` の「~15.9M constraints, ~34 s」＝
+**predicate guest**（34 行）であって、410k cycles の再実行 guest（008 後はさらに増える）ではない。
+仕様は §7.5 で**報告**は求めるが**予算も停止条件も無い**（AC-13 という小さい方には両方ある）
+＝ r1 finding 3 と同型が場所を変えて再発。
+**→ 推奨は削減でなく順序**: ①**今日**、現行 guest で `reexec-groth16-fixture.json` を1本
+再生成して壁時計を測る。分単位なら日程は問題ない。時間単位なら**その数字が 9/9 を決める**。
+②fixture 再生成は Rust が impl APPROVE に達した**後に1回だけ**（§7.2 に明記）。
+③§7.5 に AC-13 と同じ形の予算＋停止条件。
+**それでも入らない場合の削減順**: AC-3 の E-11/E-12（仕様自身が「fidelity でなく agreement」と
+書いており AC-6 check 4 が無料で同じ面を見る）→ AC-8 を 6→2（5つの `FailReason` は同じ byte に
+写るので4本は同一の assertion）→ AC-1 の test 2（20万件の乱択。15⁴=50,625 の網羅が本体）→
+AC-12 test 2 → 最後に AC-16（ただし N-3 を明示的に取り下げる場合のみ）。
+**AC-1 の pool / AC-2 / AC-3 の E-01…E-10 / AC-4 / AC-7a,b / AC-9 / AC-10 / AC-13 / AC-0,0b は削らない。
+そして finding 2 の新 mutant を削減の財源にしない** — M-5 は上の11テストより価値が高い。
+
+**round 3 の見通し**: BLOCKER 2件はいずれも局所修正（① guest に構文チェック1つ＋vector 1本＋
+3つの文の書き換え ② patch ファイル 5〜7本、うち4本はコンパイル不要）。MAJOR も 1〜6 行ずつ。
+**r6 hard stop まで残り 4 周。**
 
 ## 008 spec review r1（2026-09-04）— **CHANGES**
 
