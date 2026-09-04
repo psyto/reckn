@@ -37,6 +37,7 @@
 | task | stage | round | verdict | 記録 |
 |---|---|---|---|---|
 | 003 key gauntlet（001 を内包） | spec | r1 | **CHANGES** | `docs/reviews/003-spec-r1.md` |
+| 004 live adversarial input | spec | r1 | **CHANGES** | `docs/reviews/004-spec-r1.md` |
 
 **003 spec r1（2026-09-04）— CHANGES。** Codex を独立レビュアとして1回呼び、5 findings を受領。
 自分で行単位に裁定し、**12 findings（BLOCKER 3 / MAJOR 6 / MINOR 3）**を残した。Codex 由来は
@@ -71,13 +72,49 @@ INV-9 の binding 式は `program-revm/src/main.rs:178-190` と一致。
 （finding 8）③`no-keys.sh` に target 引数を入れること自体（finding 12、`AGENTS.md` §0 は
 このチェックの緩和を founder 判断としている）。
 
+## 004 spec review r1（2026-09-04）— **CHANGES**
+
+記録: `docs/reviews/004-spec-r1.md`（payload `/tmp/reckn-payload-004-spec-r1.md` /
+Codex raw `/tmp/reckn-codex-004-spec-r1.md`、呼び出しは 1 回・`-s read-only`）。
+対象 `docs/specs/004-live-adversarial-input.md` は `reckn-spec`（Claude Code）起草。
+Codex 8件 → 裁定後 **BLOCKER 5 / MAJOR 6 / MINOR 6**（Codex 由来 7件採用・1件を理由差し替えで採用・
+1件を部分却下・1件を MINOR→MAJOR に引き上げ、**私の独立検出 6件**を追加）。
+
+**founder 不確実点①（AC-3/AC-4 の対で退化実装を落とせるか）は否**: 再実行を 1 度も呼ばない
+決定的な算術模型が **AC-0〜AC-16 を全部通る**。仕様は `reexec` の**形**しか固定しておらず、
+`STATE_ROOT` の具体値も `gasUsed` の期待値も `traceHash` の関数形も committed でない。
+AC-11(a) の静的リテラル検査は base64 化 1 行で抜けられ、AC-11(b) の 8/32 は
+変奏器と判事を同じ実装者が書くので空白/大小文字偏重の変奏＋正規化判事で自作自演できる。
+
+**founder 不確実点②（OQ-2）**: 実モデル不可なら、判事側は実装者自作の採点器なので
+**判事だけを見れば strawman**。ただし **004 の核（散文は再実行を動かさない）は判事ゼロでも成立する**。
+現状は §1 の見出し主張が「LLM 判事」と書かれており、**未決の OQ に主張が依存している**。
+推奨＝見出しを判事非依存に書き直し、LLM 版を OQ-2 条件付きに落とす（founder 裁定）。
+
+**新しい protocol 所見（004 の scope 外・deferred）**: spec §11 が挙げる `planHash` の
+`gas_limit` 欠落は**正しい**。それより重い2件を追加検出 —
+①`u64_low`（limb 0 のみ）と off-chain U256 の乖離は「verdict が乖離しうる」ではなく
+**減少が最大 credit として証明される**（偽 release）向きを持ち、18 decimals の ERC-20 では
+**残高 18.45 token 超で日常的に到達する**（＝ タスク 002 が正面から入る領域）。
+②guest（`program-revm/src/main.rs:121-127`）は `chain_id` しか設定せず
+`SpecId::default() == OSAKA` で走るのに対し、off-chain（`reexec-evm/src/lib.rs:489-512`）は
+`anchor.spec_id`（現 fixture は `CANCUN`）と block env 全体を pin する。
+**「同じエンジンが in-guest で走る」は現状 UNVERIFIED** であり、審査員に言ってよい文ではない。
+
+**tier 違反は発火せず**: `~34 s` / `~6.2 GB` は `zk-verdict/README.md:97` `:105` の実測の引用で、
+004 は「だから live loop に乗らない」という否定方向にのみ使っている。Honest scope は 1 つも解消していない。
+
 ## 次
 
 1. **founder**: ETHOnline に応募（<https://ethglobal.com/events/ethonline2026>）
 2. **founder**: 9/4 に `DISCLOSURE.md` を ETHGlobal へ送付
 3. **`reckn-spec`**: `docs/reviews/003-spec-r1.md` の「What must change before round 2」12項目を
    `docs/specs/003-key-gauntlet.md` に反映 → `reckn-codex-review`(stage=spec, r2)
-4. spec が APPROVE になってから `reckn-codex-impl`。**実装・コントラクトは未着手**（r1 の時点で
+4. **`reckn-spec`**: `docs/reviews/004-spec-r1.md` の「004 に戻すときに直すもの」12項目を
+   `docs/specs/004-live-adversarial-input.md` に反映 → `reckn-codex-review`(stage=spec, r2)
+5. **founder 裁定**: OQ-2（`cli` 実モデル経路の可否。**004 の見出し主張がこれに依存**）／
+   `u64`/`U256` 偽 release を**タスク 002 の前に閉じるか**（deferred D-2）
+6. spec が APPROVE になってから `reckn-codex-impl`。**実装・コントラクトは未着手**（r1 の時点で
    `RecknZkEscrow.sol` に変更なし）
 
 ## Day 1（2026-09-04）— 起点の記録

@@ -571,8 +571,19 @@ is closed by anything above; the honest scope in
   `refundAfterDeadline` as the only permitted way in.
 - **In-guest precompiles.** `c-kzg` and `ecrecover` are disabled inside the zkVM;
   a plan requiring either is unsupported, not merely slow.
-- **Verdict values are `u64`.** Balances map through limb 0, so amounts ≥ 2^64 are
-  truncated at the verdict boundary.
+- **⚠ The `u64` verdict boundary is a soundness bug, not just a limit** (found
+  2026-09-04, open). The guest takes the delta on limb 0
+  (`program-revm/src/main.rs:163`) while the off-chain engine takes it on the full
+  `U256` (`reexec-evm/src/lib.rs:647`). With `pre = 2^64` and `post = 2^64 − 1` the
+  balance *decreased*, yet the guest sees `pre = 0`, `post = u64::MAX` and proves
+  `Reproduced` — **a false release**. At 18 decimals any balance above ≈18.45
+  tokens crosses limb 0. Nothing is deployed and no funds are at risk, but the
+  keyless path cannot be called sound until this is closed.
+- **"The same engine runs in-guest" is UNVERIFIED.** The guest configures only
+  `chain_id` (`program-revm/src/main.rs:122-126`), so it runs at revm's default
+  spec with a zeroed block env, while `reexec-evm` pins `anchor.spec_id` (`CANCUN`
+  in the current fixture) and the full environment. The two may disagree on any
+  opcode whose behaviour is fork-dependent.
 - **Scale.** The guest proves one CALL plus one delta check. A full block or an
   arbitrary contract set is more cycles on the same architecture — but that is a
   claim about architecture, not a measured result.
