@@ -569,8 +569,14 @@ is closed by anything above; the honest scope in
   this **without introducing a key** is the first ETHOnline task
   ([`AGENTS.md`](AGENTS.md) §3, task 001); `no-keys.sh` already enumerates
   `refundAfterDeadline` as the only permitted way in.
-- **In-guest precompiles.** `c-kzg` and `ecrecover` are disabled inside the zkVM;
-  a plan requiring either is unsupported, not merely slow.
+- **In-guest precompiles run on different backends, and parity is unverified.**
+  This repository has long said they are *disabled* in-guest. They are not:
+  `revm-precompile` falls back to pure-Rust implementations when the native
+  features are off — `k256` for `ecrecover` (`secp256k1.rs:1-8`, preference order
+  `secp256k1 → k256`) and `arkworks` for KZG (`kzg_point_evaluation.rs:87-101`).
+  So a plan touching `0x01` or `0x0a`–`0x11` is not unsupported; it runs against a
+  *different implementation* than the off-chain engine, and the two have never been
+  checked for equivalence. Corrected 2026-09-04.
 - **⚠ The `u64` verdict boundary is a soundness bug, not just a limit** (found
   2026-09-04, open). The guest takes the delta on limb 0
   (`program-revm/src/main.rs:163`) while the off-chain engine takes it on the full
