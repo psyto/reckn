@@ -96,7 +96,7 @@ and tested with a **real Groth16 proof** verified against SP1's real `SP1Verifie
 proves the *verdict/predicate* derivation. A second guest closes the trusted-`post`
 gap too: it runs **real revm inside the zkVM**, executing the committed CALL to
 derive the post-state under proof, and its Groth16 proof verifies on-chain through
-the same verifier (`zk-verdict/program-revm`, ~410k cycles for the SSTORE plan
+the same verifier (`zk-verdict/program-revm`, 406,715 cycles for the SSTORE plan
 including in-guest prestate MPT verification).
 The guest also **MPT-verifies the prestate against the committed `state_root`
 in-guest** (via `alloy-trie`), so a tampered prestate is rejected — both the

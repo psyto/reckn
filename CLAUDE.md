@@ -33,7 +33,7 @@ optimistic 系=bonded resolver / feedback 系=投票者）。**アーキテク�
 
 - `zk-verdict/program-revm/src/main.rs` は **prestate を `state_root` に対し MPT 検証**し
   （アカウント証明＋ストレージ証明）、**本物の `revm` を in-guest で任意 CALL に対し実行**して
-  `post` を導出する。**~410k cycles**（うち MPT 検証 ~180k）。
+  `post` を導出する。**406,715 cycles**（2026-09-05 実測、`zk-verdict/cycles.json`）。
   → ルート `README.md` はこれを "a working proof-of-concept over a single instruction today" と
   書いていた（**SVM 側の話**で EVM には当てはまらない）。**09-03 に訂正済み。**
 - `program-revm/src/main.rs` 冒頭のモジュールコメントは「MPT-authenticity は次に折り込める」と
@@ -47,7 +47,7 @@ optimistic 系=bonded resolver / feedback 系=投票者）。**アーキテク�
   timeout escape hatch を持つ（`contracts/README.md:12`）のに鍵の無い方だけが持っていない。
   → タスク 001。**未解決**。09-03 に `README.md` の `Known gaps (not closed)` へ明記した
   （隠さず先に書く。`no-keys.sh` は `refundAfterDeadline` を唯一の入口として既に列挙済み）。
-- `program-svm` は ~980k cycles（ed25519 sigverify + lattice 再計算）。
+- `program-svm` は 1,003,195 cycles（ed25519 sigverify + lattice 再計算）。
 - **本プロジェクトは一度もハッカソンに提出されていない。** `SUBMISSION.md` のプリフライトで
   "Repo public" と "Submission form" が未チェック、リポジトリは今も private。
 

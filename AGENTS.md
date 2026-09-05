@@ -128,10 +128,20 @@ task → reckn-spec (Claude, 判断を1つ固定) → reckn-codex-review(stage=s
 `zk-verdict/README.md` の "Honest scope" を**上書きしない**。以下は当日の作業で解消しない限り真であり、
 デモ・README・提出文で**解消したかのように書かない**:
 
-- `c-kzg` / `ecrecover` precompile は in-guest で無効。これを要する plan は非対応
-- verdict 値は `u64` にマップ（`u64_low` は limb 0 のみ。2^64 超の残高は切り捨て）
+- `c-kzg` / `ecrecover` precompile は in-guest でも**動く**（`revm-precompile` は native feature を
+  切ると `k256` / `arkworks` の純 Rust 実装へ落ちる）。真の限界はもっと狭く、もっと悪い:
+  **guest と off-chain engine は同じ precompile の別実装を走らせており、等価性は未検証**
 - 1 CALL + 1 delta check。フルブロック / 任意コントラクト集合は more cycles, same architecture
 - `state_root` ↔ ブロックヘッダの束縛は off-chain の `reexec-evm::header` 層に残る
+- predicate は floor であり、**floor が 0 なら「何もしない」で満たされる**（`minDelta = 0`）
+
+008 で解消したもの（「まだ真」の側に置いたままにしない）:
+
+- verdict 値は `uint256`。**旧 `u64` マップは制限ではなく健全性バグだった** —— limb 0 をまたぐ
+  減少が「最大の credit」として証明され、seller へ払われた。in-guest と off-chain が同じ
+  committed bytes の同じ関数になり、14 vector が両側で判定して一致を要求する
+- guest は committed hardfork と block environment で実行する。engine identity は仮定でなく検定
+  （13 vector）で、その各フィールドは `dealBinding` に入る（18 vector）
 
 さらに:
 

@@ -19,9 +19,9 @@ each against a cryptographically authenticated prestate** (MPT vs `state_root` /
 proof **settles escrow directly** ([`RecknZkEscrow`](zk-verdict/contracts/src/RecknZkEscrow.sol)):
 `Reproduced` releases to the seller, `Failed` refunds the buyer, **with no resolver
 at all** — the proof carries its own authority. The EVM guest runs **real `revm`
-over the seller's committed CALL** against an MPT-proven prestate (~410k cycles);
+over the seller's committed CALL** against an MPT-proven prestate (406,715 cycles);
 the Solana guest is the narrower slice — a `bank_hash`-authenticated System
-transfer (~980k cycles). Scope and limits are stated honestly in
+transfer (1,003,195 cycles). Scope and limits are stated honestly in
 [`zk-verdict/`](zk-verdict), including what is **not** closed
 ([below](#known-gaps-not-closed)).
 
@@ -296,7 +296,12 @@ zk-verdict/                 # the keyless path — independent SP1 workspace
   program-svm/              #   guest: recompute bank_hash, sigverify, re-execute transfer
   contracts/src/RecknZkEscrow.sol      # settles on the proof alone — no resolver
   contracts/src/RecknVerdictVerifier.sol # one generic verifier, EVM + SVM proofs
+  script/tests/             #   the 008 vectors: value domain, engine identity, binding
+  cycles.json               #   measured cycle counts + ELF digests (no rounded figures)
   scripts/zk-e2e.sh         #   one command: re-execute → prove → verify → settle
+  scripts/ac008.sh          #   the 008 acceptance gate: one runner, 18 manifest rows
+  scripts/surfaces.sh       #   BUILD CONDITION: the two files 008 promised not to touch
+  scripts/surfaces.pinned   #   their pinned digests, re-pinned only as a readable diff
 dashboard/                  # LLM-judge vs replay money-shot — implemented
   index.html                #   cinematic money-shot: money moves, live keeper
                             #   console + ledger, on-chain resolve receipt
@@ -547,7 +552,7 @@ content publication.
   derive the post-state. So the prestate is *proven authentic* and `post` is *computed
   by the EVM* — both in the proof, not trusted from a resolver; the trace hash binds
   the `state_root`. Verified: revm 38 + alloy-trie compile to the zkVM target; the
-  SSTORE plan (slot 7 = 42 proven) executes to `post=142` → `Reproduced` (~410k
+  SSTORE plan (slot 7 = 42 proven) executes to `post=142` → `Reproduced` (406,715
   cycles), a no-op → `Failed`, and a **tampered prestate value is rejected** (the
   guest panics on the bad MPT proof — no verdict for an inauthentic state). A **real
   Groth16 proof verifies on-chain** through the same generic verifier
@@ -562,8 +567,8 @@ content publication.
   System transfer** against the authenticated prestate to derive the post-lamports,
   then applies the `LamportsDelta`. So the prestate is *proven authentic* and `post`
   is *computed by re-execution*, not trusted. Verified: `System::Transfer(2_000_000)`
-  → `bank_hash`-bound recipient `post` executed to `2_000_001` → `Reproduced` (~980k
-  cycles); below-floor → `Failed`; a **tampered signature is rejected** (verify fails
+  → `bank_hash`-bound recipient `post` executed to `2_000_001` → `Reproduced`
+  (1,003,195 cycles); below-floor → `Failed`; a **tampered signature is rejected** (verify fails
   → `Failed`) and a **tampered account is rejected** (fails the in-guest `bank_hash`
   check → guest panics). The `bank_hash` recompute is byte-identical to
   `reexec-svm::bankhash`. Its **real Groth16 proof verifies on-chain through the same
@@ -591,6 +596,32 @@ content publication.
   double-settle
   rules).
 
+### Closed during ETHOnline (2026-09-04 onward)
+
+Two of the gaps this section used to list were **soundness bugs**, not limits, and
+they are closed. They are kept here rather than deleted, because a reader who saw
+the earlier text deserves to know what happened to it.
+
+- **The verdict is taken over the whole 256-bit value domain** (the limb-0 defect
+  found 2026-09-04 is closed, task 008). The guest used to take the delta on limb 0
+  while the off-chain engine took it on the full `U256`, so `pre = 2^64` /
+  `post = 2^64 − 1` — a *decrease* — proved as the largest possible credit and
+  released to the seller. Verdict values are `uint256` on both sides now, and
+  fourteen vectors (`zk-verdict/script/tests/value_domain.rs`) decide each case
+  twice — replayed off-chain and executed in-guest — and require the two to agree.
+- **Engine identity is checked, not assumed.** The guest used to configure only
+  `chain_id`, so it ran at revm's default spec with a zeroed block env while
+  `reexec-evm` pinned the hardfork and the full environment. Thirteen vectors
+  (`zk-verdict/script/tests/engine_identity.rs`) now hold each field to that
+  agreement — PUSH0 across the Merge/Shanghai boundary, `TIMESTAMP`, `NUMBER`,
+  `COINBASE`, `PREVRANDAO`, `GASLIMIT`, `CHAINID`, `BASEFEE`, `ORIGIN`, `GASPRICE`
+  — and eighteen more require every one of them to move `dealBinding`
+  (`zk-verdict/script/tests/binding.rs`), so a proof cannot be carried from one
+  environment to another.
+
+The evidence is mechanical, not narrative: `bash zk-verdict/scripts/ac008.sh AC-02`
+and `AC-03` run those vectors and assert the count before they assert success.
+
 ### Known gaps (not closed)
 
 Stated here so no reader has to discover them by reading the source. None of these
@@ -600,9 +631,11 @@ is closed by anything above; the honest scope in
 - **`RecknZkEscrow` has no timeout.** If no proof ever arrives, a funded escrow
   stays funded — permanently. The optimistic `RecknEscrow` has timeout escape
   hatches; the keyless contract, which is the differentiated one, does not. Closing
-  this **without introducing a key** is the first ETHOnline task
-  ([`AGENTS.md`](AGENTS.md) §3, task 001); `no-keys.sh` already enumerates
-  `refundAfterDeadline` as the only permitted way in.
+  this **without introducing a key** lands inside the key gauntlet
+  ([`AGENTS.md`](AGENTS.md) §3, task 003 — task 001 is not raised separately);
+  `no-keys.sh` already enumerates `refundAfterDeadline` as the only permitted way
+  in. Task 003 is stopped at review round 6 and awaiting a founder ruling, so this
+  gap is open today.
 - **In-guest precompiles run on different backends, and parity is unverified.**
   This repository has long said they are *disabled* in-guest. They are not:
   `revm-precompile` falls back to pure-Rust implementations when the native
@@ -611,19 +644,6 @@ is closed by anything above; the honest scope in
   So a plan touching `0x01` or `0x0a`–`0x11` is not unsupported; it runs against a
   *different implementation* than the off-chain engine, and the two have never been
   checked for equivalence. Corrected 2026-09-04.
-- **⚠ The `u64` verdict boundary is a soundness bug, not just a limit** (found
-  2026-09-04, open). The guest takes the delta on limb 0
-  (`program-revm/src/main.rs:163`) while the off-chain engine takes it on the full
-  `U256` (`reexec-evm/src/lib.rs:647`). With `pre = 2^64` and `post = 2^64 − 1` the
-  balance *decreased*, yet the guest sees `pre = 0`, `post = u64::MAX` and proves
-  `Reproduced` — **a false release**. At 18 decimals any balance above ≈18.45
-  tokens crosses limb 0. Nothing is deployed and no funds are at risk, but the
-  keyless path cannot be called sound until this is closed.
-- **"The same engine runs in-guest" is UNVERIFIED.** The guest configures only
-  `chain_id` (`program-revm/src/main.rs:122-126`), so it runs at revm's default
-  spec with a zeroed block env, while `reexec-evm` pins `anchor.spec_id` (`CANCUN`
-  in the current fixture) and the full environment. The two may disagree on any
-  opcode whose behaviour is fork-dependent.
 - **⚠ The build condition reads one file, and settlement authority leaves it**
   (found 2026-09-04; task 008 closes it). `scripts/no-keys.sh` checks
   `RecknZkEscrow.sol` only, but `settleWithProof` obeys the struct returned by
@@ -755,6 +775,16 @@ bash zk-verdict/scripts/zk-e2e.sh
 cd zk-verdict/contracts && forge test                                    # verify + settle
 cd zk-verdict/script && cargo run --release --bin reexec -- --execute    # EVM in-guest
 cd zk-verdict/script && cargo run --release --bin svm -- --execute        # SVM in-guest
+
+# the 008 vectors: value domain (14), engine identity (13), binding (18),
+# domain closure (13), outcome map (6) — every one decided twice, in-guest and
+# off-chain, and required to agree — 64 tests
+cd zk-verdict/script && cargo test
+
+# the 008 acceptance gate: 18 manifest rows parsed out of the spec itself
+bash zk-verdict/scripts/ac008.sh --check    # manifest arithmetic, no runs
+bash zk-verdict/scripts/ac008.sh AC-02      # one row, count asserted before success
+bash zk-verdict/scripts/surfaces.sh         # the two files 008 may not touch
 
 # one-command local chain demo: Act I false claim → Failed → refund;
 # Act II causal delta predicate (credited ≥ minOut) → Reproduced → seller release

@@ -1,0 +1,20 @@
+{
+  "measured_at": "2026-09-05",
+  "commit": "e171183a1c112a95dbb14d948ffb4fb1354b86e0",
+  "note": "Measured with `cargo run --release --bin <guest> -- --execute` in zk-verdict/script, after 008 parts 1-3 changed all three guests. SP1 execution is deterministic for a fixed ELF and input, so these are exact, not approximate.",
+  "elf_path": {
+    "verdict": "zk-verdict/target/elf-compilation/riscv64im-succinct-zkvm-elf/release/verdict-program",
+    "reexec": "zk-verdict/program-revm/target/elf-compilation/riscv64im-succinct-zkvm-elf/release/verdict-program-revm",
+    "svm": "zk-verdict/program-svm/target/elf-compilation/riscv64im-succinct-zkvm-elf/release/verdict-program-svm"
+  },
+  "elf_sha256": {
+    "verdict": "e432d2d3c7ef0bdb542e22e69447535ea2e05d0d77080fe6e41dcf9b94da86b3",
+    "reexec": "593ea11fdeca5d2d805114d7086dccddddc1bba3a92fcb80f11f513e32bc9b2d",
+    "svm": "d96aba03d6bbbda58aabc45497b0aca4704947c3c9155ae5fb4c7bdce52edff7"
+  },
+  "cycles": {
+    "verdict": 30355,
+    "reexec": 406715,
+    "svm": 1003195
+  }
+}

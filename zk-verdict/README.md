@@ -53,7 +53,7 @@ SP1_PROVER=cpu cargo run --release --bin verdict -- --prove  # generate AND veri
 # --pre 42 --post 42 --min 1  → the no-op attack: credits 0, Failed (proven)
 ```
 
-Verified locally: `--execute` reports ~21.7k cycles and the guest output matches
+Verified locally: `--execute` reports 30,355 cycles and the guest output matches
 the host computation; `--prove` generates a core proof and **verifies it**.
 
 ## On-chain verification (the trustless cross-chain settlement primitive)
@@ -95,7 +95,8 @@ SP1_PROVER=cpu cargo run --release --bin evm -- --pre 42 --post 142 --min 100
 
 **What was run here — a real proof, verified on-chain.** A **real Groth16 proof**
 of the verdict was generated on CPU (the gnark prover, ~15.9M constraints, ~34 s
-once the artifacts are local) and checked against SP1's **real** `SP1Verifier`
+for the gnark wrap alone once the artifacts are local — the end-to-end regeneration
+of one fixture was measured at 335 s, so read the figure narrowly) and checked against SP1's **real** `SP1Verifier`
 (circuit v6.1.0) inside `RecknVerdictVerifierFixture.t.sol` — it verifies on-chain
 and a tampered public-values variant reverts. The fixture is committed at
 [`contracts/src/fixtures/groth16-fixture.json`](contracts/src/fixtures/groth16-fixture.json)
@@ -139,8 +140,8 @@ Verified end-to-end:
   `c-kzg`/`secp256k1` precompiles) are dropped.
 - The guest **MPT-verifies the prestate then executes the SSTORE CALL**: slot 7 = 42
   is proven against `state_root`, `post` is derived as 142 by execution (not given),
-  the credited delta 100 clears the floor → `Reproduced` (~**410k cycles**, of which
-  MPT verification is ~180k). A no-op (`--credit 42`) → delta 0 → `Failed`.
+  the credited delta 100 clears the floor → `Reproduced` (**406,715 cycles**, measured
+  2026-09-05, `cycles.json`). A no-op (`--credit 42`) → delta 0 → `Failed`.
 - **`--tamper`** flips a proven slot value: the guest **panics with `storage proof
   invalid` — a verdict cannot be produced for an inauthentic prestate.** That is the
   authenticity soundness: a valid proof can only exist for a prestate that matches
@@ -156,11 +157,26 @@ Verified end-to-end:
 - **Is** the actual `revm` EVM executing a real CALL against an **MPT-authenticated
   prestate**, under proof — not a toy interpreter, not a trusted prestate. Both the
   trusted-prestate and trusted-`post` gaps are genuinely closed for that execution.
-- **Not yet:** (a) the `c-kzg`/`ecrecover` precompiles are disabled, so plans needing
-  them aren't supported until SP1's patched crypto is wired in. (b) Verdict values map
-  to `u64` to reuse the on-chain ABI. (c) One CALL + one delta check; a full block or
-  arbitrary contract set is more cycles, same architecture. (d) The `state_root`↔block
-  binding (header proof) stays the off-chain `reexec-evm::header` layer.
+- **Verdict values are `uint256`.** The whole 256-bit domain is judged, in-guest and
+  off-chain, by the same function of the same committed bytes (task 008). The earlier
+  `u64` map was not a limit but a soundness bug: a decrease across limb 0 proved as the
+  largest possible credit.
+- **Engine identity is checked, not assumed.** The guest executes the committed CALL
+  **at the committed hardfork and block environment** — spec id, `TIMESTAMP`, `NUMBER`,
+  `COINBASE`, `PREVRANDAO`, `GASLIMIT`, `CHAINID`, `BASEFEE` — and every one of those
+  fields is committed by `dealBinding`, so a proof cannot be moved from the environment
+  it was produced in to another one.
+- **Not yet:** (a) the `c-kzg`/`ecrecover` precompiles are **not** disabled in-guest —
+  `revm-precompile` falls back to pure-Rust backends (`k256`, `arkworks`) when the
+  native features are off — but the guest and the off-chain engine therefore run
+  *different implementations* of them and equivalence has never been checked. (b) One
+  CALL + one delta check; a full block or arbitrary contract set is more cycles, same
+  architecture. (c) The `state_root`↔block binding (header proof) stays the off-chain
+  `reexec-evm::header` layer.
+- **The predicate is a floor, and a floor of zero is satisfied by doing nothing.**
+  `minDelta = 0` accepts a no-op as `Reproduced`, because nothing is below zero. That
+  is the predicate working as specified, not a bug — but a buyer who funds a deal with
+  a zero floor has bought nothing, and the escrow will pay the seller for it.
 
 ## SVM re-execution in the guest (the Solana mirror)
 
@@ -191,7 +207,7 @@ Verified end-to-end:
 - The guest **recomputes `bank_hash`, verifies signatures, and re-executes**
   `System::Transfer(2_000_000)`: the recipient is `bank_hash`-bound at pre = 1 →
   **post EXECUTED to 2_000_001** → credited delta 2_000_000 ≥ floor → `Reproduced`
-  (~**980k cycles**: ed25519 sigverify + the lattice recompute). Below the floor →
+  (**1,003,195 cycles**: ed25519 sigverify + the lattice recompute). Below the floor →
   `Failed`.
 - **`--tamper`** zeroes the signature → in-guest `Transaction::verify` rejects it →
   `Failed`. **`--tamper-prestate`** perturbs a committed account so it no longer
