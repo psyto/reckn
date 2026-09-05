@@ -23,6 +23,7 @@
 | part 3b 前提 | `2bc15e8` | testkit が1アカウント1スロットしか witness できなかったのを解消 |
 | part 3b | `c982e3b` | `value_domain` 14（AC-02）/ `engine_identity` 13（AC-03）/ `binding` 18（AC-07a） |
 | part 4a | `f843081` | **gate の runner `ac008.sh`** と **AC-0b の `surfaces.sh` + `surfaces.pinned`** |
+| part 4b | `fae1858` | **AC-14 の文書側**（cycle 実測 + tilde 14件除去 + 陳腐化した主張7件/marker 8件） |
 
 **cargo 側は manifest の要求を満たして閉じた**（`bash` は未着手）。2026-09-05 実測:
 
@@ -53,6 +54,16 @@ selftest 自身が計算した digest と一致。**定数を echo する stub �
 4. AC-14 が要求する文書側の書き換え（9 absent / 11 present / `cycles.json` 3 guests）
 5. **AC-09 の witness は未実装で fail closed** — 「4本の ELF vkey を新規計算」は
    `fixtures-check.sh` のビルドに乗る。静かに通さず落ちる側にしてある
+
+**part 4b で実測した cycle**（`zk-verdict/cycles.json`、2026-09-05、ELF の sha256 併記）:
+`verdict` **30,355** / `reexec` **406,715** / `svm` **1,003,195**。旧表記はそれぞれ
+`~21.7k` / `~410k` / `~980k` で、**doc set の tilde 14件はゼロになった**。
+`~34 s` は削除せず「gnark wrap alone」と限定（end-to-end 実測は 335 s ＝素の数字は約10倍
+都合の良い方向に外れていた）。
+
+**AC-14 で残った2件は、まだ書いていないコードに依存する**（先に書くと文書だけが主張を広げる）:
+①「fixture 不在は hard failure」は **AC-11 の `require` 化**待ち、②`no-keys.sh` の scope コメントと
+`RecknVerdictVerifier.sol` の marker 2件は **check 5**（§6.4）待ち。
 
 ## 裁定 — ハーネス（2026-09-05 founder 確定、`4946a94`）
 
