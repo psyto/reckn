@@ -36,9 +36,10 @@ frame の分割は**熟練度でなく枠の厚さ**による。
 
 | agent | frame | 役割 | 定義 |
 |---|---|---|---|
-| `reckn-spec` | **thin** | 枠を閉じる。受入条件・不変条件・非目標・境界を `docs/specs/NNN-*.md` に固める。何を主張するかを決める。 | `.claude/agents/reckn-spec.md` |
-| `reckn-codex-impl` | **thick** | 固まった仕様の内側を Codex CLI に網羅的に埋めさせる。diff を統合し git を所有。 | `.claude/agents/reckn-codex-impl.md` |
-| `reckn-codex-review` | — | Codex を独立した第二のモデルとして敵対的レビューに使い、findings を**自分で裁定**する。 | `.claude/agents/reckn-codex-review.md` |
+| `reckn-spec` | **thin / Claude** | 変更すべき判断を1つだけ選び、受入条件・不変条件・非目標を固定する。探索の反復を所有しない。 | `.claude/agents/reckn-spec.md` |
+| `reckn-codex-review` | **Codex** | Claude が書いた仕様を1回だけ反証する。Codex 自身が書いた diff はレビューしない。 | `.claude/agents/reckn-codex-review.md` |
+| `reckn-codex-impl` | **thick / Codex** | 固定済み仕様の実装、テスト修正、限定diff調査を行う。 | `.claude/agents/reckn-codex-impl.md` |
+| `reckn-review` | **thin / Claude** | Codex が書いた diff を1回だけ独立レビューする。実装も再設計も行わない。 | `.claude/agents/reckn-review.md` |
 | `reckn-demo` | thin | 審査員が最初に見るもの（gauntlet・money-shot・README・3分台本）を所有。 | `.claude/agents/reckn-demo.md` |
 
 **author independence**: `reckn-codex-impl` が書いたコードを Codex にレビューさせない。
@@ -51,12 +52,17 @@ frame の分割は**熟練度でなく枠の厚さ**による。
 ## 2. サイクル
 
 ```
-task → reckn-spec → reckn-codex-review(stage=spec) → [APPROVE] →
-       reckn-codex-impl → reckn-codex-review(stage=impl) → [APPROVE] → commit → push
+task → reckn-spec (Claude, 判断を1つ固定) → reckn-codex-review(stage=spec, 1回) →
+       spec を凍結 → reckn-codex-impl (Codex, 実装+テスト) →
+       reckn-review (Claude, diff の独立レビュー1回) → fix+実テスト → commit → push
 ```
 
-- `CHANGES` が5周続くのは正常。周回が長いことを理由に verdict を甘くしない。
-- **round 6 で hard stop。** 開いている論点を持って founder に返す。
+- Claude は**判断とCodex diffへの独立レビューだけ**に使う。リポジトリ探索、定型実装、テスト失敗の
+  修正、既知factの照合は Codex が行う。
+- 各レビューは1回。修正後の再レビューは、中心主張を破る**新しい再現可能な BLOCKER**が出た場合に
+  founder が許可したときだけ行える。通常の `CHANGES` は同じ実装者が直し、テストで閉じる。
+- brief は対象パス・判断・受入条件・実行コマンドだけに絞り、過去レビューや資料を全文貼り付けない。
+- レビューは重大度順の最大3 finding。同根の指摘は統合する。
 - レビュー記録は `docs/reviews/NNN-<stage>-r<M>.md`、末尾は `VERDICT: APPROVE` か `VERDICT: CHANGES` の一行。
 
 ---
