@@ -83,9 +83,17 @@ fn system_transfer(from: &Pubkey, to: &Pubkey, lamports: u64) -> Instruction {
     }
 }
 
+// A fixed signer and a fixed recipient. `Keypair::new()` was random per run, which
+// made the SVM guest's cycle count a different number every time — measured
+// 1,003,195 / 993,018 / 984,496 / 983,746 / 987,632 over five runs of the SAME ELF.
+// Publishing one of those as an exact figure would state a precision the harness does
+// not have, so the input is pinned instead of the figure being rounded.
+const SIGNER_SECRET: [u8; 32] = [7u8; 32];
+const RECIPIENT: [u8; 32] = [9u8; 32];
+
 fn build(amount: u64, min: u64, tamper: bool, tamper_prestate: bool) -> (Transaction, SvmPrestate) {
-    let from = Keypair::new();
-    let to = Pubkey::new_unique();
+    let from = Keypair::new_from_array(SIGNER_SECRET);
+    let to = Pubkey::new_from_array(RECIPIENT);
     let ix = system_transfer(&from.pubkey(), &to, amount);
     let mut tx = Transaction::new_with_payer(&[ix], Some(&from.pubkey()));
     tx.sign(&[&from], Default::default());

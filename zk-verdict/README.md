@@ -207,7 +207,7 @@ Verified end-to-end:
 - The guest **recomputes `bank_hash`, verifies signatures, and re-executes**
   `System::Transfer(2_000_000)`: the recipient is `bank_hash`-bound at pre = 1 →
   **post EXECUTED to 2_000_001** → credited delta 2_000_000 ≥ floor → `Reproduced`
-  (**1,003,195 cycles**: ed25519 sigverify + the lattice recompute). Below the floor →
+  (**986,097 cycles**: ed25519 sigverify + the lattice recompute). Below the floor →
   `Failed`.
 - **`--tamper`** zeroes the signature → in-guest `Transaction::verify` rejects it →
   `Failed`. **`--tamper-prestate`** perturbs a committed account so it no longer

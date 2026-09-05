@@ -47,7 +47,7 @@ optimistic 系=bonded resolver / feedback 系=投票者）。**アーキテク�
   timeout escape hatch を持つ（`contracts/README.md:12`）のに鍵の無い方だけが持っていない。
   → タスク 001。**未解決**。09-03 に `README.md` の `Known gaps (not closed)` へ明記した
   （隠さず先に書く。`no-keys.sh` は `refundAfterDeadline` を唯一の入口として既に列挙済み）。
-- `program-svm` は 1,003,195 cycles（ed25519 sigverify + lattice 再計算）。
+- `program-svm` は 986,097 cycles（ed25519 sigverify + lattice 再計算）。
 - **本プロジェクトは一度もハッカソンに提出されていない。** `SUBMISSION.md` のプリフライトで
   "Repo public" と "Submission form" が未チェック、リポジトリは今も private。
 

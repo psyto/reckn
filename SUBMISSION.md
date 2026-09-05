@@ -153,7 +153,7 @@ live and tested — on **both** VMs, behind **one** router.
   (`zk-verdict/program-svm`) **signature-verifies the real committed Solana transaction
   in-guest** (`Transaction::verify`, real ed25519 — the Solana data crates compile to
   the zkVM target) and **re-executes its System transfer** to derive the post-lamports,
-  then applies `LamportsDelta`. `System::Transfer(2M)` → `Reproduced` (1,003,195 cycles); a
+  then applies `LamportsDelta`. `System::Transfer(2M)` → `Reproduced` (986,097 cycles); a
   **tampered signature is rejected** → `Failed`; the real Groth16 proof verifies
   on-chain through the **same generic verifier** — one verdict contract, EVM and SVM
   proofs alike. reckn permits System builtins only, so this is not the full Agave/LiteSVM

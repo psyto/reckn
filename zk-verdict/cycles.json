@@ -1,7 +1,8 @@
 {
   "measured_at": "2026-09-05",
-  "commit": "e171183a1c112a95dbb14d948ffb4fb1354b86e0",
-  "note": "Measured with `cargo run --release --bin <guest> -- --execute` in zk-verdict/script, after 008 parts 1-3 changed all three guests. SP1 execution is deterministic for a fixed ELF and input, so these are exact, not approximate.",
+  "commit": "84033426d95cdfb69a67235f0e7fd797ecc43216",
+  "working_tree": "plus the pinned SVM signer/recipient in zk-verdict/script/src/bin/svm.rs, which lands in the commit that carries this file",
+  "note": "Measured with `cargo run --release --bin <guest> -- --execute` in zk-verdict/script, after 008 parts 1-3 changed all three guests. SP1 execution is deterministic for a fixed ELF and a fixed input; the SVM harness used to build a random Keypair per run, so its count varied (1,003,195 / 993,018 / 984,496 / 983,746 / 987,632 over five runs of one ELF). The signer and recipient are pinned now, and three consecutive runs give 986,097.",
   "elf_path": {
     "verdict": "zk-verdict/target/elf-compilation/riscv64im-succinct-zkvm-elf/release/verdict-program",
     "reexec": "zk-verdict/program-revm/target/elf-compilation/riscv64im-succinct-zkvm-elf/release/verdict-program-revm",
@@ -15,6 +16,6 @@
   "cycles": {
     "verdict": 30355,
     "reexec": 406715,
-    "svm": 1003195
+    "svm": 986097
   }
 }

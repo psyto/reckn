@@ -21,7 +21,7 @@ proof **settles escrow directly** ([`RecknZkEscrow`](zk-verdict/contracts/src/Re
 at all** — the proof carries its own authority. The EVM guest runs **real `revm`
 over the seller's committed CALL** against an MPT-proven prestate (406,715 cycles);
 the Solana guest is the narrower slice — a `bank_hash`-authenticated System
-transfer (1,003,195 cycles). Scope and limits are stated honestly in
+transfer (986,097 cycles). Scope and limits are stated honestly in
 [`zk-verdict/`](zk-verdict), including what is **not** closed
 ([below](#known-gaps-not-closed)).
 
@@ -568,7 +568,7 @@ content publication.
   then applies the `LamportsDelta`. So the prestate is *proven authentic* and `post`
   is *computed by re-execution*, not trusted. Verified: `System::Transfer(2_000_000)`
   → `bank_hash`-bound recipient `post` executed to `2_000_001` → `Reproduced`
-  (1,003,195 cycles); below-floor → `Failed`; a **tampered signature is rejected** (verify fails
+  (986,097 cycles); below-floor → `Failed`; a **tampered signature is rejected** (verify fails
   → `Failed`) and a **tampered account is rejected** (fails the in-guest `bank_hash`
   check → guest panics). The `bank_hash` recompute is byte-identical to
   `reexec-svm::bankhash`. Its **real Groth16 proof verifies on-chain through the same
