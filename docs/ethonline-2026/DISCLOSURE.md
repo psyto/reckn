@@ -86,8 +86,17 @@ repository history before 2026-09-04 is fully accounted for.
 
 ## 5. Honest limits of the pre-existing engine
 
-Carried verbatim from `zk-verdict/README.md` so nothing is overstated: the `c-kzg` and
-`ecrecover` precompiles are disabled in-guest; verdict values map to `u64`; the guest
-proves one CALL plus one delta check (a full block or arbitrary contract set is more
-cycles, same architecture); and the `state_root`-to-block-header binding remains an
-off-chain layer.
+Carried from `zk-verdict/README.md` so nothing is overstated: verdict values map to
+`u64` (closed by item 6 above); the guest proves one CALL plus one delta check (a full
+block or arbitrary contract set is more cycles, same architecture); and the
+`state_root`-to-block-header binding remains an off-chain layer.
+
+On precompiles, this document said until 2026-09-04 that `c-kzg` and `ecrecover` are
+*disabled* in-guest. That is **false**, and it was inherited from the same sentence in
+`zk-verdict/README.md`. `revm-precompile` falls back to pure-Rust backends when the
+native features are off — `k256` for `ecrecover` (`secp256k1.rs:1-8`, preference order
+`secp256k1 → k256`) and `arkworks` for KZG (`kzg_point_evaluation.rs:87-101`). Nothing
+is missing in-guest. The true limitation is narrower and worse to state loosely: the
+guest and the off-chain engine run **different implementations** of the same
+precompiles, and equivalence has never been checked. Corrected here rather than left
+standing, because a disclosure that carries a false sentence is not a disclosure.
