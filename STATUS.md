@@ -14,6 +14,42 @@
 | 凍結予定 | **9/12**（9/13–15 は R[3]sidency 締切 9/15 に明け渡す） |
 | 撤退可能点 | **9/9** — **`008` と `009` の両方が緑**でなければ founder 判断（`AGENTS.md` §7、2026-09-04 の応募提出に合わせて `003` → `009` に差し替え。`003` は撤退判定の対象外だが **9/12 の凍結までに着地させる対象**。旧文言「001/002 が緑」「008 と 003 が緑」は使わない） |
 
+## 008 実装の進捗（2026-09-05、実測。再起動で失われないようここに置く）
+
+| part | commit | 内容 |
+|---|---|---|
+| part 1 / 2 | `04d81f1` 他 | guest が別の EVM を走らせるのをやめ、与えられていない state を発明するのをやめた |
+| part 3a | `bfee4ed` | domain gate に本体、guest の refusal に vector（`domain_closed` 13 / `outcome_map` 6） |
+| part 3b 前提 | `2bc15e8` | testkit が1アカウント1スロットしか witness できなかったのを解消 |
+| part 3b | `c982e3b` | `value_domain` 14（AC-02）/ `engine_identity` 13（AC-03）/ `binding` 18（AC-07a） |
+
+**cargo 側は manifest の要求を満たして閉じた**（`bash` は未着手）。2026-09-05 実測:
+
+- `zk-verdict/lib` = **11**（`_AC01_` 8 + `_AC12_` 3）
+- `zk-verdict/script` = **64**（binding 18 + domain_closed 13 + engine_identity 13 + outcome_map 6 + value_domain 14）
+- `reexec-evm` = **16**（008 はここにテストを足さない。N-3 のとおり production API は不変）
+- 合計 **91** = §6.1 manifest の cargo 総数 ✓
+
+part 3b で1件落ちた: `address_word` が 20 byte の `Address` を `U256::from_be_bytes`（32 byte 必須）へ
+渡して E05 / E11 が panic。`from_be_slice` に修正（COINBASE / ORIGIN が push するのは zero-pad された word）。
+
+**残り（すべて未着手）**:
+
+1. **forge 6件** — AC-07b 2 + AC-10 4。現在 **12**（実測 `grep -c "function test"`）、AC-11 は **18** を要求
+2. **`zk-verdict/scripts/` の 8 本** — `ac008.sh`（runner）/ `surfaces.sh` / `env-parity.sh` /
+   `fixtures-check.sh` / `no-skip.sh` / `ac008-selftest.sh`（**21 mutant**）/ `docs-check.sh` /
+   `consumers-check.sh`。現在このディレクトリにあるのは `zk-e2e.sh` **1本だけ**
+3. AC-14 が要求する文書側の書き換え（9 absent / 11 present / `cycles.json` 3 guests）
+
+## 裁定 — ハーネス（2026-09-05 founder 確定、`4946a94`）
+
+`AGENTS.md` §1/§2 を**枠の厚さでなく「誰が安いか」**で分け直した。Claude = 判断（`reckn-spec`）と
+Codex diff の独立レビュー（**新設 `reckn-review`**）。Codex = 探索・定型実装・テスト失敗の修正・
+既知 fact の照合。**各レビューは1回**で、5周 `CHANGES` → round 6 hard stop のループは廃止。
+通常の指摘は同じ実装者が直してテストで閉じる。例外は「中心主張を破る**新しい再現可能な BLOCKER**」を
+founder が許可したときだけ。`reckn-codex-review` は `stage=spec` 専用になった。
+**`AGENTS.md` は §8 の founder 文書**なので、この編集は founder の明示的な確定により行った（黙って例外を作らない）。
+
 ## 完了
 
 - Phase 0 — ハーネス: `AGENTS.md` / `CLAUDE.md` / `.claude/agents/` / `scripts/no-keys.sh`
