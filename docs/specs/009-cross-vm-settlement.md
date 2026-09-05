@@ -20,7 +20,29 @@
 
 ---
 
-## 0. Round 2 — every finding of `009-spec-r1.md`, and where it landed
+## 0. Round 3 — every finding of `009-spec-r2.md`, and where it landed
+
+**This is the last spec round.** The 2026-09-05 harness ruling (`AGENTS.md` §1/§2) gives each
+specification **one** independent review; round 2's findings are closed here and the document is
+frozen for implementation. A further round happens only if a **new, reproducible BLOCKER against
+the central claim** appears and the founder authorises it.
+
+| # | sev | finding | what changed |
+|---|---|---|---|
+| 1 | **BLOCKER** | the entry-point closure's **region** is not closed: 7h, 7i and check 2 clause 2a all read *"from the `contract RecknZkEscrow` line onward"*, and an **inherited** `fallback` is declared above that line. Compiled and drained in `/tmp/sbx009` with every check and every clause green | **7j (new)** and **check 2 clause 2c (new)**: the normalised text between `contract RecknZkEscrow` and its `{` must be **empty**, the token `contract` must occur **exactly once** in the file, and `using` is counted over the **whole file** (7i's span corrected). AC-7's evidence line gains `1 contract 0 inherited`, so the clause is observable. r1 finding 4 reappearing one level up |
+| 2 | **BLOCKER** | §7.8's extraction rule fails on this document: applied mechanically it returns **seventeen** tokens, the seventeenth being the bare `test_AC` in §7.8's own prose, so `ac009.sh --check` fails on every run and **no row can execute** | The sixteen names move into a fenced **`ac009-testnames`** block and §7.8 reads that block **and nothing else** — the construction §7.1 already uses for the manifest. Re-measured: sixteen names, all matching the regex, per-selector counts 2/4/2/2/3/3 = the manifest's column |
+| 3 | **BLOCKER** | **INV-2 is false and §11(4) ships it into `CLAUDE.md`**: *"there is no path to a payout that skips proof verification"* — the buyer names the verifier at `fund`, so a sham verifier is paid out on garbage, and 009's own AC-3 test 2 requires that behaviour | INV-2 restated as what is true (*the funder chooses the program; the proof, checked by that program, chooses the payout*), with the false sentence quoted as false so it cannot return. §11(4) now **forbids** it by name. **The design is not changed** — a registry is a key, a vkey argument is a founder question, two escrows moves the objection up a level. **The seller-side capability 009 newly creates is written down** for the first time: a buyer can name a verifier that always returns `FAILED` and the seller works for nothing, indistinguishable on-chain from an honest `Failed` (INV-2, L-7) |
+| 4 | MAJOR | nothing binds either fixture to the guest that produced it — `xvm.pinned` pins no **path**, so the headline claim rides on a filename | The **two paths are literals** of §7 now, in order, with the failure they close spelled out (two copies of one fixture under two names). The deeper half — binding a fixture to its guest rather than to a path — is **not** closed and is disclosed as **L-12** |
+| 8 | MINOR | INV-7 says `msg.sender` appears **twice**; `grep -c` says **three** | Corrected to three, with the three sites named and the date measured. Same shape as r1 finding 1: a number transcribed rather than run |
+| 5, 6, 7, 9, 10 | MAJOR / MINOR | AC-12's empty-green case; the counted-surface inventory missing three entries; INV-5 asserting value conservation with no ERC-20 model; `defence in depth` being a denylist by 009's own R-7; L-16's residual understated | **Disclosed, not closed** — the r2 review's own classification. Each is recorded where it belongs (§8, §10, L-16) and none blocks implementation. The AC-12 mechanism works; what is wrong is the description |
+
+*(Round 2's findings 1–3 were adopted in full and none of them changed the design. All three were
+the same shape as findings the earlier round had closed — a boundary that does not reach far
+enough, a gate that cannot pass its own document, an invariant its own AC contradicts.)*
+
+---
+
+## 0.1 Round 2 — every finding of `009-spec-r1.md`, and where it landed
 
 | # | sev | finding | what changed |
 |---|---|---|---|
@@ -558,6 +580,27 @@ names to a list.**
 >
 > **Clause 2b** is today's check, unchanged: every name following `function` is in
 > `fund settleWithProof refundAfterDeadline`.
+>
+> **Clause 2c — the region reaches everything the deployed contract can execute**
+> (r2 BLOCKER 1). Clauses 2a and 2b read *from the `contract RecknZkEscrow` line
+> onward*. **An inherited member is declared above that line**, so a base contract
+> carrying a `fallback` that drains a funded deal is outside the region every other
+> clause reads — measured in `/tmp/sbx009`, compiled:
+> `[PASS] test_inherited_fallback_drains_a_funded_deal`, with all four checks and all
+> nine AC-7 clauses green. Three properties close it, and none of them names a
+> construct:
+>
+> - the normalised text between the token `contract RecknZkEscrow` and the `{` that
+>   opens its body is **empty** — i.e. there is no inheritance specifier, so nothing
+>   the contract executes is declared elsewhere in the file;
+> - the token `contract` occurs **exactly once** in the whole file, so there is no
+>   second contract to inherit from or to declare members in;
+> - the token `using` is counted over the **whole file**, not over the region — a
+>   `using … for` above the contract line binds member-call resolution inside it.
+>
+> The first two are what make "from the `contract` line onward" a complete reading of
+> the deployed code rather than a convenient one. The third is 7i's precondition,
+> which round 2 measured over the wrong span.
 
 **Why this is a closure and not a denylist** (R-7). The rule is not *"`fallback` and `receive`
 are forbidden"*. The rule is *"the only member declarations through which this contract can be
@@ -760,9 +803,32 @@ Identifiers are referenced by the ACs in §7.
   program whose proof can settle a deal is therefore decided by the funder and by nobody
   after funding — in particular not by the settler, who has no parameter for it.
 - **INV-2 (program identity).** A `settleWithProof` call that does not revert implies that
-  `ISP1Verifier.verifyProof` was reached with the vkey held by the code whose keccak equals
-  `d.verifierCodeHash`, and returned without reverting. Equivalently: **there is no path to
-  a payout that skips proof verification.**
+  **the code whose keccak equals `d.verifierCodeHash` was called and returned a record**, and
+  that the payout followed that record.
+
+  **It does not imply that a proof was verified, and round 2 said it did** (r2 BLOCKER 3). The
+  earlier wording — *"there is no path to a payout that skips proof verification"* — is **false
+  after 009**: the deal's verifier is named by the **buyer** at `fund`, so a buyer who names
+  `AlwaysReproduces` (a contract whose `verifyVerdict` returns `REPRODUCED` for any bytes) is
+  paid out on garbage, and 009's own AC-3 test 2 requires exactly that behaviour as correct.
+  The design is not the defect and this document does not propose changing it — a registry is a
+  key, a vkey argument is a founder question, and two escrows only moves the same objection up a
+  level. **The false thing was the sentence**, and it was pointed at the file that states the
+  central claim (§11(4)).
+
+  What is true, and what INV-3 and §4.4's B-1/B-2/B-3 actually carry: **the funder chooses the
+  program; the proof, checked by that program, chooses the payout.** A funder who names a sham
+  program has defrauded nobody but themselves — and that is the direction 009 leaves open on the
+  **buyer** side.
+
+  **The risk 009 newly creates is on the seller side, and it was unwritten.** Before 009 the
+  escrow's verifier was common to every deal, so a seller who reproduced was necessarily paid.
+  After 009 a buyer can fund naming a verifier that always returns `FAILED`, and the seller does
+  the work for nothing while the refund goes back to the buyer. No AC detects it, because it is
+  indistinguishable on-chain from an honest `Failed`. The seller's protection is off-chain — read
+  the deal's `verifier` and `verifierCodeHash` before working, which is what L-4 and L-7's
+  checklist are for. **This is a capability 009 adds**, not a pre-existing one, and it is
+  recorded as such here and in **L-7**.
 - **INV-3 (binding).** A payout implies the verified record's `dealBinding` equals the
   value committed at `fund`. A proof of some other execution — other prestate, other
   predicate bounds, other plan or other signed transaction — cannot settle this deal.
@@ -777,8 +843,11 @@ Identifiers are referenced by the ACs in §7.
   exactly once. No path pays two recipients and no path pays twice.
 - **INV-6 (no double settlement).** `Funded → Settled` is one-way and guarded by the state
   read at the top of `settleWithProof`, before any external call.
-- **INV-7 (keylessness).** `msg.sender` appears exactly twice in the contract body, both in
-  `fund`, both recording or debiting the funder. `settleWithProof` never reads it. This is
+- **INV-7 (keylessness).** `msg.sender` appears exactly **three** times in the contract body,
+  all three in `fund` — the buyer field (`:77`), the `Funded` event (`:84`) and the
+  `transferFrom` debit (`:86`), measured with `grep -c` on 2026-09-05. *(Round 2 wrote "twice",
+  in both the current contract and §3.3; it was a number transcribed rather than run — r1
+  finding 1's shape, r2 finding 8.)* All three record or debit the funder. `settleWithProof` never reads it. This is
   `no-keys.sh` check 3 and 009 does not weaken it.
 - **INV-8 (no configuration).** `RecknZkEscrow` has no constructor and no `immutable`, so
   two deployments of the same source are behaviourally identical and there is no
@@ -931,7 +1000,7 @@ AC-3     forge   _AC03_    -                                          2      -
 AC-4     forge   _AC04_    -                                          2      -
 AC-5     forge   _AC05_    -                                          3      -
 AC-6     forge   _AC06_    -                                          3      -
-AC-7     script  -         bash zk-verdict/scripts/escrow-shape.sh    -      escrow-shape: 0 constructor, 0 immutable, 1 mapping, verdict members 3/3 read (5 accesses) and 4/4 unread, 9 assignments over 8 targets, function 2 (fund settleWithProof) other entry keywords 0 sum 2, 0 assembly 0 using; witness={witness}
+AC-7     script  -         bash zk-verdict/scripts/escrow-shape.sh    -      escrow-shape: 0 constructor, 0 immutable, 1 mapping, verdict members 3/3 read (5 accesses) and 4/4 unread, 9 assignments over 8 targets, function 2 (fund settleWithProof) other entry keywords 0 sum 2, 0 assembly 0 using, 1 contract 0 inherited; witness={witness}
 AC-9     script  -         bash zk-verdict/scripts/xvm-no-skip.sh     -      no-skip: 0 fixture gates in the cross-VM file, 2/2 fixtures readable, {B}+16 tests listed and ran, 0 forge-reported skips; witness={witness}
 AC-10    script  -         bash zk-verdict/scripts/ac009-selftest.sh  -      ac009-selftest: 15/15 mutants detected, 15/15 sandbox controls clean, mutants dir {P}+15; witness={witness}
 AC-11    script  -         bash zk-verdict/scripts/xvm-docs.sh        -      docs: 4/4 replacements present, 4/4 retired sentences absent, 1/1 anchoring sentence adjacent, 1/1 authority sentence preserved; witness={witness}
@@ -1060,7 +1129,20 @@ variable, and **does not invoke `forge`** — so it runs in the zero-build sandb
 in this order:
 
 1. `xvm.pinned` has **exactly two** lines and each has **exactly five** fields; a different
-   count is a failure, not a partial run.
+   count is a failure, not a partial run. **The two paths are literals of this specification,
+   in this order** (r2 finding 4, the half that is closable here):
+
+   ```
+   zk-verdict/contracts/src/fixtures/reexec-groth16-fixture.json
+   zk-verdict/contracts/src/fixtures/svm-groth16-fixture.json
+   ```
+
+   Without them the first field is free-form and the headline claim — *one escrow settled by
+   two guests* — rests on a **filename**: two copies of the EVM fixture under two names satisfy
+   every other clause here except the vkey inequality, and a single renamed file satisfies even
+   that if the second is a copy of the first with a stale vkey pin. The deeper half — binding
+   each fixture to the guest that produced it, rather than to a path — is **not** closed by 009
+   and is disclosed as **L-12**.
 2. For each line: the file at that path exists; `shasum -a 256` of it equals `sha256=`; and
    the JSON's `.vkey`, `.deal_binding` and `.outcome` equal `vkey=`, `binding=` and
    `outcome=`. **The digest and the three parsed fields are four independent comparisons**, so
@@ -1408,13 +1490,29 @@ against §3.3** (r1 finding 1, E-14).
   does not run before a commit and the founder's ritual does.
 
 - **7i — the lexical reading is well-defined.** Over the stripped region: **0** occurrences of
-  the token `assembly` and **0** of the token `using`. This is not a ban on two dangerous
+  the token `assembly`; and over the **whole stripped file** — not the region, r2 BLOCKER 1 —
+  **0** of the token `using`. This is not a ban on two dangerous
   features; it is the **precondition that makes 7a–7h true statements**. Inline assembly is a
   second language inside the source over which none of 7a–7h's readings hold — an `assembly`
   block moves value with no `=`, no member call and no new declaration — and `using … for`
   makes member-call resolution non-local, which is exactly the operand question R-8 exists for.
   A region containing either is a region this script cannot read, and a script that cannot read
   its region must say so rather than pass.
+
+- **7j — the region is the whole of the deployed code** (r2 BLOCKER 1). 7a–7i read from the
+  `contract RecknZkEscrow` line onward, and **an inherited member is declared above it**. Two
+  properties make that reading complete: the normalised text between the token
+  `contract RecknZkEscrow` and the `{` opening its body is **empty** (no inheritance
+  specifier), and the token `contract` occurs **exactly once** in the file (no second contract
+  to inherit from). Without them the enumeration is closed over a region an attacker chooses
+  the boundary of — r1 finding 4 (*"an enumeration is not a closure"*) reappearing one level up.
+  Reproduced before the fix, compiled and run in `/tmp/sbx009`:
+  `[PASS] test_inherited_fallback_drains_a_funded_deal` — any address sends a 32-byte dealId as
+  raw calldata and takes the whole funded deal, with no proof, no binding, no state guard and
+  no `msg.sender` gate, while `no-keys.sh`'s four checks and all nine of round 2's AC-7 clauses
+  printed green and the evidence line matched the manifest byte for byte. The same two
+  properties are check 2 clause 2c (§3.6.2), because AC-7 does not run before a commit and the
+  founder's ritual does.
 
 - **7g — the residual, stated rather than implied, and larger than round 1 said.** Round 1
   wrote that 7f's only blind spot is *"a state variable that is declared and never assigned"*.
@@ -1668,9 +1766,39 @@ reproduce this partition**, not a sentence saying some tests are mocks.
 ### 7.8 The naming gate, applied to this document's own names
 
 `ac009.sh --check` additionally applies §7.0's regex `^test_AC[0-9]{2}[a-z]?_[a-z0-9_]+$` to
-**every test name this specification mandates**, extracted from §7's AC bodies as the set of
-backtick-quoted tokens beginning `test_AC`, and fails if any does not match or if the
+**every test name this specification mandates**, and fails if any does not match or if the
 per-selector counts do not equal the manifest's `tests` column.
+
+**The names are read from the fenced block below and from nowhere else** (r2 BLOCKER 2).
+Round 2 defined the extraction as *"the backtick-quoted tokens beginning `test_AC` in §7"*, and
+**that rule does not survive contact with this document**: applied mechanically it returns
+seventeen tokens, not sixteen — §7.8's own prose contains the bare token `test_AC`, which fails
+the regex — so `ac009.sh --check` fails on every run and **no row can execute**. The gate built
+to stop round 1's contradiction reproduced the same contradiction one level up. A fenced block
+is the same construction §7.1 already uses for the manifest, and it cannot be widened by prose:
+
+```ac009-testnames
+test_AC01_one_escrow_settles_an_evm_proof_and_an_svm_proof
+test_AC01_settling_the_svm_deal_leaves_every_other_deal_untouched
+test_AC02_an_evm_proof_cannot_settle_the_svm_deal
+test_AC02_an_svm_proof_cannot_settle_the_evm_deal
+test_AC02_a_verifying_proof_with_the_wrong_binding_reverts_on_the_binding
+test_AC02_the_two_fixtures_are_not_the_same_artifact
+test_AC03_settle_with_proof_has_no_adjudicator_parameter
+test_AC03_the_escrow_dispatches_to_the_deal_s_verifier_and_to_nothing_else
+test_AC04_the_adjudication_call_cannot_write_state
+test_AC04_the_same_verifier_writes_when_it_is_not_called_through_a_view_type
+test_AC05_fund_rejects_an_address_with_no_code
+test_AC05_fund_rejects_a_codehash_that_is_not_the_named_verifier_s
+test_AC05_fund_still_rejects_a_zero_binding
+test_AC06_the_svm_deal_cannot_be_settled_twice
+test_AC06_a_failed_verdict_on_an_svm_shaped_deal_refunds_the_buyer
+test_AC06_no_token_is_created_or_destroyed_across_both_settlements
+```
+
+Sixteen names; per selector **AC-1 2, AC-2 4, AC-3 2, AC-4 2, AC-5 3, AC-6 3**, which is the
+manifest's `tests` column. Measured against this block on 2026-09-05: all sixteen match the
+regex, the counts agree, and the extraction returns exactly sixteen tokens.
 
 This clause exists because round 1 mandated a name its own gate rejects, and **the gate could
 not see it**: the regex was applied to what `forge` *found*, so the contradiction only surfaces
@@ -1922,12 +2050,19 @@ the tree, not a dependency on a document. See OQ-6, rewritten.
    row can then say the wire is closed.
 4. **`CLAUDE.md`** — the "verified facts" block says the escrow is settled by real Groth16
    proofs; after 009 it must say **from two guests, through one escrow with no constructor**,
-   and must carry L-1 in the same breath. **It must not say, or imply, that the deal's
-   committed verifier is what makes a payout sound.** §4.4 is explicit and §11(4) ships it:
-   **settlement authority comes from the proof verifying (B-2)**; the deal's `verifier` /
-   `verifierCodeHash` decide *which* program's proof, and B-1 alone would settle on unverified
-   bytes. Round 1's §4.4 said the reverse, and this clause is what stops that sentence reaching
-   the file that states the central claim (r1 finding 5).
+   and must carry L-1 in the same breath. Two things it **must not** say, and round 2 had it
+   shipping the second of them (r2 BLOCKER 3):
+   - not that the deal's committed verifier is what makes a payout **sound** — B-1 alone would
+     settle on unverified bytes (r1 finding 5);
+   - **not that "there is no path to a payout that skips proof verification"**, which is false
+     after 009: the buyer names the verifier at `fund`, so a buyer who names a sham is paid out
+     on garbage, and AC-3 test 2 requires that behaviour.
+
+   The sentence that is true, and the one this clause ships: **the funder chooses the program;
+   the proof, checked by that program, chooses the payout** (§4.4 B-2, INV-2). It must be
+   accompanied by the seller-side capability 009 adds — a buyer can name a verifier that always
+   returns `FAILED`, and no on-chain check distinguishes that from an honest `Failed` (INV-2,
+   L-7).
 5. **The four sentences retired, listed so `xvm-docs.sh` has a set to match and not a
    judgement to make**: (i) the `zk-verdict/README.md` sentence presenting the escrow as bound
    to one verifier at construction (§11(1)); (ii) the root `README.md` sentence describing
