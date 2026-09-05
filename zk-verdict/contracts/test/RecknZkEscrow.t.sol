@@ -36,10 +36,7 @@ contract RecknZkEscrowTest is Test {
     /// End-to-end: a REAL Groth16 proof of the EVM re-execution (Reproduced) settles
     /// the escrow to the seller — authority from the proof, not a signature.
     function test_real_proof_settles_to_seller() public {
-        if (!vm.exists(REEXEC_FIXTURE)) {
-            emit log("no reexec fixture -- skipping (cd ../script && cargo run --bin reexec -- --fixture)");
-            return;
-        }
+        require(vm.exists(REEXEC_FIXTURE), "missing reexec fixture -- a missing fixture is a hard failure; regenerate in ../script with `cargo run --bin reexec -- --fixture`");
         string memory json = vm.readFile(REEXEC_FIXTURE);
         bytes32 vkey = vm.parseJsonBytes32(json, ".vkey");
         bytes memory publicValues = vm.parseJsonBytes(json, ".public_values");

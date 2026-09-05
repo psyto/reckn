@@ -6,10 +6,10 @@ import {ISP1Verifier} from "@sp1-contracts/ISP1Verifier.sol";
 /// @notice Public values committed by the zk-verdict guest. Must match the
 ///         `sol!` struct in `zk-verdict/lib/src/lib.rs` (field order + types).
 struct VerdictPublicValues {
-    uint64 pre;
-    uint64 post;
-    uint64 minDelta;
-    uint64 maxDelta;
+    uint256 pre;
+    uint256 post;
+    uint256 minDelta;
+    uint256 maxDelta;
     uint8 outcome;
     bytes32 traceHash;
     /// @notice Commitment over the guest's prestate + predicate + plan. An escrow

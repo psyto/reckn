@@ -18,10 +18,7 @@ contract RecknVerdictVerifierFixtureTest is Test {
     string constant FIXTURE = "src/fixtures/groth16-fixture.json";
 
     function test_real_groth16_proof_verifies_on_chain() public {
-        if (!vm.exists(FIXTURE)) {
-            emit log("no groth16 fixture present -- skipping (run `cargo run --bin evm`)");
-            return;
-        }
+        require(vm.exists(FIXTURE), "missing groth16 fixture -- a missing fixture is a hard failure; regenerate with `cargo run --bin evm`");
 
         string memory json = vm.readFile(FIXTURE);
         bytes32 vkey = vm.parseJsonBytes32(json, ".vkey");
@@ -44,7 +41,7 @@ contract RecknVerdictVerifierFixtureTest is Test {
     }
 
     function test_tampered_public_values_are_rejected() public {
-        if (!vm.exists(FIXTURE)) return;
+        require(vm.exists(FIXTURE), "missing fixture -- regenerate it; a missing fixture is a hard failure");
 
         string memory json = vm.readFile(FIXTURE);
         bytes32 vkey = vm.parseJsonBytes32(json, ".vkey");

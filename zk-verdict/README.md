@@ -105,9 +105,11 @@ the wiring suite (mock verifier) and the real-verifier suite are green.
 
 The only heavy prerequisite is SP1's ~6.2 GB v6.1.0 gnark circuit artifacts (the
 wrapping circuit's proving key), fetched once into `~/.sp1/circuits/groth16/v6.1.0`
-— inherent to SP1's Groth16 path, not a reckn choice. `RecknVerdictVerifierFixture.t.sol`
-stays gated on the fixture's presence, so `forge test` is green for anyone who
-hasn't regenerated it.
+— inherent to SP1's Groth16 path, not a reckn choice. The fixtures are committed, and
+**a missing fixture is a hard failure**: the suites used to return early when one was
+absent, which made `forge test` green for a run that verified nothing. They `require`
+the fixture now, so a deleted or unregenerated fixture is a red test rather than a
+quiet pass.
 
 ## Full re-execution in the guest (the trusted-prestate AND trusted-`post` gaps, closed)
 

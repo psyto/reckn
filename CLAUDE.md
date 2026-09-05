@@ -17,6 +17,11 @@ TEE の LLM 判事でも、自己申告フィードバックでも、監査不�
 持たず、`settleWithProof` は permissionless。決済権限は「proof が検証される」ことから来る。
 `bash scripts/no-keys.sh` がこれをビルド条件として強制する。**commit 前に必ず走らせる。**
 
+**主張が住むファイルは1本ではない。** `settleWithProof` は
+`zk-verdict/contracts/src/RecknVerdictVerifier.sol` の `verifyVerdict` が返す struct に従うので、
+**その1本も同じ権限を持つ**。2026-09-05 の check 5 でそのファイルも検査領域に入った
+（6つの性質で閉じる。禁止語リストではない）。
+
 競合が模倣できないのは、全員が「鍵を持つ誰か」を抱えているから（TEE 系=オペレータ /
 optimistic 系=bonded resolver / feedback 系=投票者）。**アーキテクチャを捨てないと同じことが言えない。**
 

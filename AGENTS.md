@@ -14,6 +14,12 @@
 Reckn の差別化はこの一点しかない。`RecknZkEscrow` に owner / admin / resolver / pause / upgrade を
 **一行足した瞬間に、製品は競合と同じものになる**。だから約束でなく**ビルド条件**にしてある。
 
+**検査される領域は2ファイルである**（2026-09-05 に拡大、task 008 check 5）。
+`RecknZkEscrow.sol` に加え **`RecknVerdictVerifier.sol`** —— `settleWithProof` は後者の
+`verifyVerdict` が返す struct に従うので、そこに定数アドレス分岐を差し込めばそれは resolver である。
+それまでこのスクリプトは1ファイルしか読んでおらず、**その分岐は全検査を緑のまま通過した**。
+check 5 は禁止語の列挙ではなく**6つの性質**（許可される内容の全体）で閉じる。
+
 ```sh
 bash scripts/no-keys.sh     # exit 0 = 主張はまだ真
 ```

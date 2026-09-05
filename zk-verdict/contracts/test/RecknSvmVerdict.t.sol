@@ -20,10 +20,7 @@ contract RecknSvmVerdictTest is Test {
     string constant FIXTURE = "src/fixtures/svm-groth16-fixture.json";
 
     function test_svm_reexecution_proof_verifies_on_chain() public {
-        if (!vm.exists(FIXTURE)) {
-            emit log("no svm fixture present -- skipping (run `cargo run --bin svm -- --fixture`)");
-            return;
-        }
+        require(vm.exists(FIXTURE), "missing svm fixture -- a missing fixture is a hard failure; regenerate with `cargo run --bin svm -- --fixture`");
 
         string memory json = vm.readFile(FIXTURE);
         bytes32 vkey = vm.parseJsonBytes32(json, ".vkey");
@@ -43,7 +40,7 @@ contract RecknSvmVerdictTest is Test {
     }
 
     function test_svm_tampered_public_values_are_rejected() public {
-        if (!vm.exists(FIXTURE)) return;
+        require(vm.exists(FIXTURE), "missing fixture -- regenerate it; a missing fixture is a hard failure");
 
         string memory json = vm.readFile(FIXTURE);
         bytes32 vkey = vm.parseJsonBytes32(json, ".vkey");
