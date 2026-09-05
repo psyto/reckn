@@ -1273,7 +1273,7 @@ AC-07b  forge   -                   _AC07_                                      
 AC-08   cargo   zk-verdict/script   _AC08_                                           6   -
 AC-09   script  -                   bash zk-verdict/scripts/fixtures-check.sh        -   fixtures: 4/4 current (vkey and public values byte-identical); witness={witness}
 AC-10   forge   -                   _AC10_                                           4   -
-AC-11   script  -                   bash zk-verdict/scripts/no-skip.sh               -   no-skip: 0 early-return fixture gates, 18/18 forge tests ran, 0 skipped; witness={witness}
+AC-11   script  -                   bash zk-verdict/scripts/no-skip.sh               -   no-skip: 0 early-return fixture gates, {P}/{P} forge tests ran, 0 skipped; witness={witness}
 AC-12   cargo   zk-verdict/lib      _AC12_                                           3   -
 AC-13   script  -                   bash zk-verdict/scripts/ac008-selftest.sh        -   ac008-selftest: 21/21 mutants detected; witness={witness}
 AC-14   script  -                   bash zk-verdict/scripts/docs-check.sh            -   docs: 9/9 stale claims absent, 11/11 replacements present, 0 tilde cycle literals, 1/1 qualified ~34 s site, cycles.json matches 3/3 guests; witness={witness}
@@ -1294,6 +1294,14 @@ Arithmetic `ac008.sh --check` recomputes and a reviewer can recompute by hand:
   `reexec-evm` = **16** (unchanged; 008 adds testkit builders and **zero** tests there —
   measured 2026-09-04: `grep -c '#\[test\]'` gives 10 in `src/lib.rs`, 6 in `src/header.rs`).
   11 + 64 + 16 = **91** ✓.
+*(**`{P}` — added 2026-09-06 under the founder's OQ-8 ruling.** AC-11's evidence line carried the
+literal `18/18`, and `009` legitimately adds sixteen tests, which would turn this row — and with it
+`008` — red for a number rather than for a defect. `{P}` is a **base-measured token**, recomputed by
+`ac008.sh` from `grep -c 'function test'` over the suite, exactly as `003` uses `{P}`. What the row
+asserts is unchanged: every test the suite declares must run, and none may be skipped. Measured
+2026-09-06 after 009's sixteen landed: **34/34**. The `18` figures below are the base measurement
+and are kept as the record of what 008 itself added.)*
+
 - `zk-verdict/contracts` = **18** forge tests = **12** pre-existing (measured 2026-09-04:
   `grep -n "function test" zk-verdict/contracts/test/*.t.sol | wc -l` → 12) + **6** new.
   AC-11 asserts 18.
@@ -2526,7 +2534,7 @@ is adopted; the remedy is re-derived. Verified 2026-09-05 by reading both test f
 
 ```sh
 bash zk-verdict/scripts/no-skip.sh
-# no-skip: 0 early-return fixture gates, 18/18 forge tests ran, 0 skipped; witness=<16 hex>
+# no-skip: 0 early-return fixture gates, <P>/<P> forge tests ran, 0 skipped; witness=<16 hex>
 ```
 
 *(r1 finding 2 — BLOCKER. Round 1 required `grep -c 'vm.exists'` to be **0** while
@@ -2545,7 +2553,7 @@ string. The check is restated over the pattern that is actually the defect: the 
   hard failure, not an early return. It contains `vm.exists` and passes the check above.
   All four fixtures are committed and AC-9 keeps them current, so a missing fixture is a
   failure, not a reason to return early.
-- `forge test --json` over the whole suite must report **18** results, all `Success`, none
+- `forge test --json` over the whole suite must report **as many results as the suite declares** (`{P}`; **18** at 008's base, 34 after 009), all `Success`, none
   `Skipped`.
 
 **Falsify:** restore one `if (!vm.exists(F)) return;` — the gate count is 1. **Mutant M-11** is

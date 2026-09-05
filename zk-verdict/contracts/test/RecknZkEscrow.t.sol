@@ -26,11 +26,11 @@ contract RecknZkEscrowTest is Test {
         token.mint(buyer, AMOUNT);
     }
 
-    function _fund(RecknZkEscrow escrow, bytes32 dealId, bytes32 binding) internal {
+    function _fund(RecknZkEscrow escrow, bytes32 dealId, address verifier, bytes32 binding) internal {
         vm.prank(buyer);
         token.approve(address(escrow), AMOUNT);
         vm.prank(buyer);
-        escrow.fund(dealId, seller, address(token), AMOUNT, binding);
+        escrow.fund(dealId, seller, address(token), AMOUNT, verifier, verifier.codehash, binding);
     }
 
     /// End-to-end: a REAL Groth16 proof of the EVM re-execution (Reproduced) settles
@@ -46,10 +46,10 @@ contract RecknZkEscrowTest is Test {
 
         SP1Verifier sp1 = new SP1Verifier();
         RecknVerdictVerifier verifier = new RecknVerdictVerifier(address(sp1), vkey);
-        RecknZkEscrow escrow = new RecknZkEscrow(verifier);
+        RecknZkEscrow escrow = new RecknZkEscrow();
 
         bytes32 dealId = keccak256("deal-real");
-        _fund(escrow, dealId, binding);
+        _fund(escrow, dealId, address(verifier), binding);
         assertEq(token.balanceOf(address(escrow)), AMOUNT, "escrow holds funds");
 
         // Anyone can submit the proof — it carries its own authority.
@@ -61,10 +61,14 @@ contract RecknZkEscrowTest is Test {
 
     // --- mocked verifier: refund + guards ---
 
-    function _mockEscrow() internal returns (RecknZkEscrow escrow, address verifierAddr) {
+    function _mockEscrow()
+        internal
+        returns (RecknZkEscrow escrow, address verifierAddr, address adjudicator)
+    {
         verifierAddr = address(new SP1VerifierGateway(address(1)));
         RecknVerdictVerifier verifier = new RecknVerdictVerifier(verifierAddr, bytes32(uint256(0xbeef)));
-        escrow = new RecknZkEscrow(verifier);
+        adjudicator = address(verifier);
+        escrow = new RecknZkEscrow();
         // Accept any proof so we can exercise the escrow's own logic.
         vm.mockCall(
             verifierAddr,
@@ -88,10 +92,10 @@ contract RecknZkEscrowTest is Test {
     }
 
     function test_failed_verdict_refunds_buyer() public {
-        (RecknZkEscrow escrow,) = _mockEscrow();
+        (RecknZkEscrow escrow,, address adjudicator) = _mockEscrow();
         bytes32 dealId = keccak256("deal-failed");
         bytes32 binding = keccak256("binding-A");
-        _fund(escrow, dealId, binding);
+        _fund(escrow, dealId, adjudicator, binding);
 
         escrow.settleWithProof(dealId, _pv(escrow.FAILED(), binding), hex"1234");
         assertEq(token.balanceOf(buyer), AMOUNT, "buyer refunded on ZK-proven Failed");
@@ -99,9 +103,9 @@ contract RecknZkEscrowTest is Test {
     }
 
     function test_settle_reverts_on_binding_mismatch() public {
-        (RecknZkEscrow escrow,) = _mockEscrow();
+        (RecknZkEscrow escrow,, address adjudicator) = _mockEscrow();
         bytes32 dealId = keccak256("deal-mismatch");
-        _fund(escrow, dealId, keccak256("binding-A"));
+        _fund(escrow, dealId, adjudicator, keccak256("binding-A"));
 
         // A verified proof, but about a DIFFERENT deal (binding-B) — must not settle.
         // Build the public values first so expectRevert targets the settle call only.
@@ -115,9 +119,9 @@ contract RecknZkEscrowTest is Test {
         // Real gateway (no mock): a fake proof cannot verify, so settlement reverts.
         SP1VerifierGateway gw = new SP1VerifierGateway(address(1));
         RecknVerdictVerifier verifier = new RecknVerdictVerifier(address(gw), bytes32(uint256(0xbeef)));
-        RecknZkEscrow escrow = new RecknZkEscrow(verifier);
+        RecknZkEscrow escrow = new RecknZkEscrow();
         bytes32 dealId = keccak256("deal-badproof");
-        _fund(escrow, dealId, keccak256("binding-A"));
+        _fund(escrow, dealId, address(verifier), keccak256("binding-A"));
 
         vm.expectRevert();
         escrow.settleWithProof(dealId, _pv(0, keccak256("binding-A")), new bytes(260));

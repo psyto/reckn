@@ -36,11 +36,11 @@ contract RecknVerdictDomainTest is Test {
         token.mint(buyer, AMOUNT);
     }
 
-    function _fund(RecknZkEscrow escrow, bytes32 dealId, bytes32 binding) internal {
+    function _fund(RecknZkEscrow escrow, bytes32 dealId, address verifier, bytes32 binding) internal {
         vm.prank(buyer);
         token.approve(address(escrow), AMOUNT);
         vm.prank(buyer);
-        escrow.fund(dealId, seller, address(token), AMOUNT, binding);
+        escrow.fund(dealId, seller, address(token), AMOUNT, verifier, verifier.codehash, binding);
     }
 
     function _verifier(string memory json) internal returns (RecknVerdictVerifier) {
@@ -68,9 +68,10 @@ contract RecknVerdictDomainTest is Test {
         string memory json = vm.readFile(FIXTURE);
         assertEq(vm.parseJsonUint(json, ".outcome"), 0, "fixture is Reproduced");
 
-        RecknZkEscrow escrow = new RecknZkEscrow(_verifier(json));
+        RecknVerdictVerifier verifier = _verifier(json);
+        RecknZkEscrow escrow = new RecknZkEscrow();
         bytes32 dealId = keccak256("deal-widened-reproduced");
-        _fund(escrow, dealId, vm.parseJsonBytes32(json, ".deal_binding"));
+        _fund(escrow, dealId, address(verifier), vm.parseJsonBytes32(json, ".deal_binding"));
 
         escrow.settleWithProof(
             dealId, vm.parseJsonBytes(json, ".public_values"), vm.parseJsonBytes(json, ".proof")
@@ -95,9 +96,10 @@ contract RecknVerdictDomainTest is Test {
         assertEq(got.pre, TWO_64, "pre is 2^64");
         assertEq(got.post, TWO_64 - 1, "post is one wei below it -- a decrease");
 
-        RecknZkEscrow escrow = new RecknZkEscrow(_verifier(json));
+        RecknVerdictVerifier verifier = _verifier(json);
+        RecknZkEscrow escrow = new RecknZkEscrow();
         bytes32 dealId = keccak256("deal-false-release");
-        _fund(escrow, dealId, vm.parseJsonBytes32(json, ".deal_binding"));
+        _fund(escrow, dealId, address(verifier), vm.parseJsonBytes32(json, ".deal_binding"));
 
         escrow.settleWithProof(
             dealId, vm.parseJsonBytes(json, ".public_values"), vm.parseJsonBytes(json, ".proof")
@@ -113,9 +115,10 @@ contract RecknVerdictDomainTest is Test {
         require(vm.exists(FIXTURE), "missing reexec fixture -- a missing fixture is a hard failure");
         string memory json = vm.readFile(FIXTURE);
 
-        RecknZkEscrow escrow = new RecknZkEscrow(_verifier(json));
+        RecknVerdictVerifier verifier = _verifier(json);
+        RecknZkEscrow escrow = new RecknZkEscrow();
         bytes32 dealId = keccak256("deal-bound");
-        _fund(escrow, dealId, vm.parseJsonBytes32(json, ".deal_binding"));
+        _fund(escrow, dealId, address(verifier), vm.parseJsonBytes32(json, ".deal_binding"));
 
         escrow.settleWithProof(
             dealId, vm.parseJsonBytes(json, ".public_values"), vm.parseJsonBytes(json, ".proof")
@@ -135,9 +138,10 @@ contract RecknVerdictDomainTest is Test {
         bytes32 alt = vm.parseJsonBytes32(vm.readFile(ALT_BINDING), ".deal_binding");
         assertTrue(alt != vm.parseJsonBytes32(json, ".deal_binding"), "the two executions differ");
 
-        RecknZkEscrow escrow = new RecknZkEscrow(_verifier(json));
+        RecknVerdictVerifier verifier = _verifier(json);
+        RecknZkEscrow escrow = new RecknZkEscrow();
         bytes32 dealId = keccak256("deal-other-execution");
-        _fund(escrow, dealId, alt);
+        _fund(escrow, dealId, address(verifier), alt);
 
         vm.expectRevert(RecknZkEscrow.BindingMismatch.selector);
         escrow.settleWithProof(

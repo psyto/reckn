@@ -43,19 +43,50 @@ else
   ok "none of: owner / admin / authority / allowlist / pause / upgrade / delegatecall / signature-recovery"
 fi
 
-# 2. The state-changing surface must be exactly the functions we intend, and each
-#    must be callable by anyone. A new external function is a new way to move money.
-say "state-changing surface is enumerated"
+# 2. The state-changing surface is CLOSED, not enumerated (009). Enumerating what the
+#    grep finds is not a closure: `fallback()` and `receive()` carry no `function`
+#    keyword, so a fallback that drains any funded deal was invisible to this check —
+#    measured, compiled and drained. K below is the complete set of Solidity 0.8.x
+#    keywords that introduce executable code reachable AFTER deployment at member
+#    level; `constructor` is deliberately not in it (it is check 4b's).
+say "state-changing surface is closed"
+sum=0
+for kw in function fallback receive modifier; do
+  n=$( (printf '%s\n' "$body" | grep -ow "$kw" || true) | wc -l | tr -d ' ')
+  sum=$((sum + n))
+  if [[ "$kw" != "function" && "$n" != "0" ]]; then
+    bad "2a: $n '$kw' — the only entry points may be functions, and only the enumerated ones"
+  fi
+done
 expected='fund settleWithProof refundAfterDeadline'
 actual=$(printf '%s\n' "$body" | grep -oE '\bfunction +[a-zA-Z_][a-zA-Z0-9_]*' \
          | awk '{print $2}' | sort -u)
-[[ -n "$actual" ]] || bad "no functions found — the body scan is broken, not the contract"
+[[ -n "$actual" ]] || bad "2b: no functions found — the body scan is broken, not the contract"
 for f in $actual; do
   case " $expected " in
     *" $f "*) ok "function $f — expected" ;;
-    *)        bad "function $f — NOT in the enumerated surface ($expected). If this is intended, the claim changed: update AGENTS.md and this script in the same commit, and say so in the demo." ;;
+    *)        bad "2b: function $f — NOT in the enumerated surface ($expected). If this is intended, the claim changed: update AGENTS.md and this script in the same commit, and say so in the demo." ;;
   esac
 done
+ok "entry keywords sum $sum (function only; 0 fallback, 0 receive, 0 modifier)"
+
+# 2c. The region above reads from the `contract RecknZkEscrow` line down. An
+#     INHERITED member is declared above that line, so the reading is only complete
+#     if there is nothing to inherit from and no `using` binding member calls
+#     elsewhere. Measured: a base contract carrying a draining `fallback` compiled and
+#     took a funded deal while every other clause here stayed green.
+inherit=$(sed -n 's/.*contract RecknZkEscrow\(.*\){.*/\1/p' "$target" | tr -d ' \t')
+contracts=$( (grep -ow contract "$target" || true) | wc -l | tr -d ' ')
+usings=$( (sed -e 's://.*::' "$target" | grep -ow using || true) | wc -l | tr -d ' ')
+if [[ -n "$inherit" ]]; then
+  bad "2c: RecknZkEscrow inherits ($inherit) — members declared above the contract line are outside every check here"
+elif [[ "$contracts" != "1" ]]; then
+  bad "2c: $contracts 'contract' declarations in the file; exactly 1 keeps the region complete"
+elif [[ "$usings" != "0" ]]; then
+  bad "2c: $usings 'using' directives — member-call resolution is no longer local"
+else
+  ok "2c region is the whole of the deployed code — 1 contract, 0 inherited, 0 using"
+fi
 
 # 3. No function may gate on the caller's identity.
 say "no caller-identity gating"
@@ -65,12 +96,32 @@ else
   ok "no require/if on msg.sender — anyone may call"
 fi
 
-# 4. The constructor may bind only the verifier. Anything else is a stored authority.
-say "constructor binds only the verifier"
-if printf '%s\n' "$body" | sed -n '/constructor(/,/}/p' | grep -qE '= *msg\.sender'; then
-  bad "constructor stores msg.sender"
+# 4. There is no constructor at all (009), so the old body — "the constructor does not
+#    store msg.sender" — would match an empty range and pass vacuously. An observer
+#    that watches nothing is not an observer.
+say "no deployment-time configuration, over a literal region"
+# 4a. What makes 1, 2, 3 and 4b mean anything. The stripper is line-based and
+#     quote-blind: `string constant MASK = "//"; constructor() {}` becomes
+#     `string constant MASK = "` — valid Solidity carrying a constructor, with the
+#     token gone. Both routes are closed in the RAW file, before stripping.
+blk_open=$(grep -c -F '/*' "$target" || true)
+blk_close=$(grep -c -F '*/' "$target" || true)
+quotes=$(printf '%s\n' "$body" | grep -c '["'"'"']' || true)
+if [[ "$blk_open" != "0" || "$blk_close" != "0" ]]; then
+  bad "4a: block comments present ($blk_open /* , $blk_close */) — the stripper cannot span lines"
+elif [[ "$quotes" != "0" ]]; then
+  bad "4a: $quotes quoted line(s) in the body — a string can hide a declaration from the stripper"
 else
-  ok "constructor stores no caller"
+  ok "4a region is literal — no block comments, no string or char literals"
+fi
+# 4b. No constructor, no immutable: two deployments of this source are behaviourally
+#     identical and there is no deployer choice to disclose or trust.
+ctor=$( (printf '%s\n' "$body" | grep -ow constructor || true) | wc -l | tr -d ' ')
+immut=$( (printf '%s\n' "$body" | grep -ow immutable || true) | wc -l | tr -d ' ')
+if [[ "$ctor" != "0" || "$immut" != "0" ]]; then
+  bad "4b: $ctor constructor, $immut immutable — deployment-time configuration is a key by another name"
+else
+  ok "4b no constructor, no immutable — every deployment of this source is the same contract"
 fi
 
 # 5. Settlement authority does not stop at the escrow. `settleWithProof` obeys the

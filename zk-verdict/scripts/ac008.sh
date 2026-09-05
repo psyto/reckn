@@ -179,8 +179,24 @@ run_forge() {
   echo "$ac: forge $selector — $want tests, all Success"
 }
 
+# {P} — a count the RUNNER measures from the repository, for a row whose number a
+# sibling task legitimately moves. Recomputed here, never transcribed: AC-11's
+# forge-test total was the literal 18 until 009 added sixteen tests (founder ruling,
+# OQ-8, 2026-09-05).
+param_for() {
+  case "$1" in
+    AC-11) (grep -h -c 'function test' "$root"/zk-verdict/contracts/test/*.t.sol || true) \
+             | paste -sd+ - | bc ;;
+    *) echo "ac008: no {P} recipe for $1" >&2; exit 2 ;;
+  esac
+}
+
 run_script() {
   local ac=$1 cmd=$2 evidence=$3 out expected rc=0
+  if [[ "$evidence" == *"{P}"* ]]; then
+    local p; p=$(param_for "$ac")
+    evidence=${evidence//\{P\}/$p}
+  fi
   if [[ "$evidence" == *"{witness}"* ]]; then
     local w; w=$(witness_for "$ac")
     expected=${evidence//\{witness\}/$w}

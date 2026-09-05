@@ -13,7 +13,10 @@ set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 root=$(cd "$here/../.." && pwd)
 testdir="$root/zk-verdict/contracts/test"
-want_tests=18
+# The count is DECLARED by the suite and re-measured here, so "18" cannot go stale
+# when a sibling task adds a test file. What the row asserts is unchanged: every test
+# the suite declares must actually run, and none may be skipped.
+want_tests=$( (grep -h -c 'function test' "$testdir"/*.t.sol || true) | paste -sd+ - | bc)
 fail=0
 
 gates=0

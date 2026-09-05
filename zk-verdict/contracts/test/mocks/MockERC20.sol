@@ -5,9 +5,13 @@ pragma solidity ^0.8.20;
 contract MockERC20 {
     mapping(address => uint256) public balanceOf;
     mapping(address => mapping(address => uint256)) public allowance;
+    /// Tracked so 009's AC-6 test 3 can assert that settlement creates and destroys
+    /// nothing: only `mint` moves it, and no transfer path touches it.
+    uint256 public totalSupply;
 
     function mint(address to, uint256 amount) external {
         balanceOf[to] += amount;
+        totalSupply += amount;
     }
 
     function approve(address spender, uint256 value) external returns (bool) {
