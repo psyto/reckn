@@ -39,6 +39,12 @@ struct Args {
     prove: bool,
     #[arg(long)]
     fixture: bool,
+    /// Emit the deal binding of an execution that differs from the fixture's ONLY in
+    /// the block environment (timestamp + 1). AC-7b funds a deal with this value and
+    /// submits the real proof: it must revert BindingMismatch. Pre-008 the guest
+    /// configured chain_id and nothing else, so it could not tell the two apart.
+    #[arg(long)]
+    alt_binding: bool,
     #[arg(long, default_value = "42")]
     pre: String,
     #[arg(long, default_value = "142")]
@@ -76,10 +82,11 @@ fn build_input(
     min: U256,
     max: U256,
     tamper: bool,
+    timestamp_delta: u64,
 ) -> (GuestInput, [u8; 32]) {
     let caller = testkit::addr(0xca);
     let target = testkit::addr(0x77);
-    let (anchor, witness) = testkit::anchored_witness(PrestateSpec {
+    let (mut anchor, witness) = testkit::anchored_witness(PrestateSpec {
         caller,
         target,
         caller_nonce: 0,
@@ -90,6 +97,7 @@ fn build_input(
         extra_slots: vec![],
         empty_account_proof_for: None,
     });
+    anchor.timestamp += timestamp_delta;
     let predicate = to_predicate(target, U256::from(SLOT), min, max);
     let plan = reckn_reexec_evm::EvmCallPlanV1 {
         caller,
@@ -126,20 +134,21 @@ fn main() {
     sp1_sdk::utils::setup_logger();
     dotenv::dotenv().ok();
     let args = Args::parse();
-    if [args.execute, args.prove, args.fixture]
+    if [args.execute, args.prove, args.fixture, args.alt_binding]
         .iter()
         .filter(|active| **active)
         .count()
         != 1
     {
-        eprintln!("Error: specify exactly one of --execute / --prove / --fixture");
+        eprintln!("Error: specify exactly one of --execute / --prove / --fixture / --alt-binding");
         std::process::exit(1);
     }
     let pre = parse_word(&args.pre);
     let post = parse_word(&args.post);
     let min = parse_word(&args.min);
     let max = parse_word(&args.max);
-    let (input, state_root) = build_input(pre, post, min, max, args.tamper);
+    let timestamp_delta = if args.alt_binding { 1 } else { 0 };
+    let (input, state_root) = build_input(pre, post, min, max, args.tamper, timestamp_delta);
     let mut stdin = SP1Stdin::new();
     stdin.write(&input);
     let client = ProverClient::from_env();
@@ -162,6 +171,30 @@ fn main() {
             outcome_name(values.outcome)
         );
         println!("cycles: {}", report.total_instruction_count());
+    } else if args.alt_binding {
+        // Execution only — no proof. The binding is committed by the guest, so it
+        // has to be read out of a real run rather than hashed here.
+        let (output, _) = client
+            .execute(REEXEC_ELF, stdin)
+            .run()
+            .expect("execute guest");
+        let values =
+            VerdictPublicValues::abi_decode(output.as_slice()).expect("decode public values");
+        let path = args
+            .fixture_path
+            .unwrap_or_else(|| PathBuf::from("../contracts/src/fixtures/alt-binding.json"));
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).expect("create fixture directory");
+        }
+        std::fs::write(
+            &path,
+            format!(
+                "{{\n  \"deal_binding\": \"0x{}\",\n  \"source\": \"the headline execution with anchor.timestamp + 1 -- same prestate, same plan, same predicate\"\n}}\n",
+                hex::encode(values.dealBinding.0)
+            ),
+        )
+        .expect("write alt binding");
+        println!("wrote alt binding to {}", path.display());
     } else if args.prove {
         let pk = client.setup(REEXEC_ELF).expect("setup elf");
         let proof = client.prove(&pk, stdin).run().expect("generate proof");
