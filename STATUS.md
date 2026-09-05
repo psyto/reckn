@@ -27,6 +27,7 @@
 | part 4c | `b6fbbc7` | **`docs-check.sh`**（AC-14 の5検査）と、それが捕まえた **SVM 数値の再現不能** |
 | part 5 | `ede9fef` | **check 5**（`no-keys.sh` が2ファイル目を読む）＋ §3.4 の4トークン＋AC-11 の require 化。**AC-14 緑** |
 | part 6 | `2fe080e` | `env-parity.sh`（AC-06 緑）/ `consumers-check.sh`（AC-16 緑）/ `no-skip.sh`（AC-11 は 12/18 で赤） |
+| part 7 | `1f5af50` | **実 Groth16 2本**（pre=2^64）＋ forge 6テスト。**AC-07b / AC-10 / AC-11 緑、forge 18/18** |
 
 **cargo 側は manifest の要求を満たして閉じた**（`bash` は未着手）。2026-09-05 実測:
 
@@ -48,9 +49,15 @@ M-8 形／M-18 形／711 の境界ずらし／M-20 形（pin の1文字）で正
 selftest 自身が計算した digest と一致。**定数を echo する stub は「witness された byte が動くまでは通る」**
 ——これは §6.2 が自分で書いている限界で、実際に stub を作って再現した。
 
-**gate の現況（実測、runner 経由）**: 緑 = AC-00 / AC-00b / AC-01 / AC-02 / AC-03 / AC-04 /
-AC-06 / AC-07a / AC-08 / AC-12 / AC-14 / AC-15 / AC-16。赤 = AC-11（forge 12/18）、
-AC-07b・AC-10（テスト未作成）、AC-09・AC-13（スクリプト未作成）。
+**gate の現況（実測、runner 経由）**: 緑 = **16 row**（AC-00 / AC-00b / AC-01 / AC-02 / AC-03 /
+AC-04 / AC-06 / AC-07a / AC-07b / AC-08 / AC-10 / AC-11 / AC-12 / AC-14 / AC-15 / AC-16）。
+残り2 = **AC-09**（`fixtures-check.sh`）と **AC-13**（`ac008-selftest.sh` + mutant 21本）。
+
+**part 7 の money-shot**: `test_AC10_false_release_vector_refunds_the_buyer`。
+`pre = 2^64` / `post = 2^64 − 1`（**減少**）の**実 Groth16 proof** で、008 以前は
+「u64::MAX の入金」と読まれ seller へ解放されていたセルが、**buyer へ返金**する。
+証拠とデモが同じ1本のテストになった。fixture は2本とも実 proof を新規生成（各約5分）。
+`alt-binding.json` は **timestamp だけ違う実行**の binding（guest が commit するので実行して読み出す）。
 
 **part 6 で見つけたシェルの罠**: `sed file | grep -q PAT` は `set -o pipefail` 下で
 **一致していても失敗**を返す（grep -q が最初の一致で抜け、大きいファイルでは sed が SIGPIPE）。
