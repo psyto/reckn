@@ -26,6 +26,7 @@
 | part 4b | `fae1858` | **AC-14 の文書側**（cycle 実測 + tilde 14件除去 + 陳腐化した主張7件/marker 8件） |
 | part 4c | `b6fbbc7` | **`docs-check.sh`**（AC-14 の5検査）と、それが捕まえた **SVM 数値の再現不能** |
 | part 5 | `ede9fef` | **check 5**（`no-keys.sh` が2ファイル目を読む）＋ §3.4 の4トークン＋AC-11 の require 化。**AC-14 緑** |
+| part 6 | `2fe080e` | `env-parity.sh`（AC-06 緑）/ `consumers-check.sh`（AC-16 緑）/ `no-skip.sh`（AC-11 は 12/18 で赤） |
 
 **cargo 側は manifest の要求を満たして閉じた**（`bash` は未着手）。2026-09-05 実測:
 
@@ -46,6 +47,15 @@ cargo 8行91 / forge 2行6 / script 8行のうち witness 7）、`AC-00`、`AC-0
 M-8 形／M-18 形／711 の境界ずらし／M-20 形（pin の1文字）で正しく非ゼロ、`computed:` は
 selftest 自身が計算した digest と一致。**定数を echo する stub は「witness された byte が動くまでは通る」**
 ——これは §6.2 が自分で書いている限界で、実際に stub を作って再現した。
+
+**gate の現況（実測、runner 経由）**: 緑 = AC-00 / AC-00b / AC-01 / AC-02 / AC-03 / AC-04 /
+AC-06 / AC-07a / AC-08 / AC-12 / AC-14 / AC-15 / AC-16。赤 = AC-11（forge 12/18）、
+AC-07b・AC-10（テスト未作成）、AC-09・AC-13（スクリプト未作成）。
+
+**part 6 で見つけたシェルの罠**: `sed file | grep -q PAT` は `set -o pipefail` 下で
+**一致していても失敗**を返す（grep -q が最初の一致で抜け、大きいファイルでは sed が SIGPIPE）。
+300行の guest では通り、1100行の engine で落ちたので、**偽の「CFG MISSING」**が出た。
+env-parity.sh はパイプ越しに grep しない形に直してある。
 
 **残り**:
 
