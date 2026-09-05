@@ -24,6 +24,7 @@
 | part 3b | `c982e3b` | `value_domain` 14（AC-02）/ `engine_identity` 13（AC-03）/ `binding` 18（AC-07a） |
 | part 4a | `f843081` | **gate の runner `ac008.sh`** と **AC-0b の `surfaces.sh` + `surfaces.pinned`** |
 | part 4b | `fae1858` | **AC-14 の文書側**（cycle 実測 + tilde 14件除去 + 陳腐化した主張7件/marker 8件） |
+| part 4c | `b6fbbc7` | **`docs-check.sh`**（AC-14 の5検査）と、それが捕まえた **SVM 数値の再現不能** |
 
 **cargo 側は manifest の要求を満たして閉じた**（`bash` は未着手）。2026-09-05 実測:
 
@@ -55,9 +56,17 @@ selftest 自身が計算した digest と一致。**定数を echo する stub �
 5. **AC-09 の witness は未実装で fail closed** — 「4本の ELF vkey を新規計算」は
    `fixtures-check.sh` のビルドに乗る。静かに通さず落ちる側にしてある
 
-**part 4b で実測した cycle**（`zk-verdict/cycles.json`、2026-09-05、ELF の sha256 併記）:
-`verdict` **30,355** / `reexec` **406,715** / `svm` **1,003,195**。旧表記はそれぞれ
+**実測した cycle**（`zk-verdict/cycles.json`、2026-09-05、ELF の sha256 併記）:
+`verdict` **30,355** / `reexec` **406,715** / `svm` **986,097**。旧表記はそれぞれ
 `~21.7k` / `~410k` / `~980k` で、**doc set の tilde 14件はゼロになった**。
+
+**⚠ part 4c の発見: SVM の数値は毎回違っていた。** 同一 ELF で
+1,003,195 / 993,018 / 984,496 / 983,746 / 987,632（5回）。原因は harness の
+`Keypair::new()` が run ごとにランダム（署名鍵もアカウントアドレスも変わる）。
+part 4b はその1サンプルを exact な整数として公開していた。**丸めでも許容幅でもなく入力を固定**
+して解決（signer/recipient を定数化、3回連続で 986,097）。
+**繰り越し1件**: 既存の `svm-groth16-fixture.json` は再現不能なランダム入力から生成されているので、
+AC-09 の「再生成して一致」には一度の作り直しが要る。
 `~34 s` は削除せず「gnark wrap alone」と限定（end-to-end 実測は 335 s ＝素の数字は約10倍
 都合の良い方向に外れていた）。
 
