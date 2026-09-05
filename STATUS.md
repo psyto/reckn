@@ -22,6 +22,7 @@
 | part 3a | `bfee4ed` | domain gate に本体、guest の refusal に vector（`domain_closed` 13 / `outcome_map` 6） |
 | part 3b 前提 | `2bc15e8` | testkit が1アカウント1スロットしか witness できなかったのを解消 |
 | part 3b | `c982e3b` | `value_domain` 14（AC-02）/ `engine_identity` 13（AC-03）/ `binding` 18（AC-07a） |
+| part 4a | `f843081` | **gate の runner `ac008.sh`** と **AC-0b の `surfaces.sh` + `surfaces.pinned`** |
 
 **cargo 側は manifest の要求を満たして閉じた**（`bash` は未着手）。2026-09-05 実測:
 
@@ -33,13 +34,25 @@
 part 3b で1件落ちた: `address_word` が 20 byte の `Address` を `U256::from_be_bytes`（32 byte 必須）へ
 渡して E05 / E11 が panic。`from_be_slice` に修正（COINBASE / ORIGIN が push するのは zero-pad された word）。
 
-**残り（すべて未着手）**:
+**part 4a で通った row（実測 2026-09-05、すべて runner 経由）**: `--check`（18行 / 16基準 /
+cargo 8行91 / forge 2行6 / script 8行のうち witness 7）、`AC-00`、`AC-00b`、`AC-01` 8、`AC-02` 14、
+`AC-12` 3、`AC-15` 16。**`surfaces.pinned` の2つの digest は仕様の literal と今日も一致**＝
+008 の実装がここまで N-1（escrow 1バイトも触らない）と N-3（production prefix 不変）を守った最初の機械的証拠。
 
-1. **forge 6件** — AC-07b 2 + AC-10 4。現在 **12**（実測 `grep -c "function test"`）、AC-11 は **18** を要求
-2. **`zk-verdict/scripts/` の 8 本** — `ac008.sh`（runner）/ `surfaces.sh` / `env-parity.sh` /
-   `fixtures-check.sh` / `no-skip.sh` / `ac008-selftest.sh`（**21 mutant**）/ `docs-check.sh` /
-   `consumers-check.sh`。現在このディレクトリにあるのは `zk-e2e.sh` **1本だけ**
-3. AC-14 が要求する文書側の書き換え（9 absent / 11 present / `cycles.json` 3 guests）
+負のコントロールは**すべて sandbox コピー**で実施（リポジトリのファイルは1つも書いていない）:
+M-8 形／M-18 形／711 の境界ずらし／M-20 形（pin の1文字）で正しく非ゼロ、`computed:` は
+selftest 自身が計算した digest と一致。**定数を echo する stub は「witness された byte が動くまでは通る」**
+——これは §6.2 が自分で書いている限界で、実際に stub を作って再現した。
+
+**残り**:
+
+1. **forge 6件** — AC-07b 2 + AC-10 4。現在 **12**、AC-11 は **18** を要求
+2. **`zk-verdict/scripts/` の残り6本** — `env-parity.sh` / `fixtures-check.sh` / `no-skip.sh` /
+   `ac008-selftest.sh`（**21 mutant**）/ `docs-check.sh` / `consumers-check.sh`
+3. **`mutants/*.patch` 21本**（`09-restore-u64low.patch` は `--all` の canary が自分で当てる）
+4. AC-14 が要求する文書側の書き換え（9 absent / 11 present / `cycles.json` 3 guests）
+5. **AC-09 の witness は未実装で fail closed** — 「4本の ELF vkey を新規計算」は
+   `fixtures-check.sh` のビルドに乗る。静かに通さず落ちる側にしてある
 
 ## 裁定 — ハーネス（2026-09-05 founder 確定、`4946a94`）
 
