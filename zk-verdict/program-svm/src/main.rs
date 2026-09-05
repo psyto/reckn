@@ -19,6 +19,7 @@
 sp1_zkvm::entrypoint!(main);
 
 use alloy_sol_types::SolType;
+use alloy_sol_types::private::U256;
 use solana_transaction::Transaction;
 use svm_io::SvmPrestate;
 use verdict_lib::{delta_outcome, verdict_trace_hash, VerdictPublicValues, FAILED};
@@ -120,31 +121,42 @@ pub fn main() {
     };
 
     let outcome = if exec_ok {
-        delta_outcome(pre, post, check.min, check.max)
+        delta_outcome(
+            U256::from(pre),
+            U256::from(post),
+            U256::from(check.min),
+            U256::from(check.max),
+        )
     } else {
         FAILED
     };
-    let trace = verdict_trace_hash(pre, post, check.min, check.max, outcome);
+    let trace = verdict_trace_hash(
+        U256::from(pre),
+        U256::from(post),
+        U256::from(check.min),
+        U256::from(check.max),
+        outcome,
+    );
 
     // Deal binding: commit the authenticated bank_hash + the predicate + the signed
     // transaction (via its signature), so an escrow can require a proof to be about
     // its exact committed deal.
     use sha2::{Digest, Sha256};
     let mut bh = Sha256::new();
-    bh.update(b"reckn/zk/bind/svm/v1");
+    bh.update(b"reckn/zk/bind/svm/v2");
     bh.update(prestate.bank_hash);
     bh.update(check.account);
-    bh.update(check.min.to_le_bytes());
-    bh.update(check.max.to_le_bytes());
+    bh.update(U256::from(check.min).to_be_bytes::<32>());
+    bh.update(U256::from(check.max).to_be_bytes::<32>());
     bh.update(tx.signatures[0].as_ref());
     let mut deal_binding = [0u8; 32];
     deal_binding.copy_from_slice(&bh.finalize());
 
     let bytes = VerdictPublicValues::abi_encode(&VerdictPublicValues {
-        pre,
-        post,
-        minDelta: check.min,
-        maxDelta: check.max,
+        pre: U256::from(pre),
+        post: U256::from(post),
+        minDelta: U256::from(check.min),
+        maxDelta: U256::from(check.max),
         outcome,
         traceHash: trace.into(),
         dealBinding: deal_binding.into(),

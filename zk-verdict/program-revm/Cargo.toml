@@ -7,7 +7,7 @@ edition = "2021"
 sp1-zkvm = { version = "6.0.1" }
 # Full re-execution in-guest: real revm, minus the C-based c-kzg/secp precompiles
 # (default features) our CALL plans don't need.
-revm = { version = "38", default-features = false }
+revm = { version = "38", default-features = false, features = ["optional_no_base_fee"] }
 # In-guest prestate MPT-authenticity vs the committed state_root (same crates and
 # versions reexec-evm verifies with, so the guest and the off-chain backend agree).
 alloy-trie = { version = "0.9.5", features = ["ethereum"] }

@@ -7,6 +7,7 @@
 sp1_zkvm::entrypoint!(main);
 
 use alloy_sol_types::SolType;
+use alloy_sol_types::private::U256;
 use verdict_lib::{delta_outcome, verdict_trace_hash, VerdictPublicValues};
 
 pub fn main() {
@@ -17,14 +18,18 @@ pub fn main() {
     let max = sp1_zkvm::io::read::<u64>();
 
     // reckn's causal delta adjudication, run under proof.
-    let outcome = delta_outcome(pre, post, min, max);
-    let trace = verdict_trace_hash(pre, post, min, max, outcome);
+    let pre_u256 = U256::from(pre);
+    let post_u256 = U256::from(post);
+    let min_u256 = U256::from(min);
+    let max_u256 = U256::from(max);
+    let outcome = delta_outcome(pre_u256, post_u256, min_u256, max_u256);
+    let trace = verdict_trace_hash(pre_u256, post_u256, min_u256, max_u256, outcome);
 
     let bytes = VerdictPublicValues::abi_encode(&VerdictPublicValues {
-        pre,
-        post,
-        minDelta: min,
-        maxDelta: max,
+        pre: pre_u256,
+        post: post_u256,
+        minDelta: min_u256,
+        maxDelta: max_u256,
         outcome,
         traceHash: trace.into(),
         // The predicate guest trusts pre/post and is not a settlement source.
