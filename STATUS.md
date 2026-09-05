@@ -28,6 +28,10 @@
 | part 5 | `ede9fef` | **check 5**（`no-keys.sh` が2ファイル目を読む）＋ §3.4 の4トークン＋AC-11 の require 化。**AC-14 緑** |
 | part 6 | `2fe080e` | `env-parity.sh`（AC-06 緑）/ `consumers-check.sh`（AC-16 緑）/ `no-skip.sh`（AC-11 は 12/18 で赤） |
 | part 7 | `1f5af50` | **実 Groth16 2本**（pre=2^64）＋ forge 6テスト。**AC-07b / AC-10 / AC-11 緑、forge 18/18** |
+| part 8 | `ca30c51` | `fixtures-check.sh`（AC-09）と bin の `--verify` / `--vkey` |
+| part 9 | `0a797c6` | fixture 3本を実 proof で作り直し（min=1 / hex 文字列 / svm 再現可能化）。**AC-09 緑** |
+| part 10 | `a1a0d63` | **mutant 21本 + `ac008-selftest.sh`。21/21 検出（1854s）** |
+| **着地** | — | **`ac008: 18/18 rows passed; canary M-9 detected by AC-06`**（2026-09-06、通し実行） |
 
 **cargo 側は manifest の要求を満たして閉じた**（`bash` は未着手）。2026-09-05 実測:
 
@@ -49,7 +53,43 @@ M-8 形／M-18 形／711 の境界ずらし／M-20 形（pin の1文字）で正
 selftest 自身が計算した digest と一致。**定数を echo する stub は「witness された byte が動くまでは通る」**
 ——これは §6.2 が自分で書いている限界で、実際に stub を作って再現した。
 
-**gate の現況（実測、runner 経由）**: 緑 = **16 row**（AC-00 / AC-00b / AC-01 / AC-02 / AC-03 /
+## 008 は着地した（2026-09-06、`ac008.sh --all` 通し実行の逐語）
+
+```
+AC-00: the claim holds: no key can move a funded escrow.
+AC-00b: surfaces: RecknZkEscrow.sol unchanged; reexec-evm production prefix unchanged; witness=af8c246875df1e78
+AC-01: cargo zk-verdict/lib _AC01_ — 8 passed, 0 failed, 0 ignored
+AC-02: cargo zk-verdict/script _AC02_ — 14 passed, 0 failed, 0 ignored
+AC-03: cargo zk-verdict/script _AC03_ — 13 passed, 0 failed, 0 ignored
+AC-04: cargo zk-verdict/script _AC04_ — 13 passed, 0 failed, 0 ignored
+AC-06: env-parity: 5/5 truncation patterns absent; 4/4 cfg flags pinned on both sides; 0 rest patterns in to_guest_input; TxEnv fields identical (7); witness=5125d80fa917167a
+AC-07a: cargo zk-verdict/script _AC07_ — 18 passed, 0 failed, 0 ignored
+AC-07b: forge _AC07_ — 2 tests, all Success
+AC-08: cargo zk-verdict/script _AC08_ — 6 passed, 0 failed, 0 ignored
+AC-09: fixtures: 4/4 current (vkey and public values byte-identical); witness=1d706f61ab269a3b
+AC-10: forge _AC10_ — 4 tests, all Success
+AC-11: no-skip: 0 early-return fixture gates, 18/18 forge tests ran, 0 skipped; witness=744f4c3e4e41520c
+AC-12: cargo zk-verdict/lib _AC12_ — 3 passed, 0 failed, 0 ignored
+AC-13: ac008-selftest: 21/21 mutants detected; witness=2bc6fc46729c2609
+AC-14: docs: 9/9 stale claims absent, 11/11 replacements present, 0 tilde cycle literals, 1/1 qualified ~34 s site, cycles.json matches 3/3 guests; witness=19393ee7b79317fa
+AC-15: cargo reexec-evm - — 16 passed, 0 failed, 0 ignored
+AC-16: consumers: binder, keeper, reckn-evm-content check --tests clean (3/3); witness=96d866043bf88386
+ac008: 18/18 rows passed; canary M-9 detected by AC-06
+```
+
+**canary は `--all` 自身が M-9（`fn u64_low` 再挿入）を当て、AC-06 が非ゼロになることを確認してから**
+でないとこの最終行を印字できない。`ac008-selftest.sh` を stub しても、`env-parity.sh` が本当に
+検出しない限り緑にならない。**実行後の `git status` はクリーン**（in-tree mutation の残渣なし）。
+
+**閉じていないことも書いておく**: AC-13 の witness は run 全体で定数（どの mutant も
+`mutants/*.patch` を書き換えない）なので、**この row を満たす2行の `echo` は書ける**。
+リポジトリの内側にそれを閉じるものは無く、canary が検出を1つ別スクリプトへ移し、
+残りは人が読んで走らせることに乗っている（L-3）。
+
+**次は 009 の実装**（仕様は `d7fcb85` で凍結済み）。9/9 のチェックポイントは
+「008 と 009 が*同時に*緑」。
+
+## 旧: gate の現況（実測、runner 経由）: 緑 = **16 row**（AC-00 / AC-00b / AC-01 / AC-02 / AC-03 /
 AC-04 / AC-06 / AC-07a / AC-07b / AC-08 / AC-10 / AC-11 / AC-12 / AC-14 / AC-15 / AC-16）。
 残り2 = **AC-09**（`fixtures-check.sh`）と **AC-13**（`ac008-selftest.sh` + mutant 21本）。
 
