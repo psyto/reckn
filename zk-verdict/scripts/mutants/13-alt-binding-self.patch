@@ -1,0 +1,10 @@
+diff --git a/zk-verdict/contracts/src/fixtures/alt-binding.json b/zk-verdict/contracts/src/fixtures/alt-binding.json
+index f0d63f3..0c3f525 100644
+--- a/zk-verdict/contracts/src/fixtures/alt-binding.json
++++ b/zk-verdict/contracts/src/fixtures/alt-binding.json
+@@ -1,4 +1,4 @@
+ {
+-  "deal_binding": "0xd8247b3d2af4445009a5c1de442d72d121fabd87d0527c72fd56cf537d09d715",
++  "deal_binding": "0x85ac262cbf7f0bdc2a0bda399b6c748a894825885424e361d0e107dcbcafa1ef",
+   "source": "the headline execution with anchor.timestamp + 1 -- same prestate, same plan, same predicate"
+ }

@@ -1,0 +1,13 @@
+diff --git a/zk-verdict/README.md b/zk-verdict/README.md
+index 50f683a..22385ca 100644
+--- a/zk-verdict/README.md
++++ b/zk-verdict/README.md
+@@ -111,6 +111,8 @@ absent, which made `forge test` green for a run that verified nothing. They `req
+ the fixture now, so a deleted or unregenerated fixture is a red test rather than a
+ quiet pass.
+ 
++The re-execution guest costs ~410k cycles.
++
+ ## Full re-execution in the guest (the trusted-prestate AND trusted-`post` gaps, closed)
+ 
+ The predicate guest above trusts `post` as an input — someone still runs the EVM

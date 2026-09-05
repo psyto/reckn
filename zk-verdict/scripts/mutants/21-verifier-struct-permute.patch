@@ -1,0 +1,14 @@
+diff --git a/zk-verdict/contracts/src/RecknVerdictVerifier.sol b/zk-verdict/contracts/src/RecknVerdictVerifier.sol
+index b5d4c47..8ced259 100644
+--- a/zk-verdict/contracts/src/RecknVerdictVerifier.sol
++++ b/zk-verdict/contracts/src/RecknVerdictVerifier.sol
+@@ -8,8 +8,8 @@ import {ISP1Verifier} from "@sp1-contracts/ISP1Verifier.sol";
+ struct VerdictPublicValues {
+     uint256 pre;
+     uint256 post;
+-    uint256 minDelta;
+     uint256 maxDelta;
++    uint256 minDelta;
+     uint8 outcome;
+     bytes32 traceHash;
+     /// @notice Commitment over the guest's prestate + predicate + plan. An escrow

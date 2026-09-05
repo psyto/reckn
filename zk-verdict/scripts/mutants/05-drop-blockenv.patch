@@ -1,0 +1,19 @@
+diff --git a/zk-verdict/program-revm/src/main.rs b/zk-verdict/program-revm/src/main.rs
+index f01c544..ab7f08d 100644
+--- a/zk-verdict/program-revm/src/main.rs
++++ b/zk-verdict/program-revm/src/main.rs
+@@ -299,14 +299,6 @@ pub fn main() {
+             cfg.disable_base_fee = true;
+             cfg.disable_nonce_check = true;
+         })
+-        .modify_block_chained(|block| {
+-            block.number = U256::from(input.env.block_number);
+-            block.timestamp = U256::from(input.env.timestamp);
+-            block.basefee = input.env.base_fee;
+-            block.gas_limit = input.env.block_gas_limit;
+-            block.beneficiary = Address::from(input.env.coinbase);
+-            block.prevrandao = Some(B256::from(input.env.prevrandao));
+-        })
+         .build_mainnet();
+ 
+     let tx = TxEnv {

@@ -1,0 +1,13 @@
+diff --git a/reexec-evm/src/lib.rs b/reexec-evm/src/lib.rs
+index c8d2daa..2fc7427 100644
+--- a/reexec-evm/src/lib.rs
++++ b/reexec-evm/src/lib.rs
+@@ -807,7 +807,7 @@ pub mod testkit {
+         (root, proofs)
+     }
+ 
+-    pub fn anchored_identity_witness(
++    pub fn anchored_identity_witness_renamed(
+         caller: Address,
+         target: Address,
+     ) -> (EvmAnchorV1, PrestateWitnessV1) {

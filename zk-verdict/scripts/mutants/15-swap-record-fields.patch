@@ -1,0 +1,18 @@
+diff --git a/zk-verdict/contracts/src/RecknVerdictVerifier.sol b/zk-verdict/contracts/src/RecknVerdictVerifier.sol
+index b5d4c47..146689f 100644
+--- a/zk-verdict/contracts/src/RecknVerdictVerifier.sol
++++ b/zk-verdict/contracts/src/RecknVerdictVerifier.sol
+@@ -11,11 +11,11 @@ struct VerdictPublicValues {
+     uint256 minDelta;
+     uint256 maxDelta;
+     uint8 outcome;
+-    bytes32 traceHash;
++    bytes32 dealBinding;
+     /// @notice Commitment over the guest's prestate + predicate + plan. An escrow
+     ///         deal commits the same value at funding, so a proof can only settle
+     ///         the deal it was actually about (see RecknZkEscrow).
+-    bytes32 dealBinding;
++    bytes32 traceHash;
+ }
+ 
+ /// @title RecknVerdictVerifier

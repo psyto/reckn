@@ -1,0 +1,14 @@
+diff --git a/zk-verdict/program-revm/src/main.rs b/zk-verdict/program-revm/src/main.rs
+index f01c544..7cedb2c 100644
+--- a/zk-verdict/program-revm/src/main.rs
++++ b/zk-verdict/program-revm/src/main.rs
+@@ -341,6 +341,9 @@ pub fn main() {
+     let min = U256::from_be_bytes(check.min);
+     let max = U256::from_be_bytes(check.max);
+     let outcome = if exec_ok {
++        let mask = (U256::from(1u64) << 128) - U256::from(1u64);
++        let pre = pre & mask;
++        let post = post & mask;
+         delta_outcome(pre, post, min, max)
+     } else {
+         FAILED

@@ -1,0 +1,12 @@
+diff --git a/zk-verdict/contracts/src/RecknVerdictVerifier.sol b/zk-verdict/contracts/src/RecknVerdictVerifier.sol
+index b5d4c47..bef5e50 100644
+--- a/zk-verdict/contracts/src/RecknVerdictVerifier.sol
++++ b/zk-verdict/contracts/src/RecknVerdictVerifier.sol
+@@ -52,7 +52,6 @@ contract RecknVerdictVerifier {
+         view
+         returns (VerdictPublicValues memory v)
+     {
+-        ISP1Verifier(verifier).verifyProof(verdictProgramVKey, publicValues, proofBytes);
+         v = abi.decode(publicValues, (VerdictPublicValues));
+     }
+ }

@@ -1,0 +1,13 @@
+diff --git a/reexec-evm/src/lib.rs b/reexec-evm/src/lib.rs
+index c8d2daa..badddb5 100644
+--- a/reexec-evm/src/lib.rs
++++ b/reexec-evm/src/lib.rs
+@@ -705,7 +705,7 @@ fn read_post_slot(
+     U256::ZERO
+ }
+ 
+-/// Deterministic, offline MPT fixtures shared by integration tests.  This is
++/// Deterministic; offline MPT fixtures shared by integration tests.  This is
+ /// deliberately feature-gated so the production API stays limited to replay
+ /// and verification primitives.
+ #[cfg(any(test, feature = "testkit"))]

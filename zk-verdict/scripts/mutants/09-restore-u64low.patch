@@ -1,0 +1,15 @@
+diff --git a/zk-verdict/program-revm/src/main.rs b/zk-verdict/program-revm/src/main.rs
+index f01c544..aad238d 100644
+--- a/zk-verdict/program-revm/src/main.rs
++++ b/zk-verdict/program-revm/src/main.rs
+@@ -269,6 +269,10 @@ fn deal_binding(input: &GuestInput) -> B256 {
+     keccak256(&binding_pre)
+ }
+ 
++fn u64_low(value: U256) -> u64 {
++    value.as_limbs()[0]
++}
++
+ pub fn main() {
+     let input = sp1_zkvm::io::read::<GuestInput>();
+ 

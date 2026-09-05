@@ -1,0 +1,13 @@
+diff --git a/zk-verdict/program-revm/src/main.rs b/zk-verdict/program-revm/src/main.rs
+index f01c544..454d15d 100644
+--- a/zk-verdict/program-revm/src/main.rs
++++ b/zk-verdict/program-revm/src/main.rs
+@@ -292,7 +292,7 @@ pub fn main() {
+     let db = WitnessDb::from_verified_witness(&input);
+ 
+     let mut evm = Context::mainnet()
+-        .with_db(db)
++        .with_db(revm::database::InMemoryDB::default())
+         .modify_cfg_chained(|cfg| {
+             cfg.chain_id = input.env.chain_id;
+             cfg.spec = spec;

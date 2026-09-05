@@ -1,0 +1,10 @@
+diff --git a/zk-verdict/contracts/src/RecknZkEscrow.sol b/zk-verdict/contracts/src/RecknZkEscrow.sol
+index 8c8ee42..b873f59 100644
+--- a/zk-verdict/contracts/src/RecknZkEscrow.sol
++++ b/zk-verdict/contracts/src/RecknZkEscrow.sol
+@@ -1,4 +1,4 @@
+-// SPDX-License-Identifier: Apache-2.0
++//  SPDX-License-Identifier: Apache-2.0
+ pragma solidity ^0.8.20;
+ 
+ import {RecknVerdictVerifier, VerdictPublicValues} from "./RecknVerdictVerifier.sol";

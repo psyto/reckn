@@ -1,0 +1,8 @@
+diff --git a/zk-verdict/scripts/surfaces.pinned b/zk-verdict/scripts/surfaces.pinned
+index abe3ab3..841f0b1 100644
+--- a/zk-verdict/scripts/surfaces.pinned
++++ b/zk-verdict/scripts/surfaces.pinned
+@@ -1,2 +1,2 @@
+-RecknZkEscrow.sol       07d649c2808457f78f9371c96966abdd80a82636171a15e77516c0f5df33e45b
++RecknZkEscrow.sol       07d649c3808457f78f9371c96966abdd80a82636171a15e77516c0f5df33e45b
+ reexec-evm-prefix-710   b4fd62d5b728c704a67ee8aaed463ac186859db079451fc83c47dd3ae5ab29d1

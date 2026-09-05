@@ -1,0 +1,12 @@
+diff --git a/zk-verdict/program-revm/src/main.rs b/zk-verdict/program-revm/src/main.rs
+index f01c544..5daaf1f 100644
+--- a/zk-verdict/program-revm/src/main.rs
++++ b/zk-verdict/program-revm/src/main.rs
+@@ -263,7 +263,6 @@ fn deal_binding(input: &GuestInput) -> B256 {
+     let mut binding_pre = Vec::new();
+     binding_pre.extend_from_slice(b"reckn/zk/bind/evm/v2");
+     binding_pre.extend_from_slice(&input.state_root);
+-    binding_pre.extend_from_slice(env_hash.as_slice());
+     binding_pre.extend_from_slice(check_hash.as_slice());
+     binding_pre.extend_from_slice(plan_hash.as_slice());
+     keccak256(&binding_pre)
