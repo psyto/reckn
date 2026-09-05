@@ -39,6 +39,14 @@ struct Args {
     prove: bool,
     #[arg(long)]
     fixture: bool,
+    /// AC-9: execute the current ELF on these inputs and print the vkey and the
+    /// committed public values, for `fixtures-check.sh` to compare against the
+    /// committed fixture. No proof is generated.
+    #[arg(long)]
+    verify: bool,
+    /// Print the current ELF's vkey and exit. Cheap: no execution, no proof.
+    #[arg(long)]
+    vkey: bool,
     /// Emit the deal binding of an execution that differs from the fixture's ONLY in
     /// the block environment (timestamp + 1). AC-7b funds a deal with this value and
     /// submits the real proof: it must revert BindingMismatch. Pre-008 the guest
@@ -134,13 +142,21 @@ fn main() {
     sp1_sdk::utils::setup_logger();
     dotenv::dotenv().ok();
     let args = Args::parse();
-    if [args.execute, args.prove, args.fixture, args.alt_binding]
+    if args.vkey {
+        let client = ProverClient::from_env();
+        let pk = client.setup(REEXEC_ELF).expect("setup elf");
+        println!("vkey: {}", pk.verifying_key().bytes32());
+        return;
+    }
+    if [args.execute, args.prove, args.fixture, args.alt_binding, args.verify]
         .iter()
         .filter(|active| **active)
         .count()
         != 1
     {
-        eprintln!("Error: specify exactly one of --execute / --prove / --fixture / --alt-binding");
+        eprintln!(
+            "Error: specify exactly one of --execute / --prove / --fixture / --alt-binding / --verify"
+        );
         std::process::exit(1);
     }
     let pre = parse_word(&args.pre);
@@ -171,6 +187,14 @@ fn main() {
             outcome_name(values.outcome)
         );
         println!("cycles: {}", report.total_instruction_count());
+    } else if args.verify {
+        let pk = client.setup(REEXEC_ELF).expect("setup elf");
+        let (output, _) = client
+            .execute(REEXEC_ELF, stdin)
+            .run()
+            .expect("execute guest");
+        println!("vkey: {}", pk.verifying_key().bytes32());
+        println!("public_values: 0x{}", hex::encode(output.as_slice()));
     } else if args.alt_binding {
         // Execution only — no proof. The binding is committed by the guest, so it
         // has to be read out of a real run rather than hashed here.

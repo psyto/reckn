@@ -83,11 +83,23 @@ witness_for() {
       cat "${fs[@]}" | digest16
       ;;
     AC-09)
-      # Recipe: the four freshly-computed ELF vkeys ‖ the four fixture files.
-      # The vkey half needs `fixtures-check.sh`'s build, which is not written yet.
-      # Fail closed rather than witness half the row.
-      echo "ac008: AC-09's witness recipe (four freshly-computed ELF vkeys) is not implemented yet" >&2
-      exit 2
+      # Recipe: the four freshly-computed ELF vkeys (in AC-9's fixture order) ‖ the
+      # four fixture files. The vkeys come from `--vkey`, a cheap setup-only mode of
+      # the three bins — NOT from fixtures-check.sh, which §6.2 forbids this
+      # recomputation from invoking.
+      local fx="$root/zk-verdict/contracts/src/fixtures"
+      local files=("$fx/groth16-fixture.json" "$fx/reexec-groth16-fixture.json"                    "$fx/reexec-falserelease-fixture.json" "$fx/svm-groth16-fixture.json")
+      local f; for f in "${files[@]}"; do need "$f"; done
+      vkey_of() { (cd "$root/zk-verdict/script" && cargo run --release --quiet --bin "$1" -- --vkey) 2>/dev/null                   | sed -n 's/^vkey: //p' | tail -1; }
+      local vk_evm vk_reexec vk_svm
+      vk_evm=$(vkey_of evm); vk_reexec=$(vkey_of reexec); vk_svm=$(vkey_of svm)
+      for f in "$vk_evm" "$vk_reexec" "$vk_svm"; do
+        [[ "$f" =~ ^0x[0-9a-f]{64}$ ]] || { echo "ac008: could not compute a vkey for AC-09's witness" >&2; exit 2; }
+      done
+      { for v in "$vk_evm" "$vk_reexec" "$vk_reexec" "$vk_svm"; do
+          printf '%s' "${v#0x}" | xxd -r -p
+        done
+        cat "${files[@]}"; } | digest16
       ;;
     AC-11)
       local fs=(); while IFS= read -r f; do fs+=("$f"); done \

@@ -62,6 +62,14 @@ struct Args {
     /// Causal floor: the credited increase must be >= this.
     #[arg(long, default_value = "1000000")]
     min: u64,
+    /// AC-9: execute the current ELF on these inputs and print the vkey and the
+    /// committed public values, for `fixtures-check.sh` to compare against the
+    /// committed fixture. No proof is generated.
+    #[arg(long)]
+    verify: bool,
+    /// Print the current ELF's vkey and exit. Cheap: no execution, no proof.
+    #[arg(long)]
+    vkey: bool,
     /// Corrupt the signature so the in-guest sigverify fails — no Reproduced.
     #[arg(long)]
     tamper: bool,
@@ -167,13 +175,19 @@ fn main() {
     dotenv::dotenv().ok();
 
     let args = Args::parse();
-    if [args.execute, args.prove, args.fixture]
+    if args.vkey {
+        let client = ProverClient::from_env();
+        let pk = client.setup(REEXEC_ELF).expect("setup elf");
+        println!("vkey: {}", pk.verifying_key().bytes32());
+        return;
+    }
+    if [args.execute, args.prove, args.fixture, args.verify]
         .iter()
         .filter(|b| **b)
         .count()
         != 1
     {
-        eprintln!("Error: specify exactly one of --execute / --prove / --fixture");
+        eprintln!("Error: specify exactly one of --execute / --prove / --fixture / --verify");
         std::process::exit(1);
     }
 
@@ -254,6 +268,14 @@ fn main() {
             "SVM sigverify + re-execution cycles: {}",
             report.total_instruction_count()
         );
+    } else if args.verify {
+        let pk = client.setup(REEXEC_ELF).expect("setup elf");
+        let (output, _) = client
+            .execute(REEXEC_ELF, stdin)
+            .run()
+            .expect("execute guest");
+        println!("vkey: {}", pk.verifying_key().bytes32());
+        println!("public_values: 0x{}", hex::encode(output.as_slice()));
     } else if args.prove {
         let pk = client.setup(REEXEC_ELF).expect("setup elf");
         let proof = client.prove(&pk, stdin).run().expect("generate proof");

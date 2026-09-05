@@ -36,6 +36,16 @@ struct Args {
     min: u64,
     #[arg(long, default_value = "18446744073709551615")]
     max: u64,
+    /// AC-9: execute the current ELF on these inputs and print the vkey and the
+    /// committed public values, so `fixtures-check.sh` can compare them against the
+    /// committed fixture. No proof is generated.
+    #[arg(long)]
+    verify: bool,
+    /// Print the current ELF's vkey and exit. Cheap: no execution, no proof. This is
+    /// what `ac008.sh` uses to recompute AC-09's witness WITHOUT invoking the row's
+    /// own command, which §6.2 forbids.
+    #[arg(long)]
+    vkey: bool,
 }
 
 /// The on-chain fixture — everything `RecknVerdictVerifier.verifyVerdict` needs,
@@ -67,6 +77,19 @@ fn main() {
     stdin.write(&args.max);
 
     let pk = client.setup(VERDICT_ELF).expect("setup elf");
+    if args.vkey {
+        println!("vkey: {}", pk.verifying_key().bytes32());
+        return;
+    }
+    if args.verify {
+        let (output, _) = client
+            .execute(VERDICT_ELF, stdin)
+            .run()
+            .expect("execute guest");
+        println!("vkey: {}", pk.verifying_key().bytes32());
+        println!("public_values: 0x{}", hex::encode(output.as_slice()));
+        return;
+    }
     println!("generating Groth16 proof (this downloads circuit artifacts on first run)...");
     let proof = client
         .prove(&pk, stdin)
