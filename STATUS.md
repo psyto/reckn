@@ -25,6 +25,7 @@
 | part 4a | `f843081` | **gate の runner `ac008.sh`** と **AC-0b の `surfaces.sh` + `surfaces.pinned`** |
 | part 4b | `fae1858` | **AC-14 の文書側**（cycle 実測 + tilde 14件除去 + 陳腐化した主張7件/marker 8件） |
 | part 4c | `b6fbbc7` | **`docs-check.sh`**（AC-14 の5検査）と、それが捕まえた **SVM 数値の再現不能** |
+| part 5 | `ede9fef` | **check 5**（`no-keys.sh` が2ファイル目を読む）＋ §3.4 の4トークン＋AC-11 の require 化。**AC-14 緑** |
 
 **cargo 側は manifest の要求を満たして閉じた**（`bash` は未着手）。2026-09-05 実測:
 
@@ -70,9 +71,22 @@ AC-09 の「再生成して一致」には一度の作り直しが要る。
 `~34 s` は削除せず「gnark wrap alone」と限定（end-to-end 実測は 335 s ＝素の数字は約10倍
 都合の良い方向に外れていた）。
 
-**AC-14 で残った2件は、まだ書いていないコードに依存する**（先に書くと文書だけが主張を広げる）:
-①「fixture 不在は hard failure」は **AC-11 の `require` 化**待ち、②`no-keys.sh` の scope コメントと
-`RecknVerdictVerifier.sol` の marker 2件は **check 5**（§6.4）待ち。
+**part 5 で AC-14 は緑になった**（9/9 absent, 11/11 present, tilde 0, ~34 s 1/1, cycles 3/3）。
+待っていた2件のコードを両方入れたため:
+
+- **check 5**: `scripts/no-keys.sh` が2ファイル目 `RecknVerdictVerifier.sol` を読むようになった。
+  **禁止語でなく6つの性質**（5a 領域が literal / 5b 語彙43個の双方向一致 / 5c 宣言の個数 /
+  5d body は2文 / 5e 代入先5個 / 5f 正規化 skeleton 20片の順序）。
+  sandbox で6 mutant を実測: `tx.origin` 分岐→5b+5d、`verifyProof` 削除→5b+5d（**denylist が落とす方**）、
+  **minDelta↔maxDelta 入替→5f のみ**、outcome を先頭へ→5f、定数の値入替→5f、constructor 引数入替→5f。
+  **3番目が要点** —— token も個数も文も代入先も動かさないので 5a-5e は全部黙る。
+- **§3.4 の4トークン**: `RecknVerdictVerifier.sol` の `uint64`→`uint256`（Rust 側は part 1 から
+  uint256 なので、2^64 超の値を載せた proof は `abi.decode` で revert していた）
+- **AC-11 の半分**: `if (!vm.exists(F)) return;` 7箇所を `require` に。fixture 不在で
+  「何も検証していない run が緑」だった
+
+**主張の拡大は同じ commit で文書にも書いた**（`AGENTS.md` §0 / `CLAUDE.md` 中心主張 /
+`no-keys.sh` 自身の scope コメント）。コードだけ広げて文書が古いのは、このリポジトリが2回犯した型。
 
 ## 裁定 — ハーネス（2026-09-05 founder 確定、`4946a94`）
 
