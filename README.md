@@ -216,12 +216,20 @@ What the event is for, in execution order ([`AGENTS.md`](AGENTS.md) §3):
    reach `settleWithProof`. This is the event's headline: a payment escrowed on one
    chain, disputed over work performed on another, settled by a proof — no resolver
    on either side, and no bridge or light client in the adjudication path.
-3. **003 — key gauntlet.** Publish every party's private key and demonstrate with a
-   test matrix that every theft path reverts, folding in the keyless timeout so a
-   funded deal with no proof cannot lock forever.
+3. **003 — key gauntlet** *(stopped, not abandoned)*. Publish every party's private
+   key and demonstrate with a test matrix that every theft path reverts, folding in
+   the keyless timeout so a funded deal with no proof cannot lock forever. Its spec
+   hit the harness's six-round review limit still holding one open hole — a
+   constant-keyed branch that no check rejects — and the rules say to stop and hand it
+   back rather than write a seventh round. It is out of the 9/9 checkpoint and may
+   return before the freeze.
 4. **004 — live adversarial input.** Open the seller's delivery claim to free-form
    text so anyone watching can try to talk the judge into approving, and watch
    re-execution refuse to be talked into anything.
+
+**Where this stands (2026-09-05):** 008's spec is approved after six rounds and is
+being implemented; 009's spec is in its second review; 003 is stopped as above; 004 is
+queued. No task is finished, and none is described here as if it were.
 
 Each task goes through a written spec with mechanically checkable acceptance
 criteria and an adversarial review by a second model before any implementation. The
