@@ -25,13 +25,15 @@ transfer (~980k cycles). Scope and limits are stated honestly in
 [`zk-verdict/`](zk-verdict), including what is **not** closed
 ([below](#known-gaps-not-closed)).
 
-**▶ Live money-shot:** <https://claude.ai/code/artifact/88a370e4-bfeb-480c-af14-015661e6e6f7>
-— the same dispute, judged by an opinion LLM vs deterministic re-execution.
-Toggle *Honest delivery* / *False claim* and watch them disagree. Or run the whole
-thing live on a local chain: [`bash scripts/anvil-e2e.sh`](#try-it-one-command).
+**▶ Money-shot:** the same dispute, judged by an opinion LLM and by deterministic
+re-execution, watching them disagree — the animation below is driven by real
+`reexec-evm` output. Open [`dashboard/index.html`](dashboard/index.html) locally to
+toggle *Honest delivery* / *False claim* yourself (the data is inline, so `file://`
+works), or run the whole thing live on a throwaway chain:
+[`bash scripts/anvil-e2e.sh`](#try-it-one-command).
 
-**▶ ZK money-shot:** <https://claude.ai/code/artifact/9ae55be5-4a17-423e-8bb6-67c28838e579>
-— watch a disputed payment get **re-executed inside a zkVM → proven → verified on-chain
+**▶ ZK money-shot:** [`dashboard/variants/`](dashboard/variants) — watch a disputed
+payment get **re-executed inside a zkVM → proven → verified on-chain
 → settled on the proof alone**, on EVM or Solana (real fixture data). Flip *tamper
 prestate* and the pipeline is rejected: no proof, no settlement. One command:
 [`bash zk-verdict/scripts/zk-e2e.sh`](zk-verdict/scripts/zk-e2e.sh).
@@ -488,8 +490,8 @@ content publication.
   animated money-shot driven by real `reexec-evm` output: the escrow pot moves, a
   live `reckn-keeper` console + ledger stream the resolve, and the outcome lands on
   an on-chain `resolve()` receipt. Same dispute — the opinion judge releases escrow
-  to a false claim; Reckn replays the actual plan and refunds the buyer. Live:
-  <https://claude.ai/code/artifact/88a370e4-bfeb-480c-af14-015661e6e6f7>.
+  to a false claim; Reckn replays the actual plan and refunds the buyer. Open it
+  locally — the data is inline, so `file://` works with no server and no setup.
 - **Keeper (chain shell + settlement signature):** [`keeper/`](keeper) — maps a reproducible
   replay to the `VerdictCommitment` and EIP-712-signs it. The digest is
   cross-checked against the contract in both Rust and Foundry (a shared golden),

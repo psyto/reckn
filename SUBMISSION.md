@@ -187,10 +187,19 @@ positioned; if it stalls, the verdict still reproduces anywhere.
 
 ## Demo links
 
-- **▶ Live money-shot (clickable):** https://claude.ai/code/artifact/88a370e4-bfeb-480c-af14-015661e6e6f7
-  — the same dispute, judged by an opinion LLM vs deterministic re-execution. Toggle
+> ⚠ **The two claude.ai artifact links this section used to carry are not public**
+> (verified 2026-09-05 in a logged-out browser). They were owner-only, so a judge
+> following them saw nothing. Everything below is in the public repository instead.
+> If those dashboards are ever shared publicly, add them back here — a live page beats
+> a file every time — but never ship a link nobody can open.
+
+- **▶ Money-shot (in-repo, zero setup):** [`dashboard/index.html`](dashboard/index.html)
+  — the same dispute, judged by an opinion LLM vs deterministic re-execution. The
+  engine output is inlined, so `file://` works with no server. Toggle
   *Honest delivery* / *False claim* and watch them disagree.
-- **▶ ZK money-shot (clickable):** https://claude.ai/code/artifact/9ae55be5-4a17-423e-8bb6-67c28838e579
+- **▶ Demo video (35s, title cards, no audio needed):**
+  [`dashboard/media/reckn-demo-full.mp4`](dashboard/media/reckn-demo-full.mp4)
+- **▶ ZK money-shot (in-repo):** [`dashboard/variants/`](dashboard/variants)
   — the trustless path, visualized: a disputed payment **re-executed inside a zkVM →
   proven → verified on-chain → settled on the proof alone**, on EVM or Solana (real
   fixture data). Flip *tamper prestate* and the pipeline is rejected — no proof, no

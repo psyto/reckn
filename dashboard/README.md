@@ -15,8 +15,8 @@ content (hash-checked) → re-execute in revm → sign verdict → resolve tx �
 confirmed`), and the outcome lands on an on-chain `resolve()` receipt. Toggle
 *Honest delivery* / *False claim*, hit *Replay*, or check *instant*.
 
-**Live (zero setup):**
-<https://claude.ai/code/artifact/88a370e4-bfeb-480c-af14-015661e6e6f7>
+**Zero setup:** open `index.html` directly. The engine output is inlined, so
+`file://` works — no server, no build, no network.
 
 ## The data is real
 
