@@ -51,6 +51,111 @@
 | **008 verdict domain soundness** | spec | **r5** | **CHANGES** | `docs/reviews/008-spec-r5.md` |
 | **008 verdict domain soundness** | spec | **r6（hard stop / 時刻上限）** | **APPROVE** | `docs/reviews/008-spec-r6.md` |
 | **009 cross-VM settlement** | spec | **r1** | **CHANGES** | `docs/reviews/009-spec-r1.md` |
+| **009 cross-VM settlement** | spec | **r2** | **CHANGES** | `docs/reviews/009-spec-r2.md` |
+
+## 009 spec review r2（2026-09-05）— **CHANGES**
+
+記録: `docs/reviews/009-spec-r2.md`（payload `/tmp/reckn-payload-009-spec-r2.md` /
+Codex raw `/tmp/reckn-codex-009-spec-r2.md`、**呼び出しは 1 回・`-s read-only`**。
+1回目は自分の 10 分タイムアウトで**出力ファイルが1バイトも生まれないまま kill** されたので
+detached で再投入した＝答えられた呼び出しは 1 回）。
+対象 `docs/specs/009-cross-vm-settlement.md`（**2049 行**）は `reckn-spec`（Claude Code）起草＝
+**Codex は自分の宿題を採点していない**（payload §0 に明記）。
+
+**findings 10件（BLOCKER 3 / MAJOR 4 / MINOR 3）。r1 の 15件のうち BLOCKER 3件は実際に閉じた**
+（7f の 9/8 再計数を自分で走らせて一致・命名 regex・§1.4 の新設）。**残った 3 BLOCKER は
+閉じた 3 件と同じ形**——閉じた境界の外に穴が残る、gate が自分の文書を通れない、不変条件を
+自分の AC が否定する。
+
+1. **[BLOCKER] entry-point closure の**領域**が閉じていない**（`009:1260`/`:1377`/`:1410`）。
+   7h・7i・check 2 clause 2a は全部「`contract RecknZkEscrow` 行から下」を読む。**継承した
+   `fallback` はその行より上に置ける。** `/tmp/sbx009` で実際に**コンパイルして排水させた**:
+   `[PASS] test_inherited_fallback_drains_a_funded_deal (gas: 1712521)` — 任意アドレスが
+   32 byte の dealId を生 calldata で送るだけで funded deal を全額奪う。proof も binding も
+   state guard も `msg.sender` gate も無い。**そのファイルに対し no-keys.sh 4検査と AC-7 の
+   9 clause が全部緑**で、AC-7 が出す evidence 行は manifest の要求文字列と**バイト一致**:
+   `function 2 (fund settleWithProof) other entry keywords 0 sum 2, 0 assembly 0 using`。
+   排水は**インライン assembly を使う**のに 7i は `assembly 0` と印字する。r1 finding 4
+   （「列挙は閉包でない」）が**一段上で再発**。INV-12 / INV-8 / §3.6.2 の「閉包が届かない範囲」
+   も同時に偽。**塞ぎ方は小さい**: `contract RecknZkEscrow` と `{` の間の正規化テキストが空
+   （継承指定なし）＋ファイル内 `contract` は1つ＋`using` はファイル全体で数える。
+2. **[BLOCKER] §7.8 の抽出規則がこの文書自身で落ちる**（`009:1668`）。「§7 内の backtick で
+   囲まれ `test_AC` で始まるトークン」を機械適用すると **20 件中 4 件が regex に不一致**
+   （`test_AC` / `test_AC01_…` / r1 の却下名 ×2）で、`_AC03_` の件数も 2 でなく 4 になる。
+   `ac009.sh --check` が常に落ち、**どの row も走れない**。r1 finding 2 を止めるために作った
+   gate が、その中で同じ矛盾を再生産している。**塞ぎ方**: §7.1 が manifest を fenced block に
+   しているのと同じく、16 名を fenced `ac009-testnames` block に置いて §7.8 はそこだけ読む。
+3. **[BLOCKER] INV-2 が偽で、009 自身の AC-3 test 2 がその否定を「正しい挙動」として要求する**
+   （`009:762` vs `:1172`、§4.4 B-1 `:666`）。INV-2 は *"there is no path to a payout that
+   skips proof verification"* と書くが、buyer が `AlwaysReproduces` を `fund` で指名すれば
+   garbage で seller に払われる。**設計は否定しない**（registry は鍵・vkey 引数は founder 案件・
+   escrow 2本立ては deployer が VM を選ぶ＝同じ反論が一段上に出るだけ）。偽なのは**文言**で、
+   しかも **§11(4) が実装者にその偽文を `CLAUDE.md`（中心主張が住むファイル）へ書けと指示している**。
+   **009 が新たに作った危険は seller 側**: 009 前は escrow の verifier が全 deal 共通だったので、
+   再現した seller は必ず払われた。009 後は buyer が常に `FAILED` を返す sham を指名でき、
+   seller はタダ働きさせられる。INV-11/L-4/L-7 は checklist と sham を書くが、**「これは 009 が
+   新設した能力だ」とは書いていない**。
+
+**MAJOR 4件**: ④どちらの fixture も「その guest が作った」と紐づける criterion が 009 に無い
+（`xvm.pinned` は path を1つも固定しない。看板の主張が**ファイル名に乗っている**）。
+⑤AC-12 は §8.2 が言うほど強くない — founder が OQ-6 で認めた並行実装の木では
+`0 sibling gate(s) discovered, 0/0 exit 0` の**空虚な緑**、`siblingGates` は検査対象自身が書き
+何も検証しない、sibling の exit 0 は中身を保証しない、そして**未記載: `ac008.sh --all` は
+`008:1439` で canary を in-tree に patch するので `ac009.sh --all` が作業ツリーを書く**
+（§7.0 の "No file under the repository is written" は selftest の話で、checkpoint 命令の話ではない）。
+実行時間も未測定（008 の gate は ELF 再ビルド込み）。
+⑥**counted surface の棚卸しが3件足りない** — `008` AC-14 の docs-check（009 §11 が書き換える
+まさに4文書＋`no-keys.sh` に 9 absent / 11 present を要求）、`008:1936` の転記済み digest literal、
+`008` の forge selector 件数。OQ-8 の *"the only counted surface … cannot repair"* は偽。
+r1 finding 3（完全と称した棚卸しが不完全）の**2度目**。ただし **AC-12 が commit 時に全部赤にする**
+ので機構は効いており、直すのは §1.4/§10/OQ-8 の記述。
+⑦INV-5 は ERC-20 モデル無しで価値保存を無条件に主張（`transferFrom` が false を返せば
+**何も引かずに Funded** が立つ／出金側 `transfer` が false なら**誰にも払わず Settled**。
+L-7 は入金側しか書いていない）。
+
+**MINOR 3件**: ⑧INV-7「`msg.sender` はちょうど2回」は**3回**（今日の contract でも §3.3 でも。
+`grep -c` 一発。r1 finding 1 と同種＝走らせず転記した数）。⑨`defence in depth` の grep は
+009 自身の R-7 基準では denylist（"a secondary safeguard" で破れる）。⑩L-16 の residual が
+また実際より小さい（R-11 で観測器に分岐すれば `if (block.chainid != 31337) transfer(...)` は
+lexical にも behavioural にも捕まらない）。
+
+**却下**: ①Codex の「predicate fixture `groth16-fixture.json` を差し替えれば AC-0b/1/2 が通る」
+— 実測、**その fixture は `deal_binding` key を持たない**ので clause 2 の parse で落ちる
+（一般論としての「path が固定されていない」は finding 4 として採用）。②「`008` AC-11/AC-13 の
+witness（`*.t.sol` / `*.patch` の glob）が衝突する」— 両側が run time に再計算するので自己修復。
+009 の CS-1 の分析が正しい。③Codex の finding 1 を「設計の BLOCKER」とする枠 — 文言の
+BLOCKER（finding 3）へ再スコープ。④Codex の「§7.8 は r1 の矛盾を直した」— finding 2 で反証。
+
+**founder への回答 — OQ-8: orchestrator の裁定では閉じない。** `008` は suite 総数を**2箇所**に
+固定しており両方 009 が触れない文書の中にある: 本文 `008:2548`（*"must report **18** results"*）と
+§6.1 manifest の evidence cell `008:1276`。`ac008.sh` は **stdout がその evidence 行を逐語で
+含むこと**を要求する（`008:1213-1216`）ので、id 集合で assert する 008 実装は**自分の
+dispatcher に一致しない行を印字する**。つまり「総数でなく id 集合で」は **`008` の承認済み
+manifest を編集しない限り実装不能**で、それは `AGENTS.md` §2 の実装エージェントの役割ではない。
+**必要な founder 指示は1行**: 009 が着地する commit で `008:2548` と `008:1276` の `18/18` を
+base 実測トークン（`003` の `{P}` 形）に置き換える権限を `008` 側に与えること
+（= 009 自身の推奨1、`009:2038`）。加えて裁定が届かない2件（`008` AC-14 の文書 marker と
+`008:1936` の digest literal）は finding 6 として 009 が棚卸しに足す。
+
+**OQ-1（拡大）: 009 の整理は正しい。**4行とも実在サイトであることを確認
+（`003:1382` check 8 / `003:512`・`003:515` / `003:904`・`003:908` / `verifier()` は
+`forge inspect` に今日も出る）。`003` は §7 で停止中・9/9 gate 外なのでコストは繰延。
+**tightening 維持の推奨に同意。**再開時は finding 1 の remedy により check 8 を
+constructor 本体でなく**領域の性質**へ張り替えるべき、を付記。
+
+**9/7 に間に合わなかった場合の2分類**（founder 裁定でその仕様のまま実装に入る場合）:
+**実装中に必ず閉じる** = finding 1（領域閉包。これだけは開示で済まない。`AGENTS.md` §0 の
+ビルド条件が偽陽性を返す）、finding 2（`--check` が通らない＝全 row が走れない）、
+finding 3（実装者が偽文を `CLAUDE.md` に書くよう指示されている）、finding 4 の安い半分
+（fixture の2 path を literal で固定）。**開示で足りる** = finding 4 の深い半分（L-12 拡張）、
+finding 5 の (a)〜(e)、finding 6 の棚卸し訂正、findings 7/8/9/10、繰延2件
+（EIP-6780 の資金凍結、破棄された ERC-20 boolean）。**verdict によらず founder 指示が要るのは
+OQ-8 の1行。**
+
+10件中6件（1,3,4,5,6,10）が **009 に有利な方向**の誤り、KILL 方向は0件。r1 と同じ分布。
+**round 2 は r1 から実質的に大きく前進している**（7f 再計数・E-13〜E-16 の再現・§5.3 の撤回・
+§1.4 新設は本物の仕事で、r1 の 4 BLOCKER のうち 3 は閉じた）。残る3件はどれも
+アーキテクチャではなく、1周で閉じられる。**r6 hard stop まで残り 4 周、時刻上限は 9/7。**
 
 ## 008 spec review r6（2026-09-05）— **APPROVE**（実装開始可）
 
