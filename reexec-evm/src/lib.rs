@@ -855,6 +855,37 @@ pub mod testkit {
     }
 
     /// Build a proof-carrying prestate from an explicit fixture description.
+    /// The `(slot, value)` pairs `extra_slots` declares for one account.
+    fn slots_for(extra_slots: &[(Address, U256, U256)], who: Address) -> Vec<(U256, U256)> {
+        extra_slots
+            .iter()
+            .filter(|(address, _, _)| *address == who)
+            .map(|(_, slot, value)| (*slot, *value))
+            .collect()
+    }
+
+    /// A storage trie over `slots`, returning the root and one inclusion proof per
+    /// slot in the same order. An account with no declared slots keeps the empty root.
+    fn storage_trie(slots: &[(U256, U256)]) -> (B256, Vec<StorageWitnessV1>) {
+        if slots.is_empty() {
+            return (EMPTY_ROOT_HASH, vec![]);
+        }
+        let entries: Vec<(B256, Vec<u8>)> = slots
+            .iter()
+            .map(|(slot, value)| (keccak256(slot.to_be_bytes::<32>()), alloy_rlp::encode(*value)))
+            .collect();
+        let (root, proofs) = trie_with_proofs(entries);
+        let witnesses = slots
+            .iter()
+            .map(|(slot, value)| StorageWitnessV1 {
+                slot: *slot,
+                value: *value,
+                proof: proofs[&keccak256(slot.to_be_bytes::<32>())].clone(),
+            })
+            .collect();
+        (root, witnesses)
+    }
+
     pub fn anchored_witness(spec: PrestateSpec) -> (EvmAnchorV1, PrestateWitnessV1) {
         let PrestateSpec {
             caller, target, caller_nonce, target_code, coinbase, slot7,
@@ -862,60 +893,51 @@ pub mod testkit {
         } = spec;
         let storage_slot = U256::from(7u64);
         let storage_key = keccak256(storage_slot.to_be_bytes::<32>());
-        let mut storage_entries = Vec::new();
-        let (storage_value, target_storage_root, slot7_proof) = match slot7 {
+        let target_extra = slots_for(&extra_slots, target);
+
+        // The target's storage trie. `slot7` decides how slot 7 itself is witnessed;
+        // `extra_slots` for this address are always inclusion-proven beside it.
+        let (target_storage_root, target_storage) = match slot7 {
             SlotSpec::Value(value) => {
-                storage_entries.push((storage_key, alloy_rlp::encode(value)));
-                for (address, slot, value) in &extra_slots {
-                    if *address == target {
-                        storage_entries.push((keccak256(slot.to_be_bytes::<32>()), alloy_rlp::encode(*value)));
-                    }
-                }
-                let (root, proofs) = trie_with_proofs(storage_entries);
-                (value, root, proofs[&storage_key].clone())
+                let mut slots = vec![(storage_slot, value)];
+                slots.extend(target_extra.iter().copied());
+                storage_trie(&slots)
             }
             SlotSpec::AbsentWithExclusionProof => {
-                let other_slot = U256::from(9u64);
-                storage_entries.push((keccak256(other_slot.to_be_bytes::<32>()), alloy_rlp::encode(U256::ONE)));
-                for (address, slot, value) in &extra_slots {
-                    if *address == target {
-                        storage_entries.push((keccak256(slot.to_be_bytes::<32>()), alloy_rlp::encode(*value)));
-                    }
+                // A different leaf is present, so slot 7's absence is provable.
+                let mut slots = vec![(U256::from(9u64), U256::ONE)];
+                slots.extend(target_extra.iter().copied());
+                let entries: Vec<(B256, Vec<u8>)> = slots
+                    .iter()
+                    .map(|(slot, value)| {
+                        (keccak256(slot.to_be_bytes::<32>()), alloy_rlp::encode(*value))
+                    })
+                    .collect();
+                let (root, exclusion) = trie_with_exclusion_proof(entries.clone(), storage_key);
+                let (_, inclusion) = trie_with_proofs(entries);
+                let mut witnesses = vec![StorageWitnessV1 {
+                    slot: storage_slot,
+                    value: U256::ZERO,
+                    proof: exclusion,
+                }];
+                for (slot, value) in &slots {
+                    witnesses.push(StorageWitnessV1 {
+                        slot: *slot,
+                        value: *value,
+                        proof: inclusion[&keccak256(slot.to_be_bytes::<32>())].clone(),
+                    });
                 }
-                let (root, proof) = trie_with_exclusion_proof(storage_entries, storage_key);
-                (U256::ZERO, root, proof)
+                (root, witnesses)
             }
-            SlotSpec::EmptyProofZero => (U256::ZERO, EMPTY_ROOT_HASH, vec![]),
+            SlotSpec::EmptyProofZero => (
+                EMPTY_ROOT_HASH,
+                vec![StorageWitnessV1 {
+                    slot: storage_slot,
+                    value: U256::ZERO,
+                    proof: vec![],
+                }],
+            ),
         };
-
-        let mut target_storage = vec![StorageWitnessV1 {
-            slot: storage_slot,
-            value: storage_value,
-            proof: slot7_proof,
-        }];
-        for (address, slot, value) in &extra_slots {
-            if *address == target {
-                let key = keccak256(slot.to_be_bytes::<32>());
-                let proof = match slot7 {
-                    SlotSpec::EmptyProofZero => vec![],
-                    _ => {
-                        let mut entries = Vec::new();
-                        match slot7 {
-                            SlotSpec::Value(value) => entries.push((storage_key, alloy_rlp::encode(value))),
-                            SlotSpec::AbsentWithExclusionProof => entries.push((keccak256(U256::from(9u64).to_be_bytes::<32>()), alloy_rlp::encode(U256::ONE))),
-                            SlotSpec::EmptyProofZero => {}
-                        }
-                        for (other_address, other_slot, other_value) in &extra_slots {
-                            if *other_address == target {
-                                entries.push((keccak256(other_slot.to_be_bytes::<32>()), alloy_rlp::encode(*other_value)));
-                            }
-                        }
-                        trie_with_proofs(entries).1[&key].clone()
-                    }
-                };
-                target_storage.push(StorageWitnessV1 { slot: *slot, value: *value, proof });
-            }
-        }
 
         let caller_code = Bytes::new();
         let caller_account = TrieAccount {
@@ -948,15 +970,19 @@ pub mod testkit {
         ];
         let mut extra_witnesses = Vec::new();
         for (address, balance, code) in extra_accounts {
+            // An extra account gets whatever `extra_slots` declares for it, proven
+            // against its own storage root — so an AC-7a variant that moves the
+            // checked address still reaches the commitment instead of panicking P-8.
+            let (storage_root, storage) = storage_trie(&slots_for(&extra_slots, address));
             let account = TrieAccount {
                 nonce: 0,
                 balance,
-                storage_root: EMPTY_ROOT_HASH,
+                storage_root,
                 code_hash: keccak256(code.as_ref()),
             };
             let key = keccak256(address.as_slice());
             account_entries.push((key, alloy_rlp::encode(account)));
-            extra_witnesses.push((address, account, code, key));
+            extra_witnesses.push((address, account, code, key, storage));
         }
         let (state_root, account_proofs) = trie_with_proofs(account_entries);
 
@@ -992,7 +1018,7 @@ pub mod testkit {
                     storage: vec![],
                 },
             ];
-        for (address, account, code, key) in extra_witnesses {
+        for (address, account, code, key, storage) in extra_witnesses {
             accounts.push(AccountWitness {
                 address,
                 balance: account.balance,
@@ -1001,7 +1027,7 @@ pub mod testkit {
                 code_hash: account.code_hash,
                 code,
                 account_proof: account_proofs[&key].clone(),
-                storage: vec![],
+                storage,
             });
         }
         if let Some(address) = empty_account_proof_for {
