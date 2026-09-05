@@ -12,6 +12,7 @@
 //! Foundry wiring test do not require it; this produces the *real* on-chain
 //! fixture when the environment can run it.
 
+use alloy_sol_types::private::U256;
 use alloy_sol_types::SolType;
 use clap::Parser;
 use serde::{Deserialize, Serialize};
@@ -41,10 +42,10 @@ struct Args {
 /// plus the decoded verdict for the test to assert against.
 #[derive(Serialize, Deserialize)]
 struct VerdictFixture {
-    pre: u64,
-    post: u64,
-    min_delta: u64,
-    max_delta: u64,
+    pre: String,
+    post: String,
+    min_delta: String,
+    max_delta: String,
     outcome: u8,
     trace_hash: String,
     vkey: String,
@@ -76,17 +77,40 @@ fn main() {
     // Sanity: the committed public values decode and match the host computation.
     let v = VerdictPublicValues::abi_decode(proof.public_values.as_slice())
         .expect("decode public values");
-    let outcome = delta_outcome(args.pre, args.post, args.min, args.max);
-    let trace = verdict_trace_hash(args.pre, args.post, args.min, args.max, outcome);
+    let outcome = delta_outcome(
+        U256::from(args.pre),
+        U256::from(args.post),
+        U256::from(args.min),
+        U256::from(args.max),
+    );
+    let trace = verdict_trace_hash(
+        U256::from(args.pre),
+        U256::from(args.post),
+        U256::from(args.min),
+        U256::from(args.max),
+        outcome,
+    );
     assert_eq!(v.outcome, outcome, "guest outcome matches host");
     assert_eq!(v.traceHash.0, trace, "guest traceHash matches host");
 
     let vk = pk.verifying_key();
     let fixture = VerdictFixture {
-        pre: args.pre,
-        post: args.post,
-        min_delta: args.min,
-        max_delta: args.max,
+        pre: format!(
+            "0x{}",
+            hex::encode(U256::from(args.pre).to_be_bytes::<32>())
+        ),
+        post: format!(
+            "0x{}",
+            hex::encode(U256::from(args.post).to_be_bytes::<32>())
+        ),
+        min_delta: format!(
+            "0x{}",
+            hex::encode(U256::from(args.min).to_be_bytes::<32>())
+        ),
+        max_delta: format!(
+            "0x{}",
+            hex::encode(U256::from(args.max).to_be_bytes::<32>())
+        ),
         outcome: v.outcome,
         trace_hash: format!("0x{}", hex::encode(v.traceHash.0)),
         vkey: vk.bytes32(),
@@ -97,10 +121,12 @@ fn main() {
     let dir = PathBuf::from("../contracts/src/fixtures");
     std::fs::create_dir_all(&dir).expect("create fixtures dir");
     let path = dir.join("groth16-fixture.json");
-    std::fs::write(&path, serde_json::to_string_pretty(&fixture).unwrap())
-        .expect("write fixture");
+    std::fs::write(&path, serde_json::to_string_pretty(&fixture).unwrap()).expect("write fixture");
 
     println!("vkey: {}", fixture.vkey);
-    println!("outcome: {} traceHash: {}", fixture.outcome, fixture.trace_hash);
+    println!(
+        "outcome: {} traceHash: {}",
+        fixture.outcome, fixture.trace_hash
+    );
     println!("wrote fixture to {}", path.display());
 }

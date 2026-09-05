@@ -11,6 +11,7 @@
 //! # --amount 500000 -> delta 500_000 < floor -> Failed;  --tamper -> bad signature -> verify fails -> Failed
 //! ```
 
+use alloy_sol_types::private::U256;
 use alloy_sol_types::SolType;
 use clap::Parser;
 use serde::{Deserialize, Serialize};
@@ -34,10 +35,10 @@ const PRE_TO: u64 = 1;
 
 #[derive(Serialize, Deserialize)]
 struct SvmFixture {
-    pre: u64,
-    post: u64,
-    min_delta: u64,
-    max_delta: u64,
+    pre: String,
+    post: String,
+    min_delta: String,
+    max_delta: String,
     outcome: u8,
     trace_hash: String,
     deal_binding: String,
@@ -115,8 +116,12 @@ fn build(amount: u64, min: u64, tamper: bool, tamper_prestate: bool) -> (Transac
     let parent_bank_hash = [0x11u8; 32];
     let signature_count = 1u64;
     let last_blockhash = [0u8; 32]; // matches the default blockhash used to sign
-    let bank_hash =
-        svm_bankhash::compute_bank_hash(&accounts, &parent_bank_hash, signature_count, &last_blockhash);
+    let bank_hash = svm_bankhash::compute_bank_hash(
+        &accounts,
+        &parent_bank_hash,
+        signature_count,
+        &last_blockhash,
+    );
 
     if tamper_prestate {
         // Perturb the recipient's committed lamports AFTER bank_hash is fixed, so
@@ -154,7 +159,12 @@ fn main() {
     dotenv::dotenv().ok();
 
     let args = Args::parse();
-    if [args.execute, args.prove, args.fixture].iter().filter(|b| **b).count() != 1 {
+    if [args.execute, args.prove, args.fixture]
+        .iter()
+        .filter(|b| **b)
+        .count()
+        != 1
+    {
         eprintln!("Error: specify exactly one of --execute / --prove / --fixture");
         std::process::exit(1);
     }
@@ -176,8 +186,13 @@ fn main() {
     } else {
         ""
     };
-    println!("tx: System::Transfer({})   floor: delta >= {}{}", args.amount, args.min, flag);
-    println!("(the guest recomputes bank_hash, SIGNATURE-VERIFIES the tx, and re-executes the transfer)");
+    println!(
+        "tx: System::Transfer({})   floor: delta >= {}{}",
+        args.amount, args.min, flag
+    );
+    println!(
+        "(the guest recomputes bank_hash, SIGNATURE-VERIFIES the tx, and re-executes the transfer)"
+    );
 
     let client = ProverClient::from_env();
 
@@ -188,24 +203,49 @@ fn main() {
         println!("  pre (committed): {}", v.pre);
         println!("  post (EXECUTED): {}", v.post);
         println!("  credited delta : {}", v.post.saturating_sub(v.pre));
-        println!("  verdict        : {} ({})", v.outcome, outcome_name(v.outcome));
+        println!(
+            "  verdict        : {} ({})",
+            v.outcome,
+            outcome_name(v.outcome)
+        );
         println!("  traceHash      : 0x{}", hex::encode(v.traceHash.0));
 
         // Host cross-check: an authentic transfer credits exactly `amount`; a
         // tampered signature must fail verification (Failed, delta 0).
         if args.tamper {
-            assert_eq!(v.outcome, FAILED, "tampered signature must fail verify -> Failed");
+            assert_eq!(
+                v.outcome, FAILED,
+                "tampered signature must fail verify -> Failed"
+            );
             assert_eq!(v.post, v.pre, "no transfer applied on a bad signature");
         } else {
             let expected_post = PRE_TO + args.amount;
-            let expected = delta_outcome(PRE_TO, expected_post, args.min, u64::MAX);
-            assert_eq!(v.post, expected_post, "recipient credited the transfer amount");
+            let expected = delta_outcome(
+                U256::from(PRE_TO),
+                U256::from(expected_post),
+                U256::from(args.min),
+                U256::from(u64::MAX),
+            );
+            assert_eq!(
+                v.post,
+                U256::from(expected_post),
+                "recipient credited the transfer amount"
+            );
             assert_eq!(v.outcome, expected, "guest verdict matches the host delta");
         }
-        let trace = verdict_trace_hash(v.pre, v.post, args.min, u64::MAX, v.outcome);
+        let trace = verdict_trace_hash(
+            v.pre,
+            v.post,
+            U256::from(args.min),
+            U256::from(u64::MAX),
+            v.outcome,
+        );
         assert_eq!(v.traceHash.0, trace, "guest traceHash matches the host");
         println!("guest execution matches the host computation");
-        println!("SVM sigverify + re-execution cycles: {}", report.total_instruction_count());
+        println!(
+            "SVM sigverify + re-execution cycles: {}",
+            report.total_instruction_count()
+        );
     } else if args.prove {
         let pk = client.setup(REEXEC_ELF).expect("setup elf");
         let proof = client.prove(&pk, stdin).run().expect("generate proof");
@@ -216,7 +256,9 @@ fn main() {
         println!("Verified: the SVM verdict is ZK-proven from a signature-verified re-execution — post computed under proof.");
     } else {
         let pk = client.setup(REEXEC_ELF).expect("setup elf");
-        println!("generating Groth16 proof of the SVM re-execution (uses local v6.1.0 artifacts)...");
+        println!(
+            "generating Groth16 proof of the SVM re-execution (uses local v6.1.0 artifacts)..."
+        );
         let proof = client
             .prove(&pk, stdin)
             .groth16()
@@ -226,10 +268,10 @@ fn main() {
             .expect("decode public values");
         let vk = pk.verifying_key();
         let fixture = SvmFixture {
-            pre: v.pre,
-            post: v.post,
-            min_delta: v.minDelta,
-            max_delta: v.maxDelta,
+            pre: format!("0x{}", hex::encode(v.pre.to_be_bytes::<32>())),
+            post: format!("0x{}", hex::encode(v.post.to_be_bytes::<32>())),
+            min_delta: format!("0x{}", hex::encode(v.minDelta.to_be_bytes::<32>())),
+            max_delta: format!("0x{}", hex::encode(v.maxDelta.to_be_bytes::<32>())),
             outcome: v.outcome,
             trace_hash: format!("0x{}", hex::encode(v.traceHash.0)),
             deal_binding: format!("0x{}", hex::encode(v.dealBinding.0)),

@@ -6,3 +6,14 @@ resolver = "2"
 alloy-primitives = "1.6.1"
 alloy-sol-types = "*"
 sha2 = { version = "0.10", default-features = false }
+
+# The AC harness runs `cargo test` (no --release), and the SP1 executor lives in a
+# dependency: unoptimised, one in-guest execution of the re-execution guest takes
+# minutes, which puts AC-04's thirteen vectors past AC-13's whole budget. Optimising
+# dependencies only leaves the crates under test unoptimised and debuggable, and
+# changes no semantics — SP1 execution is deterministic for a fixed ELF and input.
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.test.package."*"]
+opt-level = 3

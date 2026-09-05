@@ -7422,12 +7422,14 @@ dependencies = [
 name = "verdict-script"
 version = "0.1.0"
 dependencies = [
+ "alloy-consensus",
  "alloy-sol-types",
  "clap",
  "dotenv",
  "hex",
  "reckn-reexec-evm",
  "reexec-io",
+ "revm",
  "serde",
  "serde_json",
  "solana-instruction",

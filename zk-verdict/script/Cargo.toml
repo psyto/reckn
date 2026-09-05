@@ -4,6 +4,9 @@ name = "verdict-script"
 edition = "2021"
 default-run = "verdict"
 
+[lib]
+path = "src/lib.rs"
+
 [[bin]]
 name = "verdict"
 path = "src/bin/main.rs"
@@ -41,6 +44,8 @@ hex = "0.4.3"
 alloy-sol-types = { workspace = true }
 verdict-lib = { path = "../lib" }
 dotenv = "0.15.0"
+revm = { version = "38", features = ["optional_no_base_fee"] }
+alloy-consensus = { version = "2.2.0", default-features = false }
 
 [build-dependencies]
 sp1-build = { version = "6.0.1" }

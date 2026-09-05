@@ -8,6 +8,7 @@
 //! # inputs default to pre=42 post=142 min=100 (a credited 100 clearing a floor of 100)
 //! ```
 
+use alloy_sol_types::private::U256;
 use alloy_sol_types::SolType;
 use clap::Parser;
 use sp1_sdk::{
@@ -81,8 +82,19 @@ fn main() {
         println!("guest traceHash: 0x{}", hex::encode(v.traceHash.0));
 
         // Cross-check the guest against the same host-side computation.
-        let outcome = delta_outcome(args.pre, args.post, args.min, args.max);
-        let trace = verdict_trace_hash(args.pre, args.post, args.min, args.max, outcome);
+        let outcome = delta_outcome(
+            U256::from(args.pre),
+            U256::from(args.post),
+            U256::from(args.min),
+            U256::from(args.max),
+        );
+        let trace = verdict_trace_hash(
+            U256::from(args.pre),
+            U256::from(args.post),
+            U256::from(args.min),
+            U256::from(args.max),
+            outcome,
+        );
         assert_eq!(v.outcome, outcome, "guest outcome matches host");
         assert_eq!(v.traceHash.0, trace, "guest traceHash matches host");
         println!("guest matches the host computation");
