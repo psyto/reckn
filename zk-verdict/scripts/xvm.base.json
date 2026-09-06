@@ -24,6 +24,7 @@
   "B": 18,
   "P": 21,
   "siblingGates": [
+    "ac005.sh",
     "ac008.sh"
   ]
 }

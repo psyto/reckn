@@ -149,6 +149,30 @@ await press('button[data-act="warp"]', null, { hold: 1200 });
 await press('button[data-act="refund"][data-deal="abandoned"]', "tx 0x", { hold: 2600, nth: 1 });
 await card("And if nobody ever proves anything,\nthe money still comes home.", 2800);
 
+// 8b · the same contract, on the public chain. The recording so far is a local anvil
+// at Arc's chain id — honest, reproducible, and worth exactly nothing as evidence
+// that anyone deployed anything. These four receipts are the evidence, so the
+// hashes on screen are checked against the record on disk before the shot is kept.
+{
+  const rec_ = JSON.parse(fs.readFileSync(
+    path.join(repo, "zk-verdict", "contracts", "arc.json"), "utf8"));
+  const txs = Object.values(rec_.deployedByReckn.settlements).map((x) => x.tx);
+  if (txs.length < 4) throw new Error(`arc.json records only ${txs.length} settlements`);
+  await page.evaluate(() =>
+    document.getElementById("live")?.scrollIntoView({ behavior: "smooth", block: "center" }));
+  await sleep(1600);
+  const shown = await page.$eval("#live", (e) => e.innerHTML);
+  for (const tx of txs) {
+    if (!shown.includes(tx)) {
+      throw new Error(`the live panel does not link the recorded settlement ${tx} — ` +
+                      `refusing to record a receipt the record does not back`);
+    }
+  }
+  await sleep(2600);
+}
+await card("Everything you just saw was a local chain.\nThis one was not.", 2800);
+await card("USDC on Arc testnet. Four settlements.\nTwo of them decided by proofs about Solana.", 3400);
+
 // 9 · the build condition, in this run's own bytes.
 await page.setContent(`<!doctype html><meta charset="utf-8"><style>
   body{margin:0;background:#05070a;color:#e8edf4;font:13.5px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;
