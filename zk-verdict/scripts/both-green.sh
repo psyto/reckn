@@ -44,6 +44,13 @@ for g in ${gates[@]+"${gates[@]}"}; do
   keep=0
   if (cd "$root" && bash "$here/$g" --all) > "$out" 2>&1; then
     green=$((green + 1))
+    # Echo what the sibling itself reported. The exit code is the evidence this row
+    # asserts, but the 9/9 checkpoint is a claim shown to a person — "both green
+    # simultaneously" reads better as the siblings' own tallies than as an exit
+    # status, and yesterday's fix kept the output only when a sibling FAILED. A run
+    # whose log cannot say what passed is the same defect in the other direction.
+    printf '    %s: %s\n' "$g" "$(tail -1 "$out")"
+
   else
     rc=$?
     echo "sibling $g exited $rc"
