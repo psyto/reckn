@@ -68,8 +68,10 @@ optimistic 系=bonded resolver / feedback 系=投票者）。**アーキテク�
   → タスク 001。**未解決**。09-03 に `README.md` の `Known gaps (not closed)` へ明記した
   （隠さず先に書く。`no-keys.sh` は `refundAfterDeadline` を唯一の入口として既に列挙済み）。
 - `program-svm` は 986,097 cycles（ed25519 sigverify + lattice 再計算）。
-- **本プロジェクトは一度もハッカソンに提出されていない。** `SUBMISSION.md` のプリフライトで
-  "Repo public" と "Submission form" が未チェック、リポジトリは今も private。
+- **本プロジェクトは一度もハッカソンに提出されていない**（2026-09-06 現在も未提出）。ただし
+  **リポジトリは 2026-09-04 に public 済み**——応募が現物のソースに対して審査されるようにするため、
+  提出時でなく前倒しで公開した。**「今も private」は偽**なので、そう書かない。
+  残る未了は提出フォームだけで、submission description には `DISCLOSURE.md` の**全文再掲**が要る。
 
 ## 検証済みの事実（2026-09-04 / 09-05 に追加、いずれも実測）
 

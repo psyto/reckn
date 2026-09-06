@@ -125,6 +125,13 @@ live and tested — on **both** VMs, behind **one** router.
   timeout (evidence withheld) and returned on every other exit — including a `Failed`
   verdict on the merits — so it punishes *withholding*, not *losing*. The SVM lamport
   mirror is the follow-up.
+- **A capability the cross-VM work added, stated as a cost:** because the **buyer**
+  names the adjudicating program at funding, a buyer can name one that always returns
+  `Failed` — the seller then works for nothing, and on-chain that is indistinguishable
+  from an honest `Failed`. A buyer who names a sham that always *approves* has defrauded
+  only themselves. The seller's protection is to read the deal's `verifier`,
+  `verifierCodeHash` and `dealBinding` before working; nothing checks them on the
+  seller's behalf.
 - **Deliberate cuts, surfaced not hidden:** Solana snapshot *authenticity* now has
   a real verifier — `reexec-svm/src/bankhash.rs` recomputes the SIMD-0215 accounts
   lattice hash and re-derives `bank_hash`, and `reexec-svm/src/authenticity.rs`
@@ -168,6 +175,19 @@ live and tested — on **both** VMs, behind **one** router.
   funding, so a proof can only settle the deal it was about. Tested end-to-end with a
   **real Groth16 proof** of the EVM re-execution settling to the seller; binding
   mismatch and unverified proof both revert.
+- **One escrow, two virtual machines (new, 2026-09-06):** the same contract settles an
+  **EVM proof and a Solana proof**, each with its real committed Groth16 proof, in one
+  test. The adjudicating program is named by the **funder**, per deal, and pinned by its
+  codehash; `settleWithProof` has **no parameter** with which a settler could name one;
+  the dispatch is `view`-typed, so it is a `STATICCALL` and funder-chosen code cannot
+  write state. The escrow has **no constructor and no `immutable`** — every deployment
+  of that source is the same contract. **No bridge and no light client are on the
+  adjudication path**, which is a claim about adjudication and *not* about anchoring.
+- **The verdict is sound over the whole 256-bit domain (new, 2026-09-05):** the guest
+  used to take the balance delta on limb 0 while the off-chain engine took it on the
+  full `U256`, so `pre = 2^64` / `post = 2^64 − 1` — a **decrease** — proved as the
+  largest possible credit and released to the seller. On a real Groth16 proof, that
+  exact cell now refunds the buyer.
 
 ## Positioning & sponsor targets
 
@@ -264,16 +284,22 @@ positioned; if it stalls, the verdict still reproduces anywhere.
 ## Pre-flight checklist
 
 - [ ] **README hero** renders on GitHub (GIF + clickable artifact link) — verified.
-- [ ] **Artifacts shared:** open the money-shot AND the ZK money-shot artifacts →
-      Share → make link-viewable (only the owner can, from claude.ai; private until then).
-- [ ] **Repo public:** flip `psyto/reckn` from private to public
-      (`gh repo edit psyto/reckn --visibility public`). One-way-ish — do at submission.
+- [x] ~~**Artifacts shared**~~ — **dropped 2026-09-05.** The two artifact links were
+      **owner-only**: nobody but the author could open them, and they were the first two
+      lines of a public README. They are removed. What a judge follows instead is in the
+      repository: `dashboard/index.html` (engine output inlined, so `file://` works),
+      `dashboard/media/reckn-demo-full.mp4`, and the two one-command scripts.
+- [x] ~~**Repo public**~~ — done **2026-09-04**, ahead of submission, so the application
+      could be reviewed against the actual source.
 - [x] **Demo video** — full cut at `dashboard/media/reckn-demo-full.mp4` (money-shot +
       live `anvil-e2e.sh` terminal), Puppeteer/Chromium. Optional upgrade: add VO per
       the script above, then upload and link in the form.
-- [ ] **Submission form**: one-liner, elevator pitch, how-it-works, track (Arc — Best
-      Agentic Economy), sponsor tech (ERC-8004, x402/EIP-3009, Arc), repo + artifact
-      + video links.
+- [ ] **Submission form** (ETHOnline 2026, Continuity — open, in progress): name,
+      category, short description, description, how-it's-made, repo. **Two things that
+      are easy to get wrong:** the demo field must be the repository URL, not an
+      artifact link; and `docs/ethonline-2026/DISCLOSURE.md` must be **reproduced in
+      full inside the description field** — there is no separate place to file it, and
+      the rules require it.
 - [ ] **`bash scripts/anvil-e2e.sh` green** on a clean clone (Foundry + Rust + jq).
 - [x] **ZK demo green on a clean checkout** — `contracts` (57) and `zk-verdict/contracts`
       (12, incl. the real proof settling to the seller) both pass from a fresh worktree

@@ -21,7 +21,14 @@ proof **settles escrow directly** ([`RecknZkEscrow`](zk-verdict/contracts/src/Re
 at all** — the proof carries its own authority. The EVM guest runs **real `revm`
 over the seller's committed CALL** against an MPT-proven prestate (406,715 cycles);
 the Solana guest is the narrower slice — a `bank_hash`-authenticated System
-transfer (986,097 cycles). Scope and limits are stated honestly in
+transfer (986,097 cycles).
+
+**One escrow settles both.** The adjudicating program is named by the funder per deal
+and pinned by its codehash, so a single `RecknZkEscrow` — with **no constructor and no
+`immutable`**, meaning every deployment of that source is the same contract — settles
+an EVM proof and a Solana proof side by side. No resolver, no bridge, and no light
+client on the adjudication path. The funder chooses the program; the proof, checked by
+that program, chooses the payout. Scope and limits are stated honestly in
 [`zk-verdict/`](zk-verdict), including what is **not** closed
 ([below](#known-gaps-not-closed)).
 
@@ -297,9 +304,14 @@ zk-verdict/                 # the keyless path — independent SP1 workspace
   contracts/src/RecknZkEscrow.sol      # settles on the proof alone — no resolver
   contracts/src/RecknVerdictVerifier.sol # one generic verifier, EVM + SVM proofs
   script/tests/             #   the 008 vectors: value domain, engine identity, binding
+  contracts/test/RecknCrossVmSettlement.t.sol # one escrow, an EVM proof and an SVM proof
   cycles.json               #   measured cycle counts + ELF digests (no rounded figures)
   scripts/zk-e2e.sh         #   one command: re-execute → prove → verify → settle
   scripts/ac008.sh          #   the 008 acceptance gate: one runner, 18 manifest rows
+  scripts/ac009.sh          #   the 009 acceptance gate: 13 rows, cross-VM settlement
+  scripts/escrow-shape.sh   #   the escrow's shape, closed by ten properties
+  scripts/both-green.sh     #   sibling gates, discovered by closure and actually run
+  scripts/mutants/          #   36 mutation patches: 21 for 008, 15 for 009
   scripts/surfaces.sh       #   BUILD CONDITION: the two files 008 promised not to touch
   scripts/surfaces.pinned   #   their pinned digests, re-pinned only as a readable diff
 dashboard/                  # LLM-judge vs replay money-shot — implemented
@@ -789,7 +801,7 @@ cd binder && cargo test
 
 # ZK re-execution, one command: re-execute both VMs in the zkVM (tampered prestate
 # rejected), verify the REAL Groth16 proofs on-chain, and SETTLE the escrow to the
-# seller on the proof alone — no resolver (RecknZkEscrow) — 12 tests
+# seller on the proof alone — no resolver (RecknZkEscrow) — 34 tests
 bash zk-verdict/scripts/zk-e2e.sh
 # or piecemeal:
 cd zk-verdict/contracts && forge test                                    # verify + settle
@@ -801,9 +813,16 @@ cd zk-verdict/script && cargo run --release --bin svm -- --execute        # SVM 
 # off-chain, and required to agree — 64 tests
 cd zk-verdict/script && cargo test
 
-# the 008 acceptance gate: 18 manifest rows parsed out of the spec itself
+# one escrow, two virtual machines: an EVM proof and a Solana proof settled through
+# a single RecknZkEscrow, plus the sixteen cross-VM criteria — 16 tests
+cd zk-verdict/contracts && forge test --match-contract RecknCrossVmSettlement
+
+# the acceptance gates: manifest rows parsed out of the specs themselves
 bash zk-verdict/scripts/ac008.sh --check    # manifest arithmetic, no runs
 bash zk-verdict/scripts/ac008.sh AC-02      # one row, count asserted before success
+bash zk-verdict/scripts/ac009.sh --check    # 13 rows + the naming gate
+bash zk-verdict/scripts/ac009.sh AC-1       # one escrow, two VMs, both settled
+bash scripts/no-keys.sh                     # the build condition, five checks
 bash zk-verdict/scripts/surfaces.sh         # the two files 008 may not touch
 
 # one-command local chain demo: Act I false claim → Failed → refund;
