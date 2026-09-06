@@ -1083,7 +1083,7 @@ is stated here rather than buried: see R-9.
     replacement guard is now stronger than a witness field would have been.)*
 
   **Case (c) — no guard, stated as such.** **AC-13** carries a `witness=` and it is a constant
-  for the whole run: its witness set is the twenty-one `mutants/*.patch` files and **no mutant
+  for the whole run: its witness set is the twenty-one `mutants/[0-9][0-9]-*.patch` files and **no mutant
   modifies a patch file**. **AC-13's own manifest row is satisfiable by `echo`**, and rounds 1–3
   said the opposite (r3 finding 2). This is not closed here — the regress does not terminate
   inside a repository, because whatever runs last is trusted. It is stated in **L-3**, §6.3's
@@ -2668,7 +2668,8 @@ false as well: `no-keys.sh` **does** read it. What survives, restated on a true 
 **Mode `in-tree` — fifteen mutants. Unchanged from round 2.**
 
 ```
-0. assert `ls zk-verdict/scripts/mutants/*.patch | wc -l` == 21   # a deleted mutant FAILS AC-13
+0. assert `ls zk-verdict/scripts/mutants/[0-9][0-9]-*.patch | wc -l` == 21   # a deleted mutant FAILS AC-13
+   (the glob is 008's own family; 009 keeps fifteen `M-*.patch` beside them, so `*.patch` counts 36)
 for each mutant M, in the order of §7.3 (zero-build mutants first):
   1. save byte copies of the files M touches into a temp dir; install
      `trap restore EXIT INT TERM` FIRST, before touching anything
@@ -3304,7 +3305,7 @@ prefix digest deliberately does **not** move and the failure is isolated to this
 | `zk-verdict/contracts/src/RecknVerdictVerifier.sol` | **modified — four tokens, and nothing else** (§3.4, N-12): `VerdictPublicValues.pre` / `.post` / `.minDelta` / `.maxDelta` go `uint64` → `uint256`. *(Round 4 changed this file in §3.4 and did not list it here, in §6.2's coverage table, or in `no-keys.sh` — the r4 BLOCKER. It is on the settlement-authority path: `RecknZkEscrow.sol:99`.)* |
 | `scripts/no-keys.sh` | **modified — one new numbered section, check 5** (§6.4). Second target derived from `$root` exactly as the first is (`:17-19`); the four existing checks, the arguments, and the final line are unchanged. The header comment at `:11-12` is corrected in the same edit (AC-14(i) literal 9). **This is `AGENTS.md` §0's script**: the change is a tightening, it is declared in §9(2a)–(2c), and **relaxing it later is a founder call** (OQ-6). |
 | `zk-verdict/scripts/{ac008,surfaces,env-parity,fixtures-check,no-skip,ac008-selftest,docs-check,consumers-check}.sh` | the harness (**8** scripts — `no-truncation.sh` is gone, folded into `env-parity.sh`; `consumers-check.sh` is new) |
-| `zk-verdict/scripts/mutants/*.patch` | the **twenty-one** committed mutants (AC-13), named `01-truncate`, `02-const-reproduced`, `03-open-db`, `04-drop-envhash`, `05-drop-blockenv`, `06-truncate-128`, `07-drop-checkhash`, `08-escrow-comment`, `09-restore-u64low`, `10-fixture-vkey`, `11-restore-skip-gate`, `12-tilde-cycles`, `13-alt-binding-self`, `14-const-zk-outcome`, **`15-swap-record-fields`**, `16-testkit-signature`, **`17-verifier-origin-branch`**, **`18-reexec-prefix-comment`**, **`19-verifier-drop-verifyproof`**, **`20-pinned-digest-flip`**, **`21-verifier-struct-permute`**. `ac008-selftest.sh` step 0 requires exactly 21. **`08-…`, `17-…`, `18-…`, `19-…`, `20-…` and `21-…` are applied only with `-d "$S"`, inside AC-13's six sandbox phases; none of them is ever applied to the repository.** `17-verifier-origin-branch.patch` is a **working resolver** and the repository must never carry it, not even transiently. *(`15-…` is renamed from round 5's `15-swap-outcome-consts` because its content changed — r5 BLOCKER 1. `20-pinned-digest-flip.patch` mutates **only** `$S`'s copy of `surfaces.pinned`; OQ-5(b)'s ruling forbids mutating the **repository's** pin and is untouched — AC-0b R5.)* `09-restore-u64low.patch` is applied twice per full run — once by `ac008-selftest.sh` and once by `ac008.sh --all` as the §6.3 canary. |
+| `zk-verdict/scripts/mutants/[0-9][0-9]-*.patch` | the **twenty-one** committed mutants (AC-13) — the directory also holds 009's fifteen `M-*.patch`, which are not 008's — named `01-truncate`, `02-const-reproduced`, `03-open-db`, `04-drop-envhash`, `05-drop-blockenv`, `06-truncate-128`, `07-drop-checkhash`, `08-escrow-comment`, `09-restore-u64low`, `10-fixture-vkey`, `11-restore-skip-gate`, `12-tilde-cycles`, `13-alt-binding-self`, `14-const-zk-outcome`, **`15-swap-record-fields`**, `16-testkit-signature`, **`17-verifier-origin-branch`**, **`18-reexec-prefix-comment`**, **`19-verifier-drop-verifyproof`**, **`20-pinned-digest-flip`**, **`21-verifier-struct-permute`**. `ac008-selftest.sh` step 0 requires exactly 21. **`08-…`, `17-…`, `18-…`, `19-…`, `20-…` and `21-…` are applied only with `-d "$S"`, inside AC-13's six sandbox phases; none of them is ever applied to the repository.** `17-verifier-origin-branch.patch` is a **working resolver** and the repository must never carry it, not even transiently. *(`15-…` is renamed from round 5's `15-swap-outcome-consts` because its content changed — r5 BLOCKER 1. `20-pinned-digest-flip.patch` mutates **only** `$S`'s copy of `surfaces.pinned`; OQ-5(b)'s ruling forbids mutating the **repository's** pin and is untouched — AC-0b R5.)* `09-restore-u64low.patch` is applied twice per full run — once by `ac008-selftest.sh` and once by `ac008.sh --all` as the §6.3 canary. |
 | `zk-verdict/cycles.json`, `zk-verdict/scripts/surfaces.pinned` | committed measurements and the two code digests |
 
 ### 7.2 Positive path (must pass), and the guest-freeze rule
@@ -3533,7 +3534,7 @@ They are written down because an unstated limit is indistinguishable from a miss
   `sp1-build`. The guards are AC-14(iv)'s `elf_sha256` equality against a freshly built ELF and
   `ac008.sh`'s `unset` of every `SP1_*` skip variable (§3.6.4). **Guards, not proofs** (§6.2).
 - **L-3 — AC-13's own manifest row is satisfiable by `echo`, and nothing inside this repository
-  closes that.** Its witness set is the twenty-one `mutants/*.patch` files and **no mutant modifies
+  closes that.** Its witness set is the twenty-one `mutants/[0-9][0-9]-*.patch` files and **no mutant modifies
   a patch file**, so the `witness=` value is a constant for the whole run; step 0 (the patch count
   must be 18) and step 6 (AC-00b and `no-keys.sh` green after the last restore) are **inside the
   script a stub replaces**. A two-line `ac008-selftest.sh` that echoes

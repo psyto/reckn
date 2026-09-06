@@ -108,9 +108,17 @@ witness_for() {
       cat "${fs[@]}" | digest16
       ;;
     AC-13)
+      # The glob is 008's OWN family, not `*.patch`. Task 009 keeps its fifteen
+      # `M-*.patch` in this directory (009 §1.4 CS-1), and a glob that swept them in
+      # made this witness move for a sibling's population rather than for a defect.
+      # ac008-selftest.sh and §7.2 were both scoped on 2026-09-06; this recipe was
+      # missed, so the gate expected a digest over thirty-six files while the script
+      # it checks printed one over twenty-one. The row went red with 21/21 detected —
+      # two implementations of one question disagreeing, which is the mechanism
+      # working, on a drift inside 008 itself.
       local fs=(); while IFS= read -r f; do fs+=("$f"); done \
-        < <(find "$root/zk-verdict/scripts/mutants" -maxdepth 1 -name '*.patch' 2>/dev/null | LC_ALL=C sort)
-      [[ ${#fs[@]} -gt 0 ]] || { echo "ac008: no mutants/*.patch found for AC-13's witness" >&2; exit 2; }
+        < <(find "$root/zk-verdict/scripts/mutants" -maxdepth 1 -name '[0-9][0-9]-*.patch' 2>/dev/null | LC_ALL=C sort)
+      [[ ${#fs[@]} -gt 0 ]] || { echo "ac008: no mutants/[0-9][0-9]-*.patch found for AC-13's witness" >&2; exit 2; }
       cat "${fs[@]}" | digest16
       ;;
     AC-14)

@@ -41,15 +41,25 @@ done < <(jq -r '.siblingGates[]' "$base")
 green=0
 for g in ${gates[@]+"${gates[@]}"}; do
   out=$(mktemp "${TMPDIR:-/tmp}/both-green.XXXXXX")
+  keep=0
   if (cd "$root" && bash "$here/$g" --all) > "$out" 2>&1; then
     green=$((green + 1))
   else
     rc=$?
     echo "sibling $g exited $rc"
+    # KEEP the output on failure. A sibling gate can spend an hour and a quarter
+    # applying twenty-one mutants; `tail -20` then crushes that into the last twenty
+    # lines, which on 2026-09-06 were the epilogue rather than the failure. What
+    # survived said one mutant had gone undetected, and threw away WHICH ONE — so the
+    # only way to learn it was to spend the hour and a quarter again, and the answer
+    # turned out to be that none had: two witness recipes disagreed. A gate that
+    # discards the expensive half of its own evidence is a gate you must run twice.
+    echo "    full output kept at: $out"
     tail -20 "$out" | sed 's/^/    /'
     fail=1
+    keep=1
   fi
-  rm -f "$out"
+  [[ $keep -eq 1 ]] || rm -f "$out"
 done
 
 n=${#gates[@]}
