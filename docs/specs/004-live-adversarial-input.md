@@ -1,4 +1,4 @@
-# 004 — live adversarial input (round 2)
+# 004 — live adversarial input (round 3)
 
 > **主張（1文・判事非依存）**: **散文は再実行を動かさない。**
 > 観客が自由に書いた最大 2000 バイトのどのバイト列も、同じ deal の再実行の
@@ -10,15 +10,145 @@
 > 並べると、その裁定者は散文で動く。**004 の主張はこの裁定者の存在にも品質にも依存しない。**
 > 判事が 0 個でも上の 1 文は成立し、AC-0〜AC-20 のうち判事に触れるのは AC-9〜AC-12 の 4 本だけである。
 
-status: **round 2 draft**（`reckn-spec` 改稿。r1 レビュー `docs/reviews/004-spec-r1.md` は `VERDICT: CHANGES`）
+status: **round 3 draft**（`reckn-spec` 改稿。r2 レビュー `docs/reviews/004-spec-r2.md` は
+`VERDICT: CHANGES`、BLOCKER 2 / MAJOR 5 / MINOR 5 — **全 12 件を採用**、§0 参照）
 tier: **local only**。チェーンに一切触れない（anvil も testnet も mainnet も無し）。proof も生成しない。
-当日作業（日付 ≥ 2026-09-04）。実行順は `AGENTS.md` §3 の founder 裁定に従い **`008` → `003` → `004`**。
+当日作業（日付 ≥ 2026-09-04）。**実行順の現状（2026-09-07）**: `008` `009` `005` と 001 の timeout は
+**着地済み**、`003` は §7 hard stop 維持（再開判断は founder）、`002` は未着手。**004 が次**。
+r2 執筆時の「`008` → `003` → `004`」は古い——`008` が着地したことが本改稿の BLOCKER 1 そのものである。
 
 ---
 
-## 0. round 2 の枠（founder 裁定 2026-09-04 と r1 findings への対応）
+## 0. round 3 の枠（2026-09-07）
 
-### 0.1 founder 裁定（この改稿の枠）
+### 0.1 この改稿を動かしている一文
+
+r2 の BLOCKER 2 が、004 の受入装置について**004 自身より正確なこと**を言った:
+
+> 有限で公開された入力集合に対する黒箱 AC は、**26 行のルックアップ表**で全部通る。
+> ルックアップ表はエンジンではない。
+
+これは AC を増やして直る欠陥ではない。**入力集合が仕様に列挙されている限り、AC の本数に
+関係なく表で通る。** したがって round 3 は AC を足さず、**効いている部分に寄せて残りを削る**。
+効いているのは2つだけである:
+
+1. **白箱の負のコントロール**（replay が実際に呼ばれたことを担保する唯一のもの）
+2. **表に書けない入力集合**（実行時 seed。1つあればルックアップ表は死ぬ）
+
+§7 の founder 裁定「以後は時刻で切る」を 004 にも適用する: **仕様は 9/7 終わりで打ち切り、
+実装は 9/10 終わりで打ち切り、開いた項目は開示する。** round 4 は無い。
+
+### 0.2 08 が着地したことによる巻き戻し（BLOCKER 1）
+
+004 は **008 が削除した v1 guest に対して書かれている**。008 は着地済みなので、これは
+「pin の再測定」では直らない。現物 (`zk-verdict/program-revm/src/main.rs:234-269`) の v2 は:
+
+```
+env_hash   = keccak256("reckn/zk/env/evm/v2"   ‖ chain_id:u64BE ‖ spec_id:u8 ‖ block_number:u64BE
+                        ‖ timestamp:u64BE ‖ base_fee:u64BE ‖ block_gas_limit:u64BE ‖ coinbase ‖ prevrandao)
+check_hash = keccak256("reckn/zk/check/evm/v2" ‖ address ‖ slot ‖ min:U256BE ‖ max:U256BE)
+plan_hash  = keccak256("reckn/zk/plan/evm/v2"  ‖ caller ‖ target ‖ value:U256BE ‖ gas_limit:u64BE
+                        ‖ len(calldata):u64BE ‖ calldata)
+dealBinding= keccak256("reckn/zk/bind/evm/v2"  ‖ state_root ‖ env_hash ‖ check_hash ‖ plan_hash)
+```
+
+対応（r2 の remedy (i)–(v) をそのまま採る）:
+
+- **(i)** §4.1 は式をリテラルで持たない。**`zk-verdict` HEAD への参照**として定義し、
+  文書に残る hex は「2026-09-04 時点・pre-008 の値」と明示して**期待値としては使わない**。
+- **(ii)** AC-7(d) は「fixture の preimage を、そのとき `reexec.rs` の `build_input` が
+  使っている構成子から組み直す」と書く。**関数名を固定しない**
+  （`anchored_sstore_witness` は 008 後の `pre = 2^64` を作れないので、名前を書くと
+  「誰も通せない AC」が実行順のせいで復活する）。
+- **(iii)** AC-6 は「guest の verdict 関数（008 後は `U256`）と 004 の off-chain 結果が
+  受理域 8 点で一致する」に一般化し、**`u64 crossing is unreachable…` の義務づけ文言は削る**
+  （008 が閉じた後にそれを印字するのは §5 の逆向き違反＝**解消済みを未解消と書く**）。
+- **(iv)** §11 D-1 は「**008 が閉じた**」に書き換える（`plan/evm/v2` が `gas_limit` を束ねている）。
+- **(v)** §3.4 の `DELIVERED_MAX` は「008 前の暫定回避策」でなく
+  **004 の入力面の設計上の上限**として書き直す。008 後は `AmountWouldTruncate` に
+  「切り捨てが起きるから」という正当化が残らないので、理由を入力面の側に置き換える。
+- **INV-2** は「`dealBinding` は `(STATE_ROOT, TARGET, CHECK_SLOT, MIN_OUT, MAX_DELTA, planHash)`
+  のみの関数」を撤回する。v2 は `env_hash` を束ねるので **`spec_id` と block env も入る**。
+  AC-18 が 12 の `spec_id` を振る以上、004 の面でこれは可視化する。
+
+### 0.3 受入装置の削減（BLOCKER 2）
+
+- **`negative-controls` を §6.0 の gate に入れる**（今は AC からの参照が **0 件**＝
+  NC-1〜NC-24 を1行も書かない実装が全 gate で緑になる）。NC ごとに
+  **どの gate が落ちたかを印字させ、期待と厳密一致**させる。
+- **NC-25 を追加**: gate 本体を「自分の成功行を印字するだけ」の実装に差し替える →
+  `negative-controls` が落ちること。これが COUNT CONTRACT の穴
+  （`println!(expected)` で全 gate 緑）を塞ぐ唯一の口である。
+- **amount の入力集合を実行時 seed にする**。seed から K 個引き、`gasUsed` を
+  intrinsic（zero 4 / nonzero 16）+ cold SLOAD 2100 + SSTORE(RESET 2900 / no-op 100) の
+  **解析式**と突き合わせる。**表に書けない集合が1つあれば、26 行の表は死ぬ。**
+- **§6.1 の「2つ目のエンジンである」を削る。** 置き換え文:
+  「**有限で公開された入力集合に対する黒箱 AC はルックアップ表で通る。replay が呼ばれたことを
+  担保するのは白箱の負のコントロールだけであり、それは gate に入っている。**」
+  正直さの告白を過大主張の後ろに置かない——**主張の側を下げる**。
+
+### 0.4 削るもの（時間で切った結果。開示に載せる）
+
+r2 の findings 3–12 のうち、文言修正（8/9/10/11/12）は全部入れる。
+**入れないもの**と、その理由:
+
+- **004 独自の mutation family**。008 と 009 が各1本持っているが、004 の
+  `negative-controls` は NC-1〜NC-26 で同じ役目を果たす。凍結まで6日で3本目の
+  sandbox 家系を起こすのは、得るものより崩すものが大きい。
+- **§7.2 の実モデル経路だけ**。ここは元から条件付きの上乗せであり、外部 API は使えない。
+  **stub 判事と §7.5 の 32 件 corpus は残す**——起草時にこれを一緒に捨てかけたが、それは
+  過剰な削減だった。stub 判事は外部 API ではなく**規則を本仕様が書いた決定的な手続き**であり、
+  corpus も判事規則も仕様が著者である以上、**実装者はどちらの側も書けない**。それが AC-11(b) を
+  効かせている当のものなので、外すと時間を1分も節約せずに 004 だけが弱くなる。
+  founder 裁定が禁じたのは stub 判事の存在ではなく、**その `APPROVE` を「LLM が説得された」
+  証拠として引用すること**である（NC-17 / AC-10 がそれを機械で禁じる）。
+  finding 6 が要求する committed のスクリプト判事3本（20秒超スリープ / 不正な第1行 /
+  16 KiB+1）も残す——シェルスクリプト3本で `JudgeTimeout` と `JudgeResponseTooLarge` が
+  定義だけの飾りでなくなる。
+
+### 0.5 findings 3–12 の処理（全件採用。remedy は r2 のものを採る）
+
+| # | 何が壊れているか | r3 での処置 |
+|---|---|---|
+| 3 | 禁止語 `settled` が **README/SUBMISSION の真の記述**（zk 経路、`forge test` が裏づけ）に発火する。004 の作業を1行も始めない状態で `lint-claims` が落ちる | 走査単位をファイル全体から **004 所有区画**へ落とす（`<!-- 004:begin -->` / `<!-- 004:end -->`）。全域に置く語は `004 settled` のような **004 固有の語形**にする |
+| 4 | AC-9 と AC-10(a) が**同時に満たせない**。`forced-kill` は `judge.kind = "unavailable"` を要求するが、AC-10(a) の許容集合は `{stub, cli, http}` で、到達できなかった判事に `model` も `rawResponse` も無い | 許容集合を `{stub, cli, http, unavailable, timeout, oversize, unparseable}` に広げ、**`NO_CONTEST` 系では `model` / `rawResponse` が `null` でよい**と明記（`promptHash` は全行必須のまま）。§7.1 の mode 表に forced 系を載せる |
+| 5 | `attemptId` を引用しない誇張文が**どの検査にも捕まらない**。「A language model was persuaded…」と書けば母集合に入らない。**AC-10 の見出しが名指しで防ごうとしている状態そのもの** | 母集合を**反転**する。`LLM` / `language model` / `model` / `persuaded` / `judge` の語彙を含む文を集め、**解決可能な `attemptId` を持たない文があれば失敗** |
+| 6 | `JudgeTimeout` / `JudgeResponseTooLarge` が定義だけで、**実行する AC が無い**。AC-9 が使うのは 004 自身の合成モードで、実際にハングするプロセスでも 16 KiB 超でもない。AC-19(3) も逐次の重複だけで**同時 POST を検定していない** | `live-input/fixtures/judges/` に committed のスクリプト判事3本（20秒超スリープ / 不正な第1行 / 16 KiB+1）。`judge-independence` の expected を 3→6。AC-19 に(6)「**同時2 POST で連続する別 `seq` を得て `prev` 連鎖が有効**」を追加 |
+| 7 | `DELIVERED_MAX` が回避策だという開示が、**審査員が見る面に1つも無い**（selftest の stdout にしか存在しない） | AC-15 の必須文に1行追加し、対象に `dashboard/live.html` を含める。`AmountWouldTruncate` の **UI メッセージに理由を載せる**。§5 の「解消したかのように書かない」は、**書かないこと**でなく**見えるところに書くこと**でしか満たせない |
+| 8 | 「u64 の縁に**触れない**」が不正確 | 「縁を**越えない**」に直す |
+| 9 | §6.0 の expected 件数が列挙ケースと合わない gate が3つ | AC-0 = 6 / AC-7(e) = 7 に直し、`docs-claims` の expected を **manifest から独立に**読む |
+| 10 | INV-3 を**同じ文書の AC-18 が反証している** | INV-3 に環境の限定を付す |
+| 11 | §11 D-1 が**解決済みの穴を open として提示** | 「008 が閉じた」に直す |
+| 12 | OQ-3 は 008 を読めば founder 裁定なしで閉じられる | 閉じる。**ただし引用は現物へ**——r2 が示した `008:343-349` は現在の 008 では check 5 の話で、行番号は仕様が動けば動く。実体は `zk-verdict/script/tests/value_domain.rs` |
+
+**注記（4 と 6 の関係）**: 判事側の LLM 経路は §0.4 で実装対象から外したが、
+**`judge.kind` の型と `NO_CONTEST` の扱いは残す**。004 の transcript は判事欄を持つので、
+「判事に到達できなかった」を表現できないと AC-9 が書けない。**型は要る、モデルは要らない。**
+
+### 0.6 §6.0 の表に入る変更（差分だけ書く。表そのものは §6.0 で置き換える）
+
+| 行 | r2 | r3 | 理由 |
+|---|---|---|---|
+| **`negative-controls`（新設・表の最終行）** | 無い | **expected = 26**（NC-1〜NC-26）。各 NC について**どの gate が落ちたかを印字**し、期待と厳密一致。NC-19 は 3 gate 名を要求 | いま NC は AC からの参照が **0 件**＝NC を1行も書かない実装が全 gate で緑になる。r1 finding 1 の remedy の中核が受入条件の外にあった |
+| **NC-25（新設）** | 無い | gate 本体を「自分の成功行を印字するだけ」の実装に差し替える → `negative-controls` が落ちること | COUNT CONTRACT は**被検査プログラム自身が印字した行**を厳密一致で照合するので、`println!(期待行); Ok(())` が全 gate を通る。NC-24（COUNT CONTRACT を外す）はこの変異を覆わない |
+| `domain-amount` / AC-4 | expected = 8（仕様が列挙した 8 amount） | **実行時 seed から K 個**引き、`gasUsed` を intrinsic（zero 4 / nonzero 16）+ cold SLOAD 2100 + SSTORE(RESET 2900 / no-op 100) の**解析式**と突き合わせる | 有限で公開された入力集合は**26行のルックアップ表**で通る（AC-4 の 8 + AC-17 の 6 + AC-18 の 12）。**表に書けない集合が1つあれば表は死ぬ**。AC-3 が claim 側で既に 512 件の実行時 seed を使っており、同じ道具を amount に広げるだけ |
+| AC-0 | expected = 5 | **6** | 列挙ケースと合っていない（finding 9） |
+| AC-7(e) | expected = 4 | **7** | 同上 |
+| `docs-claims` | expected を manifest 長と同値で書いている | **manifest から独立に読む** | 同じ数を2箇所から取ると、片方を書き換えた実装が両方で緑になる |
+| `judge-independence` | expected = 3 | **6** | committed のスクリプト判事3本（20秒超スリープ / 不正な第1行 / 16 KiB+1）を足し、`JudgeTimeout` と `JudgeResponseTooLarge` を**定義だけの飾りでなくする**（finding 6） |
+| `transcript` / AC-19 | 5 | **6**（(6) 同時2 POST で連続する別 `seq` を得て `prev` 連鎖が有効） | 逐次の重複テストは、ロックが競合安全であることを1ビットも示さない |
+| `lint-claims` / AC-15 | README と SUBMISSION の**全文**を走査 | **004 所有区画**（`<!-- 004:begin -->` / `<!-- 004:end -->`）+ `dashboard/live.html` | 禁止語 `settled` が**別 tier の真の記述**に発火し、004 の作業を1行も始めない状態で落ちる |
+| `docs-claims` / AC-10(b) | 母集合 =「`attemptId` を引用している文」 | **反転**: 判事語彙を含む文を集め、**解決可能な `attemptId` を持たない文があれば失敗** | `attemptId` 無しの誇張文がどの検査にも捕まらない。AC-10 の見出しが名指しで防ごうとしている状態そのもの |
+
+**この表に一行も足していない gate がある**ことに注意する。r3 は **AC を増やす改稿ではない**——
+増やしても、入力集合が仕様に列挙されている限りルックアップ表で通る。増えたのは
+`negative-controls` の1行だけで、それが**唯一「replay が呼ばれた」を担保するもの**である。
+
+---
+
+## 0.7 round 2 の枠（過去分・founder 裁定 2026-09-04 と r1 findings への対応）
+
+### 0.7.1 founder 裁定（round 2 の枠）
 
 - **OQ-2 は「判事非依存に書き換え」で決着**。見出しの主張から LLM 判事を外した（上記）。
   LLM 版は §7.2 の条件付き上乗せとして書き、**実モデル経路の可否が未決のままでも 004 は成立する**。
@@ -31,7 +161,7 @@ tier: **local only**。チェーンに一切触れない（anvil も testnet も
 - 安全境界（loopback 限定・鍵なし・任意コード実行なし・`AGENTS.md` §8）は緩めない。
 - **「原理的に不可能」と書かない。有限の変奏は非退化性を証明しない**（§8.4 / AC-15）。
 
-### 0.2 受入条件の書式（003 のレビューで確定した事実を 004 にも適用）
+### 0.7.2 受入条件の書式（003 のレビューで確定した事実を 004 にも適用）
 
 1. **`forge test --match-test` は一致ゼロでも exit 0**（forge 1.7.1）。
    **終了ステータスだけの AC は、テストを一行も書かない実装で緑になる。**
@@ -46,7 +176,10 @@ tier: **local only**。チェーンに一切触れない（anvil も testnet も
 > `N` は §6.0 の表が固定した数であり、実装が数えて決める数ではない。
 > 各 gate は最後に `gate=<name> expected=<N> ran=<N> passed=<N> failed=0` を 1 行出し、
 > `scripts/004-live.sh check-counts` が**厳密文字列一致**で照合する（正規表現を使わない）。
-> 「緑だが 0 件走った」は COUNT CONTRACT で必ず落ちる。
+> **r2 はここに「『緑だが 0 件走った』は COUNT CONTRACT で必ず落ちる」と書いていた。偽である**
+> （finding 2(c)）。照合しているのは**被検査プログラム自身が印字した文字列**なので、gate 本体を
+> `println!(期待行); Ok(())` に置き換えた実装は全 gate で緑になる。COUNT CONTRACT が落とすのは
+> **数を数え間違えた実装**であって、**数えなかった実装**ではない。後者を落とすのは NC-25 である。
 >
 > **POSITIVE CONTROL**: 「一致が 0 件であること」を要求する検査は、**同じ検査器を
 > 一致するはずの fixture に当てて 1 件以上を返すこと**を同じ gate 内で示す。
@@ -58,7 +191,7 @@ tier: **local only**。チェーンに一切触れない（anvil も testnet も
 (iii) 全体の failure 件数 == 0、(iv) 全体の test 件数 >= 12 を検定する。
 終了ステータスだけを見ない。`--match-test` を使わない。
 
-### 0.3 r1 findings への対応表
+### 0.7.3 r1 findings への対応表
 
 | # | sev | 論点 | 対応 |
 |---|---|---|---|
@@ -282,8 +415,14 @@ DELIVERED_MAX = u64::MAX - PRE_SLOT_VALUE
 `deliveredBaseUnits = DELIVERED_MAX` は受理され、`post = u64::MAX` ちょうどで truncation は起きない（実測）。
 
 > **正直に書くこと（デモ・README・提出文で同じ言い方をする）**:
-> 「004 の入力面は u64 の縁に触れない」。**「Reckn は u64 の縁を解決した」とは書かない。**
-> 解決するのは 008 であり、008 が閉じるまでこの回避策は回避策のままである。
+> 「004 の入力面は u64 の縁を**越えない**」。r2 まで「触れない」と書いていたが不正確だった——
+> `deliveredBaseUnits = DELIVERED_MAX` は受理され `post = u64::MAX` **ちょうど**に届く。
+> 触れはする。越えないだけである（finding 8）。
+> **`DELIVERED_MAX` はもう回避策ではない**（finding 1(v)）。**008 は 2026-09-06 に着地**し、
+> guest も off-chain も `U256` で判定するので、「切り捨てが起きるから上限を置く」という
+> 正当化はもう存在しない。上限が残る理由は入力面の側にある——観客が打てる数は
+> **`u64` 1 語に収まる十進表記**であり、それがこの面の設計上の定義域だからである。
+> **「Reckn は u64 の縁を解決した」とは書かない。** 解決したのは 008 であって 004 ではない。
 > 008 が guest の写像や fixture を変えた場合、§3.6 と AC-7(d) / AC-20 の pin 値は
 > **同じ commit で再測定して更新する**（`PinDrift` で停止する）。
 
@@ -366,23 +505,43 @@ attempt = { claim, deliveredBaseUnits }
 
   plan          = { caller: CALLER, target: TARGET,
                     calldata: be32(deliveredBaseUnits), value: 0, gas_limit: 100_000 }
-  planHash      = keccak256( caller[20] ‖ target[20] ‖ calldata[32] ‖ value[32] )
-  dealBinding   = keccak256( "reckn/zk/bind/evm/v1"[20]
-                             ‖ STATE_ROOT[32] ‖ TARGET[20] ‖ be32(CHECK_SLOT)[32]
-                             ‖ le64(MIN_OUT) ‖ le64(MAX_DELTA) ‖ planHash[32] )
-  dealId        = keccak256( "reckn/004/deal/v1" ‖ dealBinding )
-  claimHash     = sha256( claim_bytes )
-  guestTraceHash= sha256( "reckn/zk/reexec/v1"[18] ‖ STATE_ROOT[32]
-                          ‖ le64(pre_u64) ‖ le64(post_u64) ‖ le64(MIN_OUT) ‖ le64(MAX_DELTA)
-                          ‖ [outcome] )                       -- outcome: 0=Reproduced, 1=Failed
+  planHash      = zk-verdict HEAD の plan preimage          -- 下記 §4.1.1
+  dealBinding   = zk-verdict HEAD の binding preimage       -- 下記 §4.1.1
+  dealId        = keccak256( "reckn/004/deal/v1" ‖ dealBinding )   -- これは 004 が所有する
+  claimHash     = sha256( claim_bytes )                            -- これも 004 が所有する
+  guestTraceHash= zk-verdict HEAD の reexec preimage        -- 下記 §4.1.1
 
   REEXEC_INPUT  = { anchor, witness, plan, predicate, commitments }     -- claim を含まない
   JUDGE_INPUT   = { dealId, MIN_OUT, MAX_DELTA, predicate の人間可読形,
                     JUDGE_PROMPT(固定), claim }                          -- deliveredBaseUnits と plan を含まない
 ```
 
-`dealBinding` / `guestTraceHash` の preimage は `zk-verdict/program-revm/src/main.rs:176-190`
-および `zk-verdict/lib/src/lib.rs:70-89` と**バイト単位で同一**でなければならない
+#### 4.1.1 3 つの写像は 004 の所有物ではない（**r3 で全面差し替え**——finding 1(i)）
+
+**r2 はこの 3 つを式のリテラルとして書いていた。その式は `v1` であり、008 が削除した。**
+004 は `verdict-lib` に依存せず再実装する設計（r1 finding 14 の remedy）だが、**再実装が写す先は
+「その時点の `zk-verdict` HEAD」であって、この文書に書かれた 16 進ではない。**
+2026-09-07 現在の実体（`zk-verdict/program-revm/src/main.rs` の `env_pre` / `check_pre` /
+`plan_pre` / `binding_pre`、および `zk-verdict/lib/src/lib.rs` の `reexec_trace_hash`）:
+
+```
+env_hash    = keccak256("reckn/zk/env/evm/v2"   ‖ chain_id:u64BE ‖ spec_id:u8
+                        ‖ block_number:u64BE ‖ timestamp:u64BE ‖ base_fee:u64BE
+                        ‖ block_gas_limit:u64BE ‖ coinbase ‖ prevrandao)
+check_hash  = keccak256("reckn/zk/check/evm/v2" ‖ address ‖ slot ‖ min:U256BE ‖ max:U256BE)
+plan_hash   = keccak256("reckn/zk/plan/evm/v2"  ‖ caller ‖ target ‖ value:U256BE
+                        ‖ gas_limit:u64BE ‖ len(calldata):u64BE ‖ calldata)
+dealBinding = keccak256("reckn/zk/bind/evm/v2"  ‖ state_root ‖ env_hash ‖ check_hash ‖ plan_hash)
+```
+
+**この文書に残る 16 進の pin は「2026-09-04 時点・pre-008 の値」であり、期待値としては使わない。**
+r2 の `le64` / 平坦な binding / `v1` タグはすべて v2 で置き換わっている——`min`/`max`/`pre`/`post` は
+**`U256` big-endian**、binding は **入れ子**、タグは全部 `v2`。
+実装は写した先の HEAD を**同じ commit で**引用し、ずれたら `PinDrift` で停止する。
+**「値を再測定して更新する」だけでは足りない**——r2 の PinDrift の remedy は値の更新しか指示して
+おらず、**構造が変わった場合に何をすべきかを書いていなかった**。構造が変われば式ごと差し替える。
+
+preimage は上記の現物と**バイト単位で同一**でなければならない
 （`min`/`max`/`pre`/`post` は **little-endian u64 8 bytes**、`slot` は 32 bytes big-endian、
 `gas_limit` は `planHash` に**入らない**）。004 はこの 2 関数を `live-input/` 内に**再実装する**
 （`verdict-lib` に依存しない。`zk-verdict` は独立 SP1 workspace）。
@@ -410,13 +569,22 @@ r1 finding 2 の通り、`groth16-fixture.json` に `deal_binding` は**無い**
 `zk-verdict/script/src/bin/reexec.rs:79-142`（`build_input`）の既定値がその preimage を決めている:
 
 ```
+# ↓ これは 2026-09-04 時点・pre-008 のスナップショットである。期待値として使わない。
 caller = testkit::addr(0xca)      target = testkit::addr(0x77)
 (anchor, witness) = testkit::anchored_sstore_witness(caller, target)
-state_root = 0xf07b6a185b5b203d9e53ddba85d0393552feb5042f70914d3e5824baf5146345   [実測]
-plan   = { caller, target, calldata: be32(142), value: 0 }         (gas_limit は binding に入らない)
+state_root = 0xf07b6a185b5b203d9e53ddba85d0393552feb5042f70914d3e5824baf5146345   [当時の実測]
+plan   = { caller, target, calldata: be32(142), value: 0 }
 check  = { address: target, slot: be32(7), min: 100, max: u64::MAX }
 pre = 42, post = 142, outcome = 0 (Reproduced)
 ```
+
+> **r3 の指定はこのブロックではない**（finding 1(ii)）。実装が読むのは
+> **そのとき `build_input` が実際に使っている構成子と既定値**であって、上のリストではない。
+> **008 は同じ fixture を `pre = 2^64` / `post = 2^64 + 100` で再生成したので、
+> `anchored_sstore_witness` はもうその prestate を作らない**——上のブロックを指定として読むと、
+> AC-7(d) は「値がずれる」のではなく**組み直せなくなる**。
+> `(gas_limit は binding に入らない)` という注記も **v2 では偽**である（`plan/evm/v2` は
+> `gas_limit` を束ねる。§4.1.1）。残してあるのは、何が変わったかを読者が見るためである。
 
 これを §4.1 の関数に通すと（**2026-09-04 実測**）:
 
@@ -432,10 +600,13 @@ guestTraceHash = 0x4e7b13452b3693d2b788d113ddb870edb282f6f30e528e50ab873492f25ec
 これが「004 が見せている binding は、実際に `RecknZkEscrow.settleWithProof` を通る binding と同じ関数から出ている」
 ことの外部アンカーである（AC-7(d)）。
 
-> **008 との結合**: 008 が guest を変えて fixture を再生成した場合、この 2 値は変わりうる。
-> `reckn-live guest-fixture-check` は**フィクスチャファイルから読んだ値**と再計算値を比べ、
-> さらに**本仕様に pin された hex** とも比べる。3 者が食い違ったら `PinDrift` で停止し、
-> 仕様と実装を同じ commit で更新する（黙って合わせない）。
+> **008 との結合**【r3 で書き直し】: **008 は 2026-09-06 に着地し、fixture を再生成した。**
+> この 2 値はもう当時のものではない。`reckn-live guest-fixture-check` が比べるのは
+> **フィクスチャファイルから読んだ値と再計算値の 2 者**であり、**本仕様に pin された hex は
+> 3 者目に数えない**——文書の hex を期待値に混ぜると、実装は「文書に合わせる」ことで
+> 緑にできてしまい、外部アンカーが内部参照に退化する。
+> 食い違ったら `PinDrift` で停止し、仕様と実装を同じ commit で更新する（黙って合わせない）。
+> **そして構造が変わった場合は、値の更新ではなく式ごとの差し替えである**（§4.1.1）。
 
 ### 4.4 transcript（append-only を宣言でなく機構にする）
 
@@ -541,19 +712,20 @@ operator は元から任意のプログラムを実行できるので、それ�
 
 | AC | gate 名 | expected 件数 | 走らせるコマンド |
 |---|---|---|---|
-| AC-0 | `scope-guard` | 5 | `bash scripts/004-live.sh scope-guard` |
+| AC-0 | `scope-guard` | 6 | `bash scripts/004-live.sh scope-guard` |
 | AC-1 | `domain-amount` | 20 | `cargo run -p reckn-live -- selftest --domain-amount` |
 | AC-2 | `domain-claim` | 16 | `cargo run -p reckn-live -- selftest --domain-claim` |
 | AC-3 | `prose-invariance` | 512 | `cargo run -p reckn-live -- selftest --prose-invariance --seed <S>` |
 | AC-4 | `sweep` | 8 | `cargo run -p reckn-live -- selftest --sweep` |
+| AC-4b | `gas-seeded` | **64**（実行時 seed から引いた相異なる amount。K は表が固定し、seed は固定しない） | `cargo run -p reckn-live -- selftest --gas-seeded --seed <S>` |
 | AC-5 | `noop` | 2 | `cargo run -p reckn-live -- selftest --noop` |
 | AC-6 | `u64-boundary` | 11 | `cargo run -p reckn-live -- selftest --u64-boundary` |
 | AC-7(a)(b)(c)(d) | `binding` | 38 | `cargo run -p reckn-live -- selftest --binding` |
-| AC-7(e) | `forge-green` | 4 | `bash scripts/004-live.sh forge-green` |
+| AC-7(e) | `forge-green` | 7 | `bash scripts/004-live.sh forge-green` |
 | AC-8 | `no-reach` | 15 | `cargo run -p reckn-live -- selftest --no-reach` |
-| AC-9 | `judge-independence` | 3 | `cargo run -p reckn-live -- selftest --judge-independence` |
+| AC-9 | `judge-independence` | **6** | `cargo run -p reckn-live -- selftest --judge-independence` |
 | AC-10 | `audit-fields` | 4 | `cargo run -p reckn-live -- audit --fields` |
-| AC-10 | `docs-claims` | manifest 長（`live-input/fixtures/doc-claims.json`）と scan 結果が一致すること | `cargo run -p reckn-live -- audit --docs` |
+| AC-10 | `docs-claims` | **0**（初期値。004 所有区画に判事語彙の文がまだ 1 つも無いため）。**この表が expected の唯一の出所**であり、manifest 長から読んではならない（finding 9 — 同じ数を 2 箇所から取ると、片方だけ書き換えた実装が両方で緑になる）。scan 結果と manifest 長の一致は**検査対象**であって expected の出所ではない。判事語彙の文を 1 つ足す commit は、**同じ commit でこの数を動かす** | `cargo run -p reckn-live -- audit --docs` |
 | AC-11 | `no-canned` | 2 | `cargo run -p reckn-live -- audit --no-canned` |
 | AC-11 | `mutations` | 32 | `cargo run -p reckn-live -- selftest --mutations` |
 | AC-12 | `judge-controls` | 8 | `cargo run -p reckn-live -- selftest --judge-controls` |
@@ -563,8 +735,9 @@ operator は元から任意のプログラムを実行できるので、それ�
 | AC-16 | `scope-check` | 4 | `bash scripts/004-live.sh scope-check` |
 | AC-17 | `engine-truth` | 6 | `cargo run -p reckn-live -- selftest --engine-truth` |
 | AC-18 | `fork-partition` | 12 | `cargo run -p reckn-live -- selftest --fork-partition` |
-| AC-19 | `transcript` | 5 | `cargo run -p reckn-live -- audit --chain` |
+| AC-19 | `transcript` | 6 | `cargo run -p reckn-live -- audit --chain` |
 | AC-20 | `pins` | 6 | `cargo run -p reckn-live -- selftest --pins` |
+| **NC-1〜NC-26** | **`negative-controls`** | **26** | `bash scripts/004-negative-controls.sh` |
 
 `scripts/004-live.sh all` は上の全 gate を走らせ、**各 gate の
 `gate=<name> expected=<N> ran=<N> passed=<N> failed=0` 行を厳密文字列一致で照合**してから成功する。
@@ -575,14 +748,32 @@ operator は元から任意のプログラムを実行できるので、それ�
 - **黒箱の AC だけでは「`reexec_evm::replay` が呼ばれた」ことを証明できない。**
   `TARGET_RUNTIME` の意味論は `post = pre + delivered`（mod 2^256）であり、
   その 1 行を再実装した模型は verdict と delta を正しく出せる。
-  004 がするのは**証明ではなく値上げ**である: AC-4（`gasUsed` の実測表）、
-  AC-17（MPT / witness 由来の `OperationalError` の変種と引数）、AC-18（fork 分割）、
-  AC-20（guest 形式ハッシュ）を同時に満たすには、
-  **intrinsic gas と SSTORE メータリングと EIP-3855 と MPT 証明検証を実装する**必要がある。
-  それは「退化した模型」ではなく 2 つ目のエンジンである。**それでも証明ではない。**
-- **NC-19（§8.2）が白箱側の担保**である: `replay()` 呼び出しを r1 finding 1 の `fake_reexec` に
-  差し替えたコピーで、**AC-4 / AC-17 / AC-18 が落ちること**を負のコントロールとして機械確認する。
-  落ちなければ負のコントロールスクリプト自体が非ゼロ終了する。
+- **r2 はここに「それは 2 つ目のエンジンである」と書いていた。偽である**（r2 finding 2(b)、
+  **全面採用**）。**有限で、しかも本仕様が全部公開している入力集合に対する黒箱 AC は、
+  ルックアップ表で通る。** 実際に数えられる: AC-4 = 8 amount、AC-17 = 6 fixture、
+  AC-18 = 12 spec_id、**合計 26 行の表**（amount → `gasUsed`、fixture 名 → error 文字列、
+  spec_id → (verdict, gas)）で 3 gate とも緑になる。**ルックアップ表はエンジンではない。**
+  r1 の `fake_reexec` は死ぬが、それは「値を書き写さなかった模型」が死ぬというだけである。
+  そして r2 は、この正直さの告白を**過大主張の 2 文後ろ**に置いていた——覆いとして機能する位置に。
+  **r3 は主張の側を下げる。**
+- **replay が呼ばれたことを担保するのは白箱の負のコントロールだけであり、それは gate に入っている。**
+  r2 では入っていなかった（finding 2(a)）: §6.0 の表に `negative-controls` の行が無く、
+  `scripts/004-negative-controls.sh` は §9 の成果物一覧に**列挙されているだけ**で、
+  どの AC からも参照されていなかった。**NC-1〜NC-24 を 1 行も書かない実装が、24 gate 全部で
+  緑になっていた**——r1 finding 1 の remedy の中核が、受入条件の外に置かれていた。
+  r3 では **25 行目の gate** であり、NC ごとに**どの gate が落ちたかを印字して期待と厳密一致**させる
+  （NC-19 は 3 gate 名を要求する）。
+- **表に書けない入力集合を 1 つ置く**（finding 2(iii)）。AC-4b `gas-seeded` は実行時 seed から
+  K = 64 個の amount を引き、`gasUsed` を intrinsic（zero 4 / nonzero 16）+ cold SLOAD 2100 +
+  SSTORE(RESET 2900 / no-op 100) の**解析式**と突き合わせる。AC-3 が claim 側で 512 件の
+  実行時 seed に対して既にやっている道具を、amount 側に広げただけである。
+  **表に書けない集合が 1 つあれば、26 行の表は死ぬ。**
+- **COUNT CONTRACT は「走った」を測っていない**（finding 2(c)）。`check-counts` が照合するのは
+  **被検査プログラム自身が印字した文字列**なので、gate 本体を `println!(期待行); Ok(())` に
+  置き換えた実装は全 gate で緑になる。**NC-24（COUNT CONTRACT を外す）はこの変異を覆わない。**
+  r2 の「『緑だが 0 件走った』は COUNT CONTRACT で必ず落ちる」は**偽**であり、削除した。
+  塞ぐのは **NC-25**（新規）——gate 本体を自分の成功行を印字するだけの実装に差し替え、
+  `negative-controls` が落ちることを要求する。
 - **AC-11(a) の静的リテラル検査は 1 行の符号化で破れる**（`const P_ENC: &str = "<base64>"` を
   実行時に復号する）。だから AC-11(a) は **tripwire** であって保証ではない。保証側は AC-11(b) が持つ
   （corpus と判事規則の**両方を本仕様が書いている**ので、実装者は片側も書けない）。
@@ -684,7 +875,11 @@ guest 形式 `delta_outcome(u64_low(pre), u64_low(post), MIN_OUT, MAX_DELTA)` �
 拒否 3 点（`DELIVERED_MAX + 1`, `u64::MAX`, `2^64`）は `AmountWouldTruncate` で
 **エンジンに到達しない**（transcript に `reexec` サブオブジェクトが生成されないことを検定）。
 出力に必ず次の 1 行を含める:
+`the u64/U256 divergence is closed by task 008; this input surface keeps its own bound, which is not that fix.`
+**r2 の義務文言は削除した**（finding 1(iii)）。それは
 `u64 crossing is unreachable from this input surface only; the divergence itself is task 008's, not closed here.`
+であり、008 が着地した後にこれを gate が印字するのは `AGENTS.md` §5 の**逆向きの違反**——
+未解決を解決済みと書くのと同じだけ悪い、**解決済みを未解決と書く**行為である。
 落とすコマンド: `cargo run -p reckn-live -- selftest --u64-boundary`
 *退化例*: `post` を `u64` で持つ実装。入力域上限を `u64::MAX` に広げた実装（U256 版と u64 版が食い違う）。
 「004 が u64 の穴を塞いだ」と書く文面 — AC-15 の禁止語 `fixes the u64` / `closes the u64` で落ちる。
@@ -698,14 +893,26 @@ guest 形式 `delta_outcome(u64_low(pre), u64_low(post), MIN_OUT, MAX_DELTA)` �
   `dealBinding` と `dealId` が**全件同一**（散文は deal を作らない）。
 - **(c)** `reckn-live check-binding --record A.json --deal B.json` が `BindingMismatch` で
   **非ゼロ終了**し、`A.json`/`A` の正しい組は exit 0（2 方向）。
-- **(d)** `reckn-live guest-fixture-check` が §4.3 の preimage を `testkit::anchored_sstore_witness(addr(0xca), addr(0x77))`
-  から組み直し、**`zk-verdict/contracts/src/fixtures/reexec-groth16-fixture.json` の
+- **(d)**【**r3 で構成子の名前を外した**——finding 1(ii)】`reckn-live guest-fixture-check` が
+  §4.3 の preimage を、**そのとき `zk-verdict/script/src/bin/reexec.rs` の `build_input` が使っている
+  構成子**から組み直し、**`zk-verdict/contracts/src/fixtures/reexec-groth16-fixture.json` の
   `deal_binding` と `trace_hash` の両方**をバイト一致で再現する（2 件）。
-  ファイルから読んだ値・再計算値・本仕様に pin した hex の**3 者が一致**しなければ `PinDrift` で停止。
+  ファイルから読んだ値と再計算値の**2 者が一致**しなければ `PinDrift` で停止する。
+  > **本仕様に pin した hex は 3 者目に数えない**（r2 は数えていた）。r2 は構成子を
+  > `testkit::anchored_sstore_witness(addr(0xca), addr(0x77))` と**名前で**書いていたが、
+  > **008 は同じ fixture を `pre = 2^64` / `post = 2^64 + 100` で再生成し、
+  > `anchored_sstore_witness` はその prestate を作らない。** 名前を書いた瞬間、AC-7(d) は
+  > 「pin がずれる」のではなく**組み直しのレシピが存在しなくなり、誰も通せない AC** になる——
+  > r1 BLOCKER 2 の欠陥が、実行順によって復活する形である。
+  > 名前でなく**役割**で指す。そして「同じ commit で再測定して更新する」だけでは足りない
+  > ケースがこれである（§4.1.1）。
 - **(e)** `forge test --json` を解析し、`test_settle_reverts_on_binding_mismatch()` /
   `test_real_proof_settles_to_seller()` / `test_failed_verdict_refunds_buyer()` /
   `test_settle_reverts_on_unverified_proof()` の 4 件が存在し `status == "Success"`、
-  全体の failure が 0、全体の test 件数が 12 以上（2026-09-04 実測: 12 件全緑）。
+  全体の failure が 0、全体の test 件数が **12 以上**（2026-09-04 実測 12 件全緑 →
+  **2026-09-07 実測 47 件**。下限なので緑のままだが、**下限は「増えた」ことを検知しない**——
+  AC-7(e) の expected は finding 9 に従い 4 → 7 に上げ、**要求する test 名の集合**で assert する。
+  総数の等式は、テストが 1 本消えて 1 本足されたケースを緑のまま通す）。
   **`--match-test` を使わない**（一致ゼロで exit 0 になるため）。
 落とすコマンド: `cargo run -p reckn-live -- selftest --binding && bash scripts/004-live.sh forge-green`
 *退化例*: `dealBinding = keccak256(dealId)` → (a) が落ちる。`dealBinding` に `claimHash` を混ぜる → (b) が落ちる
@@ -734,18 +941,53 @@ guest 形式 `delta_outcome(u64_low(pre), u64_low(post), MIN_OUT, MAX_DELTA)` �
 同一 `(claim, amount)` を `RECKN_JUDGE=stub` / `forced-unavailable` / `forced-kill` の 3 モードで実行し、
 transcript の `reexec` サブオブジェクトが**3 件ともバイト同一**。`forced-kill` でも
 `reexec` は完全なまま残り、`judge.kind = "unavailable"`、分類は `NO_CONTEST`。
+**さらに 3 件（r3 新規——finding 6）**: `live-input/fixtures/judges/` に **committed の
+スクリプト判事 3 本**を置き、同じ `(claim, amount)` をそれぞれで実行する:
+(d) **20 秒を超えて眠る**判事 → `JudgeTimeout`、**有界時間で終わり、プロセスが kill される**こと。
+(e) **第 1 非空行が `APPROVE` でも `REJECT` でもない**判事 → `JudgeUnparseable`。
+(f) **16 KiB + 1 バイト**を返す判事 → `JudgeResponseTooLarge`。
+3 件とも分類は `NO_CONTEST` で、`reexec` サブオブジェクトは (a)(b)(c) と**バイト同一**であること。
+
+> r2 では `JudgeTimeout`（20 秒）と `JudgeResponseTooLarge`（16 KiB）が §3.5 に**定義だけ**あり、
+> **それを実行する AC が 1 つも無かった**（finding 6）。AC-9 が使うのは
+> `forced-unavailable` / `forced-kill` という **004 自身の合成モード**であって、実際にハングする
+> サブプロセスでも、16 KiB を超えるストリームでも、不正な実応答でもない。
+> **「合成モードだけを特別扱いする実装」が通ってしまう。** 判事コマンドを `sh -c 'sleep 60'` に
+> すれば仕様上 20 秒で `JudgeTimeout` のはずだが、それを落とす AC が無いのでハングしたまま
+> 緑になりうる。committed のスクリプト 3 本は、その定義を飾りでなくするための最小の実体である。
+
 落とすコマンド: `cargo run -p reckn-live -- selftest --judge-independence`
 *退化例*: 判事の応答を見てから再実行の入力を組む実装（順序が逆）。判事が落ちたとき attempt ごと捨てる実装。
+判事プロセスを kill せずに待ち続ける実装 → (d) が有界時間で終わらず落ちる。
 
 ---
 
 **AC-10（走らせていないものを passing と書かない）**
-- **(a) `audit --fields`（4 件）**: transcript の全行が `judge.kind ∈ {stub, cli, http}` /
-  `judge.model`（endpoint または CLI が自己申告した文字列そのまま。stub は `"stub/keyword-v1"`）/
-  `judge.rawResponse`（**生の応答全文**、16 KiB 上限で切れた場合は `truncated: true`）/
-  `judge.promptHash` を持つこと。1 つでも欠けたら非ゼロ終了。
-- **(b) `audit --docs`**: `README.md` / `dashboard/live.html` / `SUBMISSION.md` /
-  `docs/specs/004-*.md` を走査して `attemptId` を引用している文を集め、
+- **(a) `audit --fields`（4 件）**: transcript の全行が
+  `judge.kind ∈ {stub, cli, http, unavailable, timeout, oversize, unparseable}` /
+  `judge.promptHash` を持つこと（**この 2 つは全行で必須**）。
+  `judge.model`（endpoint または CLI が自己申告した文字列そのまま。stub は `"stub/keyword-v1"`）と
+  `judge.rawResponse`（**生の応答全文**、16 KiB 上限で切れた場合は `truncated: true`）は、
+  **`NO_CONTEST` 系の行では `null` でよい**。1 つでも規約に反したら非ゼロ終了。
+  > **r2 では AC-9 と AC-10(a) が同時に満たせなかった**（finding 4、私の独立検出ではなくレビューの
+  > 発見を現物で確認）。AC-9 は `forced-kill` で `judge.kind = "unavailable"` を要求するのに、
+  > AC-10(a) の許容集合は `{stub, cli, http}` で、しかも**到達できなかった判事に `model` も
+  > `rawResponse` も存在しない**。AC-9 の 3 行が監査対象の transcript に載れば AC-10(a) が落ち、
+  > 載らなければ AC-9 の「`reexec` が 3 件ともバイト同一」の対象が未定義になる。
+  > `AGENTS.md` §7 の「仕様が本当に曖昧」に該当し、実装者は停止して founder に返すことになる。
+  > **判事に到達できなかったことを表現できない型では、判事非依存は書けない。型は要る、モデルは要らない。**
+- **(b) `audit --docs`**【**r3 で母集合を反転**——finding 5】: 走査対象は同じ
+  （`README.md` / `dashboard/live.html` / `SUBMISSION.md` / `docs/specs/004-*.md`）だが、
+  母集合は「`attemptId` を引用している文」**ではない**。
+  **判事語彙（`LLM` / `language model` / `model` / `persuaded` / `judge`）を含む文を集め、
+  そのうち解決可能な `attemptId` を持たない文が 1 つでもあれば失敗**する。
+  > r2 の母集合は引用のある文だけだったので、`README.md` に
+  > `A language model was persuaded by the seller's claim.` と **attemptId 無しで**書けば、
+  > 走査対象に入らず、manifest 件数とも一致し、AC-15 の禁止語 10 件にも該当せず、
+  > NC-17（stub の run を README で**引用する**）にも覆われなかった。
+  > **AC-10 の見出しは「走らせていないものを passing と書かない」であり、
+  > これはその見出しが名指しで防ごうとしている状態そのものだった。**
+  引用のある文の判定は r2 のままでよい: 各文が引用する行を transcript から解決し、
   **committed manifest `live-input/fixtures/doc-claims.json` の件数と一致**すること（COUNT CONTRACT）。
   各文が引用する行を transcript から解決し、その行の `judge.kind == "stub"` なのに
   文が「LLM」「model」「persuaded a language model」を主張していたら**失敗**。
@@ -827,7 +1069,21 @@ stub 判事の出力が §7.6 の期待ベクタと **8/8 一致**すること�
 
 ---
 
-**AC-15（誇張しない文面・12 件）**: `dashboard/live.html` と 004 が触る文書について、
+**AC-15（誇張しない文面・12 件）**【**r3 で走査単位を変更**——finding 3】:
+走査は**ファイル全体ではなく、004 が所有する区画**に対して行う。`README.md` と `SUBMISSION.md`
+では `<!-- 004:begin -->` / `<!-- 004:end -->` に挟まれた範囲だけを見る。`dashboard/live.html` と
+`docs/transcripts/004/NOTES.md` は全体が 004 のものなので全体を見る。
+
+> **r2 の指定どおり実装すると、004 の作業を 1 行も始めない状態で `lint-claims` が落ちた**
+> （finding 3、現物で再現）。禁止語 `settled` が `README.md` と `SUBMISSION.md` の
+> **既存の・真の・別 tier の記述**に発火する——
+> `proven → verified on-chain → settled on the proof alone, on EVM or Solana` は
+> zk 経路の真の記述で、committed fixture と `forge test` が裏づけている。
+> 仕様どおり実装すれば、004 は**自分の local-only tier のために別 tier の真の主張を削る**か、
+> gate が落ちて止まるかの二択になる。**自分の禁止語リストが自分の README に発火していた。**
+> 全域に置くなら語形を 004 固有にする（`004 settled` / `this demo settled`）。
+
+対象区画について、
 - 次の文を**必ず含む**（`N` / `M` は実数に置換済みであること。プレースホルダのままなら失敗）:
   `Tested over a finite corpus of <N> inputs — evidence, not a proof of impossibility.`
 - 次の 10 語句を**含まない**: `impossible to persuade`, `cannot be fooled`, `provably unpersuadable`,
@@ -835,6 +1091,17 @@ stub 判事の出力が §7.6 の期待ベクタと **8/8 一致**すること�
   `fixes the u64`, `closes the u64`。
   （`settled` / `on-chain refund` / `escrowed` は r1 finding 7: tier が local only で決済は 1 件も
   起きていないため。`fixes/closes the u64` は §3.4: それを閉じるのは 008 であり 004 ではないため。）
+- **次の文も必ず含む**（**r3 新規**——finding 7）:
+  `This demo's input surface stops short of the u64 boundary; the boundary itself is task 008's.`
+  対象に **`dashboard/live.html` を含める**。さらに `AmountWouldTruncate` を返すときの
+  **UI メッセージに同じ理由を載せる**。
+  > r2 では、`DELIVERED_MAX` が回避策であるという開示が**審査員の見る面に 1 つも無かった**。
+  > AC-6 が `selftest --u64-boundary` の stdout に印字させるだけで、AC-15 は
+  > `fixes the u64` を**禁止**するだけ——正の開示文を要求していなかった。観客が上限を超える数を
+  > 打つと `AmountWouldTruncate` が返るのに、**その理由を UI に出す要求がどこにも無かった。**
+  > `AGENTS.md` §5 の「Honest scope を解消したかのように書かない」は、**書かないこと**ではなく
+  > **見えるところに書くこと**でしか満たせない。
+  > （008 が着地した今、上限の理由は §3.4 のとおり入力面の側にある。文はそれに合わせてある。）
 - `<M_APPROVE>` / `<M_TOTAL>` / `<N>` の未置換プレースホルダが残っていたら失敗。
 - **POSITIVE CONTROL**: 同じ検査器を `live-input/fixtures/positive-controls/overclaim.md`
   （10 語句を全部含む）に当てて 10 件検出すること。
@@ -889,7 +1156,7 @@ SHANGHAI / CANCUN / PRAGUE / OSAKA` の 12 通りに振り、§3.7 の分割に�
 
 ---
 
-**AC-19（transcript の完全性・5 件）**:
+**AC-19（transcript の完全性・**6 件**）**:
 (1) 全行の `prev` 連鎖が成立し、末尾が `docs/transcripts/004/HEAD` と一致する。
 (2) 途中 1 行を JSON として妥当なまま書き換えると `audit --chain` が**非ゼロ終了**する
     （書き換え前は exit 0 — 2 方向で検定）。
@@ -899,6 +1166,11 @@ SHANGHAI / CANCUN / PRAGUE / OSAKA` の 12 通りに振り、§3.7 の分割に�
     `selftest --render` のスナップショットに**その 20 桁がそのまま現れる**ことで検定する。
 (5) `docs/transcripts/004/attempts.jsonl` が append-only であること
     （EVENT_START からの `git diff` が末尾追加のみであること）。
+(6) **`POST /attempt` を 2 本*同時に*投げたとき、2 行が連続する別々の `seq` を得て
+    `prev` 連鎖が有効なままであること**（**r3 新規**——finding 6）。
+    > (3) は同じ `seq` の**逐次**の重複を拒否するだけで、**ロックが競合安全であることを
+    > 1 ビットも示さない**。r1 finding 9 の repro は逐次ではなく同時 POST であり、
+    > 2 本が両方 `seq = N` を選ぶ実装は (3) を通ってしまう。
 落とすコマンド: `cargo run -p reckn-live -- audit --chain`
 *退化例*: 行を手で書き換えて `judge.kind:"cli"` にする（r1 finding 9）→ (2) で落ちる。
 `gasUsed` を JSON 数値で書く実装 → (4) で桁落ちして落ちる。
@@ -931,6 +1203,22 @@ SHANGHAI / CANCUN / PRAGUE / OSAKA` の 12 通りに振り、§3.7 の分割に�
 | `stub` | **本仕様 §7.4 が定義する決定的キーワード採点器。LLM ではない** | 無し | プロセス内のみ | **○** |
 | `cli` | `RECKN_JUDGE_CMD` をサブプロセス起動。プロンプトは **stdin** | 004 のコードは鍵を読まない・書かない・記録しない | **第三者へ出る**（§5.4、UI に常時バナー） | × |
 | `http` | OpenAI 互換 endpoint に POST（ローカル推論サーバ想定） | 環境変数のみ。argv・ログ・ページに出さない | **loopback 限定** | × |
+
+**テスト専用モード（r3 で表に載せた——finding 4）。** AC-9 がこれらを使うのに、r2 の表には
+1 つも載っていなかった。載っていない挙動は仕様ではない。
+
+| mode | 実体 | 生じる `judge.kind` | 分類 |
+|---|---|---|---|
+| `forced-unavailable` | 判事を起動しない合成モード | `unavailable` | `NO_CONTEST` |
+| `forced-kill` | 起動した判事を即 kill する合成モード | `unavailable` | `NO_CONTEST` |
+| `cli` + `judges/sleep-forever.sh` | **実際に 20 秒を超えて眠る** committed スクリプト | `timeout` | `NO_CONTEST` |
+| `cli` + `judges/garbage-first-line.sh` | 第 1 非空行が `APPROVE`/`REJECT` でない | `unparseable` | `NO_CONTEST` |
+| `cli` + `judges/oversize.sh` | 16 KiB + 1 バイトを返す | `oversize` | `NO_CONTEST` |
+
+**合成モードと実スクリプトの両方が要る。** 合成モードだけなら「合成モードだけを特別扱いする
+実装」が通り、`JudgeTimeout` / `JudgeResponseTooLarge` は定義されただけの飾りのままになる。
+`NO_CONTEST` 系の行では `judge.model` / `judge.rawResponse` は `null` でよい（AC-10(a)）——
+**到達できなかった判事のモデル名を要求する型は、到達しなかったことを表現できない。**
 
 **環境の実測（2026-09-04、このマシン）**: `/opt/homebrew/bin/claude` は存在する。
 `ollama` / `llama-server` は**存在しない**。`http://127.0.0.1:11434` に応答は無い。
@@ -1107,6 +1395,8 @@ README にはそう書く（「clone してすぐ offline で動く」とは書�
 | NC-22 | `gasUsed` を JSON 数値で書く / 金額を JSON 数値で書く | `transcript`(4) |
 | NC-23 | 変奏 corpus を 1 バイト書き換える | `mutations`（digest 不一致） |
 | NC-24 | gate が 0 件走っても緑を返すようにする（COUNT CONTRACT を外す） | `check-counts`（全 gate） |
+| **NC-25**（新規・r3） | **gate 本体を、ケースを 1 件も実行せず自分の成功行 `gate=<name> expected=<N> ran=<N> passed=<N> failed=0` を `println!` するだけの実装に差し替える** | **`negative-controls`**。**NC-24 はこの変異を覆わない**——COUNT CONTRACT を外すのではなく、**満たしたふりをする**変異だからである。`check-counts` は被検査プログラム自身が印字した文字列を照合しており、印字は実行の証拠ではない |
+| **NC-26**（新規・r3） | `--gas-seeded` の seed を無視して固定の 64 件を返す | **`gas-seeded`**。実行時 seed の入力集合が本当に seed に依存していることの確認。**これが無ければ AC-4b は 27 行目のルックアップ表になる** |
 
 **NC-19 が 004 の中心的な負のコントロールである。** これが 3 gate すべてを落とさない限り、
 §6 の AC 群は「中心主張の検定」を 1 件も持っていない（r1 finding 1）。
@@ -1174,11 +1464,19 @@ README にはそう書く（「clone してすぐ offline で動く」とは書�
 - **INV-1**: 観客がタイプしたバイト列は `JUDGE_INPUT` にのみ現れ、`REEXEC_INPUT` /
   `planHash` の preimage / `dealBinding` の preimage / `reexec` サブオブジェクト /
   いかなるチェーン向けデータにも現れない。
-- **INV-2**: `dealBinding` は `(STATE_ROOT, TARGET, CHECK_SLOT, MIN_OUT, MAX_DELTA, planHash)` のみの関数、
-  `planHash` は `(caller, target, calldata, value)` のみの関数（**`gas_limit` を含まない** — §11）。
-  ゆえに散文を変えても deal は変わらず、金額を変えれば deal は変わる。
-- **INV-3**: `reexec` verdict は `Reproduced` ⟺ `deliveredBaseUnits ∈ [MIN_OUT, MAX_DELTA]`。
-  他のいかなる入力もこれを変えない。
+- **INV-2**【**r3 で全面差し替え**。r2 の文は 008 着地後は偽である — finding 1】:
+  `dealBinding` は `zk-verdict/program-revm/src/main.rs` が計算する **v2 の入れ子**であり、
+  `keccak256("reckn/zk/bind/evm/v2" ‖ state_root ‖ env_hash ‖ check_hash ‖ plan_hash)`。
+  `plan_hash` は **`gas_limit` を束ねる**（`"reckn/zk/plan/evm/v2"`）し、`env_hash` は
+  **`spec_id` と block env を束ねる**（`"reckn/zk/env/evm/v2"`）。したがって
+  「`dealBinding` は `(STATE_ROOT, TARGET, CHECK_SLOT, MIN_OUT, MAX_DELTA, planHash)` のみの関数」は
+  **偽**であり、**AC-18 が 12 の `spec_id` を振る以上、004 の面でこれは可視化する**。
+  不変なのは向きだけである: **散文を変えても deal は変わらず、金額を変えれば deal は変わる。**
+- **INV-3**: **§3.3 が固定した実行環境のもとで**、`reexec` verdict は
+  `Reproduced` ⟺ `deliveredBaseUnits ∈ [MIN_OUT, MAX_DELTA]`。
+  **限定を付けたのは、同じ文書の AC-18 がこれを反証していたからである**（finding 10）——
+  AC-18 は 12 の `spec_id` を振り、fork が変われば同じ金額が別の verdict を出しうる。
+  「他のいかなる入力もこれを変えない」は、環境を固定して初めて真になる。
 - **INV-4**: エンジンに投入される `TARGET` の `code_hash` は `CODE_HASH` と一致する。
   観客は実行されるバイトコードを 1 バイトも変えられない。
 - **INV-5**: transcript は append-only で `prev` 連鎖を持ち、`HEAD` が末尾を固定する。
@@ -1197,13 +1495,14 @@ README にはそう書く（「clone してすぐ offline で動く」とは書�
 
 ## 11. 既知の隣接する穴（004 では閉じない）
 
-- **D-1（004 の scope 外・founder 裁定待ち）**: `zk-verdict/program-revm/src/main.rs:176-181` の
-  `planHash` は `caller ‖ target ‖ calldata ‖ value` を束ねるが **`gas_limit` を含まない**。
-  `gas_limit` だけが異なる 2 つの plan は同じ `dealBinding` を持つ。`gas_limit` は OOG で実行の成否を
-  変えうるので settlement-affecting であり、protocol の版上げが要る。
-  004 の入力面は `gas_limit = 100_000` 固定なので**露出しない**。
-- **008 が引き取った 2 件**（004 では触れない。`AGENTS.md` §3 の実行順で 004 より前）:
-  - guest の `u64_low` と off-chain の U256 の乖離（**偽の解放**の向き。§3.4）。
+- ~~**D-1（004 の scope 外・founder 裁定待ち）**~~ → **008 が閉じた**（finding 11）。r2 は
+  「`planHash` が `gas_limit` を束ねない」を open として提示していたが、`plan/evm/v2` の preimage は
+  `"reckn/zk/plan/evm/v2" ‖ caller ‖ target ‖ value:U256BE ‖ **gas_limit:u64BE** ‖
+  len(calldata):u64BE ‖ calldata` であり、**`gas_limit` は束ねられている**
+  （`zk-verdict/program-revm/src/main.rs` の `plan_pre`）。founder 裁定は要らない。
+  **解決済みの穴を open として提示するのは、未解決を解決済みと書くのと同じ種類の嘘である。**
+- **008 が引き取り、2026-09-06 に着地した 2 件**（004 では触れない。実行順で 004 より前）:
+  - guest の `u64_low` と off-chain の U256 の乖離（**偽の解放**の向き。§3.4）。**閉じた。**
   - guest が `chain_id` しか設定せず `spec` / block env / nonce check が off-chain と一致しない
     （`zk-verdict/program-revm/src/main.rs:122-127` vs `reexec-evm/src/lib.rs:489-512`）。
     004 の fixed runtime では表面化しないが、§9 の台詞から「同じエンジン」を削除した理由がこれである。
@@ -1221,11 +1520,18 @@ README にはそう書く（「clone してすぐ offline で動く」とは書�
 - **OQ-2**: **決着済み**（founder 裁定 2026-09-04）。見出しの主張は判事非依存に書き換えた。
   実モデル経路（`cli`）が可であれば §9 の左パネルと `<M_APPROVE>/<M_TOTAL>` が埋まり、
   不可であればその 2 箇所が消えるだけで、AC は 1 件も変わらない（§7.2 / INV-11）。
-- **OQ-3（新規・推奨は「AC にしない」）**: 004 の fixture 入力を `zk-verdict/script` の `--execute`
-  経路に通し、guest の `VerdictPublicValues` と off-chain `replay()` の結果を突き合わせる差分テストを
-  作るか。**推奨: 作るが gate にしない**。SP1 toolchain を 004 の緑の条件にすると T-8（offline 再現）が
-  偽になり、また guest の fork 不一致は **008 の対象**なので、004 がその結果に緑を賭けるのは
-  依存の逆流になる。**もし 008 がこの差分テストを持つなら、004 は何も足さない。** founder 裁定が要る。
+- ~~**OQ-3**~~ → **閉じた。founder 裁定は不要だった**（finding 12）。問いは「004 の fixture 入力を
+  guest と off-chain の双方に通す差分テストを作るか」であり、r2 は「008 がそれを持つなら 004 は
+  何も足さない」と自分で条件を書いていた。**008 はそれを持っている**——
+  `zk-verdict/script/tests/value_domain.rs` が
+  `result.guest.expect("valid fixture must execute the guest")` で guest を実行し、off-chain の
+  結果と突き合わせている（AC-02 の 14 ベクタ。AC-03 / AC-04 も同型で 13 ずつ）。
+  したがって 004 は何も足さない。
+  **r2 レビューはこれを `008:343-349` と行番号で引いていたが、その範囲は現在の 008 では
+  check 5 の話になっている**——仕様が動けば行番号は動く。引くなら現物を引く。
+  SP1 toolchain を 004 の緑の条件にしない、という判断は変わらない（T-8）。
+  **自分で書いた条件が既に満たされているかを読みに行けば閉じられる問いを、
+  founder に上げてはならない。**
 - **OQ-4（新規）**: `docs/transcripts/004/attempts.jsonl` に**審査員が生成した行**を後から追記する場合、
   Continuity 規律（`AGENTS.md` §4: 当日作業は 9/4–9/16 の日付の commit）との関係をどう書くか。
   9/12 の凍結以降に届いた attempt を commit するのは当日作業の境界を超える可能性がある。
