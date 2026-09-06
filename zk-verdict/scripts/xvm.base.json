@@ -1,0 +1,29 @@
+{
+  "note": "Measured at 009's base commit ea5a51a (2026-09-06), the commit in which 008 landed. 009 only ADDS tests and patches \u2014 it renames and deletes none \u2014 so the base id set is the current set minus RecknCrossVmSettlementTest's sixteen, and {P} is the mutants population before 009 adds its own.",
+  "baseCommit": "ea5a51a",
+  "testIds": [
+    "RecknReexecVerdictTest:test_full_reexecution_proof_verifies_on_chain",
+    "RecknReexecVerdictTest:test_reexec_tampered_public_values_are_rejected",
+    "RecknSvmVerdictTest:test_svm_reexecution_proof_verifies_on_chain",
+    "RecknSvmVerdictTest:test_svm_tampered_public_values_are_rejected",
+    "RecknVerdictDomainTest:test_AC07_proof_from_another_execution_reverts_BindingMismatch",
+    "RecknVerdictDomainTest:test_AC07_real_proof_settles_the_deal_it_is_bound_to",
+    "RecknVerdictDomainTest:test_AC10_false_release_vector_refunds_the_buyer",
+    "RecknVerdictDomainTest:test_AC10_reproduced_settles_to_seller_at_pre_above_2_64",
+    "RecknVerdictDomainTest:test_AC10_tampered_public_values_are_rejected",
+    "RecknVerdictDomainTest:test_AC10_verifier_returns_untruncated_pre",
+    "RecknVerdictVerifierFixtureTest:test_real_groth16_proof_verifies_on_chain",
+    "RecknVerdictVerifierFixtureTest:test_tampered_public_values_are_rejected",
+    "RecknVerdictVerifierTest:test_invalid_proof_reverts_so_no_unproven_verdict_settles",
+    "RecknVerdictVerifierTest:test_valid_proof_exposes_the_zk_attested_verdict",
+    "RecknZkEscrowTest:test_failed_verdict_refunds_buyer",
+    "RecknZkEscrowTest:test_real_proof_settles_to_seller",
+    "RecknZkEscrowTest:test_settle_reverts_on_binding_mismatch",
+    "RecknZkEscrowTest:test_settle_reverts_on_unverified_proof"
+  ],
+  "B": 18,
+  "P": 21,
+  "siblingGates": [
+    "ac008.sh"
+  ]
+}

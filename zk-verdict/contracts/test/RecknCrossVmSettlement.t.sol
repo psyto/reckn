@@ -131,8 +131,10 @@ contract RecknCrossVmSettlementTest is Test {
         sp1 = new SP1Verifier();
     }
 
+    /// No `vm.exists` gate, deliberately (AC-9): `vm.readFile` on a missing file is a
+    /// TEST FAILURE, and forge reports an early-returned test as Success — so a gate
+    /// here would be invisible to any skip count.
     function _read(string memory path) internal view returns (Fixture memory f) {
-        require(vm.exists(path), "missing fixture -- a missing fixture is a hard failure");
         string memory json = vm.readFile(path);
         f.vkey = vm.parseJsonBytes32(json, ".vkey");
         f.publicValues = vm.parseJsonBytes(json, ".public_values");
