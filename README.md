@@ -82,8 +82,13 @@ virtual machine the work happened on.
 
 ![The Arc demo again: the Solana deal funded and settled with the Solana proof, the seller tile at 250.00 USDC.](dashboard/media/arc-demo-solana.jpg)
 
-**▶ Demo video** *(recorded before the event's work — being re-cut; see
-[`docs/arc-usdc.md`](docs/arc-usdc.md) for what is new)***:**
+**▶ Demo video (83s, recorded 2026-09-06):**
+[`dashboard/media/reckn-arc-demo.mp4`](dashboard/media/reckn-arc-demo.mp4) — the hook,
+then the five presses above driven live, ending on this run's own `no-keys.sh` output.
+Regenerate it with `cd dashboard/video && npm install && node record.js`; the recorder
+asserts each step's result and refuses to record one that did not happen.
+
+**▶ Demo video, pre-event cut (35s):**
 [`dashboard/media/reckn-demo-full.mp4`](dashboard/media/reckn-demo-full.mp4)
 — a self-explanatory 35s cut with title cards (no audio needed): the hook (agent
 payments settle on a trusted judge you can't check) → the money-shot judged two ways

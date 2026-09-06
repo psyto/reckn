@@ -286,11 +286,23 @@ positioned; if it stalls, the verdict still reproduces anywhere.
 
 ---
 
-## Demo video — the re-cut (2026-09-06). Shoot this, not the old one.
+## Demo video — recorded 2026-09-06: [`dashboard/media/reckn-arc-demo.mp4`](dashboard/media/reckn-arc-demo.mp4)
 
-**Why re-cut.** The 35s cut in the repo was made before the event and contains none of
-the event's work: not the false-release fix, not cross-VM settlement, not the Arc USDC
-flow, not the timeout. Both Arc prizes require a video; this is the one to record.
+**83 seconds, no audio needed, title cards carry it.** It is a recording, not an
+animation: the script starts the chain itself, clicks the same buttons a judge would,
+and the closing shot is the actual stdout of `bash scripts/no-keys.sh` from that run.
+Reproduce it with `cd dashboard/video && npm install && node record.js`.
+
+**The recorder refuses to ship a video of something that did not happen.** Each step
+asserts the text it is supposed to produce, and the first take died on exactly that:
+the theft attempt returned `BadState()` instead of `BindingMismatch()`, because the
+cut settled the deal before trying to steal it — a theft against a settled deal proves
+nothing about the binding. The order is fund → steal → settle, and the guard is why
+that is known rather than assumed.
+
+**The storyboard below is what it records.** The 35s cut still in the repo was made
+before the event and contains none of the event's work: not the false-release fix, not
+cross-VM settlement, not the Arc USDC flow, not the timeout.
 
 **Format:** ~100 s, screen capture, no audio needed — title cards carry it. Two
 sources only: `dashboard/index.html` (the story) and `http://127.0.0.1:8787` (the live

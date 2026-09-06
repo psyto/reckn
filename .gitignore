@@ -30,3 +30,4 @@ v6.1.0-groth16.tar.gz
 # fixtures' proof bytes. Regenerated on every run, so committing it would be
 # committing a snapshot of a throwaway chain.
 dashboard/arc-demo-state.json
+dashboard/video/node_modules/
