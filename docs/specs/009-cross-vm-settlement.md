@@ -1656,6 +1656,17 @@ That pair is what proves AC-12 actually *runs* what it discovers rather than mer
 it, and it works whether or not any sibling task has landed — which is the whole reason AC-12
 names no sibling.
 
+**That last clause was true of this document and false of the script, until 2026-09-06.** The
+paragraph above says the sandbox holds 009's scripts *only*; the selftest implemented *only* as
+`rm -f ac008.sh ac008-selftest.sh` — a name list. When task 005 landed a gate, a second sibling
+survived into the restricted sandbox, `both-green.sh` ran it against a tree with no contracts
+and no `arc.json`, and the **control** went red: *a target row was not green on the clean copy*.
+M-13's mutant was never evaluated. The row that exists to prove a closure is a closure was
+itself defeated by one new name — **R-7, in the one place in this repository that had the least
+excuse for it**. Both sandbox builders now strip siblings with the same glob `both-green.sh`
+discovers with. Recorded here rather than quietly fixed, because the document was already
+right: what drifted was the code beneath a correct sentence, which is the harder kind to see.
+
 **AC-10's own row has no mutant.** A mutant on the selftest would be evaluated by the
 selftest. §7.4's canary moves one detection onto `ac009.sh --all`, a different script every
 other row depends on; the rest is the implementation review opening the script and running

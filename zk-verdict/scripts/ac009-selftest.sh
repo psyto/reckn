@@ -41,7 +41,17 @@ sandbox_new() {
   mkdir -p "$S/scripts" "$S/zk-verdict/scripts" "$S/zk-verdict/contracts" "$S/docs/specs"
   cp "$root/scripts/no-keys.sh" "$S/scripts/"
   cp "$here"/*.sh "$here/xvm.pinned" "$here/xvm.base.json" "$S/zk-verdict/scripts/"
-  rm -f "$S/zk-verdict/scripts/ac008.sh" "$S/zk-verdict/scripts/ac008-selftest.sh"
+  # Strip sibling gates by the SAME CLOSURE both-green.sh discovers with, not by name.
+  # These two builders used to delete `ac008.sh` and `ac008-selftest.sh` literally.
+  # When task 005 landed a gate on 2026-09-06 a second sibling appeared in the
+  # scripts-only sandbox, both-green ran it against a tree that has no contracts and
+  # no arc.json, and the CONTROL went red — "a target row was not green on the clean
+  # copy" — so M-13's mutant never got evaluated at all. R-7 in this repository's own
+  # words: a check that one new name defeats is not a check. This one was the harness
+  # for the very row that tests a closure.
+  find "$S/zk-verdict/scripts" -maxdepth 1 -type f \
+    \( -name 'ac[0-9][0-9][0-9].sh' -o -name 'ac[0-9][0-9][0-9]-selftest.sh' \) \
+    ! -name 'ac009.sh' ! -name 'ac009-selftest.sh' -delete
   cp -R "$mutants" "$S/zk-verdict/scripts/mutants"
   cp "$root/docs/specs/009-cross-vm-settlement.md" "$S/docs/specs/"
   cp "$root/README.md" "$root/CLAUDE.md" "$root/AGENTS.md" "$S/"
@@ -60,7 +70,17 @@ sandbox_scripts_only() {
   local S; S=$(mktemp -d "${TMPDIR:-/tmp}/ac009-sbx13.XXXXXX")
   mkdir -p "$S/zk-verdict/scripts" "$S/docs/specs"
   cp "$here"/*.sh "$here/xvm.pinned" "$S/zk-verdict/scripts/"
-  rm -f "$S/zk-verdict/scripts/ac008.sh" "$S/zk-verdict/scripts/ac008-selftest.sh"
+  # Strip sibling gates by the SAME CLOSURE both-green.sh discovers with, not by name.
+  # These two builders used to delete `ac008.sh` and `ac008-selftest.sh` literally.
+  # When task 005 landed a gate on 2026-09-06 a second sibling appeared in the
+  # scripts-only sandbox, both-green ran it against a tree that has no contracts and
+  # no arc.json, and the CONTROL went red — "a target row was not green on the clean
+  # copy" — so M-13's mutant never got evaluated at all. R-7 in this repository's own
+  # words: a check that one new name defeats is not a check. This one was the harness
+  # for the very row that tests a closure.
+  find "$S/zk-verdict/scripts" -maxdepth 1 -type f \
+    \( -name 'ac[0-9][0-9][0-9].sh' -o -name 'ac[0-9][0-9][0-9]-selftest.sh' \) \
+    ! -name 'ac009.sh' ! -name 'ac009-selftest.sh' -delete
   # ac009.sh parses its manifest out of the spec and refuses to run without it; the
   # spec is not a mutation target here, it is the runner's input.
   cp "$root/docs/specs/009-cross-vm-settlement.md" "$S/docs/specs/"
