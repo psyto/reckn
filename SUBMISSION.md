@@ -232,7 +232,10 @@ positioned; if it stalls, the verdict still reproduces anywhere.
   a real Groth16 proof releasing **1.000000 USDC** to the seller
   (`0x2836ddb83141f3094b4ff055c154fba41d13c74dbe35f21e41a3001e6ef055e0`), and a proof
   of a **decrease** refunding the buyer
-  (`0xeb971aa45cce8c04e9a231d67d2737a28c4b637cbef74d46d1a465f01b59456f`). The USDC is
+  (`0xeb971aa45cce8c04e9a231d67d2737a28c4b637cbef74d46d1a465f01b59456f`), and — the
+  headline — **USDC on Arc released by a proof about work performed on SOLANA**
+  (`0x5c09cc0772fcfe23acbc9ea5752bd2380bceef1076ce7fc188fc5b2fdc02c4be`, block
+  60,721,364), with no bridge and no light client on the adjudication path. The USDC is
   Circle's predeploy at `0x3600…0000` — the chain's own money, no wrapper.
   **The real chain taught us something the mock could not**: USDC on Arc blacklists
   known-compromised keys, our first settlement hit that (`Blocked address`), and the

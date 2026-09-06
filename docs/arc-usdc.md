@@ -185,6 +185,14 @@ Two settlements, both with the committed **real Groth16 proofs**:
   — block 60,720,091, 345,874 gas. The seller's USDC balance went 0 → **1.000000**.
 - **`Failed` → buyer.** `0xeb971aa45cce8c04e9a231d67d2737a28c4b637cbef74d46d1a465f01b59456f`
   — the proof of a **decrease** refunded the buyer; the seller's balance did not move.
+- **A SOLANA proof released USDC on Arc.**
+  `0x5c09cc0772fcfe23acbc9ea5752bd2380bceef1076ce7fc188fc5b2fdc02c4be` — block
+  60,721,364, 320,600 gas. The deal named the Solana guest's verifier
+  (`0x13d42c0acFa90a57E9A729F0b8d9494B18272366`) and committed the binding that guest
+  produces; 1.000000 USDC moved to the seller. **This is the sentence the repository
+  exists to make true, and it is now a transaction on a public chain.** It remains a
+  statement about the **adjudication path**: the provenance of the committed
+  `bank_hash` is not established by it.
 
 **Mainnet:** Circle has **not published Arc mainnet addresses** as of 2026-09-06 (Arc
 docs, *Contract addresses*: "Mainnet addresses are not yet available"), so

@@ -113,6 +113,19 @@ blacklist する。** 最初の deal は seller に anvil の開発鍵 #1 を指
 **30日後に `refundAfterDeadline` が buyer へ返す**。公開チェーンでは時間を進められないので、
 **その返金は「予定」であって実演ではない**（実演できるのはローカルデモの側）。
 
+**そして Solana の proof でも決済した（2026-09-06）。** 看板の一文が公開チェーンの tx になった:
+
+```
+Arc testnet の USDC 1.000000 が、Solana で行われた作業についての Groth16 proof で解放された
+tx 0x5c09cc0772fcfe23acbc9ea5752bd2380bceef1076ce7fc188fc5b2fdc02c4be
+block 60,721,364 / gas 320,600 / seller 1.000000 → 2.000000
+verifier(Solana guest) 0x13d42c0acFa90a57E9A729F0b8d9494B18272366
+binding 0x34c195a353901719c1eb618595b8908389bb2a9368fe563f79ce5aab947b17eb
+```
+
+**bridge も light client も resolver も経路にいない。** ただしこれは**裁定経路についての言明**で、
+committed `bank_hash` の出所を示すものではない（L-1 は開いたまま）。
+
 **要らなかったデプロイを1つした**: false-release fixture 用に2本目の `RecknVerdictVerifier`
 （`0x0aD3f265…`）を建ててから、**両 EVM fixture が同じ guest 由来＝同じ vkey** だと確認した。
 不要だった。黙って落とさず記録する。

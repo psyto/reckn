@@ -40,12 +40,21 @@
         "tx": "0xeb971aa45cce8c04e9a231d67d2737a28c4b637cbef74d46d1a465f01b59456f",
         "block": 60720163,
         "result": "the proof of a DECREASE refunded the buyer; the seller's balance did not move"
+      },
+      "solanaProofOnArc": {
+        "dealId": "0x2966242da627c74f3048fbe9fdaadc0e7ad339b28decbfea4c4926653cce0eb0",
+        "tx": "0x5c09cc0772fcfe23acbc9ea5752bd2380bceef1076ce7fc188fc5b2fdc02c4be",
+        "block": 60721364,
+        "gasUsed": 320600,
+        "binding": "0x34c195a353901719c1eb618595b8908389bb2a9368fe563f79ce5aab947b17eb",
+        "result": "1.000000 USDC on Arc released by a Groth16 proof about work performed on SOLANA. The deal named the Solana guest's verifier at funding; the escrow never learns which virtual machine the work happened on. No bridge, no light client, no resolver on the adjudication path — which is a statement about adjudication and not about anchoring."
       }
     },
     "findings": [
       "USDC on Arc BLACKLISTS well-known compromised keys. The first deal named anvil's dev account #1 as seller; settleWithProof reverted with the string 'Blocked address', and `isBlacklisted(0x7099...)` returns true on chain. This is exactly the failure test_ARC05 models, reproduced against Circle's real blacklist rather than a mock.",
       "That first deal (0xa3a6718735b41de2ee08e4d7e2cfa81b1c1b6957f1a374ccaf305e21cc7d8af3) still holds 1.000000 USDC and cannot settle, because the seller is fixed at funding. It is Funded, and refundAfterDeadline returns it to the buyer 30 days after 2026-09-06. Time cannot be warped on a public chain, so that refund is not demonstrated here — it is scheduled.",
       "A second RecknVerdictVerifier (0x0aD3f26597C8e2224113E77faC12d8a8F55E5582) was deployed for the false-release fixture before checking that both fixtures come from the SAME guest and therefore carry the same vkey. It was unnecessary. Recorded rather than quietly dropped."
-    ]
+    ],
+    "RecknVerdictVerifier_solanaGuest": "0x13d42c0acFa90a57E9A729F0b8d9494B18272366"
   }
 }

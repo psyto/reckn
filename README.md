@@ -25,6 +25,7 @@ the balance *decreased* refunded the buyer, both on chain 5042002.
 | `SP1Verifier` (Groth16, fixed) | [`0xc84a89a5…5fbb`](https://testnet.arcscan.app/address/0xc84a89a576f4c735191f4db484a5d5602c175fbb) |
 | **released to the seller** | [`0x2836ddb8…055e0`](https://testnet.arcscan.app/tx/0x2836ddb83141f3094b4ff055c154fba41d13c74dbe35f21e41a3001e6ef055e0) — block 60,720,091, 345,874 gas |
 | **refunded to the buyer** | [`0xeb971aa4…9456f`](https://testnet.arcscan.app/tx/0xeb971aa45cce8c04e9a231d67d2737a28c4b637cbef74d46d1a465f01b59456f) |
+| **released by a *Solana* proof** | [`0x5c09cc07…2c4be`](https://testnet.arcscan.app/tx/0x5c09cc0772fcfe23acbc9ea5752bd2380bceef1076ce7fc188fc5b2fdc02c4be) — block 60,721,364. **USDC on Arc, moved by a proof about work performed on Solana** |
 
 The USDC is Circle's own predeploy at `0x3600…0000`, so the escrow holds the chain's
 native money — no wrapper, and no change to the contract to make that work.
