@@ -113,6 +113,24 @@ blacklist する。** 最初の deal は seller に anvil の開発鍵 #1 を指
 **30日後に `refundAfterDeadline` が buyer へ返す**。公開チェーンでは時間を進められないので、
 **その返金は「予定」であって実演ではない**（実演できるのはローカルデモの側）。
 
+**Solana 側を3点強化した（2026-09-06）。**
+
+1. **失敗方向を Solana 側でも実証**。それまで SVM の fixture は `Reproduced` 1本だけで、
+   「Solana の作業が再現しなければ buyer に返る」は**EVM 側の tx でしか示していなかった**。
+   床を下回る転送の SVM proof（`svm-failed-fixture.json`）を作り、**Arc testnet で返金**:
+   `0x3fca1b9ad6702812fcb52db7e6ed07a42cb97ced6aec5cfd8840326a70065d1f`
+   （block 60,732,985 / buyer 15.835045 → 16.828343 / seller は 2.000000 のまま）
+2. **L-5 クローズ**（別 commit `565b453`）——prover 抜きで binding を計算できる
+3. **L-1 の境界をテストで固定**（`script/tests/svm_anchoring.rs`、3本）。**L-1 は閉じていない**。
+   アカウントを1件落とすと hash が動くので「既にある世界から1件隠す」は捕まる。だが
+   **こちらが捏造したアカウント集合も同じように正しい bank_hash を持つ**——出所は計算の
+   入力に無く、したがって結論にも無い。だから「Solana の proof で決済」は
+   「**deal が名指しした Solana 形の状態についての proof で決済**」という意味にしかならない
+
+**5本目の fixture を誰も検証しない穴も同じ commit で塞いだ**: `fixtures-check.sh` を 4→5 本に広げ、
+008 の AC-09 evidence（`4/4` → `5/5`）と `ac008.sh` の witness 再計算も同時に更新。片方だけ動かすと
+witness が食い違って赤くなる。
+
 **そして Solana の proof でも決済した（2026-09-06）。** 看板の一文が公開チェーンの tx になった:
 
 ```

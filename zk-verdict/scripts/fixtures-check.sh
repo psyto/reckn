@@ -23,7 +23,10 @@ fixtures="$root/zk-verdict/contracts/src/fixtures"
 script_dir="$root/zk-verdict/script"
 
 current=0
-want=4
+# Five, since 2026-09-06: the SVM guest gained a below-floor fixture so the FAILED
+# direction is demonstrated on the Solana side too, and a shipped fixture no gate
+# checks is exactly the hole this row exists to close.
+want=5
 fail=0
 note() { printf '  %s\n' "$*"; }
 hex2dec() { python3 -c "import sys;print(int(sys.argv[1],16))" "$1"; }
@@ -82,16 +85,21 @@ for name in reexec-groth16-fixture.json reexec-falserelease-fixture.json; do
     --min "$(jq -r .min_delta "$f")" --max "$(jq -r .max_delta "$f")"
 done
 
-# 4. the SVM mirror: the bin takes the credited amount, which is post - pre.
-svm="$fixtures/svm-groth16-fixture.json"
-if [[ -f "$svm" ]] && shape_ok "$svm"; then
-  amount=$(python3 -c "import sys;print(int(sys.argv[1],16)-int(sys.argv[2],16))" \
-           "$(jq -r .post "$svm")" "$(jq -r .pre "$svm")")
-  check_one svm-groth16-fixture.json --bin svm -- --verify --amount "$amount" --min "$(hex2dec "$(jq -r .min_delta "$svm")")"
-else
-  [[ -f "$svm" ]] || note "MISSING        svm-groth16-fixture.json"
-  fail=1
-fi
+# 4 + 5. the SVM mirror, both directions: the bin takes the credited amount, which
+#        is post - pre. The second fixture credits BELOW the floor, so its committed
+#        outcome is Failed — the direction the Solana side did not demonstrate until
+#        2026-09-06.
+for name in svm-groth16-fixture.json svm-failed-fixture.json; do
+  svm="$fixtures/$name"
+  if [[ -f "$svm" ]] && shape_ok "$svm"; then
+    amount=$(python3 -c "import sys;print(int(sys.argv[1],16)-int(sys.argv[2],16))" \
+             "$(jq -r .post "$svm")" "$(jq -r .pre "$svm")")
+    check_one "$name" --bin svm -- --verify --amount "$amount" --min "$(hex2dec "$(jq -r .min_delta "$svm")")"
+  else
+    [[ -f "$svm" ]] || note "MISSING        $name"
+    fail=1
+  fi
+done
 
 # alt-binding.json — the AC-7b artefact, compared rather than overwritten.
 alt="$fixtures/alt-binding.json"
@@ -115,11 +123,12 @@ rm -rf "$tmp"
 
 # witness: the four freshly-computed vkeys, in fixture order, then the four files.
 vkey_of() { (cd "$script_dir" && cargo run --release --quiet --bin "$1" -- --vkey) 2>/dev/null | sed -n 's/^vkey: //p' | tail -1; }
-witness=$( { for v in "$(vkey_of evm)" "$(vkey_of reexec)" "$(vkey_of reexec)" "$(vkey_of svm)"; do
+witness=$( { for v in "$(vkey_of evm)" "$(vkey_of reexec)" "$(vkey_of reexec)" "$(vkey_of svm)" "$(vkey_of svm)"; do
                printf '%s' "${v#0x}" | xxd -r -p
              done
              cat "$fixtures/groth16-fixture.json" "$fixtures/reexec-groth16-fixture.json" \
-                 "$fixtures/reexec-falserelease-fixture.json" "$fixtures/svm-groth16-fixture.json"; } \
+                 "$fixtures/reexec-falserelease-fixture.json" "$fixtures/svm-groth16-fixture.json" \
+                 "$fixtures/svm-failed-fixture.json"; } \
            | shasum -a 256 | cut -c1-16)
 
 echo "fixtures: $current/$want current (vkey and public values byte-identical); witness=$witness"

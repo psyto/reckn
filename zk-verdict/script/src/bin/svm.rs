@@ -70,6 +70,10 @@ struct Args {
     /// Print the current ELF's vkey and exit. Cheap: no execution, no proof.
     #[arg(long)]
     vkey: bool,
+    /// Where to write the fixture. Defaults to the headline SVM fixture; a second
+    /// fixture (the below-floor one AC-SVM-Failed needs) must not overwrite it.
+    #[arg(long)]
+    fixture_path: Option<PathBuf>,
     /// Corrupt the signature so the in-guest sigverify fails — no Reproduced.
     #[arg(long)]
     tamper: bool,
@@ -310,8 +314,12 @@ fn main() {
             proof: format!("0x{}", hex::encode(proof.bytes())),
         };
         let dir = PathBuf::from("../contracts/src/fixtures");
+        let explicit = args.fixture_path.clone();
         std::fs::create_dir_all(&dir).expect("create fixtures dir");
-        let path = dir.join("svm-groth16-fixture.json");
+        let path = explicit.unwrap_or_else(|| dir.join("svm-groth16-fixture.json"));
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).expect("create fixture directory");
+        }
         std::fs::write(&path, serde_json::to_string_pretty(&fixture).unwrap())
             .expect("write fixture");
         println!("vkey: {}", fixture.vkey);

@@ -1271,7 +1271,7 @@ AC-06   script  -                   bash zk-verdict/scripts/env-parity.sh       
 AC-07a  cargo   zk-verdict/script   _AC07_                                          18   -
 AC-07b  forge   -                   _AC07_                                           2   -
 AC-08   cargo   zk-verdict/script   _AC08_                                           6   -
-AC-09   script  -                   bash zk-verdict/scripts/fixtures-check.sh        -   fixtures: 4/4 current (vkey and public values byte-identical); witness={witness}
+AC-09   script  -                   bash zk-verdict/scripts/fixtures-check.sh        -   fixtures: 5/5 current (vkey and public values byte-identical); witness={witness}
 AC-10   forge   -                   _AC10_                                           4   -
 AC-11   script  -                   bash zk-verdict/scripts/no-skip.sh               -   no-skip: 0 early-return fixture gates, {P}/{P} forge tests ran, 0 skipped; witness={witness}
 AC-12   cargo   zk-verdict/lib      _AC12_                                           3   -
@@ -1364,7 +1364,7 @@ which is stale the moment any witnessed byte moves.
 | AC-00 | **exempt from the `witness=` field, in writing — and mutated instead.** *(Round 5: the round-4 reason for this exemption was "008 may not modify `scripts/no-keys.sh`". **That is now false** — 008 adds check 5 to it, §6.4. The exemption survives on a different and better reason.)* AC-00's evidence line is `AGENTS.md` §0's **declared output**, and every consumer of that script — the pre-commit ritual, `003`, the demo script — reads that line. 008 adds a target and a check to the script; it does **not** restyle the script's output, add a field to it, or change its arguments. What replaces the witness for this row is **three sandbox mutants**, each requiring the **copied `no-keys.sh`** to exit non-zero on a mutated copy of `RecknVerdictVerifier.sol` and to **name the clause of check 5 that fired**: **M-17** splices a constant-address branch (5b, and also 5d, 5e, 5f), **M-19** deletes the `verifyProof` statement (5b in the removal direction, and also 5d, 5f), and **M-21** permutes two struct members (**5f, and nothing else — no other clause can see it**). M-17's and M-19's reported clause may coincide, since a script reporting the first clause that fires will name 5b for both; **M-21's may not**, and a different clause there is a harness failure (phase 21). A stubbed `no-keys.sh` is the script the sandbox runs, so it exits 0 on all three mutated copies, three misses are recorded, and AC-13 fails. **M-19 is additionally the one a *denylist* implementation fails**, which is the property §0.0 finding 3 is about. That is strictly stronger than a `witness=` field, which only makes a stub *stale* (§6.2(1) vs (2)). INV-14 case (b). |
 | AC-00b | `sha256(zk-verdict/contracts/src/RecknZkEscrow.sol)` ‖ `sha256(head -710 reexec-evm/src/lib.rs)` |
 | AC-06 | the four inspected files, whole, in this order: `zk-verdict/program-revm/src/main.rs`, `zk-verdict/lib/src/lib.rs`, `zk-verdict/script/src/lib.rs`, `reexec-evm/src/lib.rs` |
-| AC-09 | the four freshly-computed ELF vkeys (32 bytes each, in AC-9's fixture order) ‖ the four fixture files, whole, same order |
+| AC-09 | the **five** freshly-computed ELF vkeys (32 bytes each, in AC-9's fixture order — the SVM guest's appears twice, for its two fixtures) ‖ the five fixture files, whole, same order |
 | AC-11 | **every** `*.t.sol` in `zk-verdict/contracts/test/`, whole, `LC_ALL=C` sort order — **the glob, not a name list**: five files before 008, **six after** (§7.1 adds `RecknVerdictDomain.t.sol`). An implementer who hard-codes five names leaves the file 008 introduces outside the witness set on the same commit that introduces it, and M-11 would still pass because it mutates one of the original five (r3 finding 6). |
 | AC-13 | the **twenty-one** `zk-verdict/scripts/mutants/[0-9][0-9]-*.patch` files, whole, `LC_ALL=C` sort order. *(Scoped to 008's own family on 2026-09-06. The glob was `*.patch`, and task **009** adds fifteen `M-*.patch` files to the same directory — its §1.4 CS-1 predicted exactly this and assigned the update, which 009's own commit did not perform. A glob that sees a sibling's patches makes this row red for a **population** rather than for a defect, and moves this row's evidence line on every sibling commit. 009 already globs `M-*` for the symmetric reason; this is the other half.)* |
 | AC-14 | the five doc-set files of AC-14(iii), whole, in the order written there ‖ `zk-verdict/cycles.json` ‖ `scripts/no-keys.sh` (**added in round 5**: AC-14(i) literal 9 inspects that file's own scope comment, so it is a byte the row's claim is about) |
@@ -2442,11 +2442,14 @@ directly — every test fails. **Mutant M-14** is the machine-run version of the
 
 ```sh
 bash zk-verdict/scripts/fixtures-check.sh
-# fixtures: 4/4 current (vkey and public values byte-identical); witness=<16 hex>
+# fixtures: 5/5 current (vkey and public values byte-identical); witness=<16 hex>
 ```
 
 For each of `groth16-fixture.json` (predicate), `reexec-groth16-fixture.json` (headline),
-`reexec-falserelease-fixture.json` (**new**), `svm-groth16-fixture.json`, the script:
+`reexec-falserelease-fixture.json` (**new**), `svm-groth16-fixture.json` and
+`svm-failed-fixture.json` (**added 2026-09-06** — the SVM guest's below-floor proof, so the
+`Failed` direction is demonstrated on the Solana side and not only on the EVM one; a shipped
+fixture that no row checks is the hole this criterion exists to close), the script:
 
 1. computes the current ELF's vkey and requires it to equal the fixture's `vkey` — this is
    the check that catches "changed the guest, did not regenerate", which would otherwise pass

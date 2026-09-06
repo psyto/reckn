@@ -284,6 +284,20 @@ which is how the two barriers are shown to be independent.
   before working — `verifier`, `verifierCodeHash`, `dealBinding` — not one, and
   nothing checks them on the seller's behalf. A buyer can name a program that always
   returns `Failed`; on-chain that is indistinguishable from an honest `Failed`.
+- **Both directions are demonstrated on both VMs** (2026-09-06). Until then the SVM
+  guest shipped one fixture, `Reproduced`, so *"a Solana proof that the work did not
+  reproduce refunds the buyer"* was a claim on the Solana side and a transaction only
+  on the EVM one. There is now a below-floor SVM proof
+  (`svm-failed-fixture.json`), and it refunded a buyer on Arc testnet in
+  `0x3fca1b9ad6702812fcb52db7e6ed07a42cb97ced6aec5cfd8840326a70065d1f`.
+- **The `bank_hash` check proves consistency, not provenance** — and that boundary is
+  now pinned by tests rather than by this paragraph
+  (`script/tests/svm_anchoring.rs`). Dropping an account moves the hash, so a prover
+  cannot quietly hide one from a world that exists; but **an account set we invented
+  hashes just as well as a real one**, because provenance is not an input to the
+  computation and therefore not a conclusion of it. That is why *"settled by a Solana
+  proof"* means *"settled by a proof about a Solana-shaped state the deal named"*.
+  L-1 is **not** closed by this; its edge is measured.
 - ~~**One implementation of each binding.**~~ **Closed 2026-09-06.** There is now a
   second, deliberately unshared transcription of the SVM binding formula on the host
   side (`verdict_script::svm_deal_binding`), and `script/tests/svm_binding.rs`

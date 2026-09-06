@@ -48,6 +48,13 @@
         "gasUsed": 320600,
         "binding": "0x34c195a353901719c1eb618595b8908389bb2a9368fe563f79ce5aab947b17eb",
         "result": "1.000000 USDC on Arc released by a Groth16 proof about work performed on SOLANA. The deal named the Solana guest's verifier at funding; the escrow never learns which virtual machine the work happened on. No bridge, no light client, no resolver on the adjudication path — which is a statement about adjudication and not about anchoring."
+      },
+      "solanaFailureOnArc": {
+        "dealId": "0x2ca21c51c45b2ae17d123b1375d205b62ce06ac57b68720adf9fdd798933aa94",
+        "tx": "0x3fca1b9ad6702812fcb52db7e6ed07a42cb97ced6aec5cfd8840326a70065d1f",
+        "block": 60732985,
+        "gasUsed": 316120,
+        "result": "a Solana proof that the transfer credited BELOW the floor refunded the buyer: 1.000000 USDC back, the seller's balance unchanged. Until this, the Solana side demonstrated only success — the refund direction was a claim there and a transaction on the EVM side."
       }
     },
     "findings": [

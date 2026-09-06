@@ -187,7 +187,9 @@ Two settlements, both with the committed **real Groth16 proofs**:
   — the proof of a **decrease** refunded the buyer; the seller's balance did not move.
 - **A SOLANA proof released USDC on Arc.**
   `0x5c09cc0772fcfe23acbc9ea5752bd2380bceef1076ce7fc188fc5b2fdc02c4be` — block
-  60,721,364, 320,600 gas. The deal named the Solana guest's verifier
+  60,721,364, 320,600 gas — and its mirror,
+  `0x3fca1b9ad6702812fcb52db7e6ed07a42cb97ced6aec5cfd8840326a70065d1f`, where a Solana
+  proof that the transfer credited **below the floor** refunded the buyer. The deal named the Solana guest's verifier
   (`0x13d42c0acFa90a57E9A729F0b8d9494B18272366`) and committed the binding that guest
   produces; 1.000000 USDC moved to the seller. **This is the sentence the repository
   exists to make true, and it is now a transaction on a public chain.** It remains a
