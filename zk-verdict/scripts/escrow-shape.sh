@@ -101,15 +101,16 @@ pieces = [p.strip() for p in re.split(r'[;{}]', flat) if p.strip()]
 want_lhs = {
  'uint8 public constant REPRODUCED': 1,
  'uint8 public constant FAILED': 1,
+ 'uint256 public constant REFUND_AFTER': 1,
  'bytes32 public constant EMPTY_CODEHASH': 1,
  'deals[dealId]': 1,
- 'Deal storage d': 1,
+ 'Deal storage d': 2,
  'VerdictPublicValues memory v': 1,
- 'd.state': 1,
+ 'd.state': 2,
  'to': 2,
 }
 want_rhs = {
- 'Deal storage d': ['deals[dealId]'],
+ 'Deal storage d': ['deals[dealId]', 'deals[dealId]'],
  'VerdictPublicValues memory v': ['RecknVerdictVerifier(d.verifier).verifyVerdict(publicValues, proofBytes)'],
  'to': ['d.seller', 'd.buyer'],
 }
@@ -147,7 +148,7 @@ n_assign=$(printf '%s' "$shape" | awk '{print $1}')
 n_targets=$(printf '%s' "$shape" | awk '{print $2}')
 f_bad=$(printf '%s' "$shape" | sed 's/^[^|]*| *//')
 [[ -z "$f_bad" ]] || note "7f: $f_bad"
-[[ "$n_assign" == "9" && "$n_targets" == "8" ]] || note "7f: $n_assign assignments over $n_targets targets; 9 over 8 expected"
+[[ "$n_assign" == "12" && "$n_targets" == "9" ]] || note "7f: $n_assign assignments over $n_targets targets; 12 over 9 expected"
 
 # 7h — the callable surface is closed as a property over the grammar. K is the
 # complete set of 0.8.x keywords introducing code reachable AFTER deployment at
@@ -159,9 +160,11 @@ for kw in function fallback receive modifier; do
   [[ "$kw" == "function" || "$n" == "0" ]] || note "7h: $n '$kw'"
 done
 fns=$(printf '%s\n' "$region" | grep -oE '\bfunction +[A-Za-z_][A-Za-z0-9_]*' | awk '{print $2}' | tr '\n' ' ' | sed 's/ $//')
-[[ "$fns" == "fund settleWithProof" ]] || note "7h: functions are '$fns', not 'fund settleWithProof'"
+# The three `AGENTS.md` §0 enumerates. 001 added the third on 2026-09-06 and the
+# enumeration did not widen: `refundAfterDeadline` was already in §0's list.
+[[ "$fns" == "fund settleWithProof refundAfterDeadline" ]] || note "7h: functions are '$fns', not 'fund settleWithProof refundAfterDeadline'"
 n_fn=$( (printf '%s\n' "$region" | grep -ow function || true) | wc -l | tr -d ' ')
-[[ "$n_fn" == "2" ]] || note "7h: $n_fn function declarations"
+[[ "$n_fn" == "3" ]] || note "7h: $n_fn function declarations"
 
 # 7i — the lexical reading is well-defined. `using` is counted over the WHOLE file:
 # a `using ... for` above the contract line makes member-call resolution non-local.
@@ -174,8 +177,10 @@ usings=$( (printf '%s\n' "$whole" | grep -ow using || true) | wc -l | tr -d ' ')
 # ABOVE the contract line, so 7a-7i would not see it. Measured before this clause
 # existed: a base contract carrying a draining fallback compiled and took a funded
 # deal with every other clause green.
-inherit=$(sed -n 's/.*contract RecknZkEscrow\(.*\){.*/\1/p' "$escrow" | tr -d ' \t')
-contracts=$( (grep -ow contract "$escrow" || true) | wc -l | tr -d ' ')
+# Comment-stripped, for the same reason 7a exists: a doc comment naming a construct
+# is not the construct.
+inherit=$(printf '%s\n' "$whole" | sed -n 's/.*contract RecknZkEscrow\(.*\){.*/\1/p' | tr -d ' \t')
+contracts=$( (printf '%s\n' "$whole" | grep -ow contract || true) | wc -l | tr -d ' ')
 [[ -z "$inherit" ]] || note "7j: RecknZkEscrow inherits ($inherit)"
 [[ "$contracts" == "1" ]] || note "7j: $contracts contract declarations in the file"
 

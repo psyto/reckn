@@ -151,7 +151,7 @@ contract RecknCrossVmSettlementTest is Test {
     }
 
     function _state(RecknZkEscrow escrow, bytes32 dealId) internal view returns (RecknZkEscrow.State) {
-        (,,,,,,, RecknZkEscrow.State st) = escrow.deals(dealId);
+        (,,,,,,,, RecknZkEscrow.State st) = escrow.deals(dealId);
         return st;
     }
 
@@ -209,7 +209,7 @@ contract RecknCrossVmSettlementTest is Test {
         assertEq(token.balanceOf(address(escrow)), 2 * AMOUNT, "the other two deals still funded");
         assertEq(token.balanceOf(seller), AMOUNT, "exactly one settlement paid");
 
-        (,,,, address uVerifier, bytes32 uCodeHash, bytes32 uBinding,) = escrow.deals(dealU);
+        (,,,, address uVerifier, bytes32 uCodeHash, bytes32 uBinding,,) = escrow.deals(dealU);
         assertEq(uVerifier, address(vS), "U's verifier unchanged");
         assertEq(uCodeHash, address(vS).codehash, "U's codehash unchanged");
         assertEq(uBinding, unrelated, "U's binding unchanged");

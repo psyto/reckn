@@ -31,6 +31,8 @@ contract RecknArcUsdcSettlementTest is Test {
     string constant PROOF_FAILED = "src/fixtures/reexec-falserelease-fixture.json";
     /// A binding from an execution differing only in the block environment.
     string constant ALT_BINDING = "src/fixtures/alt-binding.json";
+    /// The real SVM re-execution proof: a `bank_hash`-authenticated System transfer.
+    string constant SVM_PROOF = "src/fixtures/svm-groth16-fixture.json";
 
     /// 250.00 USDC. Six decimals, not eighteen — the units the escrow will actually
     /// hold on Arc.
@@ -90,7 +92,7 @@ contract RecknArcUsdcSettlementTest is Test {
     }
 
     function _state(RecknZkEscrow escrow, bytes32 dealId) internal view returns (RecknZkEscrow.State) {
-        (,,,,,,, RecknZkEscrow.State st) = escrow.deals(dealId);
+        (,,,,,,,, RecknZkEscrow.State st) = escrow.deals(dealId);
         return st;
     }
 
@@ -168,9 +170,10 @@ contract RecknArcUsdcSettlementTest is Test {
 
     /// USDC can freeze an address. This is not a bug in the escrow, and the honest
     /// consequence is demonstrated rather than described: the payout reverts, the
-    /// deal stays Funded, and — because the keyless escrow has no timeout yet — the
-    /// money stays where it is. That gap is task 003's, and it is why the gap is
-    /// still listed in the README.
+    /// deal stays Funded and the money stays where it is until either the freeze is
+    /// lifted or `refundAfterDeadline` returns it to the buyer (thirty days,
+    /// permissionless — `RecknTimeout.t.sol`). Before that existed, this state was
+    /// permanent, which is why the test was written before the fix was.
     function test_ARC05_a_blacklisted_seller_makes_settlement_revert_and_the_money_stays() public {
         Proof memory p = _proof(PROOF_REPRODUCED);
         (RecknZkEscrow escrow, RecknVerdictVerifier verifier) = _escrow(p);
@@ -191,6 +194,47 @@ contract RecknArcUsdcSettlementTest is Test {
         usdc.setBlacklisted(seller, false);
         escrow.settleWithProof(dealId, p.publicValues, p.proof);
         assertEq(usdc.balanceOf(seller), AMOUNT, "paid once the freeze is lifted");
+    }
+
+    /// The sentence this whole repository exists to make true, in one transaction:
+    /// **USDC escrowed on Arc, released by a proof about work performed on Solana.**
+    ///
+    /// Nothing here is a bridge and nothing is a light client. The deal names the
+    /// Solana guest's verifier at funding; `settleWithProof` calls it, checks that
+    /// the proof carries THIS deal's binding, and pays. The escrow does not know
+    /// which virtual machine the work happened on, and that is the point — the
+    /// adjudicator is a computation, so it does not belong to a chain.
+    ///
+    /// What it does NOT say (`docs/arc-usdc.md`, and unchanged by this test):
+    /// "settled by a Solana proof" means "settled by a proof about a Solana-shaped
+    /// state the deal named". The provenance of the committed `bank_hash` is not
+    /// established here or anywhere else in this repository.
+    function test_ARC07_usdc_on_arc_settled_by_a_proof_about_work_on_solana() public {
+        Proof memory svm = _proof(SVM_PROOF);
+        Proof memory evm = _proof(PROOF_REPRODUCED);
+        assertEq(svm.outcome, 0, "the Solana fixture is Reproduced");
+        assertTrue(svm.vkey != evm.vkey, "two guests, two vkeys, not the same proof twice");
+        assertTrue(svm.binding != evm.binding, "and two executions, two bindings");
+
+        // One escrow. The deal names the SOLANA guest's verifier; the token is USDC.
+        (RecknZkEscrow escrow, RecknVerdictVerifier verifier) = _escrow(svm);
+        bytes32 dealId = keccak256("arc-usdc-settled-by-solana");
+        _fund(escrow, verifier, dealId, svm.binding, AMOUNT);
+        assertEq(usdc.balanceOf(address(escrow)), AMOUNT, "250.00 USDC escrowed");
+
+        escrow.settleWithProof(dealId, svm.publicValues, svm.proof);
+
+        assertEq(usdc.balanceOf(seller), AMOUNT, "USDC released on a Solana proof");
+        assertEq(usdc.balanceOf(address(escrow)), 0, "escrow drained");
+        assertTrue(_state(escrow, dealId) == RecknZkEscrow.State.Settled, "settled");
+
+        // And the EVM proof cannot take this deal's USDC: the barriers are per-deal,
+        // not per-chain.
+        bytes32 other = keccak256("arc-usdc-settled-by-solana-2");
+        _fund(escrow, verifier, other, svm.binding, AMOUNT);
+        vm.expectRevert();
+        escrow.settleWithProof(other, evm.publicValues, evm.proof);
+        assertEq(usdc.balanceOf(address(escrow)), AMOUNT, "the second deal keeps its USDC");
     }
 
     /// No USDC is created or destroyed by a settlement.

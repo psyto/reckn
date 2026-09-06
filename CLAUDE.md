@@ -63,7 +63,10 @@ optimistic 系=bonded resolver / feedback 系=投票者）。**アーキテク�
   まず `git log -1 --format=%cd <file>` でなく**現物のコードを読む**。
 - `RecknZkEscrow` は実 Groth16 proof で決済まで通っている（`Reproduced`→seller /
   `Failed`→buyer / binding 不一致 revert / 未検証 proof revert）。
-- **`RecknZkEscrow` に timeout が無い**（proof が来なければ資金は永久ロック）。本体 `RecknEscrow` は
+- ~~**`RecknZkEscrow` に timeout が無い**~~ → **2026-09-06 に解消**。`refundAfterDeadline` が
+  30日後に buyer へ返す（**誰でも呼べて、呼んだ人には何も入らない**）。待機期間はプロトコル固定で、
+  deployer にも funder にも選ばせない。`AGENTS.md` §0 の列挙面に元から入っていた関数なので**主張は広がっていない**。
+  以下は解消前の記録（本体 `RecknEscrow` は
   timeout escape hatch を持つ（`contracts/README.md:12`）のに鍵の無い方だけが持っていない。
   → タスク 001。**未解決**。09-03 に `README.md` の `Known gaps (not closed)` へ明記した
   （隠さず先に書く。`no-keys.sh` は `refundAfterDeadline` を唯一の入口として既に列挙済み）。

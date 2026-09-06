@@ -33,6 +33,15 @@ interface IERC20Min {
 contract RecknZkEscrow {
     uint8 public constant REPRODUCED = 0;
     uint8 public constant FAILED = 1;
+    /// @notice How long a funded deal waits for a proof before the buyer may take
+    ///         the money back. Fixed for the protocol, not chosen by a deployer or a
+    ///         funder: a deadline someone picks is a parameter someone controls, and
+    ///         the point of this contract is that nobody controls anything. It is
+    ///         long enough that an honest seller can produce a Groth16 proof —
+    ///         regenerating one fixture measures at 335 s — with room for a prover
+    ///         outage, a chain halt, and a human weekend.
+    uint256 public constant REFUND_AFTER = 30 days;
+
     /// @notice `extcodehash` of an account that exists with no code. An address
     ///         whose codehash is this, or zero, is not a program.
     bytes32 public constant EMPTY_CODEHASH =
@@ -52,6 +61,7 @@ contract RecknZkEscrow {
         address verifier;
         bytes32 verifierCodeHash;
         bytes32 dealBinding;
+        uint64 fundedAt;
         State state;
     }
 
@@ -70,6 +80,11 @@ contract RecknZkEscrow {
     /// @notice A deal settled purely on a verified ZK verdict (reason: 0 = release to
     ///         seller on Reproduced, 1 = refund to buyer on Failed).
     event SettledByProof(bytes32 indexed dealId, address indexed to, uint8 outcome, bytes32 traceHash);
+    /// @notice A funded deal returned to its buyer because no proof arrived in time.
+    ///         Distinct from `SettledByProof` on purpose: this payout is the only one
+    ///         in the contract that no proof authorised, and a reader of the log
+    ///         should never have to infer which kind it was.
+    event RefundedAfterDeadline(bytes32 indexed dealId, address indexed buyer, uint256 amount);
 
     error DealExists();
     error BadState();
@@ -78,6 +93,7 @@ contract RecknZkEscrow {
     error BadOutcome();
     error NoVerifierCode();
     error VerifierMismatch();
+    error TooEarly();
 
     /// @notice Fund a deal, naming the program whose proof may settle it.
     /// @dev The codehash is pinned at funding and re-checked at settlement, so the
@@ -103,6 +119,7 @@ contract RecknZkEscrow {
             verifier: verifier,
             verifierCodeHash: verifierCodeHash,
             dealBinding: dealBinding,
+            fundedAt: uint64(block.timestamp),
             state: State.Funded
         });
         emit Funded(dealId, msg.sender, seller, token, amount, verifier, verifierCodeHash, dealBinding);
@@ -143,5 +160,27 @@ contract RecknZkEscrow {
         }
         emit SettledByProof(dealId, to, v.outcome, v.traceHash);
         IERC20Min(d.token).transfer(to, d.amount);
+    }
+
+    /// @notice Return a funded deal to its buyer once `REFUND_AFTER` has passed with
+    ///         no proof. **Permissionless**: any address may call it, and calling it
+    ///         gives the caller nothing — the money goes to the deal's buyer, which
+    ///         `fund` fixed and nothing can change.
+    /// @dev    This is the only payout in the contract that a proof did not
+    ///         authorise, and it is why the escrow can be keyless without being a
+    ///         place money goes to die: before it, a deal whose prover never showed
+    ///         up — or whose recipient a stablecoin froze — stayed funded forever.
+    ///         It is not an escape hatch for anyone in particular: it cannot be
+    ///         called early, it cannot be called twice, it cannot be called after a
+    ///         proof settled the deal, and it names no privileged address.
+    function refundAfterDeadline(bytes32 dealId) external {
+        Deal storage d = deals[dealId];
+        if (d.state != State.Funded) revert BadState();
+        if (block.timestamp < uint256(d.fundedAt) + REFUND_AFTER) revert TooEarly();
+
+        // State first, then the transfer: a re-entrant token hook re-hits the guard.
+        d.state = State.Settled;
+        emit RefundedAfterDeadline(dealId, d.buyer, d.amount);
+        IERC20Min(d.token).transfer(d.buyer, d.amount);
     }
 }

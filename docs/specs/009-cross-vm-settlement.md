@@ -388,6 +388,7 @@ contract RecknZkEscrow {
         address verifier;          // NEW
         bytes32 verifierCodeHash;  // NEW
         bytes32 dealBinding;
+        uint64 fundedAt;           // NEW (001)
         State state;
     }
 
@@ -407,6 +408,11 @@ contract RecknZkEscrow {
     error BadOutcome();
     error NoVerifierCode();     // NEW
     error VerifierMismatch();   // NEW
+    error TooEarly();           // NEW (001, founder-directed 2026-09-06)
+
+    /// Fixed for the protocol: a deadline someone picks is a parameter someone
+    /// controls. 001, not 003 — the key gauntlet stays stopped (`AGENTS.md` §7).
+    uint256 public constant REFUND_AFTER = 30 days;   // NEW
 
     // no constructor.
 
@@ -452,8 +458,28 @@ contract RecknZkEscrow {
         emit SettledByProof(dealId, to, v.outcome, v.traceHash);
         IERC20Min(d.token).transfer(to, d.amount);
     }
+
+    // NEW (001, founder-directed 2026-09-06). Permissionless, pays only the deal's
+    // own buyer, names no privileged address, and `refundAfterDeadline` was already
+    // in `AGENTS.md` §0's enumerated surface — so this widens nothing.
+    function refundAfterDeadline(bytes32 dealId) external {
+        Deal storage d = deals[dealId];
+        if (d.state != State.Funded) revert BadState();
+        if (block.timestamp < uint256(d.fundedAt) + REFUND_AFTER) revert TooEarly();
+        d.state = State.Settled;
+        emit RefundedAfterDeadline(dealId, d.buyer, d.amount);
+        IERC20Min(d.token).transfer(d.buyer, d.amount);
+    }
 }
 ```
+
+**Why AC-7's pins move, and why it is not the failure this document warns about**
+(2026-09-06). AC-7 opens by naming the failure mode: *when a pinned count disagrees
+with the file, the cheapest route to green is to narrow the observer until it agrees.*
+These counts change for the opposite reason — the **subject** changed, under a founder
+directive, and the new pins are re-derived from the text above rather than read off the
+file or obtained by relaxing a clause. That distinction is the whole of AC-7's
+discipline, so it is stated here rather than left to a reader of the diff.
 
 **Five** properties of that text, each of which an AC checks:
 
@@ -1000,7 +1026,7 @@ AC-3     forge   _AC03_    -                                          2      -
 AC-4     forge   _AC04_    -                                          2      -
 AC-5     forge   _AC05_    -                                          3      -
 AC-6     forge   _AC06_    -                                          3      -
-AC-7     script  -         bash zk-verdict/scripts/escrow-shape.sh    -      escrow-shape: 0 constructor, 0 immutable, 1 mapping, verdict members 3/3 read (5 accesses) and 4/4 unread, 9 assignments over 8 targets, function 2 (fund settleWithProof) other entry keywords 0 sum 2, 0 assembly 0 using, 1 contract 0 inherited; witness={witness}
+AC-7     script  -         bash zk-verdict/scripts/escrow-shape.sh    -      escrow-shape: 0 constructor, 0 immutable, 1 mapping, verdict members 3/3 read (5 accesses) and 4/4 unread, 12 assignments over 9 targets, function 3 (fund settleWithProof refundAfterDeadline) other entry keywords 0 sum 3, 0 assembly 0 using, 1 contract 0 inherited; witness={witness}
 AC-9     script  -         bash zk-verdict/scripts/xvm-no-skip.sh     -      no-skip: 0 fixture gates in the cross-VM file, 2/2 fixtures readable, {B}+16+{S} tests listed and ran, 0 forge-reported skips; witness={witness}
 AC-10    script  -         bash zk-verdict/scripts/ac009-selftest.sh  -      ac009-selftest: 15/15 mutants detected, 15/15 sandbox controls clean, mutants dir {P}+15; witness={witness}
 AC-11    script  -         bash zk-verdict/scripts/xvm-docs.sh        -      docs: 4/4 replacements present, 4/4 retired sentences absent, 1/1 anchoring sentence adjacent, 1/1 authority sentence preserved; witness={witness}
@@ -1394,8 +1420,8 @@ against §3.3** (r1 finding 1, E-14).
   assignment; its **left-hand side is the normalised text before it, verbatim, declarators
   included**, and its right-hand side is the normalised text after it.
 
-  Over §3.3, the multiset of left-hand sides is exactly these **eight**, and the total number
-  of assignments is exactly **9**:
+  Over §3.3, the multiset of left-hand sides is exactly these **nine**, and the total number
+  of assignments is exactly **12** *(eight over 9 before 001 added the timeout, 2026-09-06)*:
 
   | # | left-hand side, verbatim | times | right-hand side |
   |---|---|---|---|
@@ -1403,9 +1429,10 @@ against §3.3** (r1 finding 1, E-14).
   | 2 | `uint8 public constant FAILED` | 1 | not pinned lexically |
   | 3 | `bytes32 public constant EMPTY_CODEHASH` | 1 | not pinned lexically |
   | 4 | `deals[dealId]` | 1 | not pinned lexically |
-  | 5 | `Deal storage d` | 1 | **pinned: `deals[dealId]`** |
+  | 5 | `Deal storage d` | **2** | **pinned: `deals[dealId]` both times** — `settleWithProof` and `refundAfterDeadline` |
   | 6 | `VerdictPublicValues memory v` | 1 | **pinned: `RecknVerdictVerifier(d.verifier).verifyVerdict(publicValues, proofBytes)`** |
-  | 7 | `d.state` | 1 | not pinned lexically |
+  | 7 | `d.state` | **2** | not pinned lexically — one per payout path |
+| 9 | `uint256 public constant REFUND_AFTER` | 1 | not pinned lexically; **behaviourally pinned** by the timeout suite, which asserts thirty days and that nothing changes it |
   | 8 | `to` | **2** | **pinned: `d.seller` then `d.buyer`, in that order** |
 
   **Why the left-hand sides carry their declarators, which is new in round 2 and is the part
@@ -1463,8 +1490,9 @@ against §3.3** (r1 finding 1, E-14).
   level. `constructor` is deliberately not in `K`; it runs before deployment and is 7b's.
   Over the stripped region, counting tokens:
 
-  - `function` occurs exactly **2** times, and the identifiers immediately following them are,
-    in file order, exactly `fund` and `settleWithProof`;
+  - `function` occurs exactly **3** times, and the identifiers immediately following them are,
+    in file order, exactly `fund`, `settleWithProof` and `refundAfterDeadline` — the three
+    `AGENTS.md` §0 already enumerates, so this closure did not widen when 001 landed;
   - every other element of `K` occurs exactly **0** times;
   - the **sum** over `K` is exactly **2** and is printed as its own number, so that a future
     grammar keyword added to `K` without updating the counts fails rather than passes.

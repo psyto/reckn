@@ -175,6 +175,23 @@ live and tested — on **both** VMs, behind **one** router.
   funding, so a proof can only settle the deal it was about. Tested end-to-end with a
   **real Groth16 proof** of the EVM re-execution settling to the seller; binding
   mismatch and unverified proof both revert.
+- **A USDC payment on Arc, released by a proof about work on Solana (new,
+  2026-09-06):** the strongest single sentence this repository can say, and it is a
+  test — `test_ARC07_usdc_on_arc_settled_by_a_proof_about_work_on_solana`. The deal
+  names the Solana guest's verifier at funding; `settleWithProof` calls it, checks the
+  proof carries that deal's binding, and pays 250.00 USDC. **No bridge, no light
+  client, no resolver**, and the escrow never learns which virtual machine the work
+  happened on. "Settled by a Solana proof" still means "settled by a proof about a
+  Solana-shaped state the deal named" — the `bank_hash`'s provenance is not
+  established here or anywhere else.
+- **A funded deal can no longer lock forever (new, 2026-09-06):** the keyless escrow
+  had no timeout, so a deal whose prover never showed up — or whose recipient a
+  stablecoin froze — stayed funded permanently. `refundAfterDeadline` returns it to
+  the buyer after thirty days: **permissionless**, pays the caller nothing, cannot be
+  called early or twice or after a proof settled the deal, and in either order the
+  money comes out exactly once. The waiting period is a constant of the protocol —
+  a deadline someone picks is a parameter someone controls — and the function was
+  already in the enumerated surface, so the central claim did not widen to make room.
 - **One escrow, two virtual machines (new, 2026-09-06):** the same contract settles an
   **EVM proof and a Solana proof**, each with its real committed Groth16 proof, in one
   test. The adjudicating program is named by the **funder**, per deal, and pinned by its

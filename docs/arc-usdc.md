@@ -48,6 +48,15 @@ fails the build if one appears.
 nothing in the adjudication path knows it is on Arc. That is the honest form of "one
 engine, any rail" — and it is a conclusion, not the pitch.
 
+**The strongest single sentence this repository can say, and it is a test.** A USDC
+payment escrowed on Arc, released by a proof about work performed **on Solana** —
+`test_ARC07_usdc_on_arc_settled_by_a_proof_about_work_on_solana`. The deal names the
+Solana guest's verifier at funding; the escrow calls it, checks that the proof carries
+that deal's binding, and pays. **No bridge, no light client, no resolver**, and the
+escrow never learns which virtual machine the work happened on. That is what "the
+adjudicator is a computation, not a party" buys: a conditional stablecoin payment on
+one chain whose condition is a fact about another.
+
 ## What had to change in Reckn to settle USDC on Arc
 
 **Nothing in the contract.** `RecknZkEscrow` already takes the payment token per deal:
@@ -118,6 +127,7 @@ Run: `cd zk-verdict/contracts && forge test --match-contract RecknArcUsdc`
 | `test_ARC04_six_decimal_amounts_move_exactly` | 1.234567 USDC moves as 1.234567 |
 | `test_ARC05_a_blacklisted_seller_makes_settlement_revert_and_the_money_stays` | USDC can freeze an address; the honest consequence is shown, not described |
 | `test_ARC06_no_usdc_is_created_or_destroyed_by_a_settlement` | conservation across funding and settlement |
+| **`test_ARC07_usdc_on_arc_settled_by_a_proof_about_work_on_solana`** | **USDC escrowed on Arc, released by a real Groth16 proof about work performed on Solana** — the deal names the Solana guest's verifier, and the EVM proof cannot take that deal's USDC |
 
 ## Demo, in four minutes
 
@@ -155,10 +165,14 @@ anvil configured to look like Arc** (chain id 5042002, the same 6-decimal USDC f
   settlement outcome — 6 decimals, revert-not-false, blacklist. It is not upgradeable,
   has no EIP-3009 and no fee logic. The first thing an Arc testnet deployment would
   test is whether that model was right.
-- **The escrow has no timeout.** If no proof ever arrives — or if the payout keeps
-  reverting because a party is frozen — a funded deal stays funded. `test_ARC05`
-  demonstrates that rather than hiding it. Closing it **without adding a key** is task
-  003 and it is not done.
+- **The timeout is thirty days, and it is the one payout no proof authorises.**
+  `test_ARC05` shows a frozen recipient making the payout revert; `refundAfterDeadline`
+  is what stops that from being permanent. Anyone may call it after thirty days, it
+  pays the caller nothing, and it cannot be called early, twice, or after a proof
+  settled the deal. Thirty days is long for a payments product — it is sized so an
+  honest seller can produce a Groth16 proof through a prover outage — and a shorter,
+  per-deal deadline is the natural next step. It is deliberately **not** configurable
+  today: a deadline someone picks is a parameter someone controls.
 - **The buyer names the adjudicator.** A buyer who names a program that always returns
   `Failed` makes the seller work for nothing, and on-chain that is indistinguishable
   from an honest `Failed`. The seller's protection is to read the deal's `verifier`

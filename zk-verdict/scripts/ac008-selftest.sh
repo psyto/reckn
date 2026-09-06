@@ -33,7 +33,11 @@ say() { printf 'ac008-selftest: %s\n' "$*"; }
 bad() { printf 'ac008-selftest: FAIL %s\n' "$*"; fail=1; }
 
 # 0. a deleted mutant fails this row.
-have=$(ls "$mutants"/*.patch 2>/dev/null | wc -l | tr -d ' ')
+# The glob is `NN-*.patch`, 008's own family — NOT `*.patch`. Task 009 adds fifteen
+# `M-*.patch` files to the same directory (its §1.4 CS-1), and a glob that counted
+# them would make this row red for a sibling's population rather than for a defect.
+# 009 already globs its own family for the symmetric reason; this is the other half.
+have=$(ls "$mutants"/[0-9][0-9]-*.patch 2>/dev/null | wc -l | tr -d ' ')
 [[ "$have" == "$want_mutants" ]] || { echo "ac008-selftest: $have mutants, expected $want_mutants"; exit 1; }
 
 sha() { shasum -a 256 "$1" | cut -d' ' -f1; }
@@ -120,7 +124,14 @@ run_sandbox() {
   say "sandbox control clean ($name) $(( $(now) - start ))s"
 
   if ! (cd "$S" && patch -p1 --batch --forward -d "$S" < "$patch") > /dev/null 2>&1; then
-    bad "$name did not apply in the sandbox"; rm -rf "$S"; return
+    # A mutant that encodes a VALUE of the file it mutates goes stale the moment a
+    # later task legitimately changes that value. Measured 2026-09-06: 001's timeout
+    # changed RecknZkEscrow.sol, surfaces.pinned was re-pinned as the protocol
+    # requires, and 20-pinned-digest-flip stopped applying — scored here as a failure
+    # (20/21), which is correct: an unapplied mutant tested nothing. Regenerate the
+    # patch against the current file rather than relaxing this branch. 003's re-pin
+    # protocol will hit this again.
+    bad "$name did not apply in the sandbox — if the file it encodes was re-pinned, regenerate the patch"; rm -rf "$S"; return
   fi
   rc=0
   out=$( (cd /tmp && bash "$script" 2>&1) ) || rc=$?
@@ -211,7 +222,7 @@ run_in_tree 07-drop-checkhash   AC-07a
 bash "$here/ac008.sh" AC-00b > /dev/null 2>&1 || bad "AC-00b is not green after the last restore"
 bash "$root/scripts/no-keys.sh" > /dev/null 2>&1 || bad "no-keys.sh is not green after the last restore"
 
-witness=$(cat $(ls "$mutants"/*.patch | LC_ALL=C sort) | shasum -a 256 | cut -c1-16)
+witness=$(cat $(ls "$mutants"/[0-9][0-9]-*.patch | LC_ALL=C sort) | shasum -a 256 | cut -c1-16)
 say "$detected/$want_mutants mutants detected; witness=$witness"
 say "elapsed $(( $(now) - t0 ))s"
 [[ $fail -eq 0 && "$detected" == "$want_mutants" ]] || exit 1

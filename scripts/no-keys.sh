@@ -75,9 +75,13 @@ ok "entry keywords sum $sum (function only; 0 fallback, 0 receive, 0 modifier)"
 #     if there is nothing to inherit from and no `using` binding member calls
 #     elsewhere. Measured: a base contract carrying a draining `fallback` compiled and
 #     took a funded deal while every other clause here stayed green.
-inherit=$(sed -n 's/.*contract RecknZkEscrow\(.*\){.*/\1/p' "$target" | tr -d ' \t')
-contracts=$( (grep -ow contract "$target" || true) | wc -l | tr -d ' ')
-usings=$( (sed -e 's://.*::' "$target" | grep -ow using || true) | wc -l | tr -d ' ')
+# Counted over comment-STRIPPED source: a doc comment that says "the contract" is
+# not a second contract, and counting it would make honest documentation fail the
+# clause. (Found 2026-09-06 by writing exactly such a comment.)
+stripped_file=$(sed -e 's://.*::' -e 's:/\*.*\*/::' "$target")
+inherit=$(printf '%s\n' "$stripped_file" | sed -n 's/.*contract RecknZkEscrow\(.*\){.*/\1/p' | tr -d ' \t')
+contracts=$( (printf '%s\n' "$stripped_file" | grep -ow contract || true) | wc -l | tr -d ' ')
+usings=$( (printf '%s\n' "$stripped_file" | grep -ow using || true) | wc -l | tr -d ' ')
 if [[ -n "$inherit" ]]; then
   bad "2c: RecknZkEscrow inherits ($inherit) — members declared above the contract line are outside every check here"
 elif [[ "$contracts" != "1" ]]; then

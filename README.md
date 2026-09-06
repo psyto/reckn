@@ -227,7 +227,9 @@ What the event is for, in execution order ([`AGENTS.md`](AGENTS.md) §3):
    on either side, and no bridge or light client in the adjudication path.
 3. **003 — key gauntlet** *(stopped, not abandoned)*. Publish every party's private
    key and demonstrate with a test matrix that every theft path reverts, folding in
-   the keyless timeout so a funded deal with no proof cannot lock forever. Its spec
+   the keyless timeout — **the timeout half landed 2026-09-06**, so a funded deal
+   with no proof no longer locks forever; the key gauntlet itself is still stopped.
+   Its spec
    hit the harness's six-round review limit still holding one open hole — a
    constant-keyed branch that no check rejects — and the rules say to stop and hand it
    back rather than write a seventh round. It is out of the 9/9 checkpoint and may
@@ -627,10 +629,11 @@ cd zk-verdict/contracts && forge test --match-contract RecknArcUsdc   # 6 tests,
 open dashboard/arc.html          # the run above, rendered (data inlined, file:// works)
 ```
 
-250.00 USDC released by a proof, and a proof of a **decrease** refunding the buyer —
-with no owner, no resolver and no signature anywhere on the path that decides who is
-paid. Why Arc is load-bearing rather than a deployment target, the architecture
-diagram, and the limits (local tier, no timeout, `MockUSDC` is not USDC) are in
+250.00 USDC released by a proof, a proof of a **decrease** refunding the buyer, and —
+the sentence this repository exists to make true — **USDC escrowed on Arc released by
+a proof about work performed on Solana**, with no bridge, no light client and no
+signature anywhere on the path that decides who is paid. Why Arc is load-bearing rather than a deployment target, the architecture
+diagram, and the limits (local tier, `MockUSDC` is not USDC) are in
 [`docs/arc-usdc.md`](docs/arc-usdc.md). **Nothing is deployed to Arc yet**: the script
 needs a funded testnet key, and Circle has not published mainnet addresses.
 
@@ -671,6 +674,17 @@ the earlier text deserves to know what happened to it.
   whole of the deployed code, because an **inherited** member is declared above the
   contract line and was outside every clause until 009's review found it.
 
+- **A funded deal could lock forever** (closed 2026-09-06). The keyless escrow had
+  no timeout: if the prover never showed up — or if a stablecoin froze the recipient,
+  which `test_ARC05` demonstrates — the money stayed in the contract with no way out.
+  `refundAfterDeadline` returns it to the buyer after thirty days. It is
+  **permissionless**, it pays the caller nothing, it cannot be called early or twice
+  or after a proof settled the deal, and in either order the money comes out exactly
+  once (`RecknTimeout.t.sol`, six tests). The waiting period is a constant of the
+  protocol — a deadline someone picks is a parameter someone controls — and
+  `refundAfterDeadline` was already in the enumerated surface, so the central claim
+  did not widen to make room for it.
+
 The evidence is mechanical, not narrative: `bash zk-verdict/scripts/ac008.sh AC-02`
 and `AC-03` run those vectors and assert the count before they assert success, and
 `bash scripts/no-keys.sh` names the clause that fires for each of the shapes above.
@@ -681,14 +695,10 @@ Stated here so no reader has to discover them by reading the source. None of the
 is closed by anything above; the honest scope in
 [`zk-verdict/README.md`](zk-verdict/README.md) governs.
 
-- **`RecknZkEscrow` has no timeout.** If no proof ever arrives, a funded escrow
-  stays funded — permanently. The optimistic `RecknEscrow` has timeout escape
-  hatches; the keyless contract, which is the differentiated one, does not. Closing
-  this **without introducing a key** lands inside the key gauntlet
-  ([`AGENTS.md`](AGENTS.md) §3, task 003 — task 001 is not raised separately);
-  `no-keys.sh` already enumerates `refundAfterDeadline` as the only permitted way
-  in. Task 003 is stopped at review round 6 and awaiting a founder ruling, so this
-  gap is open today.
+- ~~**`RecknZkEscrow` has no timeout.**~~ **Closed 2026-09-06** — see the closed
+  list above. A funded deal whose proof never arrives is returned to its buyer after
+  thirty days by `refundAfterDeadline`, which anyone may call and which pays the
+  caller nothing.
 - **In-guest precompiles run on different backends, and parity is unverified.**
   This repository has long said they are *disabled* in-guest. They are not:
   `revm-precompile` falls back to pure-Rust implementations when the native
