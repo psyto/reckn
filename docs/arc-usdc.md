@@ -131,8 +131,29 @@ Run: `cd zk-verdict/contracts && forge test --match-contract RecknArcUsdc`
 
 ## Demo, in four minutes
 
+**The one a judge should drive themselves.** A page whose buttons are transactions —
+fund, settle, try to steal it, settle with a Solana proof, and wait out the deadline:
+
 ```bash
-# 1. the whole path on a local chain at Arc's chain id (no key, no funds, no account)
+bash scripts/arc-demo.sh          # local chain + deploy + USDC + a server on :8787
+open http://127.0.0.1:8787
+```
+
+Nothing on that page is simulated. Each button posts to a small local backend that
+shells out to `cast`; the balances shown were read back from the chain, and a failed
+theft shows the contract's own error — `BindingMismatch()` — because on this contract
+the error name **is** the result. Five things it lets a judge do:
+
+| on the page | what it proves |
+|---|---|
+| fund 250.00, then settle with the proof | a conditional USDC payment, released by a Groth16 proof and by nothing else |
+| **submit another execution's proof** | it verifies — it is a real proof — and `BindingMismatch()` stops it. The money does not move |
+| settle with the failing proof | the proof of a **decrease** refunds the buyer |
+| **settle with the Solana proof** | **USDC on Arc released by a proof about work on Solana** |
+| refund early, then wait 30 days, then refund | `TooEarly()`, then anyone may return the money to the buyer |
+
+```bash
+# the same path without a browser (no key, no funds, no account)
 bash scripts/arc-usdc-e2e.sh
 
 # 2. the same settlement as tests, including the failure directions

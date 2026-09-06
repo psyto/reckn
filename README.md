@@ -624,9 +624,11 @@ required no change to the contract at all** — what it required was evidence th
 settlement is correct in USDC's units and under USDC's semantics.
 
 ```bash
-bash scripts/arc-usdc-e2e.sh     # local chain at Arc's chain id: deploy → fund → settle → refund
-cd zk-verdict/contracts && forge test --match-contract RecknArcUsdc   # 6 tests, real Groth16 proofs
-open dashboard/arc.html          # the run above, rendered (data inlined, file:// works)
+bash scripts/arc-demo.sh         # local chain + deploy + USDC + a server; then open :8787
+                                 #   and DRIVE it: fund, settle, try to steal it, wait out
+                                 #   the deadline. Every button is a real transaction.
+bash scripts/arc-usdc-e2e.sh     # the same path without a browser
+cd zk-verdict/contracts && forge test --match-contract RecknArcUsdc   # 7 tests, real Groth16 proofs
 ```
 
 250.00 USDC released by a proof, a proof of a **decrease** refunding the buyer, and —

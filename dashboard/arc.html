@@ -3,145 +3,188 @@
 <title>Reckn on Arc — a USDC payment released by a proof</title>
 <style>
   :root { --bg:#07090d; --panel:#0e1218; --line:#1c232e; --ink:#e6edf3; --dim:#8b98a8;
-          --good:#3fb950; --usdc:#2775ca; --warn:#d29922; }
+          --good:#3fb950; --usdc:#2775ca; --warn:#d29922; --bad:#f85149; }
   * { box-sizing:border-box }
   body { margin:0; background:var(--bg); color:var(--ink);
-         font:15px/1.6 ui-sans-serif,-apple-system,"SF Pro Text",Inter,sans-serif; }
-  main { max-width:920px; margin:0 auto; padding:40px 24px 72px }
+         font:15px/1.55 ui-sans-serif,-apple-system,"SF Pro Text",Inter,sans-serif }
+  main { max-width:1000px; margin:0 auto; padding:36px 24px 80px }
   h1 { font-size:26px; margin:0 0 6px; letter-spacing:-.02em }
-  .sub { color:var(--dim); margin:0 0 28px }
-  .tier { border:1px solid var(--warn); border-radius:8px; padding:10px 14px; margin:0 0 28px;
+  .sub { color:var(--dim); margin:0 0 22px }
+  .tier { border:1px solid var(--warn); border-radius:8px; padding:9px 13px; margin:0 0 24px;
           color:var(--warn); font-size:13px; background:rgba(210,153,34,.07) }
-  .grid { display:grid; gap:14px; grid-template-columns:1fr 1fr }
-  @media (max-width:720px){ .grid{grid-template-columns:1fr} }
-  .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 18px }
-  .card h2 { font-size:13px; text-transform:uppercase; letter-spacing:.09em; color:var(--dim);
-             margin:0 0 12px; font-weight:600 }
-  .flow { display:flex; align-items:baseline; gap:10px; font-variant-numeric:tabular-nums }
-  .amt { font-size:30px; font-weight:650; letter-spacing:-.02em }
-  .amt.good { color:var(--good) } .amt.back { color:var(--usdc) }
-  .who { color:var(--dim); font-size:13px }
-  .verdict { display:inline-block; font-size:11px; letter-spacing:.06em; text-transform:uppercase;
-             border:1px solid var(--line); border-radius:999px; padding:2px 9px; color:var(--dim); margin-bottom:10px }
-  table { width:100%; border-collapse:collapse; font-size:13px }
-  td { padding:5px 0; vertical-align:top }
-  td:first-child { color:var(--dim); white-space:nowrap; padding-right:14px }
-  code, .mono { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; word-break:break-all }
-  .claim { margin-top:26px; border:1px solid var(--line); border-left:3px solid var(--good);
-           border-radius:8px; padding:14px 18px; background:var(--panel) }
+  .bal { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:8px }
+  .b { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px }
+  .b .k { font-size:11px; letter-spacing:.09em; text-transform:uppercase; color:var(--dim) }
+  .b .v { font-size:27px; font-weight:650; letter-spacing:-.02em; font-variant-numeric:tabular-nums }
+  .b .v.up { color:var(--good) } .b .v.down { color:var(--usdc) }
+  .log { background:#05070a; border:1px solid var(--line); border-radius:10px; padding:12px 14px;
+         font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12.5px;
+         height:180px; overflow:auto; margin:14px 0 20px; white-space:pre-wrap }
+  .log .ok { color:var(--good) } .log .rv { color:var(--bad) } .log .dim { color:var(--dim) }
+  .steps { display:grid; gap:10px; grid-template-columns:1fr 1fr }
+  @media (max-width:820px){ .steps,.bal{grid-template-columns:1fr} }
+  .step { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px }
+  .step h3 { margin:0 0 4px; font-size:14px }
+  .step p { margin:0 0 10px; color:var(--dim); font-size:13px }
+  button { background:#16202c; color:var(--ink); border:1px solid #24303f; border-radius:7px;
+           padding:7px 12px; font:inherit; font-size:13px; cursor:pointer; margin:0 6px 6px 0 }
+  button:hover:not(:disabled) { border-color:var(--usdc) }
+  button:disabled { opacity:.45; cursor:not-allowed }
+  button.danger:hover:not(:disabled) { border-color:var(--bad) }
+  code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px }
+  .addr { color:var(--dim); font-size:12px; font-family:ui-monospace,Menlo,monospace; word-break:break-all }
+  .claim { margin-top:22px; border:1px solid var(--line); border-left:3px solid var(--good);
+           border-radius:8px; padding:14px 18px; background:var(--panel); font-size:14px }
   .claim b { color:var(--good) }
   ul { margin:8px 0 0 18px; padding:0; color:var(--dim); font-size:13px }
-  a { color:var(--usdc) }
 </style>
 <main>
   <h1>A USDC payment released by a proof</h1>
-  <p class="sub">Reckn on Arc — the escrow has no owner, no resolver and no admin. What releases the
+  <p class="sub">Reckn on Arc. The escrow has no owner, no resolver and no admin — what releases the
      money is a Groth16 proof that the disputed work re-executes to the verdict the deal was funded
-     against.</p>
+     against. Every button below is a real transaction.</p>
   <div class="tier" id="tier">…</div>
 
-  <div class="grid">
-    <div class="card">
-      <div class="verdict" id="v1">…</div>
-      <div class="flow"><span class="amt good" id="a1">…</span><span class="who">to the seller</span></div>
-      <table>
-        <tr><td>escrow after</td><td class="mono" id="e1">…</td></tr>
-        <tr><td>deal</td><td class="mono" id="d1">…</td></tr>
-      </table>
-    </div>
-    <div class="card">
-      <div class="verdict" id="v2">…</div>
-      <div class="flow"><span class="amt back" id="a2">…</span><span class="who">back to the buyer</span></div>
-      <table>
-        <tr><td>seller</td><td class="mono" id="s2">…</td></tr>
-        <tr><td>deal</td><td class="mono" id="d2">…</td></tr>
-      </table>
-    </div>
+  <div class="bal">
+    <div class="b"><div class="k">buyer</div><div class="v" id="v-buyer">—</div></div>
+    <div class="b"><div class="k">escrow</div><div class="v" id="v-escrow">—</div></div>
+    <div class="b"><div class="k">seller</div><div class="v" id="v-seller">—</div></div>
   </div>
+  <div class="log" id="log"><span class="dim">waiting…</span></div>
 
-  <div class="card" style="margin-top:14px">
-    <h2>What was deployed</h2>
-    <table>
-      <tr><td>escrow</td><td class="mono" id="c-escrow">…</td></tr>
-      <tr><td>verdict verifier</td><td class="mono" id="c-verifier">…</td></tr>
-      <tr><td>verifier codehash</td><td class="mono" id="c-codehash">…</td></tr>
-      <tr><td>SP1 Groth16 verifier</td><td class="mono" id="c-sp1">…</td></tr>
-      <tr><td>USDC (here)</td><td class="mono" id="c-usdc">…</td></tr>
-    </table>
-  </div>
-
-  <div class="card" style="margin-top:14px">
-    <h2>USDC on Arc</h2>
-    <table>
-      <tr><td>chain id</td><td class="mono" id="c-chain">…</td></tr>
-      <tr><td>USDC ERC-20 face</td><td class="mono" id="c-predeploy">…</td></tr>
-      <tr><td>decimals</td><td class="mono" id="c-dec">…</td></tr>
-      <tr><td></td><td id="c-note" style="color:var(--dim)">…</td></tr>
-    </table>
+  <div class="steps">
+    <div class="step">
+      <h3>1 · An honest delivery</h3>
+      <p>Fund 250.00 USDC against the EVM guest's verifier, then release it with the real Groth16
+         proof that the work reproduces.</p>
+      <button data-act="fund" data-deal="honest">fund 250.00</button>
+      <button data-act="settle" data-deal="honest">settle with the proof</button>
+    </div>
+    <div class="step">
+      <h3>2 · Try to steal it</h3>
+      <p>Submit a <em>different</em> execution's proof against the funded deal. It verifies — it is a
+         real proof — and the binding is what stops it.</p>
+      <button class="danger" data-act="settle" data-deal="honest" data-proof="decrease">submit another execution's proof</button>
+    </div>
+    <div class="step">
+      <h3>3 · The work did not reproduce</h3>
+      <p>A proof that the balance <em>decreased</em>. Before this repository closed a soundness bug, this
+         exact execution paid the seller.</p>
+      <button data-act="fund" data-deal="decrease">fund 250.00</button>
+      <button data-act="settle" data-deal="decrease">settle with the failing proof</button>
+    </div>
+    <div class="step">
+      <h3>4 · The work happened on Solana</h3>
+      <p>USDC escrowed on Arc, released by a proof about work performed on <b>Solana</b>. No bridge, no
+         light client, no resolver.</p>
+      <button data-act="fund" data-deal="solana">fund 250.00</button>
+      <button data-act="settle" data-deal="solana">settle with the Solana proof</button>
+    </div>
+    <div class="step">
+      <h3>5 · Nobody ever proves anything</h3>
+      <p>A funded deal whose prover never shows up. Refund early and it refuses; after thirty days
+         <b>anyone</b> may return the money to the buyer, and the caller gets nothing for it.</p>
+      <button data-act="fund" data-deal="abandoned">fund 250.00</button>
+      <button data-act="refund" data-deal="abandoned">refund now (too early)</button>
+      <button data-act="warp">wait 30 days</button>
+      <button data-act="refund" data-deal="abandoned">refund</button>
+    </div>
+    <div class="step">
+      <h3>What is on this chain</h3>
+      <p class="addr" id="addrs">—</p>
+      <p style="margin-top:8px">USDC on Arc is the native gas token; Circle exposes an ERC-20 face over
+         the same balance at <code>0x3600…0000</code>, six decimals. The escrow holds that.</p>
+    </div>
   </div>
 
   <div class="claim">
-    <b>The seller reads two values before working:</b> the deal's <code>verifier</code> and its
-    <code>verifierCodeHash</code>. The buyer names the adjudicating program at funding, so a buyer
-    who names one that always returns <code>Failed</code> makes the seller work for nothing — and
-    on-chain that is indistinguishable from an honest <code>Failed</code>. Nothing checks it for
-    them. That is a cost of letting the funder choose the program, and it is stated here rather
-    than in a footnote.
+    <b>What no button here can do:</b> move a funded deal without a proof that carries its binding, or
+    before the deadline. There is no address with that power — not the buyer's, not the seller's, not
+    the deployer's, because there is no deployer role and no constructor.
     <ul>
-      <li>If no proof arrives, <b>anyone</b> may return the money to the buyer after thirty days
-          (<code>refundAfterDeadline</code>) — it pays the caller nothing.</li>
+      <li>The buyer names the adjudicating program at funding. A buyer who names one that always
+          returns <code>Failed</code> makes the seller work for nothing, and on-chain that is
+          indistinguishable from an honest <code>Failed</code>. Sellers read the deal first.</li>
       <li>&ldquo;No bridge, no light client&rdquo; describes the path that decides the payout — not anchoring.</li>
-      <li>Every figure on this page came from <code>scripts/arc-usdc-e2e.sh</code>. Re-run it and they change.</li>
     </ul>
   </div>
 </main>
 
 <script id="arc-data" type="application/json">
-{
-  "tier": "local anvil at Arc's chain id — NOT an Arc testnet result",
-  "chainId": 5042002,
-  "arc": {
-    "testnetChainId": 5042002,
-    "usdcErc20": "0x3600000000000000000000000000000000000000",
-    "usdcErc20Decimals": 6,
-    "note": "on Arc, USDC is the native gas token and this predeploy is its ERC-20 face"
-  },
-  "deployed": {
-    "sp1Verifier": "0x5fbdb2315678afecb367f032d93f642f64180aa3",
-    "verdictVerifier": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
-    "verifierCodehash": "0x3871b5ff6a1b940f2fd0b7d151671621ae4225375785e0f86f1b3316f77a486f",
-    "escrow": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
-    "usdcMock": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"
-  },
-  "reproduced": {
-    "dealId": "0x079d0c4b04f47b2acf5cbeec34e41deb35122bef012efbf71fa069fe59ef5bdf",
-    "amountUsdc": "250.000000",
-    "verdict": "Reproduced",
-    "sellerAfter": "250.000000 USDC",
-    "escrowAfter": "0.000000 USDC"
-  },
-  "failed": {
-    "dealId": "0xcea2c95cbdea6d7fb0ac8a8bf3d2f262eaff62a274f4941a7485288e265e4bce",
-    "amountUsdc": "250.000000",
-    "verdict": "Failed (a proven DECREASE)",
-    "buyerAfter": "750.000000 USDC",
-    "sellerUnchanged": "250.000000 USDC"
-  },
-  "generatedBy": "scripts/arc-usdc-e2e.sh"
-}
+{"tier":"static view — run `bash scripts/arc-demo.sh` and open http://127.0.0.1:8787 to drive it"}
 </script>
 <script>
-  const d = JSON.parse(document.getElementById('arc-data').textContent);
-  const set = (id, v) => document.getElementById(id).textContent = v;
-  set('tier', d.tier);
-  set('v1', d.reproduced.verdict);  set('a1', d.reproduced.sellerAfter);
-  set('e1', d.reproduced.escrowAfter); set('d1', d.reproduced.dealId);
-  set('v2', d.failed.verdict);      set('a2', d.failed.buyerAfter);
-  set('s2', d.failed.sellerUnchanged + ' (unchanged)'); set('d2', d.failed.dealId);
-  set('c-escrow', d.deployed.escrow); set('c-verifier', d.deployed.verdictVerifier);
-  set('c-codehash', d.deployed.verifierCodehash); set('c-sp1', d.deployed.sp1Verifier);
-  set('c-usdc', d.deployed.usdcMock);
-  set('c-chain', d.chainId + '  (Arc testnet is ' + d.arc.testnetChainId + ')');
-  set('c-predeploy', d.arc.usdcErc20); set('c-dec', d.arc.usdcErc20Decimals);
-  set('c-note', d.arc.note);
+const $ = id => document.getElementById(id);
+const usd = n => (n / 1e6).toFixed(2);
+let live = false, prev = null;
+
+function log(msg, cls) {
+  const el = $('log');
+  if (el.dataset.clean !== '1') { el.textContent = ''; el.dataset.clean = '1'; }
+  const s = document.createElement('span');
+  s.className = cls || '';
+  s.textContent = msg + '\n';
+  el.appendChild(s);
+  el.scrollTop = el.scrollHeight;
+}
+
+function paint(s) {
+  const set = (id, v) => {
+    const el = $(id), was = prev ? prev[id.slice(2)] : null;
+    el.textContent = usd(v) + ' USDC';
+    el.className = 'v' + (was === null || was === v ? '' : (v > was ? ' up' : ' down'));
+  };
+  set('v-buyer', s.buyer); set('v-escrow', s.escrow); set('v-seller', s.seller);
+  prev = { buyer: s.buyer, escrow: s.escrow, seller: s.seller };
+  if (s.addresses) {
+    $('addrs').textContent =
+      'escrow ' + s.addresses.escrow + '\nUSDC ' + s.addresses.usdc +
+      '\nverifier (EVM guest) ' + s.addresses.verifierEvm +
+      '\nverifier (Solana guest) ' + s.addresses.verifierSvm;
+  }
+}
+
+async function act(btn) {
+  if (!live) return;
+  const a = btn.dataset.act;
+  document.querySelectorAll('button').forEach(b => b.disabled = true);
+  const label = btn.textContent.trim();
+  log('→ ' + label + (btn.dataset.deal ? '  [' + btn.dataset.deal + ']' : ''), 'dim');
+  try {
+    const body = { deal: btn.dataset.deal };
+    if (btn.dataset.proof) body.proof = btn.dataset.proof;
+    if (a === 'warp') body.seconds = 30 * 24 * 3600;
+    const r = await fetch('/api/' + a, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body)
+    });
+    const d = await r.json();
+    if (d.revert) log('   reverted: ' + d.revert + '   ← the money did not move', 'rv');
+    else if (d.tx) log('   tx ' + d.tx, 'ok');
+    else log('   ok', 'ok');
+    if (d.state) paint(d.state);
+  } catch (e) {
+    log('   ' + e, 'rv');
+  }
+  document.querySelectorAll('button').forEach(b => b.disabled = false);
+}
+
+(async () => {
+  try {
+    const s = await (await fetch('/api/state')).json();
+    if (s.error) throw new Error(s.error);
+    live = true;
+    $('tier').textContent =
+      'LIVE on a local chain at Arc’s chain id ' + s.chainId +
+      ' — this is NOT Arc testnet. Every button below sends a real transaction to it.';
+    paint(s);
+    log('connected. chain id ' + s.chainId, 'ok');
+    document.querySelectorAll('button').forEach(b => b.addEventListener('click', () => act(b)));
+  } catch (e) {
+    const d = JSON.parse($('arc-data').textContent);
+    $('tier').textContent = d.tier;
+    document.querySelectorAll('button').forEach(b => b.disabled = true);
+    log('no backend on this page. Run:  bash scripts/arc-demo.sh', 'dim');
+    log('then open http://127.0.0.1:8787', 'dim');
+  }
+})();
 </script>
