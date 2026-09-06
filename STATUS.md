@@ -53,6 +53,28 @@ M-8 形／M-18 形／711 の境界ずらし／M-20 形（pin の1文字）で正
 selftest 自身が計算した digest と一致。**定数を echo する stub は「witness された byte が動くまでは通る」**
 ——これは §6.2 が自分で書いている限界で、実際に stub を作って再現した。
 
+## 009 の実装（2026-09-06）
+
+| part | commit | 内容 |
+|---|---|---|
+| part 1 | `eb1eb58` | **契約と16テスト**。1つのエスクローが EVM proof と Solana proof を決済。`no-keys.sh` check 2/4 を締め直し、`surfaces.pinned` 再ピン、008 の AC-11 を `{P}` 化 |
+| part 2 | `2fc098c` | §11 の文書4本（`zk-verdict/README` / `README` / `AGENTS` §0 / `CLAUDE`） |
+| part 3 | `7a171d3` | ゲート `ac009.sh` + `xvm-pins.sh` / `escrow-shape.sh` / `xvm-no-skip.sh` / `xvm-docs.sh` / `both-green.sh`。**13 row 中 11 緑** |
+
+**核**: `test_AC01_one_escrow_settles_an_evm_proof_and_an_svm_proof` — 1つの `RecknZkEscrow` で
+EVM guest と SVM guest の**実 Groth16 proof を両方決済**。resolver なし、bridge なし、
+裁定経路に light client なし。**constructor が消えた**ので同じソースのデプロイは挙動同一。
+
+**AC-9 が私のテストの欠陥を捕まえた**: 書いたばかりの cross-VM テストに `require(vm.exists(...))` が
+残っていた。forge は早期 return を `Success` と報告するので、**そこに gate があると skip カウントから
+見えない**。削除して `vm.readFile` の失敗＝テスト失敗にした。
+
+**`no-keys.sh` の負のコントロール5件**（すべて sandbox コピー）: 排水する `fallback()`→2a /
+**継承した base**→2c / `using`→2c / constructor 復活→4b / body 内の文字列→4a。
+
+**残り2 row**: AC-10（`ac009-selftest.sh` + mutant 15本）と AC-12（`both-green.sh`＝
+兄弟ゲートを閉包で発見して `--all` を走らせる。**9/9 の「同時に緑」はこれでしか測れない**）。
+
 ## 008 は着地した（2026-09-06、`ac008.sh --all` 通し実行の逐語）
 
 ```

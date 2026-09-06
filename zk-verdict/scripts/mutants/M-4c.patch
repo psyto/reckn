@@ -1,0 +1,13 @@
+diff --git a/zk-verdict/contracts/src/RecknZkEscrow.sol b/zk-verdict/contracts/src/RecknZkEscrow.sol
+index 1c8681f..d56fc76 100644
+--- a/zk-verdict/contracts/src/RecknZkEscrow.sol
++++ b/zk-verdict/contracts/src/RecknZkEscrow.sol
+@@ -57,6 +57,8 @@ contract RecknZkEscrow {
+ 
+     mapping(bytes32 => Deal) public deals;
+ 
++    bytes32 public immutable unused;
++
+     event Funded(
+         bytes32 indexed dealId,
+         address indexed buyer,

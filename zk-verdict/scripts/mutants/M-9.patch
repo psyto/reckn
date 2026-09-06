@@ -1,0 +1,12 @@
+diff --git a/zk-verdict/contracts/test/RecknCrossVmSettlement.t.sol b/zk-verdict/contracts/test/RecknCrossVmSettlement.t.sol
+index 60d936a..5dd36e3 100644
+--- a/zk-verdict/contracts/test/RecknCrossVmSettlement.t.sol
++++ b/zk-verdict/contracts/test/RecknCrossVmSettlement.t.sol
+@@ -158,6 +158,7 @@ contract RecknCrossVmSettlementTest is Test {
+     // ---------------------------------------------------------------- AC-1 -----
+ 
+     function test_AC01_one_escrow_settles_an_evm_proof_and_an_svm_proof() public {
++        if (!vm.exists(EVM_FIXTURE)) return;
+         Fixture memory e = _read(EVM_FIXTURE);
+         Fixture memory s = _read(SVM_FIXTURE);
+ 

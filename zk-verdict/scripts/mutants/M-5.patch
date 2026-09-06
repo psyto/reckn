@@ -1,0 +1,13 @@
+diff --git a/zk-verdict/contracts/test/RecknCrossVmSettlement.t.sol b/zk-verdict/contracts/test/RecknCrossVmSettlement.t.sol
+index 60d936a..1a63d0e 100644
+--- a/zk-verdict/contracts/test/RecknCrossVmSettlement.t.sol
++++ b/zk-verdict/contracts/test/RecknCrossVmSettlement.t.sol
+@@ -108,7 +108,7 @@ contract MockVerdictVerifier {
+ /// one machine. Not a chain result, and nothing here may be described as one.
+ contract RecknCrossVmSettlementTest is Test {
+     string constant EVM_FIXTURE = "src/fixtures/reexec-groth16-fixture.json";
+-    string constant SVM_FIXTURE = "src/fixtures/svm-groth16-fixture.json";
++    string constant SVM_FIXTURE = "src/fixtures/reexec-groth16-fixture.json";
+ 
+     address buyer = address(0xB0B);
+     address seller = address(0x5E11E5);

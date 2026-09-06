@@ -1,0 +1,12 @@
+diff --git a/zk-verdict/contracts/src/RecknZkEscrow.sol b/zk-verdict/contracts/src/RecknZkEscrow.sol
+index 1c8681f..9f48565 100644
+--- a/zk-verdict/contracts/src/RecknZkEscrow.sol
++++ b/zk-verdict/contracts/src/RecknZkEscrow.sol
+@@ -94,7 +94,6 @@ contract RecknZkEscrow {
+         if (deals[dealId].state != State.None) revert DealExists();
+         if (dealBinding == bytes32(0)) revert ZeroBinding();
+         if (verifierCodeHash == bytes32(0) || verifierCodeHash == EMPTY_CODEHASH) revert NoVerifierCode();
+-        if (verifier.codehash != verifierCodeHash) revert VerifierMismatch();
+         deals[dealId] = Deal({
+             buyer: msg.sender,
+             seller: seller,

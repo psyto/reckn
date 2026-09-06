@@ -1,0 +1,26 @@
+diff --git a/zk-verdict/contracts/src/RecknZkEscrow.sol b/zk-verdict/contracts/src/RecknZkEscrow.sol
+index 1c8681f..326bea0 100644
+--- a/zk-verdict/contracts/src/RecknZkEscrow.sol
++++ b/zk-verdict/contracts/src/RecknZkEscrow.sol
+@@ -38,6 +38,12 @@ contract RecknZkEscrow {
+     bytes32 public constant EMPTY_CODEHASH =
+         0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
+ 
++    RecknVerdictVerifier public immutable verifier;
++
++    constructor(RecknVerdictVerifier v) {
++        verifier = v;
++    }
++
+     enum State {
+         None,
+         Funded,
+@@ -124,7 +130,7 @@ contract RecknZkEscrow {
+         // `view`-typed, so it is a STATICCALL: the callee cannot write state, which
+         // is what makes it safe to call funder-chosen code before the binding check.
+         VerdictPublicValues memory v =
+-            RecknVerdictVerifier(d.verifier).verifyVerdict(publicValues, proofBytes);
++            verifier.verifyVerdict(publicValues, proofBytes);
+ 
+         // Binding: the proof must be about THIS deal (its committed prestate +
+         // predicate + plan), not some other favorable execution.

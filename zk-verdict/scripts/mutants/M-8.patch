@@ -1,0 +1,20 @@
+diff --git a/zk-verdict/contracts/src/RecknZkEscrow.sol b/zk-verdict/contracts/src/RecknZkEscrow.sol
+index 1c8681f..7affd32 100644
+--- a/zk-verdict/contracts/src/RecknZkEscrow.sol
++++ b/zk-verdict/contracts/src/RecknZkEscrow.sol
+@@ -133,14 +133,7 @@ contract RecknZkEscrow {
+         // Settle on the proven outcome. State set before transfer so a re-entrant
+         // token hook re-hits the state guard and reverts.
+         d.state = State.Settled;
+-        address to;
+-        if (v.outcome == REPRODUCED) {
+-            to = d.seller;
+-        } else if (v.outcome == FAILED) {
+-            to = d.buyer;
+-        } else {
+-            revert BadOutcome();
+-        }
++        address to = d.seller;
+         emit SettledByProof(dealId, to, v.outcome, v.traceHash);
+         IERC20Min(d.token).transfer(to, d.amount);
+     }

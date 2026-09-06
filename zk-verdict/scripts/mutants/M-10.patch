@@ -1,0 +1,12 @@
+diff --git a/zk-verdict/README.md b/zk-verdict/README.md
+index 4fb83e6..5f1c81c 100644
+--- a/zk-verdict/README.md
++++ b/zk-verdict/README.md
+@@ -249,6 +249,7 @@ and `settleWithProof` verifies the SP1 proof via `RecknVerdictVerifier` and requ
+ the binding to match before paying out — so a proof from some *other* favorable
+ execution cannot settle this deal.
+ 
++- `fund(dealId, seller, token, amount, dealBinding)` — buyer escrows the payment.
+ - `fund(dealId, seller, token, amount, verifier, verifierCodeHash, dealBinding)` —
+   the buyer escrows the payment **and names the program whose proof may settle it**,
+   pinned by the code's hash so the address cannot become different code later.

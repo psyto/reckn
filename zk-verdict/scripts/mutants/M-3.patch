@@ -1,0 +1,26 @@
+diff --git a/zk-verdict/contracts/src/RecknZkEscrow.sol b/zk-verdict/contracts/src/RecknZkEscrow.sol
+index 1c8681f..a88d4b0 100644
+--- a/zk-verdict/contracts/src/RecknZkEscrow.sol
++++ b/zk-verdict/contracts/src/RecknZkEscrow.sol
+@@ -3,6 +3,12 @@ pragma solidity ^0.8.20;
+ 
+ import {RecknVerdictVerifier, VerdictPublicValues} from "./RecknVerdictVerifier.sol";
+ 
++interface IWritingVerdict {
++    function verifyVerdict(bytes calldata, bytes calldata)
++        external
++        returns (VerdictPublicValues memory);
++}
++
+ interface IERC20Min {
+     function transferFrom(address from, address to, uint256 value) external returns (bool);
+     function transfer(address to, uint256 value) external returns (bool);
+@@ -124,7 +130,7 @@ contract RecknZkEscrow {
+         // `view`-typed, so it is a STATICCALL: the callee cannot write state, which
+         // is what makes it safe to call funder-chosen code before the binding check.
+         VerdictPublicValues memory v =
+-            RecknVerdictVerifier(d.verifier).verifyVerdict(publicValues, proofBytes);
++            IWritingVerdict(d.verifier).verifyVerdict(publicValues, proofBytes);
+ 
+         // Binding: the proof must be about THIS deal (its committed prestate +
+         // predicate + plan), not some other favorable execution.

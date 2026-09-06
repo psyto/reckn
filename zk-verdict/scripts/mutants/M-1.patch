@@ -1,0 +1,12 @@
+diff --git a/zk-verdict/contracts/src/RecknZkEscrow.sol b/zk-verdict/contracts/src/RecknZkEscrow.sol
+index 1c8681f..73b8b33 100644
+--- a/zk-verdict/contracts/src/RecknZkEscrow.sol
++++ b/zk-verdict/contracts/src/RecknZkEscrow.sol
+@@ -128,7 +128,6 @@ contract RecknZkEscrow {
+ 
+         // Binding: the proof must be about THIS deal (its committed prestate +
+         // predicate + plan), not some other favorable execution.
+-        if (v.dealBinding != d.dealBinding) revert BindingMismatch();
+ 
+         // Settle on the proven outcome. State set before transfer so a re-entrant
+         // token hook re-hits the state guard and reverts.

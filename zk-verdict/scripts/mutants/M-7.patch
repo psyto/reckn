@@ -1,0 +1,13 @@
+diff --git a/zk-verdict/contracts/src/RecknZkEscrow.sol b/zk-verdict/contracts/src/RecknZkEscrow.sol
+index 1c8681f..274c70b 100644
+--- a/zk-verdict/contracts/src/RecknZkEscrow.sol
++++ b/zk-verdict/contracts/src/RecknZkEscrow.sol
+@@ -100,7 +100,7 @@ contract RecknZkEscrow {
+             seller: seller,
+             token: token,
+             amount: amount,
+-            verifier: verifier,
++            verifier: msg.sender,
+             verifierCodeHash: verifierCodeHash,
+             dealBinding: dealBinding,
+             state: State.Funded
