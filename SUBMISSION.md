@@ -206,6 +206,40 @@ live and tested — on **both** VMs, behind **one** router.
   largest possible credit and released to the seller. On a real Groth16 proof, that
   exact cell now refunds the buyer.
 
+### The gates, and what a red one actually caught
+
+Each event task carries an acceptance gate whose manifest is parsed out of its own
+specification, so the document and the checker cannot drift apart, and whose `script`
+rows end in a `witness=` — a digest the runner **recomputes itself** from repository
+bytes rather than reading out of the checked program's output. A stub that prints the
+expected line does not pass; it would have to print a hardcoded digest, which goes stale
+the moment any witnessed byte moves.
+
+On 2026-09-07 all three ran green together in a single run:
+
+```
+ac009: 13/13 rows passed; canary M-4c detected by AC-7
+AC-12: both-green: 2 sibling gate(s) discovered, 2/2 exit 0
+AC-10: ac009-selftest: 15/15 mutants detected, 15/15 sandbox controls clean
+```
+
+The middle line is the point: AC-12 ran `ac005.sh --all` and `ac008.sh --all` to
+completion *inside* that run. Confirming each gate in turn, on different trees, does not
+demonstrate "green at the same time".
+
+Three earlier attempts were red, and what they caught is more interesting than the green
+line. Two of the three were the same defect wearing different clothes: **a correct
+sentence in a specification sitting on top of code that enumerated names.** 008's spec
+said its mutation witness covered `[0-9][0-9]-*.patch`; the gate globbed `*.patch` and
+swept in a sibling's fifteen. 009's spec said one sandbox holds "009's scripts only"; the
+script implemented *only* as `rm -f ac008.sh ac008-selftest.sh`. Both were invisible while
+exactly one sibling gate existed, and landing a second one exposed both in a single run.
+The second is the one worth reading twice: the mutant that exists to prove a discovery
+rule is a closure was itself defeated by one new name.
+
+None of this is the product. It is the reason the numbers in this document can be
+believed without taking our word for anything.
+
 ## Positioning & sponsor targets
 
 Lead with the thesis, not a stack: **Reckn is the trustless adjudicator for any
@@ -381,7 +415,14 @@ the adjudication path, not about anchoring.
 - [x] **Demo video** — full cut at `dashboard/media/reckn-demo-full.mp4` (money-shot +
       live `anvil-e2e.sh` terminal), Puppeteer/Chromium. Optional upgrade: add VO per
       the script above, then upload and link in the form.
-- [ ] **Submission form** (ETHOnline 2026, Continuity — open, in progress): name,
+- [x] **Submission form** (ETHOnline 2026, Continuity) — **filled 2026-09-06**; what
+      remains is the founder pressing send. **Before that, two lines of the disclosure
+      no longer match reality** and the description field reproduces it verbatim:
+      §3-5 names *World AgentKit* as the sponsor integration (not implemented) and buries
+      Arc — the thing actually built, deployed and settled four times — in a conditional
+      parenthetical; §3-3 promises persuading *the LLM judge*, which 004's spec
+      deliberately removed in favour of a judge-independent claim. `DISCLOSURE.md` is a
+      founder document and was not edited here. Original checklist text: name,
       category, short description, description, how-it's-made, repo. **Two things that
       are easy to get wrong:** the demo field must be the repository URL, not an
       artifact link; and `docs/ethonline-2026/DISCLOSURE.md` must be **reproduced in
@@ -389,8 +430,11 @@ the adjudication path, not about anchoring.
       the rules require it.
 - [ ] **`bash scripts/anvil-e2e.sh` green** on a clean clone (Foundry + Rust + jq).
 - [x] **ZK demo green on a clean checkout** — `contracts` (57) and `zk-verdict/contracts`
-      (12, incl. the real proof settling to the seller) both pass from a fresh worktree
+      (**47** as of 2026-09-07, incl. the real proof settling to the seller, the sixteen
+      cross-VM criteria and the seven Arc/USDC ones) both pass from a fresh worktree
       with only the auto-installed deps + committed proofs. `bash zk-verdict/scripts/zk-e2e.sh`
       runs the full path (SP1 toolchain optional for the live half).
-- [ ] Test tally current in README (contracts 57, zk-verdict 12, reexec-evm 16,
-      reexec-svm 30, binder 6, keeper 3, escrow-svm 10, evm-content 5, record 1).
+- [x] Test tally current in README — **re-measured 2026-09-07**: contracts **57**,
+      zk-verdict **47** (was 12; 008, 009 and 005 added tests and the line was never
+      updated), reexec-evm 16, reexec-svm 30, binder 6, keeper 3, escrow-svm 10,
+      evm-content 5, record 1. Counted with `forge test --list --json`, not by hand.

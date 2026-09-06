@@ -265,7 +265,7 @@ during the event, so the boundary is stated here rather than reconstructed later
 | **Event work** | **commits dated 2026-09-04 or later — the date is primary, not the hash** |
 | `EVENT_START` | `121194ca3e25bab4ec92aaa4da1277f3a60b8421`, recorded in [`STATUS.md`](STATUS.md) |
 | Accepted | 2026-09-04, **Continuity Track** |
-| Retreat checkpoint | 9/9 — tasks 008 and 009 both green, or the founder decides |
+| Retreat checkpoint | 9/9 — tasks 008 and 009 both green, or the founder decides. **Met early, 2026-09-07**: `ac009.sh --all` → `13/13 rows passed`, and its AC-12 ran `ac005.sh --all` and `ac008.sh --all` to completion inside the same run, `2/2 exit 0`. Confirming each gate in turn, on different trees, does not satisfy the word *simultaneously*; that is the only thing AC-12 exists for |
 | Freeze | 9/12 |
 
 **Every feature described in this README is pre-event work**, disclosed to
@@ -294,12 +294,21 @@ What the event is for, in execution order ([`AGENTS.md`](AGENTS.md) §3):
    back rather than write a seventh round. It is out of the 9/9 checkpoint and may
    return before the freeze.
 4. **004 — live adversarial input.** Open the seller's delivery claim to free-form
-   text so anyone watching can try to talk the judge into approving, and watch
-   re-execution refuse to be talked into anything.
+   text, so anyone watching can write whatever they like about what was delivered —
+   and watch it change nothing. The claim is that **prose does not move re-execution**,
+   and it is stated without reference to any judge: a judge we wrote ourselves being
+   "persuaded" would be evidence of nothing.
+5. **005 — Arc / USDC.** Settle in Circle's USDC on Arc. The contract needed no change
+   — a deal names its payment token at funding — so the deliverable is *evidence*, in
+   USDC's own units and semantics: six decimals, revert-not-`false`, and a blacklisted
+   recipient. **Landed 2026-09-06**, including a live testnet deployment.
 
-**Where this stands (2026-09-05):** 008's spec is approved after six rounds and is
-being implemented; 009's spec is in its second review; 003 is stopped as above; 004 is
-queued. No task is finished, and none is described here as if it were.
+**Where this stands (2026-09-07):** **008, 009, 005 and the keyless timeout have
+landed**, and the three gates were green together in one run (above). **004 is next**,
+its spec at round 2 with a `CHANGES` verdict; **003 stays stopped** — that is a founder
+call, not a scheduling one. **002 (real ERC-20 workload) is not started.** Nothing here
+is described as finished before it is, and the two tasks that are not done are named
+rather than omitted.
 
 Each task goes through a written spec with mechanically checkable acceptance
 criteria and an adversarial review by a second model before any implementation. The
@@ -369,8 +378,14 @@ zk-verdict/                 # the keyless path — independent SP1 workspace
   contracts/test/RecknCrossVmSettlement.t.sol # one escrow, an EVM proof and an SVM proof
   cycles.json               #   measured cycle counts + ELF digests (no rounded figures)
   scripts/zk-e2e.sh         #   one command: re-execute → prove → verify → settle
+  scripts/ac005.sh          #   the 005 acceptance gate: 4 rows, USDC units and semantics
   scripts/ac008.sh          #   the 008 acceptance gate: one runner, 18 manifest rows
   scripts/ac009.sh          #   the 009 acceptance gate: 13 rows, cross-VM settlement
+  scripts/both-green.sh     #   runs every SIBLING gate it discovers by pattern — the
+                            #   only row that tests "green at the same time"
+  scripts/arc-receipts.sh   #   every arcscan link names a settlement arc.json records,
+                            #   and every settlement it records is linked somewhere
+  scripts/arc-constants.sh  #   chain id, Arc URLs and the USDC predeploy match the record
   scripts/escrow-shape.sh   #   the escrow's shape, closed by ten properties
   scripts/both-green.sh     #   sibling gates, discovered by closure and actually run
   scripts/mutants/          #   36 mutation patches: 21 for 008, 15 for 009
@@ -694,9 +709,18 @@ cd zk-verdict/contracts && forge test --match-contract RecknArcUsdc   # 7 tests,
 the sentence this repository exists to make true — **USDC escrowed on Arc released by
 a proof about work performed on Solana**, with no bridge, no light client and no
 signature anywhere on the path that decides who is paid. Why Arc is load-bearing rather than a deployment target, the architecture
-diagram, and the limits (local tier, `MockUSDC` is not USDC) are in
-[`docs/arc-usdc.md`](docs/arc-usdc.md). **Nothing is deployed to Arc yet**: the script
-needs a funded testnet key, and Circle has not published mainnet addresses.
+diagram, and the limits are in [`docs/arc-usdc.md`](docs/arc-usdc.md).
+
+**That paragraph used to end "nothing is deployed to Arc yet."** It is deployed now:
+the escrow lives at
+[`0x580f2c32…`](https://testnet.arcscan.app/address/0x580f2c3268b0a13bf46c6d381bf807cbf1595669)
+on Arc testnet and four settlements moved real testnet USDC, two of them decided by
+proofs about work performed on Solana. The receipts are in the table above, and
+`zk-verdict/scripts/arc-receipts.sh` exists because two of the four were transcribed
+into this repository **wrong** the first time — right length, right prefix, linking to
+nothing. Mainnet remains out of reach for a reason that is not ours: Circle had not
+published Arc mainnet addresses as of 2026-09-06, so "deployment-ready" is the ceiling
+and the missing address list is a precondition, not a task.
 
 ### Closed during ETHOnline (2026-09-04 onward)
 
@@ -919,6 +943,10 @@ bash zk-verdict/scripts/ac008.sh --check    # manifest arithmetic, no runs
 bash zk-verdict/scripts/ac008.sh AC-02      # one row, count asserted before success
 bash zk-verdict/scripts/ac009.sh --check    # 13 rows + the naming gate
 bash zk-verdict/scripts/ac009.sh AC-1       # one escrow, two VMs, both settled
+bash zk-verdict/scripts/ac005.sh --all      # 4 rows: USDC units, and the two
+                                            # transcription gates over the live receipts
+bash zk-verdict/scripts/ac009.sh --all      # everything, plus every sibling gate,
+                                            # in one run — an overnight job, not a minute
 bash scripts/no-keys.sh                     # the build condition, five checks
 bash zk-verdict/scripts/surfaces.sh         # the two files 008 may not touch
 
