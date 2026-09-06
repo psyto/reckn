@@ -1,0 +1,146 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Reckn on Arc — a USDC payment released by a proof</title>
+<style>
+  :root { --bg:#07090d; --panel:#0e1218; --line:#1c232e; --ink:#e6edf3; --dim:#8b98a8;
+          --good:#3fb950; --usdc:#2775ca; --warn:#d29922; }
+  * { box-sizing:border-box }
+  body { margin:0; background:var(--bg); color:var(--ink);
+         font:15px/1.6 ui-sans-serif,-apple-system,"SF Pro Text",Inter,sans-serif; }
+  main { max-width:920px; margin:0 auto; padding:40px 24px 72px }
+  h1 { font-size:26px; margin:0 0 6px; letter-spacing:-.02em }
+  .sub { color:var(--dim); margin:0 0 28px }
+  .tier { border:1px solid var(--warn); border-radius:8px; padding:10px 14px; margin:0 0 28px;
+          color:var(--warn); font-size:13px; background:rgba(210,153,34,.07) }
+  .grid { display:grid; gap:14px; grid-template-columns:1fr 1fr }
+  @media (max-width:720px){ .grid{grid-template-columns:1fr} }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 18px }
+  .card h2 { font-size:13px; text-transform:uppercase; letter-spacing:.09em; color:var(--dim);
+             margin:0 0 12px; font-weight:600 }
+  .flow { display:flex; align-items:baseline; gap:10px; font-variant-numeric:tabular-nums }
+  .amt { font-size:30px; font-weight:650; letter-spacing:-.02em }
+  .amt.good { color:var(--good) } .amt.back { color:var(--usdc) }
+  .who { color:var(--dim); font-size:13px }
+  .verdict { display:inline-block; font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+             border:1px solid var(--line); border-radius:999px; padding:2px 9px; color:var(--dim); margin-bottom:10px }
+  table { width:100%; border-collapse:collapse; font-size:13px }
+  td { padding:5px 0; vertical-align:top }
+  td:first-child { color:var(--dim); white-space:nowrap; padding-right:14px }
+  code, .mono { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; word-break:break-all }
+  .claim { margin-top:26px; border:1px solid var(--line); border-left:3px solid var(--good);
+           border-radius:8px; padding:14px 18px; background:var(--panel) }
+  .claim b { color:var(--good) }
+  ul { margin:8px 0 0 18px; padding:0; color:var(--dim); font-size:13px }
+  a { color:var(--usdc) }
+</style>
+<main>
+  <h1>A USDC payment released by a proof</h1>
+  <p class="sub">Reckn on Arc — the escrow has no owner, no resolver and no admin. What releases the
+     money is a Groth16 proof that the disputed work re-executes to the verdict the deal was funded
+     against.</p>
+  <div class="tier" id="tier">…</div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="verdict" id="v1">…</div>
+      <div class="flow"><span class="amt good" id="a1">…</span><span class="who">to the seller</span></div>
+      <table>
+        <tr><td>escrow after</td><td class="mono" id="e1">…</td></tr>
+        <tr><td>deal</td><td class="mono" id="d1">…</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <div class="verdict" id="v2">…</div>
+      <div class="flow"><span class="amt back" id="a2">…</span><span class="who">back to the buyer</span></div>
+      <table>
+        <tr><td>seller</td><td class="mono" id="s2">…</td></tr>
+        <tr><td>deal</td><td class="mono" id="d2">…</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h2>What was deployed</h2>
+    <table>
+      <tr><td>escrow</td><td class="mono" id="c-escrow">…</td></tr>
+      <tr><td>verdict verifier</td><td class="mono" id="c-verifier">…</td></tr>
+      <tr><td>verifier codehash</td><td class="mono" id="c-codehash">…</td></tr>
+      <tr><td>SP1 Groth16 verifier</td><td class="mono" id="c-sp1">…</td></tr>
+      <tr><td>USDC (here)</td><td class="mono" id="c-usdc">…</td></tr>
+    </table>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h2>USDC on Arc</h2>
+    <table>
+      <tr><td>chain id</td><td class="mono" id="c-chain">…</td></tr>
+      <tr><td>USDC ERC-20 face</td><td class="mono" id="c-predeploy">…</td></tr>
+      <tr><td>decimals</td><td class="mono" id="c-dec">…</td></tr>
+      <tr><td></td><td id="c-note" style="color:var(--dim)">…</td></tr>
+    </table>
+  </div>
+
+  <div class="claim">
+    <b>The seller reads two values before working:</b> the deal's <code>verifier</code> and its
+    <code>verifierCodeHash</code>. The buyer names the adjudicating program at funding, so a buyer
+    who names one that always returns <code>Failed</code> makes the seller work for nothing — and
+    on-chain that is indistinguishable from an honest <code>Failed</code>. Nothing checks it for
+    them. That is a cost of letting the funder choose the program, and it is stated here rather
+    than in a footnote.
+    <ul>
+      <li>The escrow has <b>no timeout</b>: if no proof arrives, a funded deal stays funded (task 003).</li>
+      <li>&ldquo;No bridge, no light client&rdquo; describes the path that decides the payout — not anchoring.</li>
+      <li>Every figure on this page came from <code>scripts/arc-usdc-e2e.sh</code>. Re-run it and they change.</li>
+    </ul>
+  </div>
+</main>
+
+<script id="arc-data" type="application/json">
+{
+  "tier": "local anvil at Arc's chain id — NOT an Arc testnet result",
+  "chainId": 5042002,
+  "arc": {
+    "testnetChainId": 5042002,
+    "usdcErc20": "0x3600000000000000000000000000000000000000",
+    "usdcErc20Decimals": 6,
+    "note": "on Arc, USDC is the native gas token and this predeploy is its ERC-20 face"
+  },
+  "deployed": {
+    "sp1Verifier": "0x5fbdb2315678afecb367f032d93f642f64180aa3",
+    "verdictVerifier": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
+    "verifierCodehash": "0x3871b5ff6a1b940f2fd0b7d151671621ae4225375785e0f86f1b3316f77a486f",
+    "escrow": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+    "usdcMock": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"
+  },
+  "reproduced": {
+    "dealId": "0x079d0c4b04f47b2acf5cbeec34e41deb35122bef012efbf71fa069fe59ef5bdf",
+    "amountUsdc": "250.000000",
+    "verdict": "Reproduced",
+    "sellerAfter": "250.000000 USDC",
+    "escrowAfter": "0.000000 USDC"
+  },
+  "failed": {
+    "dealId": "0xcea2c95cbdea6d7fb0ac8a8bf3d2f262eaff62a274f4941a7485288e265e4bce",
+    "amountUsdc": "250.000000",
+    "verdict": "Failed (a proven DECREASE)",
+    "buyerAfter": "750.000000 USDC",
+    "sellerUnchanged": "250.000000 USDC"
+  },
+  "generatedBy": "scripts/arc-usdc-e2e.sh"
+}
+</script>
+<script>
+  const d = JSON.parse(document.getElementById('arc-data').textContent);
+  const set = (id, v) => document.getElementById(id).textContent = v;
+  set('tier', d.tier);
+  set('v1', d.reproduced.verdict);  set('a1', d.reproduced.sellerAfter);
+  set('e1', d.reproduced.escrowAfter); set('d1', d.reproduced.dealId);
+  set('v2', d.failed.verdict);      set('a2', d.failed.buyerAfter);
+  set('s2', d.failed.sellerUnchanged + ' (unchanged)'); set('d2', d.failed.dealId);
+  set('c-escrow', d.deployed.escrow); set('c-verifier', d.deployed.verdictVerifier);
+  set('c-codehash', d.deployed.verifierCodehash); set('c-sp1', d.deployed.sp1Verifier);
+  set('c-usdc', d.deployed.usdcMock);
+  set('c-chain', d.chainId + '  (Arc testnet is ' + d.arc.testnetChainId + ')');
+  set('c-predeploy', d.arc.usdcErc20); set('c-dec', d.arc.usdcErc20Decimals);
+  set('c-note', d.arc.note);
+</script>

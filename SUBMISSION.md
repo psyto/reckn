@@ -197,10 +197,26 @@ demonstrated on both EVM and Solana behind one router — so the agent-payment s
 is a set of **supported targets, not a dependency**. If a rail wins, Reckn is
 positioned; if it stalls, the verdict still reproduces anywhere.
 
-- **Sponsor targets (supported, not bet on):** Circle **Arc — Best Agentic Economy**
-  (one settlement target) · **x402 / EIP-3009** payments (EVM escrow;
-  [`docs/x402-payments.md`](docs/x402-payments.md)) · **ERC-8004**
-  reputation (implemented) · Chainlink CRE / MCP as swappable orchestration.
+- **Sponsor integration — Arc, and only Arc** (founder ruling, 2026-09-06; the prize
+  list published that day confirms an Arc track at $10,000, with two prizes open to
+  Continuity entries: *Best DeFi or Agentic Application* and *Launch on Arc Testnet &
+  Push to Mainnet*). **Hedera is out of scope** — no x402 service, no Blocky402, no
+  consuming agent, no Hedera deployment.
+  **What makes Arc load-bearing rather than a deployment target:** USDC is Arc's
+  native gas token and Circle exposes an ERC-20 face over the same balance at
+  `0x3600…0000`, so an escrow there holds the chain's own money and the delta
+  predicate is a predicate over cents. Reckn's escrow already names its payment token
+  per deal, so **settling USDC on Arc needed no contract change at all**; what it
+  needed was evidence the settlement is correct in USDC's units and semantics — six
+  decimals, revert-not-false, and a blacklist that can freeze a payout.
+  Details, architecture diagram and limits: [`docs/arc-usdc.md`](docs/arc-usdc.md).
+  **Nothing is deployed to Arc yet** (a funded testnet key is the founder's to hold),
+  and Circle has not published Arc mainnet addresses, so *deployment-ready* is the
+  only honest posture for the Sept 30 requirement.
+- **Other sponsor surfaces (present, not pursued this event):** **x402 / EIP-3009**
+  payments (EVM escrow; [`docs/x402-payments.md`](docs/x402-payments.md)) ·
+  **ERC-8004** reputation (implemented) · Chainlink CRE / MCP as swappable
+  orchestration.
 - **The dual-VM build is the proof of agnosticism** — Solana is not scope creep, it
   shows the adjudicator outlives any single stack. Frame it as *one engine, any
   chain, any rail.*

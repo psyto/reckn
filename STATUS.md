@@ -53,6 +53,39 @@ M-8 形／M-18 形／711 の境界ずらし／M-20 形（pin の1文字）で正
 selftest 自身が計算した digest と一致。**定数を echo する stub は「witness された byte が動くまでは通る」**
 ——これは §6.2 が自分で書いている限界で、実際に stub を作って再現した。
 
+## Arc / USDC（task 005、2026-09-06）— ローカルで着地、testnet は founder の手
+
+**契約変更はゼロ。** Arc では USDC がネイティブガストークンで、Circle が同じ残高への
+**ERC-20 面を `0x3600000000000000000000000000000000000000` に predeploy**している（その面は
+**6 decimals**、ネイティブは 18）。`RecknZkEscrow` は deal ごとに支払いトークンを指名する設計なので、
+buyer が USDC を名指すだけ。**ラッパも payable 経路も要らなかった**——後者は関数面の追加＝
+§0 の中心主張の変更になるところだった。
+
+| 追加 | 中身 |
+|---|---|
+| `test/mocks/MockUSDC.sol` | 6 decimals / `false` を返さず revert / **blacklist**。決済結果を変えうる3性質のみ |
+| `test/RecknArcUsdcSettlement.t.sol` | 6テスト。**実 Groth16 proof のみ**（mock verifier もハードコード verdict も無し） |
+| `script/DeployArc.s.sol` | SP1 verifier（**gateway でなく固定**）→ verdict verifier → escrow |
+| `zk-verdict/contracts/arc.json` | Arc 定数を出典・日付つきで転記 |
+| `scripts/arc-usdc-e2e.sh` | ワンコマンド。**鍵も資金もアカウントも不要** |
+| `dashboard/arc.html` | frontend。実行結果をインライン化するので `file://` で開ける |
+| `docs/arc-usdc.md` | 提出補助文書（load-bearing の理由・mermaid 図・手順・限界） |
+
+**実測（2026-09-06）**: `forge test` **40 passed**（うち ARC 6）/ e2e は
+`escrow 250.000000 → seller 250.000000`、失敗方向は `buyer 750 → 500(funded) → 750(refund)`、
+seller 変化なし。`no-keys.sh` 5検査緑、008 の AC-00/00b/07b/10/11/14 と 009 の全 row 緑、
+`ac009-selftest` 15/15。
+
+**ゲートを1つ壊しかけて規約どおり直した**: 009 の AC-9 が総数 `{B}+16` を固定していて、Arc の6テストで
+赤くなった。§1.4（値は**測って得る、手で数えない**）に従い **`{S}` トークン**（`listed − {B} − 16` を
+runner が実測）へ置換。**総数が担っていた強度は捨てず**、`xvm-no-skip.sh` に「009 自身の16名が
+listing に残っていること」を §7.8 の fenced ブロックから読んで検査する節を足した——総数では
+**含意でしかなかった**ものを直接の主張にした。
+
+**停止点（founder の手）**: ①資金入りの Arc testnet 秘密鍵（faucet: `https://faucet.circle.com`）
+②デプロイ後の3アドレスを `arc.json` に記録 ③**mainnet はアドレス未公開なので "deployment-ready"
+しか取り得ない**（仕様上の限界であり、こちらの未完ではない）。
+
 ## 009 の実装（2026-09-06）
 
 | part | commit | 内容 |
@@ -1302,13 +1335,14 @@ AC-11(a) の静的リテラル検査は base64 化 1 行で抜けられ、AC-11(
 - Discord 参加、Event Info Center 確認、Code of Conduct 確認
 - ステーク後に `DISCLOSURE.md` 全文を主催者へ（`§1` の修正は 2026-09-04 に適用済み）
 
-**⚠ スポンサー構成の確認事項（`AGENTS.md` §3 のタスクに影響）**: 受理メールが名指ししたのは
-**1inch / World / Uniswap / Chainlink / 0G**（「and more」付き、**完全な賞金一覧は未公開**）。
-- **`007` World AgentKit** → World は**確認済み**
-- **`005` Arc / USDC** と **`006` Hedera / x402** → **どちらも現時点の名指しに無い**。
-  賞金一覧が公開されたら**対象スポンサーの実在を確認してから着手する**こと。
-  存在しないスポンサー向けに作ると当日作業を丸ごと捨てることになる。
-  なお 005/006 は実行順（`008 → 009 → 003 → 004`）に入っておらず、凍結 9/12 までに到達しない見込み。
+**✅ スポンサー構成は決着（2026-09-06、賞金一覧を実見）**: 上の ⚠ は解消した。**Arc は実在**
+（$10,000）。Continuity で出せる Arc の賞は2本 —— *Best DeFi or Agentic Application*（$1,666）と
+*Launch on Arc Testnet & Push to Mainnet*（$1,500）。**どちらも "working frontend and backend +
+architecture diagram" を要求**し、後者は **9/30 までに mainnet へ deploy 済み or deployment-ready**。
+Hedera も実在（$15,000）だが、**2026-09-06 の founder 裁定でスコープ外**（`AGENTS.md` §3）。
+Hedera の Continuity 賞は「既に Hedera 上に存在するプロジェクト」が要件で、そもそも**応募資格が無い**。
+
+**旧記述「005/006 は名指しに無い」は使わない** —— 一覧で確認済み。
 
 ## 裁定 — OQ-5（008 の M-8 が `RecknZkEscrow.sol` を触る件、2026-09-04）
 

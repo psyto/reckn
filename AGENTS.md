@@ -99,11 +99,21 @@ task → reckn-spec (Claude, 判断を1つ固定) → reckn-codex-review(stage=s
 | 002 | **実 ERC-20 ワークロード** | in-guest 再実行を単一 SSTORE fixture から実トークン入金述語へ。cycles を実測して記録 |
 | 003 | **key gauntlet** | 全当事者の秘密鍵を公開し、あらゆる窃取経路が revert することをテスト行列と UI で実証 |
 | 004 | **live adversarial input** | seller の納品主張を自由入力に。観客が LLM 判事を説得でき、再実行は説得されない |
-| 005 | **Arc / USDC** | Arc testnet に USDC エスクローをデプロイ。9/30 までに mainnet 可能な形 |
-| 006 | **Hedera / x402** | x402 有料サービスを Hedera 上でホストし、実課金リクエストを通す |
+| 005 | **Arc / USDC** | Arc の USDC で escrow を決済する。**2026-09-06 founder 裁定により唯一のスポンサー統合**。契約変更は不要（deal がトークンを指名する）——要るのは USDC の単位と意味論での正しさの証拠 |
+| ~~006~~ | ~~Hedera / x402~~ | **2026-09-06 founder 裁定によりスコープ外。** x402 有料サービス / Blocky402 / 消費 agent / Hedera デプロイ / 関連文書は作らない |
 | 007 | **World AgentKit** | 「**誰が紛争を開けるか**」のゲート。**「誰が判定するか」には触れない**（触れたら 0. 違反） |
 | 009 | **cross-VM settlement** | **Solana の proof で EVM の escrow を決済する。** 今日 SVM の verdict は同じ汎用 verifier でオンチェーン検証されるが、`settleWithProof` に届いているのは EVM の proof だけ。EVM に預けた資金を、Solana 上で行われた作業についての proof が解錠する——resolver なし、bridge なし、adjudication 経路に light client なし |
 | 008 | **verdict domain soundness** | guest の delta が U256 の limb 0 で取られており、`pre=2^64` / `post=2^64−1`（**減少**）が最大入金として `Reproduced` になる＝**偽の解放**。off-chain は U256。加えて guest は `chain_id` しか設定せず spec/block env が off-chain と一致しない |
+
+### スポンサー統合（founder 裁定 2026-09-06）
+
+**Arc だけをやる。Hedera はやらない。** 賞金一覧が公開され、**Arc は実在**（$10,000、うち
+Continuity で出せるのは *Best DeFi or Agentic Application* と *Launch on Arc Testnet & Push to
+Mainnet* の2本）。**両方とも "working frontend and backend + architecture diagram" を要求する**。
+
+- Arc は**支払いレールであって、裁定機構を置き換えない**。デモは Arc 上の1つの明確な取引に集中する
+- **`RecknZkEscrow` に payable 経路を足さない**。関数面が増えるのは §0 の中心主張の変更にあたる
+- **mainnet デプロイは禁止（§8）**。賞の要件は "deployed **or deployment-ready**" なので後者を取る
 
 ### 実行順（founder 裁定 2026-09-04）
 

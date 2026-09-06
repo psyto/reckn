@@ -100,6 +100,20 @@ optimistic 系=bonded resolver / feedback 系=投票者）。**アーキテク�
 - **9/9 のチェックポイントは「008 と 009 が*同時に*緑」。** 片方ずつ確認しても満たせない。
   009 の `both-green.sh` が兄弟 gate を閉包で発見して一括で走らせる形になっている。
 
+## Arc（task 005、2026-09-06 に founder が唯一のスポンサー統合として固定）
+
+- **Arc では USDC がネイティブガストークン**（18 decimals）で、Circle が同じ残高への
+  **ERC-20 面を `0x3600000000000000000000000000000000000000` に predeploy**している（**その面は 6 decimals**）。
+  ラップド USDC は存在せず、必要でもない。chain id **5042002**、RPC `https://rpc.testnet.arc.io`、
+  explorer `https://testnet.arcscan.app`、faucet `https://faucet.circle.com`。
+  **mainnet アドレスは 2026-09-06 時点で未公開**（"not yet available"）。出典は
+  `zk-verdict/contracts/arc.json` に日付つきで転記。
+- **`RecknZkEscrow` は無変更で USDC を決済できる。** deal ごとに支払いトークンを指名する設計だから。
+  **payable 経路を足すのは関数面の追加＝中心主張の変更**（`AGENTS.md` §0）なので、やらない。
+- **Hedera はスコープ外**（同じ裁定）。x402 有料サービス、Blocky402、消費 agent、Hedera デプロイは作らない。
+- 実演は `bash scripts/arc-usdc-e2e.sh`（鍵も資金も不要、chain id 5042002 のローカル anvil）。
+  **これは Arc testnet の結果ではない**。testnet デプロイには資金入りの鍵が要り、それは agent が持たない。
+
 ## この repo で成立した規則（仕様レビューが生んだもの。AC を書く前に読め）
 
 - **R-7**: 禁止リストを書くな。**性質で閉じろ。** 名前を1つ足せば破れる検査は検査でない。

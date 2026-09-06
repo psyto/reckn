@@ -66,6 +66,17 @@ param_for() {
     B) jq -r '.testIds | length' "$base" ;;
     P) jq -r '.P' "$base" ;;
     G) discovered_gates | wc -l | tr -d ' ' ;;
+    # {S} — what a SIBLING task added to the forge suite after 009. Measured here,
+    # by this runner, from the listing itself: 009's own no-skip cell used to pin the
+    # total `{B}+16`, and task 005 (Arc/USDC) legitimately adds tests to the same
+    # suite. §1.4 rule 2 — the value is measured, never transcribed — and the strength
+    # the pinned total carried moved into xvm-no-skip.sh's clause 5, which requires
+    # 009's own sixteen names to still be in the listing.
+    S) local j; j=$(mktemp "${TMPDIR:-/tmp}/ac009-list.XXXXXX")
+       (cd "$root/zk-verdict/contracts" && forge test --list --json) > "$j" 2>/dev/null || true
+       local n; n=$(jq '[.[] | .[] | .[]] | length' "$j" 2>/dev/null || echo 0)
+       rm -f "$j"
+       echo $(( n - $(jq -r '.testIds | length' "$base") - 16 )) ;;
   esac
 }
 
@@ -128,7 +139,7 @@ run_forge() {
 run_script() {
   local ac=$1 cmd=$2 evidence=$3 out expected rc=0
   local t
-  for t in B P G; do
+  for t in B P G S; do
     if [[ "$evidence" == *"{$t}"* ]]; then
       local v; v=$(param_for "$t")
       evidence=${evidence//\{$t\}/$v}

@@ -1,0 +1,32 @@
+{
+  "tier": "local anvil at Arc's chain id — NOT an Arc testnet result",
+  "chainId": 5042002,
+  "arc": {
+    "testnetChainId": 5042002,
+    "usdcErc20": "0x3600000000000000000000000000000000000000",
+    "usdcErc20Decimals": 6,
+    "note": "on Arc, USDC is the native gas token and this predeploy is its ERC-20 face"
+  },
+  "deployed": {
+    "sp1Verifier": "0x5fbdb2315678afecb367f032d93f642f64180aa3",
+    "verdictVerifier": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
+    "verifierCodehash": "0x3871b5ff6a1b940f2fd0b7d151671621ae4225375785e0f86f1b3316f77a486f",
+    "escrow": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+    "usdcMock": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"
+  },
+  "reproduced": {
+    "dealId": "0x079d0c4b04f47b2acf5cbeec34e41deb35122bef012efbf71fa069fe59ef5bdf",
+    "amountUsdc": "250.000000",
+    "verdict": "Reproduced",
+    "sellerAfter": "250.000000 USDC",
+    "escrowAfter": "0.000000 USDC"
+  },
+  "failed": {
+    "dealId": "0xcea2c95cbdea6d7fb0ac8a8bf3d2f262eaff62a274f4941a7485288e265e4bce",
+    "amountUsdc": "250.000000",
+    "verdict": "Failed (a proven DECREASE)",
+    "buyerAfter": "750.000000 USDC",
+    "sellerUnchanged": "250.000000 USDC"
+  },
+  "generatedBy": "scripts/arc-usdc-e2e.sh"
+}

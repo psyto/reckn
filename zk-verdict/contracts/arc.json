@@ -1,0 +1,25 @@
+{
+  "note": "Arc network constants, read from https://docs.arc.io on 2026-09-06. Values are transcribed, not derived; re-read the docs before a deployment rather than trusting this file.",
+  "source": "https://docs.arc.io/arc/references/connect-to-arc and /arc/references/contract-addresses",
+  "read_at": "2026-09-06",
+  "testnet": {
+    "name": "Arc Testnet",
+    "chainId": 5042002,
+    "rpc": "https://rpc.testnet.arc.io",
+    "explorer": "https://testnet.arcscan.app",
+    "faucet": "https://faucet.circle.com",
+    "nativeGasToken": "USDC (18 decimals as native)",
+    "usdcErc20": "0x3600000000000000000000000000000000000000",
+    "usdcErc20Decimals": 6,
+    "eurcErc20": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+    "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3"
+  },
+  "mainnet": {
+    "status": "addresses not yet published by Circle as of 2026-09-06",
+    "consequence": "only 'deployment-ready' is achievable for mainnet today; a mainnet address list is a precondition, not a task"
+  },
+  "deployedByReckn": {
+    "status": "nothing deployed yet",
+    "blockedOn": "a funded Arc testnet key, which an agent must not hold (AGENTS.md 8)"
+  }
+}

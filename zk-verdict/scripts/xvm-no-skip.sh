@@ -41,20 +41,26 @@ for f in "${fixtures[@]}"; do
   fi
 done
 
-# 3. listed == ran == {B} + 16, none skipped, all Success.
+# 3. listed == ran, none skipped, all Success — and the decomposition printed rather
+#    than a total pinned. A sibling task that legitimately ADDS tests must not turn
+#    this row red for a number (§1.4 rule 2: the value is measured, never transcribed).
+#    The strength the pinned total used to carry is not dropped, it moves to clause 5:
+#    009's own sixteen names must still be in the listing.
 B=$(jq -r '.B' "$base")
-want=$((B + 16))
 listed_json=$(mktemp "${TMPDIR:-/tmp}/xvm-list.XXXXXX")
 ran_json=$(mktemp "${TMPDIR:-/tmp}/xvm-ran.XXXXXX")
 (cd "$root/zk-verdict/contracts" && forge test --list --json) > "$listed_json" 2>/dev/null || note "forge --list failed"
 (cd "$root/zk-verdict/contracts" && forge test --json) > "$ran_json" 2>/dev/null || note "forge test failed"
 
 listed=$(jq '[.[] | .[] | .[]] | length' "$listed_json" 2>/dev/null || echo 0)
+listed_names=$(mktemp "${TMPDIR:-/tmp}/xvm-names.XXXXXX")
+jq -r '.[] | .[] | .[]' "$listed_json" > "$listed_names" 2>/dev/null || true
 ran=$(jq '[.[].test_results | to_entries[]] | length' "$ran_json" 2>/dev/null || echo 0)
 skipped=$(jq '[.[].test_results | to_entries[] | select(.value.status == "Skipped")] | length' "$ran_json" 2>/dev/null || echo -1)
 nonsuccess=$(jq '[.[].test_results | to_entries[] | select(.value.status != "Success")] | length' "$ran_json" 2>/dev/null || echo -1)
-[[ "$listed" == "$want" ]] || note "$listed tests listed, {B}+16 = $want expected"
-[[ "$ran" == "$want" ]] || note "$ran tests ran, $want expected"
+S=$((listed - B - 16))
+[[ "$ran" == "$listed" ]] || note "$listed tests listed but $ran ran — a test that is listed and does not run is the defect this row exists for"
+[[ $S -ge 0 ]] || note "the listing is smaller than {B}+16: tests that existed at 009's base or in 009 itself are gone"'
 [[ "$skipped" == "0" ]] || note "$skipped forge-reported skip(s)"
 [[ "$nonsuccess" == "0" ]] || note "$nonsuccess test(s) did not report Success"
 
@@ -75,8 +81,17 @@ PY
 )
 n_missing=$(printf '%s' "$missing" | awk '{print $1}')
 [[ "$n_missing" == "0" ]] || note "$n_missing base test id(s) missing: $(printf '%s' "$missing" | cut -d' ' -f2-)"
-rm -f "$listed_json" "$ran_json"
+rm -f "$ran_json"
 
+# 5. 009's own sixteen are still there. Read from the spec's fenced block, which is
+#    the only place the names live (§7.8), so this cannot drift from the document.
+missing_own=0
+while IFS= read -r nm; do
+  [[ -n "$nm" ]] || continue
+  grep -qF -- "$nm" "$listed_names" || { note "009's own test is gone from the listing: $nm"; missing_own=$((missing_own+1)); }
+done < <(awk '/^```ac009-testnames$/{f=1;next} f&&/^```/{exit} f{print}' "$root/docs/specs/009-cross-vm-settlement.md")
+
+rm -f "$listed_json" "$listed_names"
 witness=$(cat $(find "$root/zk-verdict/contracts/test" -maxdepth 1 -name '*.t.sol' | LC_ALL=C sort) | shasum -a 256 | cut -c1-16)
-echo "no-skip: $gates fixture gates in the cross-VM file, $readable/2 fixtures readable, $B+16 tests listed and ran, $skipped forge-reported skips; witness=$witness"
+echo "no-skip: $gates fixture gates in the cross-VM file, $readable/2 fixtures readable, $B+16+$S tests listed and ran, $skipped forge-reported skips; witness=$witness"
 [[ $fail -eq 0 ]] || exit 1

@@ -262,6 +262,7 @@ SUBMISSION.md               # pitch surface: submission copy, demo-video script,
 scripts/
   no-keys.sh                # BUILD CONDITION: no key can judge (exit 0 = claim holds)
   anvil-e2e.sh              # one-command live dispute on a throwaway local chain
+  arc-usdc-e2e.sh           # one-command conditional USDC payment, Arc-shaped chain
 docs/
   ethonline-2026/           # PLAN.md + DISCLOSURE.md (founder documents)
   specs/ reviews/ tasks/    # per-task spec → review → impl records (event work)
@@ -312,9 +313,13 @@ zk-verdict/                 # the keyless path — independent SP1 workspace
   scripts/escrow-shape.sh   #   the escrow's shape, closed by ten properties
   scripts/both-green.sh     #   sibling gates, discovered by closure and actually run
   scripts/mutants/          #   36 mutation patches: 21 for 008, 15 for 009
+  contracts/script/DeployArc.s.sol # deploy the keyless path to Arc (no admin to hold)
+  contracts/test/RecknArcUsdcSettlement.t.sol # USDC settlement, real Groth16 proofs
+  contracts/arc.json        #   Arc's constants, transcribed with source and date
   scripts/surfaces.sh       #   BUILD CONDITION: the two files 008 promised not to touch
   scripts/surfaces.pinned   #   their pinned digests, re-pinned only as a readable diff
 dashboard/                  # LLM-judge vs replay money-shot — implemented
+  arc.html                  #   Arc: a USDC payment released by a proof (measured run)
   index.html                #   cinematic money-shot: money moves, live keeper
                             #   console + ledger, on-chain resolve receipt
   variants/                 #   design exploration (v1–v5); v5 is promoted above
@@ -608,6 +613,27 @@ content publication.
   double-settle
   rules).
 
+### Arc — a conditional USDC payment whose condition is a proof
+
+On [Arc](https://docs.arc.io), USDC is the native gas token and Circle exposes an
+ERC-20 interface over that same balance at `0x3600…0000` (6 decimals on that face).
+Reckn's escrow already names its payment token per deal, so **settling USDC on Arc
+required no change to the contract at all** — what it required was evidence that the
+settlement is correct in USDC's units and under USDC's semantics.
+
+```bash
+bash scripts/arc-usdc-e2e.sh     # local chain at Arc's chain id: deploy → fund → settle → refund
+cd zk-verdict/contracts && forge test --match-contract RecknArcUsdc   # 6 tests, real Groth16 proofs
+open dashboard/arc.html          # the run above, rendered (data inlined, file:// works)
+```
+
+250.00 USDC released by a proof, and a proof of a **decrease** refunding the buyer —
+with no owner, no resolver and no signature anywhere on the path that decides who is
+paid. Why Arc is load-bearing rather than a deployment target, the architecture
+diagram, and the limits (local tier, no timeout, `MockUSDC` is not USDC) are in
+[`docs/arc-usdc.md`](docs/arc-usdc.md). **Nothing is deployed to Arc yet**: the script
+needs a funded testnet key, and Circle has not published mainnet addresses.
+
 ### Closed during ETHOnline (2026-09-04 onward)
 
 Two of the gaps this section used to list were **soundness bugs**, not limits, and
@@ -824,6 +850,12 @@ bash zk-verdict/scripts/ac009.sh --check    # 13 rows + the naming gate
 bash zk-verdict/scripts/ac009.sh AC-1       # one escrow, two VMs, both settled
 bash scripts/no-keys.sh                     # the build condition, five checks
 bash zk-verdict/scripts/surfaces.sh         # the two files 008 may not touch
+
+# Reckn on Arc: a conditional USDC payment released by a proof. Local chain at Arc's
+# chain id (5042002) — deploy → fund 250.00 USDC → settle → refund. No key, no funds.
+bash scripts/arc-usdc-e2e.sh
+cd zk-verdict/contracts && forge test --match-contract RecknArcUsdc   # 6 tests
+open dashboard/arc.html            # the run above, rendered (data inlined)
 
 # one-command local chain demo: Act I false claim → Failed → refund;
 # Act II causal delta predicate (credited ≥ minOut) → Reproduced → seller release
