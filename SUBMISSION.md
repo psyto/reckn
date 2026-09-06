@@ -286,6 +286,35 @@ positioned; if it stalls, the verdict still reproduces anywhere.
 
 ---
 
+## Demo video — the re-cut (2026-09-06). Shoot this, not the old one.
+
+**Why re-cut.** The 35s cut in the repo was made before the event and contains none of
+the event's work: not the false-release fix, not cross-VM settlement, not the Arc USDC
+flow, not the timeout. Both Arc prizes require a video; this is the one to record.
+
+**Format:** ~100 s, screen capture, no audio needed — title cards carry it. Two
+sources only: `dashboard/index.html` (the story) and `http://127.0.0.1:8787` (the live
+demo, `bash scripts/arc-demo.sh`). Never cut to a terminal except for the last card.
+
+| # | seconds | on screen | title card |
+|---|---|---|---|
+| 1 | 0–12 | `index.html`, **False claim** selected, replay running: the opinion judge approves, re-execution refunds | *An agent paid another agent. They disagree. Who decides?* |
+| 2 | 12–20 | same page, the two verdicts side by side | *One reads the claim. The other replays the work.* |
+| 3 | 20–28 | scroll to **Now check it yourself**, then cut to the live page loading | *Don't take our word for it.* |
+| 4 | 28–42 | click **fund 250.00** → escrow tile goes to 250.00 USDC; click **settle with the proof** → seller tile 250.00 | *A conditional USDC payment. The condition is a proof.* |
+| 5 | 42–58 | **click "submit another execution's proof"** — hold on the red line `reverted: BindingMismatch() ← the money did not move`, escrow still 250.00 | *A real proof. Of the wrong execution. The money does not move.* |
+| 6 | 58–70 | click **settle with the failing proof** → buyer refunded | *And when the work did not reproduce, the buyer is made whole.* |
+| 7 | 70–84 | click **fund** then **settle with the Solana proof** → seller tile moves | *USDC on Arc. Released by a proof about work performed on **Solana**. No bridge. No light client.* |
+| 8 | 84–94 | click **refund now** → `TooEarly()`; click **wait 30 days**; click **refund** → buyer made whole | *And if nobody ever proves anything, the money still comes home.* |
+| 9 | 94–100 | cut to a terminal: `bash scripts/no-keys.sh`, ending on `✓ the claim holds` | *There is no key that can move a funded escrow. It is a build condition, not a promise.* |
+
+**Three things not to do.** Do not describe the local chain as Arc testnet — it is a
+local anvil at Arc's chain id and the page says so on screen, so leave that banner
+visible. Do not cut the `BindingMismatch()` beat short; it is the only moment in the
+video where a theft is attempted and fails, and it is worth four seconds of silence.
+Do not add a claim the repository does not make: "no bridge, no light client" is about
+the adjudication path, not about anchoring.
+
 ## Demo video script (VO upgrade — the silent cut already exists)
 
 > The 35s carded cut (`dashboard/media/reckn-demo-full.mp4`) already realizes this

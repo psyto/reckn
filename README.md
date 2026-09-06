@@ -2,6 +2,34 @@
 
 **Every disputed agent payment is re-reckoned on-chain by replaying it. Reproduce, or refund.**
 
+An escrow whose release condition is a **proof**, not a person. No owner, no
+resolver, no admin, no upgrade path — and that is a **build condition**, not a
+promise: `scripts/no-keys.sh` fails the build if one appears.
+
+### Try to steal the money. It is a button.
+
+![The Arc demo: a funded 250.00 USDC deal, then another execution's real Groth16 proof submitted against it — reverted: BindingMismatch(), the money did not move.](dashboard/media/arc-demo-steal.jpg)
+
+```bash
+bash scripts/arc-demo.sh        # then open http://127.0.0.1:8787
+```
+
+Five buttons, five real transactions against a local chain at Arc's chain id:
+
+| press | what happens |
+|---|---|
+| **fund 250.00 USDC**, then **settle with the proof** | a conditional stablecoin payment, released by a Groth16 proof and by nothing else |
+| **submit another execution's proof** | it *verifies* — it is a real proof — and `BindingMismatch()` stops it. **The money does not move** |
+| **settle with the failing proof** | a proof that the balance **decreased** refunds the buyer |
+| **settle with the Solana proof** | **USDC on Arc, released by a proof about work performed on Solana.** No bridge, no light client, no resolver |
+| **refund now** → **wait 30 days** → **refund** | `TooEarly()`, then *anyone* may return the money to the buyer — and the caller gets nothing for it |
+
+Everything else in this README is the argument for why those five buttons behave that
+way, and what is still **not** true ([the gaps are listed](#known-gaps-not-closed),
+not buried).
+
+---
+
 Reckn is an escrow layer for agent-to-agent (x402-style) payments where the
 **dispute adjudicator is deterministic re-execution** — not a TEE'd LLM judge,
 not self-reported feedback, not an unaudited internal loop.
@@ -32,12 +60,13 @@ that program, chooses the payout. Scope and limits are stated honestly in
 [`zk-verdict/`](zk-verdict), including what is **not** closed
 ([below](#known-gaps-not-closed)).
 
-**▶ Money-shot:** the same dispute, judged by an opinion LLM and by deterministic
-re-execution, watching them disagree — the animation below is driven by real
-`reexec-evm` output. Open [`dashboard/index.html`](dashboard/index.html) locally to
-toggle *Honest delivery* / *False claim* yourself (the data is inline, so `file://`
-works), or run the whole thing live on a throwaway chain:
-[`bash scripts/anvil-e2e.sh`](#try-it-one-command).
+**▶ Why it matters, in twenty seconds:** the same dispute, judged by an opinion LLM
+and by deterministic re-execution, **watching them disagree** — the animation below is
+driven by real `reexec-evm` output. Open [`dashboard/index.html`](dashboard/index.html)
+locally to toggle *Honest delivery* / *False claim* yourself (the data is inline, so
+`file://` works), or run it live on a throwaway chain:
+[`bash scripts/anvil-e2e.sh`](#try-it-one-command). **That page is the hook; the
+buttons above are the check.**
 
 **▶ ZK money-shot:** [`dashboard/variants/`](dashboard/variants) — watch a disputed
 payment get **re-executed inside a zkVM → proven → verified on-chain
@@ -47,7 +76,15 @@ prestate* and the pipeline is rejected: no proof, no settlement. One command:
 
 ![Reckn money-shot — the same dispute: the opinion judge reads the seller's claim and approves; re-execution replays the actual plan, sees the real output, and refunds the buyer.](dashboard/media/reckn-moneyshot.gif)
 
-**▶ Demo video:** [`dashboard/media/reckn-demo-full.mp4`](dashboard/media/reckn-demo-full.mp4)
+**▶ USDC on Arc, released by a proof about work on Solana** — the same page, further
+down. The deal names the Solana guest's verifier; the escrow never learns which
+virtual machine the work happened on.
+
+![The Arc demo again: the Solana deal funded and settled with the Solana proof, the seller tile at 250.00 USDC.](dashboard/media/arc-demo-solana.jpg)
+
+**▶ Demo video** *(recorded before the event's work — being re-cut; see
+[`docs/arc-usdc.md`](docs/arc-usdc.md) for what is new)***:**
+[`dashboard/media/reckn-demo-full.mp4`](dashboard/media/reckn-demo-full.mp4)
 — a self-explanatory 35s cut with title cards (no audio needed): the hook (agent
 payments settle on a trusted judge you can't check) → the money-shot judged two ways
 (false → refund, honest → release) → **live `anvil-e2e.sh` on a real chain** (pin the

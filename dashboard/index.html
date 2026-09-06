@@ -635,6 +635,24 @@
     </div>
   </section>
 
+  <section class="drive" style="margin:26px 0 8px; padding:18px 20px; border:1px solid var(--line);
+           border-left:3px solid var(--gold); border-radius:12px; background:var(--panel);">
+    <div style="font-size:15px; font-weight:650; margin-bottom:6px;">Now check it yourself.</div>
+    <p style="margin:0 0 10px; color:var(--mute); font-size:13.5px; line-height:1.55;">
+      Everything above is a replay of real engine output — you are watching. One command turns it into
+      something you drive: a local chain at <b>Arc's chain id</b>, 250.00 <b>USDC</b> escrowed, and five
+      buttons that send real transactions. One of them is <b>&ldquo;submit another execution's proof&rdquo;</b>,
+      and it fails with the contract's own error while the money stays put. Another settles the deal with a
+      proof about work performed <b>on Solana</b>.
+    </p>
+    <pre style="margin:0 0 8px; padding:10px 12px; background:var(--void); border:1px solid var(--line);
+         border-radius:8px; font-family:var(--mono); font-size:12.5px; overflow:auto;">bash scripts/arc-demo.sh     <span style="color:var(--mute)">then open</span> http://127.0.0.1:8787</pre>
+    <p style="margin:0; color:var(--faint); font-size:12.5px;">
+      No key, no funds, no account anywhere. A local chain at Arc's chain id is <b>not</b> Arc testnet, and
+      the page says so before it says anything else.
+    </p>
+  </section>
+
   <footer class="foot">
     <span><b>engine</b> reckn · Rust · revm</span>
     <span><b>chain</b> 31337 @ block 21,000,000</span>
