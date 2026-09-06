@@ -249,15 +249,46 @@ and `settleWithProof` verifies the SP1 proof via `RecknVerdictVerifier` and requ
 the binding to match before paying out — so a proof from some *other* favorable
 execution cannot settle this deal.
 
-- `fund(dealId, seller, token, amount, dealBinding)` — buyer escrows the payment.
+- `fund(dealId, seller, token, amount, verifier, verifierCodeHash, dealBinding)` —
+  the buyer escrows the payment **and names the program whose proof may settle it**,
+  pinned by the code's hash so the address cannot become different code later.
 - `settleWithProof(dealId, publicValues, proofBytes)` — **permissionless**: the proof
   carries its own authority. `Reproduced` → release to the seller; `Failed` → refund
-  the buyer.
+  the buyer. There is no parameter with which a settler could name an adjudicator.
 
-Tested (`RecknZkEscrow.t.sol`): a **real Groth16 proof** of the EVM re-execution
-(`Reproduced`) **settles to the seller** on SP1's real verifier; a `Failed` verdict
-refunds the buyer; a **binding mismatch** and an **unverified proof** both revert.
-This is the endgame the earlier pieces pointed at: settlement authority from a proof
-that verifies, chain-agnostic, with no trusted resolver.
+**One escrow, two virtual machines.** The adjudicator is a property of the deal, not
+of the deployment: the escrow has **no constructor and no `immutable`**, so two
+deployments of this source are the same contract, and one instance settles an EVM
+proof and a Solana proof side by side. The funder chooses the program; the proof,
+checked by that program, chooses the payout. The dispatch into funder-named code is
+`view`-typed — a `STATICCALL` — so the callee cannot write state.
+
+Tested (`RecknZkEscrow.t.sol`, `RecknCrossVmSettlement.t.sol`): a **real Groth16
+proof** of the EVM re-execution (`Reproduced`) **settles to the seller** on SP1's real
+verifier; **one escrow settles the EVM proof and the Solana proof**; a `Failed`
+verdict refunds the buyer; a **binding mismatch** and an **unverified proof** both
+revert; a proof that *does* verify but carries another deal's binding still reverts,
+which is how the two barriers are shown to be independent.
+
+### Honest scope of cross-VM settlement
+
+- **Anchoring is not what this closes.** Nothing here establishes that the committed
+  `bank_hash` was ever a real Solana cluster's — the guest recomputes it from the
+  committed account set, which is conclusive only over a **complete** set, and the
+  demo treats its committed set as the world. **"Settled by a Solana proof" means
+  "settled by a proof about a Solana-shaped state the deal named", not "about
+  Solana".** The EVM side is symmetric: the `state_root` ↔ block-header binding still
+  lives in the off-chain `reexec-evm::header` layer. *"No bridge, no light client"* is
+  therefore a statement about the **adjudication path**, not about anchoring.
+- **The seller's checklist grew.** A seller must read three values off the funded deal
+  before working — `verifier`, `verifierCodeHash`, `dealBinding` — not one, and
+  nothing checks them on the seller's behalf. A buyer can name a program that always
+  returns `Failed`; on-chain that is indistinguishable from an honest `Failed`.
+- **One implementation of each binding.** The repository contains exactly one
+  implementation of the SVM binding formula — the guest — so *"either party can
+  independently compute the deal's terms"* is **not demonstrated**: the demo funds a
+  deal by copying `deal_binding` out of a fixture the prover produced.
+- **Tier.** Local, in-memory, one process. No chain of any kind was contacted. Green
+  tests here say nothing about testnet or mainnet.
 
 This is a nested SP1 workspace, independent of the main reckn crates' build.

@@ -17,6 +17,21 @@ TEE の LLM 判事でも、自己申告フィードバックでも、監査不�
 持たず、`settleWithProof` は permissionless。決済権限は「proof が検証される」ことから来る。
 `bash scripts/no-keys.sh` がこれをビルド条件として強制する。**commit 前に必ず走らせる。**
 
+**009 後の決済（2026-09-06）**: エスクローは**2つの guest の proof を1つの契約で**決済する
+（EVM と Solana、実 Groth16、`RecknCrossVmSettlement.t.sol`）。**constructor は無い**ので、
+同じソースのデプロイは挙動として同一。**adjudicator は deal ごとに funder が指名**し、codehash で
+固定される。
+
+- **正しい文はこれ**: *funder が program を選び、その program が検査した proof が payout を選ぶ*。
+- **書いてはいけない文**: 「proof 検証を飛ばす payout 経路は無い」。**偽である** ——
+  buyer は `fund` で verifier を指名するので、sham を指名すればゴミで payout される
+  （009 の AC-3 test 2 がその挙動を要求している）。
+- **009 が新設した危険（seller 側）**: buyer が常に `FAILED` を返す verifier を指名でき、
+  seller はタダ働きする。オンチェーンでは正直な `Failed` と区別が付かない。
+- **「Solana の proof で決済」は anchoring の主張ではない**: guest は committed account set から
+  `bank_hash` を再計算するだけで、それが実際の Solana クラスタのものだったことは 009 も示さない。
+  *no bridge / no light client* は**裁定経路についての言明**。
+
 **主張が住むファイルは1本ではない。** `settleWithProof` は
 `zk-verdict/contracts/src/RecknVerdictVerifier.sol` の `verifyVerdict` が返す struct に従うので、
 **その1本も同じ権限を持つ**。2026-09-05 の check 5 でそのファイルも検査領域に入った

@@ -619,8 +619,23 @@ the earlier text deserves to know what happened to it.
   (`zk-verdict/script/tests/binding.rs`), so a proof cannot be carried from one
   environment to another.
 
+- **The build condition read one file, and settlement authority left it** (found
+  2026-09-04, closed by task 008). `scripts/no-keys.sh` checked `RecknZkEscrow.sol`
+  only, while `settleWithProof` obeys the struct `RecknVerdictVerifier` returns — a
+  different file in the same deployment, on the same authority path. A constant-keyed
+  branch there is a resolver and it passed every check we had. Check 5 now closes that
+  file by six properties rather than by a list of forbidden constructs.
+- **`fallback()` and `receive()` were invisible to the enumeration** (found
+  2026-09-05, closed by task 009). Neither carries the `function` keyword, so the
+  state-changing surface check could not see them; a `fallback` that drains any funded
+  deal compiled and passed all four checks. Check 2 now closes the entry-point set
+  instead of enumerating what its grep finds — and the region it reads reaches the
+  whole of the deployed code, because an **inherited** member is declared above the
+  contract line and was outside every clause until 009's review found it.
+
 The evidence is mechanical, not narrative: `bash zk-verdict/scripts/ac008.sh AC-02`
-and `AC-03` run those vectors and assert the count before they assert success.
+and `AC-03` run those vectors and assert the count before they assert success, and
+`bash scripts/no-keys.sh` names the clause that fires for each of the shapes above.
 
 ### Known gaps (not closed)
 
@@ -644,18 +659,23 @@ is closed by anything above; the honest scope in
   So a plan touching `0x01` or `0x0a`–`0x11` is not unsupported; it runs against a
   *different implementation* than the off-chain engine, and the two have never been
   checked for equivalence. Corrected 2026-09-04.
-- **⚠ The build condition reads one file, and settlement authority leaves it**
-  (found 2026-09-04; task 008 closes it). `scripts/no-keys.sh` checks
-  `RecknZkEscrow.sol` only, but `settleWithProof` obeys the struct returned by
-  `RecknVerdictVerifier` — a different file in the same deployment, on the same
-  authority path. A constant-keyed branch there is a resolver, and it passed every
-  check we had. The claim is that no key can judge; the region we were checking was
-  one file.
-- **⚠ `fallback()` and `receive()` are invisible to the enumeration**
-  (found 2026-09-05; task 009 closes it). Neither carries the `function` keyword, so
-  the state-changing surface check cannot see them. Measured: a `fallback` that
-  drains any funded deal compiles and passes all four checks. Nothing exploitable
-  ships today — the contract has neither — but the guarantee did not cover the shape.
+- **Cross-VM settlement is not cross-VM anchoring.** One escrow settles an EVM proof
+  and a Solana proof (task 009), and that is a statement about the **adjudication
+  path**: no bridge, no light client, no resolver decides the payout. It is **not** a
+  statement that the committed `bank_hash` was ever a real Solana cluster's — the
+  guest recomputes it from the committed account set, and the demo treats that set as
+  the world. The EVM side is symmetric: the `state_root` ↔ block-header binding still
+  lives in the off-chain `reexec-evm::header` layer. *Settled by a Solana proof* means
+  *settled by a proof about a Solana-shaped state the deal named*.
+- **The seller now has three values to check, and nothing checks them for them.** After
+  009 the buyer names the adjudicating program at funding. A buyer who names a sham has
+  defrauded only themselves — but a buyer who names one that always returns `Failed`
+  makes the seller work for nothing, and on-chain that is indistinguishable from an
+  honest `Failed`. The seller's protection is to read the deal's `verifier`,
+  `verifierCodeHash` and `dealBinding` before working.
+- **Tier.** Every result in this repository is local: `forge` and `cargo` on one
+  machine, in-memory, one process. No chain of any kind has been contacted. A green
+  suite says nothing about testnet or mainnet.
 - **Scale.** The guest proves one CALL plus one delta check. A full block or an
   arbitrary contract set is more cycles on the same architecture — but that is a
   claim about architecture, not a measured result.

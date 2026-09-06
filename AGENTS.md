@@ -14,6 +14,22 @@
 Reckn の差別化はこの一点しかない。`RecknZkEscrow` に owner / admin / resolver / pause / upgrade を
 **一行足した瞬間に、製品は競合と同じものになる**。だから約束でなく**ビルド条件**にしてある。
 
+**検査は 2026-09-06 に締め直された（task 009、check を足さず・番号も変えず・最終行も変えず）**:
+
+- **check 2 は「見つけた関数を列挙する」のをやめ、入口の集合を閉じる。** `fallback()` と
+  `receive()` は `function` キーワードを持たないので、**任意の funded deal を抜く fallback が
+  4検査を全部通ることを実測**していた。いまは *関数以外の入口キーワードが0であること* を要求し、
+  さらに **継承・第二の contract・`using` を禁じる**（継承したメンバーは `contract` 行より上に
+  宣言されるので、それを許すと検査領域そのものが不完全になる。これも実測——排水する base を
+  継承させた木が全検査を緑のまま通った）
+- **check 4 は 009 後に空虚になる。** constructor が無くなるので「constructor は msg.sender を
+  保存しない」は**何もマッチせず通る**。中身を 4a（領域が literal＝ブロックコメントも文字列も無い）と
+  4b（constructor も `immutable` も無い）に差し替えた
+- **どちらも締め direction の変更**だが、**`no-keys.sh` が 0 で抜けることの意味は 009 前と同じでは
+  ない**——エスクローは buyer が指名したコードへ dispatch するようになり、ビルド条件はそれを検査
+  しない。安全にしているのは INV-9（`view` 型＝STATICCALL）と §4.4 の B-1/B-2/B-3 であって、
+  `no-keys.sh` はそのどれも見ていない。列挙された関数面は不変
+
 **検査される領域は2ファイルである**（2026-09-05 に拡大、task 008 check 5）。
 `RecknZkEscrow.sol` に加え **`RecknVerdictVerifier.sol`** —— `settleWithProof` は後者の
 `verifyVerdict` が返す struct に従うので、そこに定数アドレス分岐を差し込めばそれは resolver である。
