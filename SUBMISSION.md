@@ -333,9 +333,11 @@ positioned; if it stalls, the verdict still reproduces anywhere.
 
 ---
 
-## Demo video — recorded 2026-09-06: [`dashboard/media/reckn-arc-demo.mp4`](dashboard/media/reckn-arc-demo.mp4)
+## Demo video — re-recorded 2026-09-07: [`dashboard/media/reckn-arc-demo.mp4`](dashboard/media/reckn-arc-demo.mp4)
 
-**83 seconds, no audio needed, title cards carry it.** It is a recording, not an
+**101 seconds, no audio needed, title cards carry it.** The last third leaves the
+local chain and opens the live page, where the browser checks Arc itself — the recorder
+throws rather than filming that beat if the page's own checks do not go green. It is a recording, not an
 animation: the script starts the chain itself, clicks the same buttons a judge would,
 and the closing shot is the actual stdout of `bash scripts/no-keys.sh` from that run.
 Reproduce it with `cd dashboard/video && npm install && node record.js`.

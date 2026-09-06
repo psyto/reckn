@@ -26,7 +26,15 @@ console.error("• starting the demo chain (anvil at Arc's chain id, deploy, USD
 const demo = spawn("bash", [path.join(repo, "scripts", "arc-demo.sh")], {
   cwd: repo, stdio: "ignore", detached: true,
 });
-const stopDemo = () => { try { process.kill(-demo.pid, "SIGTERM"); } catch {} };
+// The live page is plain static files; it needs a server only because a fetch from a
+// file:// origin sends `Origin: null`, which a public RPC is entitled to refuse.
+const LIVE = "http://127.0.0.1:8898";
+const docs = spawn("python3", ["-m", "http.server", "8898", "--directory",
+  path.join(repo, "docs")], { cwd: repo, stdio: "ignore", detached: true });
+const stopDemo = () => {
+  try { process.kill(-demo.pid, "SIGTERM"); } catch {}
+  try { process.kill(-docs.pid, "SIGTERM"); } catch {}
+};
 process.on("exit", stopDemo);
 process.on("SIGINT", () => { stopDemo(); process.exit(1); });
 
@@ -149,29 +157,45 @@ await press('button[data-act="warp"]', null, { hold: 1200 });
 await press('button[data-act="refund"][data-deal="abandoned"]', "tx 0x", { hold: 2600, nth: 1 });
 await card("And if nobody ever proves anything,\nthe money still comes home.", 2800);
 
-// 8b · the same contract, on the public chain. The recording so far is a local anvil
-// at Arc's chain id — honest, reproducible, and worth exactly nothing as evidence
-// that anyone deployed anything. These four receipts are the evidence, so the
-// hashes on screen are checked against the record on disk before the shot is kept.
+// 8b · the same contract, on the PUBLIC chain, checked live in the browser being
+// filmed. Everything above is a local anvil at Arc's chain id — honest, reproducible,
+// and worth nothing as evidence that anyone deployed anything. This beat is the
+// evidence, so the recorder refuses to film it unless the page's own checks go green
+// and the hashes it shows are the ones the repository recorded.
 {
   const rec_ = JSON.parse(fs.readFileSync(
     path.join(repo, "zk-verdict", "contracts", "arc.json"), "utf8"));
   const txs = Object.values(rec_.deployedByReckn.settlements).map((x) => x.tx);
   if (txs.length < 4) throw new Error(`arc.json records only ${txs.length} settlements`);
-  await page.evaluate(() =>
-    document.getElementById("live")?.scrollIntoView({ behavior: "smooth", block: "center" }));
-  await sleep(1600);
-  const shown = await page.$eval("#live", (e) => e.innerHTML);
+
+  await card("Everything you just saw was a local chain.\nThis one is not.", 2800);
+  await page.goto(LIVE + "/", { waitUntil: "networkidle2" });
+
+  // The page talks to Arc from the browser; give the RPC time and require GREEN.
+  await page.waitForFunction(
+    () => document.querySelector("#s-code")?.textContent === "\u2713" &&
+          document.querySelectorAll("#rows .ok").length >= 4 &&
+          document.querySelector("#s-frozen")?.textContent === "\u2713",
+    { timeout: 60000 },
+  ).catch(() => { throw new Error("the live page did not reach a green state — refusing " +
+                                  "to film a check that did not pass"); });
+
+  const shown = await page.$eval("main", (e) => e.innerHTML);
   for (const tx of txs) {
     if (!shown.includes(tx)) {
-      throw new Error(`the live panel does not link the recorded settlement ${tx} — ` +
-                      `refusing to record a receipt the record does not back`);
+      throw new Error(`the live page does not carry the recorded settlement ${tx}`);
     }
   }
+  const code = await page.$eval("#t-code", (e) => e.textContent);
+  if (!/byte-identical/.test(code)) throw new Error("bytecode check is not green: " + code);
+
   await sleep(2600);
+  await page.evaluate(() =>
+    document.getElementById("rows")?.scrollIntoView({ behavior: "smooth", block: "center" }));
+  await sleep(3400);
 }
-await card("Everything you just saw was a local chain.\nThis one was not.", 2800);
 await card("USDC on Arc testnet. Four settlements.\nTwo of them decided by proofs about Solana.", 3400);
+await card("Your browser just checked the bytecode\nagainst the source. Not a screenshot.", 3200);
 
 // 9 · the build condition, in this run's own bytes.
 await page.setContent(`<!doctype html><meta charset="utf-8"><style>
