@@ -1928,10 +1928,16 @@ Written here, not in a footnote, and reproduced next to the claim in `zk-verdict
   path** and not about anchoring — the exact form the 2026-09-04 application used, preserved.
 - **L-4 (the seller's checklist grew).** INV-11. A seller must now read three values off the
   funded deal before working, not one. 009 adds no mechanism that checks them for the seller.
-- **L-5 (one implementation of each binding).** The repository contains exactly one
-  implementation of the SVM binding formula — the guest. So *"either party can independently
-  compute the deal's terms"* is **not demonstrated** by 009, and the demo funds a deal by
-  copying `.deal_binding` out of a fixture the prover produced. OQ-3.
+- **L-5 (one implementation of each binding). CLOSED 2026-09-06, after 009 landed.**
+  When this was written the repository contained exactly one implementation of the SVM binding
+  formula — the guest — so *"either party can independently compute the deal's terms"* was not
+  demonstrated, and the demo funded a deal by copying `.deal_binding` out of a fixture the prover
+  produced. There is now a second transcription on the host side
+  (`verdict_script::svm_deal_binding`), deliberately **not** shared with the guest, and
+  `zk-verdict/script/tests/svm_binding.rs` requires it to reproduce the binding of the **shipped**
+  `svm-groth16-fixture.json` from the five deal terms alone. A shared helper would have made the
+  value computable off-chain but not independently checkable. **The EVM binding still has one
+  implementation**, so the limitation is halved, not gone. OQ-3.
 - **L-6 (the SP1 verifier's code).** `verifierCodeHash` commits the `RecknVerdictVerifier`'s
   runtime code and therefore the *address* of the `ISP1Verifier` it uses (E-9). The **code**
   at that address is committed by nothing 009 adds. On-chain deployment checking is `003`'s.

@@ -41,6 +41,7 @@ serde = { version = "1.0.200", default-features = false, features = ["derive"] }
 clap = { version = "4.0", features = ["derive", "env"] }
 tracing = "0.1.40"
 hex = "0.4.3"
+sha2 = "0.10"
 alloy-sol-types = { workspace = true }
 verdict-lib = { path = "../lib" }
 dotenv = "0.15.0"

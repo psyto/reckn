@@ -284,10 +284,18 @@ which is how the two barriers are shown to be independent.
   before working — `verifier`, `verifierCodeHash`, `dealBinding` — not one, and
   nothing checks them on the seller's behalf. A buyer can name a program that always
   returns `Failed`; on-chain that is indistinguishable from an honest `Failed`.
-- **One implementation of each binding.** The repository contains exactly one
-  implementation of the SVM binding formula — the guest — so *"either party can
-  independently compute the deal's terms"* is **not demonstrated**: the demo funds a
-  deal by copying `deal_binding` out of a fixture the prover produced.
+- ~~**One implementation of each binding.**~~ **Closed 2026-09-06.** There is now a
+  second, deliberately unshared transcription of the SVM binding formula on the host
+  side (`verdict_script::svm_deal_binding`), and `script/tests/svm_binding.rs`
+  requires it to reproduce the `deal_binding` inside the **shipped**
+  `svm-groth16-fixture.json` — the same bytes that settled USDC on Arc testnet — from
+  the five deal terms alone, without running the guest. So a seller can compute what
+  they are being asked to work for, and reject a deal whose binding is not the one
+  they were shown. *(A shared helper would have made the value computable but not
+  independently checkable; it is the disagreement between two transcriptions that
+  catches a formula error, and one of the tests exists only to catch the width trap —
+  `min` and `max` are `u64` that enter the preimage as 32-byte words.)* The **EVM**
+  binding still has one implementation.
 - **Tier.** Local, in-memory, one process. No chain of any kind was contacted. Green
   tests here say nothing about testnet or mainnet.
 

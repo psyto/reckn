@@ -7432,6 +7432,7 @@ dependencies = [
  "revm",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "solana-instruction",
  "solana-keypair",
  "solana-pubkey 3.0.0",
