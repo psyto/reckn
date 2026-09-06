@@ -16,10 +16,36 @@
   },
   "mainnet": {
     "status": "addresses not yet published by Circle as of 2026-09-06",
-    "consequence": "only 'deployment-ready' is achievable for mainnet today; a mainnet address list is a precondition, not a task"
+    "consequence": "only 'deployment-ready' is achievable for mainnet today; a mainnet address list is a precondition, not a task. The same script deploys there unchanged once Circle publishes them."
   },
   "deployedByReckn": {
-    "status": "nothing deployed yet",
-    "blockedOn": "a funded Arc testnet key, which an agent must not hold (AGENTS.md 8)"
+    "network": "Arc Testnet (chainId 5042002)",
+    "deployedAt": "2026-09-06",
+    "explorer": "https://testnet.arcscan.app",
+    "SP1Verifier": "0xc84a89a576f4c735191f4db484a5d5602c175fbb",
+    "RecknVerdictVerifier": "0xc5f45b9dec0f0b00a1493c63c0204c8c920197b7",
+    "RecknVerdictVerifierCodehash": "0x17ab71beea4f9a76789fe48a1e08a6b4e3af05288280ff6508c74f4185d64720",
+    "RecknZkEscrow": "0x580f2c3268b0a13bf46c6d381bf807cbf1595669",
+    "usdcUsed": "0x3600000000000000000000000000000000000000 (the native-USDC ERC-20 face; balanceOf returned the same value the native balance had, at 6 decimals)",
+    "settlements": {
+      "reproduced": {
+        "dealId": "0xce709256c81d0b544d96d294fb9024afa9d5591a5642b608b0887bbeffbc3279",
+        "tx": "0x2836ddb83141f3094b4ff055c154fba41d13c74dbe35f21e41a3001e6ef055e0",
+        "block": 60720091,
+        "gasUsed": 345874,
+        "result": "1.000000 USDC released to the seller on a real Groth16 proof"
+      },
+      "failed": {
+        "dealId": "0x1a05293337f0b37e1db00911509c0d1c975dcb7de73a47c90ca77b5d630be062",
+        "tx": "0xeb971aa45cce8c04e9a231d67d2737a28c4b637cbef74d46d1a465f01b59456f",
+        "block": 60720163,
+        "result": "the proof of a DECREASE refunded the buyer; the seller's balance did not move"
+      }
+    },
+    "findings": [
+      "USDC on Arc BLACKLISTS well-known compromised keys. The first deal named anvil's dev account #1 as seller; settleWithProof reverted with the string 'Blocked address', and `isBlacklisted(0x7099...)` returns true on chain. This is exactly the failure test_ARC05 models, reproduced against Circle's real blacklist rather than a mock.",
+      "That first deal (0xa3a6718735b41de2ee08e4d7e2cfa81b1c1b6957f1a374ccaf305e21cc7d8af3) still holds 1.000000 USDC and cannot settle, because the seller is fixed at funding. It is Funded, and refundAfterDeadline returns it to the buyer 30 days after 2026-09-06. Time cannot be warped on a public chain, so that refund is not demonstrated here — it is scheduled.",
+      "A second RecknVerdictVerifier (0x0aD3f26597C8e2224113E77faC12d8a8F55E5582) was deployed for the false-release fixture before checking that both fixtures come from the SAME guest and therefore carry the same vkey. It was unnecessary. Recorded rather than quietly dropped."
+    ]
   }
 }

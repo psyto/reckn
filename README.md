@@ -14,6 +14,21 @@ promise: `scripts/no-keys.sh` fails the build if one appears.
 bash scripts/arc-demo.sh        # then open http://127.0.0.1:8787
 ```
 
+**And it is live on Arc testnet.** Not "deployment-ready" — deployed, and it has moved
+money: a real Groth16 proof released **1.000000 USDC** to a seller, and a proof that
+the balance *decreased* refunded the buyer, both on chain 5042002.
+
+| | |
+|---|---|
+| `RecknZkEscrow` | [`0x580f2c32…5669`](https://testnet.arcscan.app/address/0x580f2c3268b0a13bf46c6d381bf807cbf1595669) — no owner, no constructor |
+| `RecknVerdictVerifier` | [`0xc5f45b9d…97b7`](https://testnet.arcscan.app/address/0xc5f45b9dec0f0b00a1493c63c0204c8c920197b7) |
+| `SP1Verifier` (Groth16, fixed) | [`0xc84a89a5…5fbb`](https://testnet.arcscan.app/address/0xc84a89a576f4c735191f4db484a5d5602c175fbb) |
+| **released to the seller** | [`0x2836ddb8…055e0`](https://testnet.arcscan.app/tx/0x2836ddb83141f3094b4ff055c154fba41d13c74dbe35f21e41a3001e6ef055e0) — block 60,720,091, 345,874 gas |
+| **refunded to the buyer** | [`0xeb971aa4…9456f`](https://testnet.arcscan.app/tx/0xeb971aa45cce8c04e9a231d67d2737a28c4b637cbef74d46d1a465f01b59456f) |
+
+The USDC is Circle's own predeploy at `0x3600…0000`, so the escrow holds the chain's
+native money — no wrapper, and no change to the contract to make that work.
+
 Five buttons, five real transactions against a local chain at Arc's chain id:
 
 | press | what happens |

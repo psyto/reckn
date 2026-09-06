@@ -227,9 +227,19 @@ positioned; if it stalls, the verdict still reproduces anywhere.
   needed was evidence the settlement is correct in USDC's units and semantics — six
   decimals, revert-not-false, and a blacklist that can freeze a payout.
   Details, architecture diagram and limits: [`docs/arc-usdc.md`](docs/arc-usdc.md).
-  **Nothing is deployed to Arc yet** (a funded testnet key is the founder's to hold),
-  and Circle has not published Arc mainnet addresses, so *deployment-ready* is the
-  only honest posture for the Sept 30 requirement.
+  **Deployed to Arc testnet on 2026-09-06, and it has moved money**:
+  `RecknZkEscrow` at `0x580f2c3268b0a13bf46c6d381bf807cbf1595669` (chain 5042002),
+  a real Groth16 proof releasing **1.000000 USDC** to the seller
+  (`0x2836ddb83141f3094b4ff055c154fba41d13c74dbe35f21e41a3001e6ef055e0`), and a proof
+  of a **decrease** refunding the buyer
+  (`0xeb971aa45cce8c04e9a231d67d2737a28c4b637cbef74d46d1a465f01b59456f`). The USDC is
+  Circle's predeploy at `0x3600…0000` — the chain's own money, no wrapper.
+  **The real chain taught us something the mock could not**: USDC on Arc blacklists
+  known-compromised keys, our first settlement hit that (`Blocked address`), and the
+  1.00 USDC in that deal is stuck until `refundAfterDeadline` returns it in thirty
+  days — which is exactly what test_ARC05 predicted and exactly why task 001 exists.
+  Circle has not published Arc **mainnet** addresses, so *deployment-ready* remains
+  the posture there, with the same script unchanged.
 - **Other sponsor surfaces (present, not pursued this event):** **x402 / EIP-3009**
   payments (EVM escrow; [`docs/x402-payments.md`](docs/x402-payments.md)) ·
   **ERC-8004** reputation (implemented) · Chainlink CRE / MCP as swappable

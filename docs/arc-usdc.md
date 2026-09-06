@@ -169,13 +169,48 @@ anvil configured to look like Arc** (chain id 5042002, the same 6-decimal USDC f
 
 ## Deployment status, stated exactly
 
-- **Testnet:** not deployed. `DeployArc.s.sol` runs against Arc's RPC as written and
-  has been exercised end to end on a local chain at Arc's chain id. It needs one
-  thing: **a funded Arc testnet key**, which an agent must not hold (`AGENTS.md` §8).
-- **Mainnet:** Circle has **not published Arc mainnet addresses** as of 2026-09-06
-  (Arc docs, *Contract addresses*: "Mainnet addresses are not yet available"). So
-  "deployment-ready" is the only honest posture available today, and it is the one
-  this repository is in: one script, no configuration, no admin key to hold.
+**Testnet: deployed, and it has moved money** (2026-09-06, chain 5042002).
+
+| | |
+|---|---|
+| `RecknZkEscrow` | `0x580f2c3268b0a13bf46c6d381bf807cbf1595669` |
+| `RecknVerdictVerifier` | `0xc5f45b9dec0f0b00a1493c63c0204c8c920197b7` (codehash `0x17ab71be…`) |
+| `SP1Verifier` | `0xc84a89a576f4c735191f4db484a5d5602c175fbb` |
+| USDC | `0x3600000000000000000000000000000000000000` — Circle's predeploy, unmodified |
+| deploy cost | 0.0925 USDC of gas, from a faucet address that started with 20.00 |
+
+Two settlements, both with the committed **real Groth16 proofs**:
+
+- **`Reproduced` → seller.** `0x2836ddb83141f3094b4ff055c154fba41d13c74dbe35f21e41a3001e6ef055e0`
+  — block 60,720,091, 345,874 gas. The seller's USDC balance went 0 → **1.000000**.
+- **`Failed` → buyer.** `0xeb971aa45cce8c04e9a231d67d2737a28c4b637cbef74d46d1a465f01b59456f`
+  — the proof of a **decrease** refunded the buyer; the seller's balance did not move.
+
+**Mainnet:** Circle has **not published Arc mainnet addresses** as of 2026-09-06 (Arc
+docs, *Contract addresses*: "Mainnet addresses are not yet available"), so
+*deployment-ready* is the only posture available there — the same script, unchanged.
+
+### What the real chain taught us that the mock could not
+
+**USDC on Arc blacklists known-compromised keys, and our first settlement hit it.**
+The first deal named anvil's development account #1 as the seller — a publicly known
+key. `settleWithProof` reverted with the string `Blocked address`, and
+`isBlacklisted(0x7099…)` returns `true` on chain. That is precisely the failure
+`test_ARC05` models, reproduced against **Circle's real blacklist** rather than
+against our mock: the payout reverts, the deal stays `Funded`, and the money stays in
+the contract.
+
+It is still there. Deal `0xa3a6718735b41de2ee08e4d7e2cfa81b1c1b6957f1a374ccaf305e21cc7d8af3`
+holds **1.000000 USDC** and can never settle, because the seller is fixed at funding.
+`refundAfterDeadline` returns it to the buyer thirty days after 2026-09-06 — which is
+the whole reason task 001 exists, and the reason that deal is stuck rather than lost.
+Time cannot be warped on a public chain, so **that refund is scheduled, not
+demonstrated**; the local demo is where you can watch it happen.
+
+**A deployment we did not need.** A second `RecknVerdictVerifier`
+(`0x0aD3f26597C8e2224113E77faC12d8a8F55E5582`) was deployed for the false-release
+fixture before checking that both EVM fixtures come from the same guest and therefore
+carry the same vkey. It was unnecessary. Recorded here rather than quietly dropped.
 
 ## Limits — read these before believing anything above
 

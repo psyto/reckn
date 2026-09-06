@@ -83,6 +83,40 @@ selftest 自身が計算した digest と一致。**定数を echo する stub �
    再ピンのたびに陳腐化する**——`003` の re-pin protocol でも同じことが起きるので、selftest の
    失敗メッセージ自体に書き残した
 
+## Arc testnet に**デプロイし、金が動いた**（2026-09-06）
+
+**"deployment-ready" ではなく deployed。** chain 5042002 に3契約、そして**実 Groth16 proof で
+実 USDC が2方向とも動いた**。
+
+```
+RecknZkEscrow          0x580f2c3268b0a13bf46c6d381bf807cbf1595669
+RecknVerdictVerifier   0xc5f45b9dec0f0b00a1493c63c0204c8c920197b7  codehash 0x17ab71be…
+SP1Verifier (Groth16)  0xc84a89a576f4c735191f4db484a5d5602c175fbb
+USDC                   0x3600000000000000000000000000000000000000（Circle の predeploy、無改変）
+
+Reproduced → seller  0x2836ddb83141f3094b4ff055c154fba41d13c74dbe35f21e41a3001e6ef055e0
+                     block 60,720,091 / gas 345,874 / seller 0 → 1.000000 USDC
+Failed     → buyer   0xeb971aa45cce8c04e9a231d67d2737a28c4b637cbef74d46d1a465f01b59456f
+                     buyer 16.871241 → 17.864532、seller は 1.000000 のまま
+デプロイ費             0.0925 USDC（faucet の 20.00 から）
+```
+
+**契約変更はゼロだった。** Arc の USDC はネイティブ残高への ERC-20 face で、`balanceOf` が
+ネイティブと同じ値を 6 decimals で返す——エスカローは**チェーン自身の金**を保持している。
+
+**本番チェーンが教えたこと（モックでは出なかった）**: **Arc の USDC は既知の流出鍵を
+blacklist する。** 最初の deal は seller に anvil の開発鍵 #1 を指名しており、
+`settleWithProof` が **`Blocked address`** で revert した（`isBlacklisted(0x7099…)` は
+オンチェーンで `true`）。**これは `test_ARC05` が模していた失敗そのもの**で、モックでなく
+**Circle の本物の blacklist** に対して再現した。その deal（`0xa3a67187…`）は **1.000000 USDC を
+保持したまま Funded** で、seller は funding 時に固定されるので決済できない——
+**30日後に `refundAfterDeadline` が buyer へ返す**。公開チェーンでは時間を進められないので、
+**その返金は「予定」であって実演ではない**（実演できるのはローカルデモの側）。
+
+**要らなかったデプロイを1つした**: false-release fixture 用に2本目の `RecknVerdictVerifier`
+（`0x0aD3f265…`）を建ててから、**両 EVM fixture が同じ guest 由来＝同じ vkey** だと確認した。
+不要だった。黙って落とさず記録する。
+
 ## Arc / USDC（task 005、2026-09-06）— ローカルで着地、testnet は founder の手
 
 **契約変更はゼロ。** Arc では USDC がネイティブガストークンで、Circle が同じ残高への
