@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reckn on Arc — check it yourself</title>
+<style>
+  :root{--bg:#f7f8fa;--fg:#12161c;--dim:#5b6572;--line:#dfe3e9;--card:#fff;
+        --ok:#137333;--bad:#b3261e;--acc:#0b57d0;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+  @media (prefers-color-scheme:dark){:root{--bg:#0b0e13;--fg:#e6ebf2;--dim:#94a0b0;--line:#212936;
+        --card:#121722;--ok:#4ade80;--bad:#f87171;--acc:#7aa2f7}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+       font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  main{max-width:820px;margin:0 auto;padding:40px 20px 80px}
+  h1{font-size:1.9rem;line-height:1.25;margin:0 0 .4rem;letter-spacing:-.02em}
+  h2{font-size:1.15rem;margin:2.4rem 0 .6rem;letter-spacing:-.01em}
+  p{margin:.7rem 0}
+  .lede{font-size:1.06rem;color:var(--dim)}
+  code,.m{font-family:var(--mono);font-size:.88em}
+  a{color:var(--acc)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;
+        padding:16px 18px;margin:14px 0}
+  .st{display:inline-block;min-width:1.4em;font-weight:700}
+  .ok{color:var(--ok)} .bad{color:var(--bad)} .pend{color:var(--dim)}
+  .k{color:var(--dim);font-size:.85em;text-transform:uppercase;letter-spacing:.05em}
+  table{border-collapse:collapse;width:100%;font-size:.93rem}
+  th,td{text-align:left;padding:.42rem .7rem .42rem 0;vertical-align:top;
+        border-bottom:1px solid var(--line)}
+  th{color:var(--dim);font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+  .wrap{overflow-x:auto}
+  .note{color:var(--dim);font-size:.9rem}
+  .big{font-size:1.05rem;font-weight:600}
+  pre{background:var(--card);border:1px solid var(--line);border-radius:8px;
+      padding:12px 14px;overflow-x:auto;font-size:.84rem;margin:.6rem 0}
+  .foot{margin-top:3rem;padding-top:1.2rem;border-top:1px solid var(--line);color:var(--dim);font-size:.9rem}
+</style>
+</head>
+<body>
+<main>
+
+<h1>An escrow that no key can open, holding real USDC on Arc.</h1>
+<p class="lede">Nothing below is a screenshot. Your browser is reading Arc testnet
+directly as this page loads — the same public RPC anyone can call — and checking what
+it finds against the source in the repository.</p>
+
+<h2>1. The code holding the money</h2>
+<div class="card">
+  <p><span class="st pend" id="s-code">…</span> <span class="big" id="t-code">reading the deployed bytecode…</span></p>
+  <p class="note" id="d-code">
+    <code>RecknZkEscrow</code> has <b>no constructor</b>, so the same source always
+    produces the same deployment. That makes this comparison meaningful: the contract
+    that holds money on Arc is byte-for-byte the file you can read in this repository.
+  </p>
+</div>
+
+<h2>2. Four settlements, each decided by a proof</h2>
+<p>Two of them were decided by proofs about work performed <b>on Solana</b> — one escrow,
+two virtual machines, and no bridge, no light client and no resolver anywhere on the path
+that chose who got paid.</p>
+<div class="card wrap">
+  <table id="tbl">
+    <thead><tr><th></th><th>the proof said</th><th>about work on</th><th>the money went</th>
+    <th>block</th><th>gas</th><th>receipt</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+</div>
+<p class="note" id="d-settle">Each row is an <code>eth_getTransactionReceipt</code> call
+made from your browser. The verdict and the recipient are decoded out of the
+<code>SettledByProof</code> log in the receipt, not read from this page.</p>
+
+<h2>3. The deal that cannot settle, and is not lost</h2>
+<div class="card">
+  <p><span class="st pend" id="s-frozen">…</span> <span class="big" id="t-frozen">reading the frozen deal…</span></p>
+  <p class="note">Circle's USDC blacklists well-known compromised keys, and the first
+  deal named one as its seller. <code>settleWithProof</code> reverts with
+  <i>Blocked address</i>, and the seller is fixed at funding — so this deal can never
+  release. It is not lost either: <code>refundAfterDeadline</code> returns it to the
+  buyer, <b>permissionless</b>, and whoever calls it gets nothing. We did not plan this
+  demonstration; Circle's blacklist provided it, and it is recorded rather than hidden.</p>
+</div>
+
+<h2>4. What no button here can do</h2>
+<p>Move a funded deal without a proof that carries its binding, or before the deadline.
+There is no address with that power — not the buyer's, not the seller's, not the
+deployer's, because there is no deployer role and no constructor. That is enforced as a
+build condition, <code>scripts/no-keys.sh</code>, not promised in a README.</p>
+<p class="note">Two things this page does <b>not</b> claim. The buyer names the
+adjudicating program when funding, so a buyer who names one that always returns
+<code>Failed</code> makes the seller work for nothing — on-chain that is
+indistinguishable from an honest failure, and sellers read the deal first. And
+“settled by a Solana proof” is a statement about the adjudication path, not about
+anchoring: the guest recomputes a <code>bank_hash</code> over the account set the deal
+committed to, which proves internal consistency and not provenance.</p>
+
+<h2>Check it without this page</h2>
+<pre id="cli">…</pre>
+
+<div class="foot">
+  <p><b>Reckn</b> — an escrow for agent-to-agent payments whose dispute adjudicator is
+  deterministic re-execution. Source, specifications, every review verdict including the
+  failed ones, and the acceptance gates:
+  <a href="https://github.com/psyto/reckn">github.com/psyto/reckn</a>.</p>
+  <p id="meta"></p>
+</div>
+
+</main>
+<script>
+const CFG = /*__CONFIG__*/;
+const $ = id => document.getElementById(id);
+const short = h => h.slice(0, 10) + '…' + h.slice(-4);
+const mark = (el, ok) => { el.textContent = ok ? '✓' : '✗'; el.className = 'st ' + (ok ? 'ok' : 'bad'); };
+
+async function rpc(method, params) {
+  const r = await fetch(CFG.rpc, {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({jsonrpc: '2.0', id: 1, method, params})
+  });
+  const j = await r.json();
+  if (j.error) throw new Error(method + ': ' + j.error.message);
+  return j.result;
+}
+const hexToBig = h => BigInt(h === '0x' ? '0x0' : h);
+const usd = v => (Number(v) / 1e6).toFixed(6);
+const word = (data, i) => '0x' + data.slice(2 + i * 64, 2 + (i + 1) * 64);
+
+$('cli').textContent =
+`# the bytecode on Arc is the source in this repo
+cast code ${CFG.escrow} --rpc-url ${CFG.rpc} \\
+  | diff - <(jq -r .deployedBytecode.object \\
+      zk-verdict/contracts/out/RecknZkEscrow.sol/RecknZkEscrow.json)
+
+# a settlement decided by a proof about work on Solana
+cast receipt ${CFG.settlements[2].tx} --rpc-url ${CFG.rpc}
+
+# the deal Circle's blacklist froze, still funded
+cast call ${CFG.escrow} "deals(bytes32)" ${CFG.frozen} --rpc-url ${CFG.rpc}`;
+
+$('meta').innerHTML = `Escrow <a href="${CFG.explorer}/address/${CFG.escrow}"><code>${CFG.escrow}</code></a>
+ · chain id ${CFG.chainId} · repository commit <code>${CFG.commit}</code>.
+ This page is generated from <code>zk-verdict/contracts/arc.json</code> and forge's build
+ output, never typed by hand — an earlier page had two of four transaction hashes wrong.`;
+
+(async () => {
+  // 1 — the code
+  try {
+    const code = await rpc('eth_getCode', [CFG.escrow, 'latest']);
+    const ok = code.toLowerCase() === CFG.expectedCode.toLowerCase();
+    mark($('s-code'), ok);
+    const n = (code.length - 2) / 2;
+    $('t-code').textContent = ok
+      ? `${n.toLocaleString()} bytes on Arc, byte-identical to the local build`
+      : `the deployed bytecode does NOT match this repository (${n} bytes on chain)`;
+  } catch (e) { $('t-code').textContent = 'could not reach Arc: ' + e.message; }
+
+  // 2 — the settlements
+  for (const s of CFG.settlements) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><span class="st pend">…</span></td><td>${s.verdict}</td>
+      <td>${s.vm === 'Solana' ? '<b>Solana</b>' : s.vm}</td><td>${s.went}</td>
+      <td class="m">—</td><td class="m">—</td>
+      <td><a class="m" href="${CFG.explorer}/tx/${s.tx}">${short(s.tx)}</a></td>`;
+    $('rows').appendChild(tr);
+    try {
+      const r = await rpc('eth_getTransactionReceipt', [s.tx]);
+      const log = (r.logs || []).find(l =>
+        l.topics[0].toLowerCase() === CFG.topicSettled.toLowerCase());
+      // outcome is the first word of the log data; 0 = Reproduced, 1 = Failed
+      const outcome = log ? Number(hexToBig(word(log.data, 0))) : -1;
+      const to = log ? '0x' + log.topics[2].slice(26) : null;
+      const good = r.status === '0x1' && outcome === (s.verdict === 'Reproduced' ? 0 : 1);
+      mark(tr.children[0].firstChild, good);
+      tr.children[4].textContent = Number(hexToBig(r.blockNumber)).toLocaleString();
+      tr.children[5].textContent = Number(hexToBig(r.gasUsed)).toLocaleString();
+      tr.children[3].innerHTML = `${s.went}<br><span class="note m">${to ? short(to) : ''}</span>`;
+    } catch (e) { tr.children[4].textContent = 'unreachable'; }
+  }
+
+  // 3 — the frozen deal
+  try {
+    const data = await rpc('eth_call',
+      [{to: CFG.escrow, data: CFG.selDeals + CFG.frozen.slice(2)}, 'latest']);
+    const amount = hexToBig(word(data, 3));            // Deal.amount
+    const state  = Number(hexToBig(word(data, 8)));    // 0 None, 1 Funded, 2 Settled
+    const bal = hexToBig(await rpc('eth_call',
+      [{to: CFG.usdc, data: CFG.selBalanceOf + '0'.repeat(24) + CFG.escrow.slice(2)}, 'latest']));
+    const days = Number(hexToBig(await rpc('eth_call',
+      [{to: CFG.escrow, data: CFG.selRefundAfter}, 'latest']))) / 86400;
+    const ok = state === 1 && amount > 0n && bal >= amount;
+    mark($('s-frozen'), ok);
+    $('t-frozen').textContent = ok
+      ? `still Funded — ${usd(amount)} USDC held, escrow balance ${usd(bal)}, refundable ${days} days after funding`
+      : `state ${state}, amount ${usd(amount)} USDC, escrow balance ${usd(bal)}`;
+  } catch (e) { $('t-frozen').textContent = 'could not reach Arc: ' + e.message; }
+})();
+</script>
+</body>
+</html>

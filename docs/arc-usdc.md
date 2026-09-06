@@ -78,34 +78,11 @@ deployment cannot tell you afterwards:
 
 ## The architecture
 
-```mermaid
-flowchart TB
-    subgraph offchain["off-chain — nobody's opinion enters here"]
-        W["seller's work<br/>(a committed CALL over a committed prestate)"]
-        RE["reexec-evm<br/>real revm, MPT-verified prestate"]
-        G["SP1 zkVM guest<br/>re-executes and commits<br/>pre / post / minDelta / maxDelta /<br/>outcome / traceHash / dealBinding"]
-        PR["Groth16 proof"]
-        W --> RE --> G --> PR
-    end
+The diagram lives in [the README](../README.md#arc--a-conditional-usdc-payment-whose-condition-is-a-proof),
+where a judge actually reads it. It is kept in **one** place on purpose: a diagram copied
+into two files is two things that drift, and this repository spent 2026-09-06 finding two
+defects of exactly that shape.
 
-    subgraph arc["Arc — USDC is the native asset AND the gas"]
-        U["USDC 0x3600…0000<br/>ERC-20 face, 6 decimals"]
-        E["RecknZkEscrow<br/>no owner · no resolver · no admin<br/>no constructor · no immutable"]
-        V["RecknVerdictVerifier<br/>bound to ONE guest vkey"]
-        S["SP1Verifier (Groth16)<br/>fixed, not a gateway"]
-        E -->|"view call = STATICCALL"| V --> S
-        E -->|"transfer"| U
-    end
-
-    B["buyer (agent)"] -->|"fund(dealId, seller, USDC, amount,<br/>verifier, verifierCodeHash, dealBinding)"| E
-    PR -->|"settleWithProof(dealId, publicValues, proof)<br/>permissionless — anyone may submit"| E
-    E -->|"Reproduced → USDC to seller"| SE["seller (agent)"]
-    E -->|"Failed → USDC to buyer"| B
-
-    style E fill:#0b3d2e,stroke:#0f7,color:#fff
-    style PR fill:#123,stroke:#6cf,color:#fff
-    style U fill:#1a1a3a,stroke:#88f,color:#fff
-```
 
 Two edges carry the whole design:
 

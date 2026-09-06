@@ -6,6 +6,22 @@ An escrow whose release condition is a **proof**, not a person. No owner, no
 resolver, no admin, no upgrade path — and that is a **build condition**, not a
 promise: `scripts/no-keys.sh` fails the build if one appears.
 
+### Open this and your browser checks Arc for you — nothing to install
+
+**→ [psyto.github.io/reckn](https://psyto.github.io/reckn/)**
+
+[![The live page: the deployed bytecode on Arc verified byte-identical to this repository, and four settlements read live from chain — two of them decided by proofs about work performed on Solana.](dashboard/media/arc-live-page.jpg)](https://psyto.github.io/reckn/)
+
+One page, no server, no wallet, no clone. It calls Arc's public RPC from *your* browser
+and checks three things in front of you: that the bytecode holding the money is
+byte-identical to the source in this repository (`RecknZkEscrow` has no constructor, so
+the same source always produces the same deployment); that four settlements really
+happened, with the verdict and the recipient **decoded out of the receipts** rather than
+printed from the page; and that one deal is still funded and frozen — with the refund
+path that will return it. The page is generated from
+[`zk-verdict/contracts/arc.json`](zk-verdict/contracts/arc.json) and forge's build
+output, so no hash on it is typed by hand.
+
 ### Try to steal the money. It is a button.
 
 ![The Arc demo: a funded 250.00 USDC deal, then another execution's real Groth16 proof submitted against it — reverted: BindingMismatch(), the money did not move.](dashboard/media/arc-demo-steal.jpg)
@@ -690,6 +706,44 @@ content publication.
   rules).
 
 ### Arc — a conditional USDC payment whose condition is a proof
+
+**The architecture** (both Arc prizes ask for one; this is the only copy — `docs/arc-usdc.md`
+points here rather than keeping a second that could drift):
+
+```mermaid
+flowchart TB
+    subgraph offchain["off-chain — nobody's opinion enters here"]
+        W["seller's work<br/>(a committed CALL over a committed prestate)"]
+        RE["reexec-evm<br/>real revm, MPT-verified prestate"]
+        G["SP1 zkVM guest<br/>re-executes and commits<br/>pre / post / minDelta / maxDelta /<br/>outcome / traceHash / dealBinding"]
+        PR["Groth16 proof"]
+        W --> RE --> G --> PR
+    end
+
+    subgraph arc["Arc — USDC is the native asset AND the gas"]
+        U["USDC 0x3600…0000<br/>ERC-20 face, 6 decimals"]
+        E["RecknZkEscrow<br/>no owner · no resolver · no admin<br/>no constructor · no immutable"]
+        V["RecknVerdictVerifier<br/>bound to ONE guest vkey"]
+        S["SP1Verifier (Groth16)<br/>fixed, not a gateway"]
+        E -->|"view call = STATICCALL"| V --> S
+        E -->|"transfer"| U
+    end
+
+    B["buyer (agent)"] -->|"fund(dealId, seller, USDC, amount,<br/>verifier, verifierCodeHash, dealBinding)"| E
+    PR -->|"settleWithProof(dealId, publicValues, proof)<br/>permissionless — anyone may submit"| E
+    E -->|"Reproduced → USDC to seller"| SE["seller (agent)"]
+    E -->|"Failed → USDC to buyer"| B
+
+    style E fill:#0b3d2e,stroke:#0f7,color:#fff
+    style PR fill:#123,stroke:#6cf,color:#fff
+    style U fill:#1a1a3a,stroke:#88f,color:#fff
+```
+
+Two edges carry the whole design: the escrow reaches its verifier through a **`view`
+call**, so the funder-chosen adjudicator runs under `STATICCALL` and cannot write state;
+and `settleWithProof` takes **no adjudicator parameter**, because the deal named it at
+funding.
+
 
 On [Arc](https://docs.arc.io), USDC is the native gas token and Circle exposes an
 ERC-20 interface over that same balance at `0x3600…0000` (6 decimals on that face).
