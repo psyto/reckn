@@ -1,0 +1,103 @@
+{
+  "_": "Task 011's record of Tempo. Same role as arc.json: this file is the source of truth, and every other file that restates a Tempo constant is checked against it by zk-verdict/scripts/tempo-constants.sh. That script checks INTERNAL AGREEMENT ONLY. It cannot tell you this record is right — which is why every entry carries how it was obtained.",
+
+  "provenance": {
+    "measuredBy": "unauthenticated JSON-RPC from this repository's operator",
+    "measuredOn": "2026-09-08",
+    "method": "eth_chainId, eth_call to precompiles, eth_getCode, eth_getBalance, eth_getBlockByNumber",
+    "note": "No key, no transaction, no funds. Nothing here is transcribed from a blog post or a search result; entries that could not be measured are under 'fromDocs' or 'unknown' and are marked as such."
+  },
+
+  "testnet": {
+    "name": "Moderato",
+    "chainId": 42431,
+    "chainIdHex": "0xa5bf",
+    "rpc": "https://rpc.moderato.tempo.xyz",
+    "explorer": "https://explore.testnet.tempo.xyz",
+    "explorerVerified": false,
+    "explorerSource": "https://tempo.xyz/developers/docs/quickstart/connection-details, read 2026-09-08 — NOT measured"
+  },
+
+  "wrongEndpoint": {
+    "url": "https://rpc.tempo.xyz",
+    "chainId": 4217,
+    "chainIdHex": "0x1079",
+    "why": "This URL appeared in search results as the Tempo RPC. It answers on a DIFFERENT CHAIN. Using it would have deployed to the wrong network while every constant still looked plausible. tempo-constants.sh fails if this hostname appears anywhere in the tree as an endpoint."
+  },
+
+  "measured": {
+    "precompiles": {
+      "0x0000000000000000000000000000000000000006": {
+        "what": "bn256Add",
+        "input": "128 zero bytes",
+        "output": "64 zero bytes",
+        "matchesEthereum": true
+      },
+      "0x0000000000000000000000000000000000000007": {
+        "what": "bn256ScalarMul",
+        "input": "96 zero bytes",
+        "output": "64 zero bytes",
+        "matchesEthereum": true
+      },
+      "0x0000000000000000000000000000000000000008": {
+        "what": "bn256Pairing",
+        "input": "empty",
+        "output": "0x0000000000000000000000000000000000000000000000000000000000000001",
+        "matchesEthereum": true
+      },
+      "0x0000000000000000000000000000000000000001": {
+        "what": "ecrecover",
+        "input": "128 zero bytes",
+        "output": "0x",
+        "matchesEthereum": true
+      }
+    },
+    "tip20Factory": {
+      "address": "0x20Fc000000000000000000000000000000000000",
+      "hasCode": true
+    },
+    "ethGetBalance": {
+      "queried": "0x000000000000000000000000000000000000dEaD",
+      "result": "0x9612084f0316e0ebd5182f398e5195a51b5ca47667d4c9b26c9b26c9b26c9b2",
+      "meaning": "a constant, not a balance. Tempo has no native gas token. Any test, script or page that shows funding by reading the native balance is showing a constant — use IERC20Min.balanceOf."
+    },
+    "blockAtReadTime": {
+      "number": "0x20bcbc0",
+      "numberDecimal": 34327488,
+      "gasLimit": 500000000,
+      "baseFeePerGas": 600000000,
+      "note": "gasLimit is ~1500x the 320,600 gas a Solana-proof settlement used on Arc. Groth16 verification is not gas-constrained here."
+    }
+  },
+
+  "fromDocs": {
+    "_": "Read 2026-09-08 from https://tempo.xyz/developers/docs/protocol/tip20/spec. NOT measured. Nothing in the code depends on any of these without a test that models it.",
+    "erc20Semantics": "TIP-20 keeps transfer / transferFrom / approve / allowance / balanceOf",
+    "transferPolicies": "TIP-403 authorises both sender and recipient; failure reverts with PolicyForbids",
+    "pausing": "pause() / unpause() halt all token movement",
+    "invalidRecipient": "a transfer to another TIP-20 contract reverts with InvalidRecipient",
+    "memo": "transferWithMemo attaches a 32-byte memo",
+    "fees": "transferFeePreTx / transferFeePostTx; only currency == USD tokens may pay fees"
+  },
+
+  "unknown": {
+    "_": "Not established. Not assumed anywhere in the code. Each one is a founder-action item in 011 §9.",
+    "tip20TestnetAddress": "the TIP-20 the demo will use",
+    "tip20Decimals": "unknown — RecknTempoTip20.t.sol therefore runs at BOTH 6 and 18",
+    "faucet": "not found in the docs read on 2026-09-08",
+    "sendPath": "whether upstream Foundry can send a fee-paying transaction, or tempoxyz/tempo-foundry with --tempo.fee-token is required. eth_call costs nothing and proves nothing about this.",
+    "testnetTokenPolicy": "whether the faucet TIP-20 carries a TIP-403 policy restricting ordinary transfers"
+  },
+
+  "deployedByReckn": {
+    "_": "EMPTY BY DESIGN. Nothing is deployed. Filled only from real receipts after a founder-held key deploys — never transcribed from memory. Two Arc tx hashes were once written here from memory and two of them were wrong.",
+    "network": null,
+    "deployedAt": null,
+    "SP1Verifier": null,
+    "RecknVerdictVerifier": null,
+    "RecknZkEscrow": null,
+    "tip20Used": null,
+    "settlements": {},
+    "findings": []
+  }
+}
