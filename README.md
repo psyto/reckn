@@ -351,6 +351,14 @@ closes the frame) → `reckn-codex-review` (adversarial, second model) →
 Continuity discipline are in [`AGENTS.md`](AGENTS.md); the plan and the advance
 disclosure are in [`docs/ethonline-2026/`](docs/ethonline-2026).
 
+## Using it from your own agent
+
+Two calls: `fund` to open a deal, `settleWithProof` to close it — and the second is
+permissionless, so the key that pays the gas has no bearing on where the money goes.
+**[`docs/integrate.md`](docs/integrate.md)** is the whole surface in about a page, ending
+with the part that is not ready: an EVM deal's `dealBinding` is still computed only
+in-guest, so today you can settle against a binding but not compute one before the work.
+
 ## Repository layout
 
 ```text

@@ -81,9 +81,18 @@ scrolling. Worth re-reading the opening of the description with that in mind.
 |---|---|---|---|
 | **1** | **Resolve the schedule collision** (founder) | The deadline moved three days earlier than the plan assumes and now overlaps the R[3]sidency window. Everything else is worthless if the form locks first. | a decision |
 | **2** | **Finish the video** | Already the one round-1 criterion we fail: the cut on disk is 1:41 and silent against 2–4 minutes with audio. | in progress |
-| **3** | **A 4-minute live demo plan and a Q&A sheet** | Seven minutes decides the finalist prize and nothing is prepared for it. The Q&A answers exist in the specs; they need to be thirty seconds each, out loud. | half a day |
-| **4** | **Something a visitor can DO** | Usability is scored and the live page is read-only. The cheapest honest version: let the page *submit a claim* and show the verdict not moving — 004's claim, made interactive, with no wallet and no key. | one day |
-| **5** | **An integration path** | Practicality asks whether the audience could use it today. Ten lines showing how an agent funds a deal, in the README, would answer it. | half a day |
+| ~~3~~ | ~~A 4-minute live demo plan and a Q&A sheet~~ | **Done 2026-09-07** — [`LIVE-JUDGING.md`](LIVE-JUDGING.md): a minute-by-minute demo with the theft attempt at 0:50, and seven questions answered in thirty seconds each, concession first. |  |
+| ~~4~~ | ~~Something a visitor can DO~~ | **Done 2026-09-07** — the live page takes a typed claim, hashes it in the browser, and shows the dealBinding, traceHash and verdict read from Arc not moving. Interactive without pretending to re-execute. |  |
+| ~~5~~ | ~~An integration path~~ | **Done 2026-09-07** — [`../integrate.md`](../integrate.md): two calls, and it ends by naming what is not ready rather than stopping at the easy half. |  |
+
+**What `integrate.md` turned up, which is the useful part of writing it.** The scripts
+read `dealBinding` out of a proof fixture. That is fine for a demo and wrong for a buyer,
+who must commit to the binding **before** the seller works — and there is no host-side
+implementation of the v2 EVM preimage to compute one with, because the only implementation
+is in-guest. So today Reckn is a rail you can **settle** on, not one you can **open a deal
+on** unattended. The Solana side already has the second implementation; the EVM side does
+not. That is roughly a day of work, and it is the single most load-bearing thing standing
+between this and someone else using it.
 
 **Not recommended before the deadline**: more gates, more mutation families, more
 specification. Those are the dimensions where we are already strongest, and none of the
