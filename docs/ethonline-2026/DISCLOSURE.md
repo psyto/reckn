@@ -14,6 +14,23 @@ deterministic re-execution, not a trusted judge.
 
 **Team:** Hiroyuki Saito (solo)
 
+## 0. Amendments
+
+This document is reproduced in full in the submission description, so a reader is entitled
+to know where it has changed since it was first written and why. Nothing is removed; the
+superseded wording is quoted here.
+
+| date | section | was | why it changed |
+|---|---|---|---|
+| 2026-09-04 | §1 | *"the repository is still private"* | It was made public that day, ahead of submission, so the application could be reviewed against the actual source. |
+| 2026-09-05 | §3 | five items | Tasks **008** (verdict domain soundness) and **009** (cross-VM settlement) did not exist when this was written and became the event's two headline items. Declaring them late is worse only than not declaring them. |
+| 2026-09-05 | §5 | *"`c-kzg` and `ecrecover` are disabled in-guest"* | **False**, and inherited from the same false sentence in `zk-verdict/README.md`. The true limitation is narrower and is stated in §5. |
+| **2026-09-07** | **§3 item 5** | *"Sponsor integrations (new): World AgentKit gating who may open a dispute. (Integrations against Arc/USDC and Hedera/x402 … will be attempted only if those sponsors are confirmed for this event.)"* | **World AgentKit was never built** and is out of scope by ruling, while **Arc was built, deployed to testnet, and settled four times**. The old wording named the thing that does not exist and left the strongest thing that does in a conditional parenthetical — for a track judged on the event's diff, exactly backwards. |
+| **2026-09-07** | **§3 item 3** | *"…so any observer can attempt to persuade the LLM judge, and watch re-execution disagree."* | Task 004's specification made its headline claim **judge-independent** by founder ruling, and forbids citing a judge we wrote ourselves as evidence of persuasion. The disclosure was promising the thing the specification deliberately removed. |
+
+The two 2026-09-07 amendments were made **before submission, not after**, and the
+superseded text is quoted above rather than deleted.
+
 ## 1. This project has never been submitted to any hackathon
 
 Reckn was built in July–August 2026 and was **never submitted anywhere** — not to an
@@ -58,14 +75,26 @@ repository history before 2026-09-04 is fully accounted for.
    refund closes this without reintroducing any privileged key.
 2. **Adversarial key gauntlet.** A test suite and UI that publish every participant's
    private key and demonstrate that no key can move a funded escrow.
-3. **Live adversarial dispute input.** Open the seller's delivery claim to free-form input
-   so any observer can attempt to persuade the LLM judge, and watch re-execution disagree.
+3. **Live adversarial dispute input.** *(Amended 2026-09-07 — see Amendments.)* Open the
+   seller's delivery claim to free-form input, so any observer can write whatever they like
+   about what was delivered — and watch it change nothing. The claim is that **prose does not
+   move re-execution**, and it is stated without reference to any judge, because a judge we
+   wrote ourselves being "persuaded" would be evidence of nothing.
 4. **Real ERC-20 workload.** Extend the in-guest re-execution from the current single-slot
    SSTORE fixture to a real token-credit predicate, with measured cycle counts.
-5. **Sponsor integrations (new):** World AgentKit gating who may open a dispute.
-   *(Integrations against Arc/USDC and Hedera/x402 were listed at application time; the
-   full prize list was not yet published, and they will be attempted only if those
-   sponsors are confirmed for this event.)*
+5. **Sponsor integration: Arc.** *(Amended 2026-09-07 — see Amendments.)* Reckn's keyless
+   escrow settles in Circle's USDC on Arc **with no change to the contract** — a deal names
+   its payment token at funding, so a chain whose money is USDC needs evidence rather than
+   adaptation. Built during the event and **deployed to Arc testnet**, where four settlements
+   moved real testnet USDC: a proof released the seller, a proof of a wrong execution
+   refunded the buyer, and **two of the four were decided by proofs about work performed on
+   Solana** — one escrow, two virtual machines, no bridge and no resolver in the path that
+   chose the payout. A fifth deal is frozen at 1.00 USDC because Circle's USDC blacklists its
+   recipient; it is refundable by the keyless deadline and by nothing else, and it is
+   recorded rather than hidden.
+   *(At application time Arc and Hedera were both listed as conditional, because the full
+   prize list was not yet published. Arc is the only sponsor integration attempted; Hedera
+   and World AgentKit were dropped by ruling on 2026-09-06.)*
 6. **Verdict domain soundness.** The zkVM guest takes its balance delta on limb 0 of a
    U256, so a *decrease* from `2^64` to `2^64−1` is accepted as the largest possible
    credit — a false release. The guest also sets only `chain_id`, leaving the spec and

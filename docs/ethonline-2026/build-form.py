@@ -7,9 +7,10 @@ spent 2026-09-06 learning what transcriptions do: two of four live transaction h
 were copied wrong — right length, right prefix, linking to nothing.
 
 So §6b is not written. It is rendered from `DISCLOSURE.md` (markdown stripped, since the
-form field is plain text), with exactly the edits listed in EDITS applied and each one
-marked, because two sentences in the committed file stopped being true after it was
-written and `DISCLOSURE.md` is a founder document this script does not touch.
+form field is plain text), verbatim. It used to apply two corrections on the way through, because two sentences in
+the committed file had stopped being true; on 2026-09-07 the founder applied both to
+`DISCLOSURE.md` itself, so there is nothing left to diverge and this script only guards
+against the corrections being lost again.
 
   python3 docs/ethonline-2026/build-form.py      # rewrites the §6b block in place
 """
@@ -20,45 +21,33 @@ disc = (here / "DISCLOSURE.md").read_text()
 form_path = here / "SUBMISSION-FORM.md"
 form = form_path.read_text()
 
-# (find, replace, why) — every divergence from the committed disclosure, declared.
-EDITS = [
-    ("3. **Live adversarial dispute input.** Open the seller's delivery claim to free-form input\n"
-     "   so any observer can attempt to persuade the LLM judge, and watch re-execution disagree.",
-     "3. [UPDATED] Live adversarial dispute input. Open the seller's delivery claim to free-form\n"
-     "   input, so any observer can write whatever they like about what was delivered — and watch\n"
-     "   it change nothing. The claim is that PROSE DOES NOT MOVE RE-EXECUTION, and it is stated\n"
-     "   without reference to any judge, because a judge we wrote ourselves being \"persuaded\"\n"
-     "   would be evidence of nothing.",
-     "004's specification made the headline claim judge-independent by founder ruling, and "
-     "forbids citing a self-written stub judge as evidence of persuasion. The disclosure "
-     "promised the thing the specification removed."),
-    ("5. **Sponsor integrations (new):** World AgentKit gating who may open a dispute.\n"
-     "   *(Integrations against Arc/USDC and Hedera/x402 were listed at application time; the\n"
-     "   full prize list was not yet published, and they will be attempted only if those\n"
-     "   sponsors are confirmed for this event.)*",
-     "5. [UPDATED] Sponsor integration: Arc. Reckn's keyless escrow settles in Circle's USDC on\n"
-     "   Arc with no change to the contract — a deal names its payment token at funding, so a\n"
-     "   chain whose money is USDC needs evidence rather than adaptation. Built during the event\n"
-     "   and deployed to Arc testnet, where four settlements moved real testnet USDC: a proof\n"
-     "   released the seller, a proof of a wrong execution refunded the buyer, and two of the\n"
-     "   four were decided by proofs about work performed on Solana — one escrow, two virtual\n"
-     "   machines, no bridge and no resolver in the path that chose the payout. A fifth deal is\n"
-     "   frozen at 1.00 USDC because Circle's USDC blacklists its recipient; it is refundable by\n"
-     "   the keyless deadline and by nothing else, and it is recorded rather than hidden.\n"
-     "   (At application time Arc and Hedera were both listed as conditional, because the prize\n"
-     "   list was not yet published. Arc is the only sponsor integration attempted; Hedera and\n"
-     "   World AgentKit were dropped by ruling on 2026-09-06.)",
-     "World AgentKit was never implemented and is out of scope by ruling; Arc was built, "
-     "deployed and settled four times. The disclosure named the thing that does not exist "
-     "and buried the thing that does in a conditional parenthetical."),
+# 2026-09-07: the two divergences are GONE. The founder applied both amendments to
+# DISCLOSURE.md itself, so this script no longer edits anything — §6b is now a faithful
+# rendering, and the form and the disclosure say the same words.
+#
+# What is left is a guard in the other direction. An empty EDITS list would silently
+# accept a disclosure that regressed to the old wording, so the corrected sentences are
+# asserted PRESENT. A positive check is used rather than "the old phrases are absent",
+# because the old phrases are legitimately quoted in the Amendments table — a naive
+# absence check would fail on the document's own honesty.
+REQUIRED = [
+    ("Sponsor integration: Arc.",
+     "§3 item 5 named World AgentKit, which was never built, and buried Arc in a "
+     "conditional parenthetical."),
+    ("would be evidence of nothing",
+     "§3 item 3 promised persuading the LLM judge; 004's claim is judge-independent."),
+    ("## 0. Amendments",
+     "the disclosure must carry its own change history, since it is reproduced in full "
+     "in the submission description and a reader is entitled to see where it moved."),
 ]
 
 body = disc
-for find, repl, _ in EDITS:
-    if body.count(find) != 1:
-        sys.exit(f"build-form: this passage is not in DISCLOSURE.md exactly once — it was "
-                 f"edited or already applied:\n---\n{find[:120]}…")
-    body = body.replace(find, repl, 1)
+for probe, why in REQUIRED:
+    if probe not in body:
+        sys.exit(f"build-form: DISCLOSURE.md has regressed — {probe!r} is missing.\n"
+                 f"  {why}\n"
+                 f"  Refusing to render a form field from a disclosure that lost a "
+                 f"correction it already made.")
 
 # markdown -> plain text, losing nothing: headings keep their words, emphasis and code
 # ticks go, link text is kept over the URL, the italic send-instruction and the rule are
@@ -78,5 +67,5 @@ head, rest = form.split(start, 1)
 _, tail = rest.split(end, 1)
 form = f"{head}{start}\n```\n{body}\n```\n{end}{tail}"
 form_path.write_text(form)
-print(f"SUBMISSION-FORM.md §6b rendered from DISCLOSURE.md "
-      f"({len(body.splitlines())} lines, {len(EDITS)} declared edits)")
+print(f"SUBMISSION-FORM.md §6b rendered from DISCLOSURE.md verbatim "
+      f"({len(body.splitlines())} lines, 0 divergences, {len(REQUIRED)} guards held)")
