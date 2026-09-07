@@ -502,6 +502,107 @@ removes that obligation and keeps the Arc prizes, which are what this submission
 actually shaped for. Round 1 is asynchronous either way and judges on video quality,
 demo quality, and git history — all three of which are in good shape.
 
+## 10b. Arc prize application — the four sub-fields
+
+### "How are you using this Protocol / API?"
+
+```
+Reckn is a keyless escrow for agent-to-agent payments: a disputed delivery is settled by a
+zero-knowledge proof of re-execution, and no owner, resolver or admin exists to overrule
+it. On Arc it settles in Circle's USDC — through the ERC-20 face Circle predeploys at
+0x3600000000000000000000000000000000000000 over the same balance Arc uses as native gas.
+
+The contract needed no change at all, because a deal names its payment token when it is
+funded. What Arc needed from us was evidence rather than adaptation: that settlement is
+correct in USDC's units and semantics — six decimals, revert instead of a false return,
+and a blacklisting token. Seven tests cover that against real Groth16 proofs with no mock
+verifier.
+
+It is deployed on Arc testnet and has settled four times with real testnet USDC: a proof
+released the seller, a proof of a wrong execution refunded the buyer, and TWO OF THE FOUR
+WERE DECIDED BY PROOFS ABOUT WORK PERFORMED ON SOLANA — one escrow, two virtual machines,
+no bridge and no resolver anywhere on the path that chose who got paid.
+
+You can check all of it from a browser with nothing installed: https://psyto.github.io/reckn/
+compares the bytecode holding the money against the source in the repository and reads the
+four settlements off Arc as the page loads.
+```
+
+### "Link to the line of code where the tech is used"
+
+```
+https://github.com/psyto/reckn/blob/687bb0f/zk-verdict/contracts/script/DeployArc.s.sol#L36
+```
+
+> A **commit-pinned** permalink, not a branch one: line numbers move, and a reviewer who
+> opens this next week should see what it said when it was submitted. Line 36 is the
+> USDC predeploy address the escrow settles against; line 37 is the chain id.
+>
+> Worth adding underneath if the field takes more than one:
+> `.../blob/687bb0f/zk-verdict/contracts/test/RecknArcUsdcSettlement.t.sol#L212` — the
+> test where USDC on Arc is released by a proof about work performed on Solana.
+
+### "How easy is it to use the API / Protocol? (1–10)"
+
+```
+8
+```
+
+> Honest, and the reasons are in the feedback below. It is not a 10 because two things
+> cost real time that documentation could have prevented, and not lower because the core
+> design decision — USDC as native gas with a predeployed ERC-20 face over the same
+> balance — is genuinely clean and meant our contract needed no changes at all.
+
+### "Additional feedback for the Sponsor"
+
+```
+Four things, in the order they cost us time.
+
+1. ONE OF ANVIL'S DEFAULT ACCOUNTS IS BLACKLISTED BY USDC, AND NOTHING WARNS YOU.
+Our first live settlement reverted with "Blocked address". We then queried isBlacklisted
+on 0x3600...0000 for the first six accounts of the standard test mnemonic, and the result
+is narrower and stranger than "dev keys are blocked":
+
+    anvil #0  0xf39Fd6e5...  false
+    anvil #1  0x70997970...  TRUE
+    anvil #2  0x3C44CdDd...  false
+    anvil #3  0x90F79bf6...  false
+    anvil #4  0x15d34AAf...  false
+    anvil #5  0x9965507D...  false
+
+Exactly one, and it is the account almost every tutorial uses as "the second party" — the
+counterparty in any two-sided example. So a team writing a buyer-and-seller flow has a
+good chance of picking precisely the blocked one, and the revert string does not say which
+side is blocked or why. A line in the testnet docs naming that address would be worth a
+lot; "some addresses are blacklisted" would not, because the useful part is that it is not
+a pattern you can reason your way to.
+
+(For us it became the most honest thing in the demo: that deal still holds 1.00 USDC and
+can never settle, so it demonstrates why a keyless timeout has to exist. That was luck,
+not design.)
+
+2. MAINNET CONTRACT ADDRESSES ARE NOT PUBLISHED, AND A PRIZE ASKS FOR MAINNET.
+The "Launch on Arc Testnet & Push to Mainnet" prize asks for a mainnet deployment or
+deployment-readiness, and as of 2026-09-06 the contract-addresses page lists testnet only,
+with mainnet "not yet available". That is a fine state for a young chain, but it means the
+prize's first branch is unreachable through no fault of the entrant. Either publish the
+list or say plainly in the prize text that deployment-ready is the expected answer today.
+
+3. THE DECIMALS DUALITY DESERVES TO BE THE LOUDEST LINE ON THE PAGE.
+USDC is the native gas token at 18 decimals, and the ERC-20 face over the same balance is
+6 decimals. That is the single most consequential fact for anyone writing a contract that
+moves value on Arc, and getting it backwards silently moves a million times the intended
+amount. It is documented, but it reads as a detail rather than as the thing to check first.
+
+4. THE PUBLIC RPC SENDS CORS HEADERS, AND THAT MATTERED MORE THAN YOU MIGHT EXPECT.
+rpc.testnet.arc.io echoes the request Origin, so a static page on any host can read Arc
+straight from a visitor's browser with no key, no backend and no wallet. We used that to
+build a verification page where a judge with nothing installed watches their own browser
+compare the deployed bytecode against our source and read the settlements off-chain. Please
+do not regress it. It converted our strongest claim from "trust our README" into "look at
+the chain yourself", which is worth more than any amount of writing.
+```
+
 ## 11. Images page
 
 All three fields are required and none was uploaded.

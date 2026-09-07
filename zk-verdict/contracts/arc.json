@@ -58,7 +58,7 @@
       }
     },
     "findings": [
-      "USDC on Arc BLACKLISTS well-known compromised keys. The first deal named anvil's dev account #1 as seller; settleWithProof reverted with the string 'Blocked address', and `isBlacklisted(0x7099...)` returns true on chain. This is exactly the failure test_ARC05 models, reproduced against Circle's real blacklist rather than a mock.",
+      "USDC on Arc blacklists at least one of anvil's default accounts. The first deal named anvil's dev account #1 (0x70997970C51812dc3A010C7d01b50e0d17dc79C8) as seller; settleWithProof reverted with the string 'Blocked address'. Measured 2026-09-07 against the predeploy: of the first six accounts of the standard test mnemonic, ONLY #1 returns isBlacklisted == true — #0, #2, #3, #4 and #5 are all false. So the earlier wording here, 'blacklists well-known compromised keys', was a generalisation the measurement does not support: it is one specific address, not a class. This is exactly the failure test_ARC05 models, reproduced against Circle's real blacklist rather than a mock.",
       "That first deal (0xa3a6718735b41de2ee08e4d7e2cfa81b1c1b6957f1a374ccaf305e21cc7d8af3) still holds 1.000000 USDC and cannot settle, because the seller is fixed at funding. It is Funded, and refundAfterDeadline returns it to the buyer 30 days after 2026-09-06. Time cannot be warped on a public chain, so that refund is not demonstrated here — it is scheduled.",
       "A second RecknVerdictVerifier (0x0aD3f26597C8e2224113E77faC12d8a8F55E5582) was deployed for the false-release fixture before checking that both fixtures come from the SAME guest and therefore carry the same vkey. It was unnecessary. Recorded rather than quietly dropped."
     ],
