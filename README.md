@@ -351,6 +351,50 @@ closes the frame) → `reckn-codex-review` (adversarial, second model) →
 Continuity discipline are in [`AGENTS.md`](AGENTS.md); the plan and the advance
 disclosure are in [`docs/ethonline-2026/`](docs/ethonline-2026).
 
+## What crosses, and what does not
+
+The most common misreading of this project is that Arc verifies Solana, or that something
+is bridged. Neither is true, and the distinction is the whole design:
+
+```mermaid
+flowchart LR
+    subgraph solana["Solana — where the WORK happened"]
+        TX["a committed transaction<br/>+ the account set it touched"]
+    end
+    subgraph guest["SP1 zkVM — where the JUDGING happens"]
+        RX["re-execute: verify signatures,<br/>recompute bank_hash,<br/>apply transfer semantics"]
+        PV["public values:<br/>outcome · traceHash · dealBinding"]
+        RX --> PV
+    end
+    subgraph arc["Arc — where the MONEY always was"]
+        V["RecknVerdictVerifier<br/>checks a Groth16 proof"]
+        E["RecknZkEscrow<br/>no owner · no resolver"]
+        U["USDC 0x3600…0000"]
+        V --> E --> U
+    end
+    TX --> RX
+    PV -->|"a proof. nothing else crosses."| V
+
+    style PV fill:#123,stroke:#6cf,color:#fff
+    style E fill:#0b3d2e,stroke:#0f7,color:#fff
+```
+
+**No bridge is needed because no asset moves.** The USDC is on Arc at the start and on Arc
+at the end; only a *proof* travels, and Arc never runs a Solana VM — it checks that one
+program executed correctly over public inputs. **No light client is needed because Arc is
+not being asked what Solana's state is**; it is being asked whether a computation over a
+committed state is valid.
+
+That buys a precise thing, and it is worth stating both halves out loud:
+
+| | |
+|---|---|
+| **What this does today** | Settle USDC on Arc conditionally on the *re-executed result* of work performed on Solana, with no bridge, no light client and no adjudicator anywhere on the path that decides the payout. |
+| **What this does not do today** | Prove that the committed inputs came from Solana mainnet. The guest recomputes a `bank_hash` over the account set the deal named — internal consistency, **not provenance**. A fabricated account set hashes just as well, and [a test asserts exactly that](zk-verdict/script/tests/svm_anchoring.rs). Closing it needs a light client, or an oracle/attestation with its trust model written down. |
+
+Without both rows, a reader cannot tell this apart from a bridge, from a light client, or
+from an oracle. With them, the boundary is the interesting part rather than the hidden one.
+
 ## Using it from your own agent
 
 Two calls: `fund` to open a deal, `settleWithProof` to close it — and the second is

@@ -79,6 +79,28 @@ STILL OPEN, AND NAMED: the adversarial key gauntlet is stopped at a hard stop; t
 adversarial-input feature has a round-3 specification and no implementation; the real
 ERC-20 workload is not started.
 
+WHAT CROSSES, AND WHAT DOES NOT
+
+The common misreading is that Arc verifies Solana, or that something is bridged. Neither is
+true. The work happens on Solana; the JUDGING happens inside an SP1 zkVM, which verifies the
+signatures, recomputes the block bank_hash and re-executes the transfer; and what reaches Arc
+is a Groth16 proof and nothing else. No bridge is needed because no asset moves — the USDC is
+on Arc at the start and on Arc at the end. No light client is needed because Arc is never
+asked what Solana's state IS; it is asked whether a computation over a committed state is
+valid.
+
+  What this does today: settle USDC on Arc conditionally on the re-executed result of work
+  performed on Solana, with no bridge, no light client and no adjudicator anywhere on the
+  path that decides the payout.
+
+  What it does not do today: prove the committed inputs came from Solana mainnet. The guest
+  recomputes a bank_hash over the account set THE DEAL NAMED — internal consistency, not
+  provenance. A fabricated account set hashes just as well, and a test asserts exactly that.
+  Closing it needs a light client, or an oracle with its trust model written down.
+
+Both halves or neither: without them a reader cannot tell this apart from a bridge, a light
+client, or an oracle, and the boundary is the interesting part rather than the hidden one.
+
 WHAT IS NOT TRUE YET
 
 A proof carries the verdict's authority. It does not by itself prove the committed

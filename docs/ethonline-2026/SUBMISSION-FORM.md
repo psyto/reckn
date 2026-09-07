@@ -128,6 +128,16 @@ WHAT WE DID NOT PLAN, AND KEPT. The first live settlement reverted with "Blocked
 
 STILL OPEN, AND NAMED: the adversarial key gauntlet is stopped at a hard stop; the live adversarial-input feature has a round-3 specification and no implementation; the real ERC-20 workload is not started.
 
+WHAT CROSSES, AND WHAT DOES NOT
+
+The common misreading is that Arc verifies Solana, or that something is bridged. Neither is true. The work happens on Solana; the JUDGING happens inside an SP1 zkVM, which verifies the signatures, recomputes the block bank_hash and re-executes the transfer; and what reaches Arc is a Groth16 proof and nothing else. No bridge is needed because no asset moves — the USDC is on Arc at the start and on Arc at the end. No light client is needed because Arc is never asked what Solana's state IS; it is asked whether a computation over a committed state is valid.
+
+What this does today: settle USDC on Arc conditionally on the re-executed result of work performed on Solana, with no bridge, no light client and no adjudicator anywhere on the path that decides the payout.
+
+What it does not do today: prove the committed inputs came from Solana mainnet. The guest recomputes a bank_hash over the account set THE DEAL NAMED — internal consistency, not provenance. A fabricated account set hashes just as well, and a test asserts exactly that. Closing it needs a light client, or an oracle with its trust model written down.
+
+Both halves or neither: without them a reader cannot tell this apart from a bridge, a light client, or an oracle, and the boundary is the interesting part rather than the hidden one.
+
 WHAT IS NOT TRUE YET
 
 A proof carries the verdict's authority. It does not by itself prove the committed pre-state was the chain's real state: on EVM that anchoring lives in an off-chain layer, and on Solana the provenance of the committed bank_hash is not proven on-chain — a fabricated account set hashes just as well, and there is a test that says so. "No bridge, no light client" is true of the ADJUDICATION and not yet of the anchoring. Cross-VM settlement also created a new risk for the seller: a buyer can name a verifier that always returns Failed, and on-chain that is indistinguishable from an honest failure, so sellers must read the deal's verifier before working. Our open gaps are in the README, not in a footnote.
@@ -417,8 +427,9 @@ All three fields are required and none was uploaded.
 | **Cover** (16:9) | `dashboard/media/brand/cover-1280x720.png` | 1280 × 720 |
 | **Screenshot 1** | `dashboard/media/arc-demo-steal.jpg` | the theft attempt: a **real** Groth16 proof of another execution, submitted against a funded deal — reverted, `BindingMismatch()`, the money did not move |
 | **Screenshot 2** | `dashboard/media/arc-live-page.jpg` | the live page: the browser has compared the deployed bytecode against the source and read four settlements off Arc |
-| **Screenshot 3** | `dashboard/media/arc-live-prose.jpg` | the interactive half: sixty-one different claims typed, one dealBinding, one verdict — read live from Arc |
-| Screenshot 4 (optional) | `dashboard/media/arc-demo-solana.jpg` | USDC released by a proof about work performed on Solana |
+| **Screenshot 3** | `dashboard/media/arc-live-boundary.jpg` | what crosses and what does not: the proof-passing flow, and the two rows saying what this does and does not prove |
+| **Screenshot 4** | `dashboard/media/arc-live-prose.jpg` | the interactive half: sixty-one different claims typed, one dealBinding, one verdict — read live from Arc |
+| Screenshot 5 (optional) | `dashboard/media/arc-demo-solana.jpg` | USDC released by a proof about work performed on Solana |
 
 Screenshot 1 first if the order is preserved. It is the only one that shows the claim
 being *attacked*, and a judge scrolling a gallery gives the first image the most attention.
