@@ -72,6 +72,55 @@ body = (intro
         + "=" * 78 + "\n\n"
         + body)
 
+# ---- make it paste well ------------------------------------------------------------
+# The field is a textarea: the browser wraps for you, so a hard line break in the middle
+# of a sentence is not neutral — it survives, and the pasted text comes out ragged. Joining
+# paragraphs back into single lines is the difference between text that looks typeset and
+# text that looks like it was pasted out of a terminal.
+#
+# What must NOT be joined: blank lines, the rules, list items (each stays one line, but its
+# own continuation lines are pulled up into it), and markdown tables — which have no place
+# in a plain-text field at all and are rewritten as labelled lines instead.
+def reflow(text):
+    out, para, in_table = [], [], False
+
+    def flush():
+        if para:
+            out.append(" ".join(x.strip() for x in para))
+            para.clear()
+
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("|"):
+            flush()
+            cells = [c.strip() for c in stripped.strip("|").split("|")]
+            if all(set(c) <= set("-: ") for c in cells):
+                continue                                  # the ---|---|--- rule
+            if not in_table:
+                in_table = True
+                continue                                  # the header row
+            out.append("  " + " \u2014 ".join(c for c in cells if c))
+            continue
+        in_table = False
+        if not stripped:
+            flush(); out.append(""); continue
+        if stripped.startswith("="):
+            flush(); out.append(stripped); continue
+        if re.match(r"^\s*(?:[-*]\s|\d+\.\s)", line):
+            flush(); para.append(line.rstrip()); continue
+        para.append(line)
+    flush()
+
+    # collapse the runs of blank lines the joins leave behind
+    tidy = []
+    for l in out:
+        if l == "" and tidy and tidy[-1] == "":
+            continue
+        tidy.append(l)
+    return "\n".join(tidy).strip()
+
+body = reflow(body)
+
 start, end = "<!--DISCLOSURE:BEGIN-->", "<!--DISCLOSURE:END-->"
 if start not in form or end not in form:
     sys.exit("build-form: the markers are missing from SUBMISSION-FORM.md")
