@@ -8,6 +8,38 @@
 > Every number here was **measured on 2026-09-07** unless a different date is written
 > next to it. Nothing is transcribed from an older document — that is how the earlier
 > drafts went stale without anyone noticing.
+>
+> **One number is deliberately not stated in §5a**: the pre-event test total. The live
+> form says *129, re-measured 2026-09-04*; the disclosure reproduced in §5b says *~140*.
+> Both are in the same submission and they disagree, and neither was re-measured today —
+> counting them means checking out the pre-event baseline `a122b44`, which nobody has
+> done. §5a therefore points at the disclosure instead of repeating a number. **Settle it
+> before submitting, or leave it only in the disclosure**; do not paste both.
+
+---
+
+## What the form currently gets wrong — twelve things, ranked
+
+Audited 2026-09-07 against the form's live contents. Ranked, because they are not equal.
+
+| # | field | what it says | why it is wrong |
+|---|---|---|---|
+| **1** | demo link | `https://hackathon.project.io` | **The form's own placeholder.** Nobody would reach anything. |
+| **2** | description | *(no disclosure)* | ETHGlobal's rules and `DISCLOSURE.md` itself require the disclosure **reproduced in full in this field**. There is no other place to file it. |
+| **3** | description | *"Spec approved … implementation under way"*, *"We are closing that"* | **008, 009, 005 and the keyless timeout have all landed.** On a track judged by the event's diff, describing finished work as in-progress is the most expensive possible understatement. |
+| **4** | description / how it's made | Arc appears nowhere; *"No partner technology is integrated yet."* | **False.** Arc is the sponsor integration, deployed to testnet, four settlements, two decided by Solana proofs. The form has **no bounty field**, so the bounty Arc's rules require you to name must go in the description. |
+| 5 | description | *"…does that decider belong to a chain?"* then a fragment beginning *"per-chain — you redeploy the judge…"* | A clause was lost when this was pasted. It currently reads as a broken sentence. |
+| 6 | description | *"129 tests, re-measured 2026-09-04"* | The disclosure in the same submission says **~140**. Two documents a judge reads, disagreeing about the same number. |
+| 7 | how it's made | *"…or if the constructor stores its caller"* | That was check 4 **before 009**. There is no constructor at all now — and the old wording would match an empty range and pass **vacuously**, which is precisely why it was replaced. |
+| 8 | description | key gauntlet listed as being built, *"including a permissionless timeout"* | The **timeout landed** on 2026-09-06 as its own task. The key gauntlet is **stopped at a hard stop** and is a founder decision. |
+| 9 | description | *"try to talk the judge into approving"* | 004's specification removed exactly that framing: the claim is judge-independent, because a judge we wrote ourselves being persuaded is evidence of nothing. |
+| **10** | video upload | *(the cut that exists is 1 min 41 s, silent)* | The event requires **2–4 minutes, ≥720p, audio without music**. 1080p is fine; **the duration is under the floor and there is no audio track at all** — measured with `ffprobe`, not assumed. Round 1 of Live Judging grades "video presentation and quality" explicitly. |
+| **11** | images | *(nothing uploaded)* | A **logo** (square), a **cover** (16:9) and **at least three screenshots** are all required fields. |
+| 12 | AI tools | *"ChatGPT was used to generate the initial boilerplate…"* | The form's own placeholder, and false here. It is also the one field where the truthful answer is an advantage rather than a disclosure — see §9. |
+
+**Verified still accurate and not to be touched**: the 43-token vocabulary and 20-piece
+skeleton in check 5, ~410k / ~980k cycles, and the 335 s fixture regeneration against the
+34 s the repository used to advertise for a different guest.
 
 ---
 
@@ -17,130 +49,141 @@
 Reckn
 ```
 
-## 2. Short description / tagline
+## 2. Category and emoji
 
 ```
-An escrow for agent-to-agent payments where the dispute adjudicator is deterministic
-re-execution — and no key can move a funded escrow.
+Wallet/Payments
 ```
 
-## 3. Which track and which bounty (Arc requires this to be explicit)
-
 ```
-Track: Continuity — Ship a Feature
-
-Bounty: Arc — Launch on Arc Testnet & Push to Mainnet ($1,500), primary.
-Also eligible for: Arc — Best DeFi or Agentic Application ($1,666).
-
-Arc mainnet is not deployed and the reason is not ours: Circle had not published Arc
-mainnet contract addresses as of 2026-09-06, so the bounty's "deployed OR
-deployment-ready" is met on the second branch. The same script deploys there unchanged
-once the address list exists.
+⚖
 ```
 
-## 4. Demo link
+## 3. Demo link — **replace the placeholder**
 
 ```
 https://psyto.github.io/reckn/
 ```
 
 > One static page, no install, no wallet, no clone. It calls Arc's public RPC from the
-> reader's own browser and checks three things in front of them: that the bytecode
-> holding the money is byte-identical to the source in this repository, that four
-> settlements really happened with the verdict and recipient **decoded out of the
-> receipts**, and that one deal is frozen-but-refundable. The repository URL
-> `https://github.com/psyto/reckn` goes in the source/repo field.
+> reader's own browser and checks three things in front of them: the deployed bytecode
+> against the source in this repository, four settlements with the verdict and recipient
+> **decoded out of the receipts**, and one deal frozen-but-refundable.
 >
-> **Do not put an artifact link here.** On 2026-09-05 the two artifact links in the
-> README turned out to be openable by their owner only, and they were the first two
-> lines of a public README.
+> **Not an artifact link.** On 2026-09-05 the two artifact links in the README turned out
+> to be openable by their owner only, and they were the first two lines of a public README.
 
-## 5. Video
-
-```
-dashboard/media/reckn-arc-demo.mp4 — 101 seconds, no audio needed, title cards carry it.
-The last third leaves the local chain and films the browser checking Arc itself.
-```
-
----
-
-## 6. Description (long) — **must contain the disclosure in full**
-
-ETHGlobal's rules require the pre-existing-work disclosure to be reproduced in full in
-this field; there is no separate place to file it. Paste block 6a, then block 6b.
-
-### 6a — what was built during the event
+## 4. Short description (96 characters — the limit is 100)
 
 ```
-Reckn is an escrow for agent-to-agent payments whose dispute adjudicator is deterministic
-re-execution rather than a trusted judge. The claim it is built around is not "trust our
-resolver" but "there is no key that can move a funded escrow", and that is enforced as a
-build condition — scripts/no-keys.sh fails the build if an owner, resolver, admin, pause
-or upgrade path appears.
+Agent-payment escrow where a disputed delivery is re-executed, not judged. Reproduce, or refund.
+```
 
-Built during the event (2026-09-04 onward):
+## 5. Description — paste 5a, then 5b
 
-1. VERDICT DOMAIN SOUNDNESS (008). The zkVM guest took its balance delta on limb 0 of a
-   U256 while the off-chain engine used the full width, so an execution in which the
-   balance DECREASED — pre = 2^64, post = 2^64 - 1 — proved as the largest possible
-   credit and released to the seller. A false release, found by writing the specification
-   rather than by a test failing. Verdict values are uint256 on both sides now, and the
-   guest runs under a committed hardfork and block environment whose fields are bound
-   into dealBinding. Every vector is decided twice — replayed off-chain and executed
-   in-guest — and required to agree.
+### 5a — the narrative
 
-2. CROSS-VM SETTLEMENT (009). One escrow settles an EVM proof and a Solana proof. The
-   adjudicating program is named by the FUNDER, per deal, and pinned by its codehash;
-   settleWithProof has no parameter with which a settler could name an adjudicator, and
-   the dispatch is view-typed, so the funder-chosen code runs under STATICCALL and cannot
-   write state. The escrow lost its constructor, so any deployment of the same source is
-   behaviourally identical. No resolver, no bridge, and no light client on the path that
-   decides who gets paid.
+```
+When one AI agent pays another, the hard question is not which chain to deploy on. It is:
+when the payment is disputed, who decides — and does that decider belong to a chain?
+Every answer on offer is a party with a key: an operator inside a TEE, a bonded resolver,
+a quorum of voters. Each of those is per-chain — you redeploy the judge and re-earn the
+reputation on every chain your agent touches.
 
-3. ARC / USDC (005), and it went to a public chain. The contract needed no change to
-   settle in Circle's USDC — a deal names its payment token at funding — so the
-   deliverable was evidence in USDC's own units and semantics: six decimals, revert
-   rather than a false return, and a blacklisting token. Then it was deployed to Arc
-   testnet, where four settlements moved real testnet USDC: a proof released the seller,
-   a proof of a decrease refunded the buyer, and TWO OF THE FOUR WERE DECIDED BY PROOFS
-   ABOUT WORK PERFORMED ON SOLANA.
+Reckn's answer is that the decider should not be a party at all. A disputed delivery is
+re-executed: the pre-state is pinned, the disputed work is replayed against it, and the
+predicate the deal was funded against is evaluated. Reproduce, or refund. Because
+re-execution is deterministic anyone can redo it and reach the same verdict, and because
+it is a computation rather than an authority, it does not live on a chain.
 
-4. A KEYLESS TIMEOUT (001). Before it, a funded deal whose prover never appeared stayed
-   funded forever. refundAfterDeadline returns it to the buyer after 30 days,
-   permissionless — anyone may call it and calling it gives the caller nothing. The
-   waiting period is fixed in the protocol, chosen by no deployer and no funder.
+SUBMITTING FOR: Arc — Launch on Arc Testnet & Push to Mainnet (primary), and Arc — Best
+DeFi or Agentic Application. Arc mainnet is not deployed and the reason is not ours:
+Circle had not published Arc mainnet contract addresses as of 2026-09-06, so the bounty's
+"deployed OR deployment-ready" is met on the second branch, and the same script deploys
+there unchanged once that address list exists.
+
+WHAT EXISTED BEFORE THE EVENT (built July–August 2026; the disclosure below is exact)
+
+The disputed work is re-executed inside an SP1 zkVM and a real Groth16 proof settles the
+escrow directly. RecknZkEscrow has no owner, admin, resolver, pause or upgrade path, and
+settleWithProof is permissionless: the right to move money comes from a proof verifying
+and nothing else. That is enforced as a build condition — scripts/no-keys.sh fails the
+build if a privileged role, an unlisted state-changing function, or a msg.sender gate
+appears.
+
+The same re-execution runs on two deliberately dissimilar runtimes. On EVM, every account
+and storage slot is MPT-verified against the committed state root before real revm
+executes the seller's committed CALL in-guest. On Solana, the block bank_hash is
+recomputed with the SIMD-0215 lattice hash, the real transaction is signature-verified,
+and its transfer is re-executed. Two state models with nothing in common, and one generic
+on-chain verifier accepts both proofs.
+
+WHAT WAS BUILT DURING ETHONLINE (Continuity Track) — all of the following has LANDED
+
+1. VERDICT DOMAIN SOUNDNESS. On day one we found a soundness bug in our own proof: the
+   guest judged the balance delta on the low 64 bits while the off-chain engine used the
+   full U256, so a DECREASE — pre = 2^64, post = 2^64 - 1 — proved as a maximal credit and
+   released to the seller. A false release, found by writing the specification rather than
+   by a test failing. Verdict values are uint256 on both sides now, the guest runs under a
+   committed hardfork and block environment whose fields are bound into dealBinding, and
+   every vector is decided twice — replayed off-chain and executed in-guest — and required
+   to agree.
+
+2. CROSS-VM SETTLEMENT — the headline, and it is done. One escrow settles an EVM proof and
+   a Solana proof. The adjudicating program is named by the FUNDER, per deal, and pinned by
+   its codehash; settleWithProof has no parameter with which a settler could name an
+   adjudicator, and the dispatch is view-typed, so funder-chosen code runs under STATICCALL
+   and cannot write state. The escrow lost its constructor, so any deployment of the same
+   source is behaviourally identical. No resolver, no bridge, no light client on the path
+   that decides who gets paid.
+
+3. ARC / USDC — and it went to a public chain. The contract needed no change to settle in
+   Circle's USDC, because a deal names its payment token at funding; what it needed was
+   evidence in USDC's own units and semantics — six decimals, revert rather than a false
+   return, and a blacklisting token. Then it was deployed to Arc testnet, where four
+   settlements moved real testnet USDC: a proof released the seller, a proof of a decrease
+   refunded the buyer, and TWO OF THE FOUR WERE DECIDED BY PROOFS ABOUT WORK PERFORMED ON
+   SOLANA.
+
+4. A KEYLESS TIMEOUT. Before it, a funded deal whose prover never appeared stayed funded
+   forever. refundAfterDeadline returns it to the buyer after 30 days, permissionless —
+   anyone may call it, and calling it gives the caller nothing. The waiting period is fixed
+   in the protocol, chosen by no deployer and no funder.
 
 5. THE BUILD CONDITION GREW. The script enforcing "no key can move a funded escrow" now
-   reads two files rather than one, because the verifier the escrow calls has the same
-   authority, and its entry-point check became a CLOSURE instead of a list of forbidden
-   names — a fallback() draining any funded deal passed all four of the old checks.
+   reads two files rather than one, because the verifier the escrow calls carries the same
+   authority. Its entry-point check became a CLOSURE rather than a list of forbidden names
+   — a fallback() draining any funded deal passed all four of the old checks.
 
-WHAT WE DID NOT PLAN, AND KEPT. The first live settlement reverted with "Blocked
-address": Circle's USDC blacklists well-known compromised keys and the first deal had
-named one as its seller. That deal still holds 1.000000 USDC and can never release,
-because the seller is fixed at funding — and it is not lost, because the keyless timeout
-returns it. It is on the live page and in arc.json rather than quietly redeployed around.
+WHAT WE DID NOT PLAN, AND KEPT. The first live settlement reverted with "Blocked address":
+Circle's USDC blacklists well-known compromised keys and the first deal had named one as
+its seller. That deal still holds 1.000000 USDC and can never release, because the seller
+is fixed at funding — and it is not lost, because the keyless timeout returns it. It is on
+the live page and in the repository rather than quietly redeployed around.
+
+STILL OPEN, AND NAMED: the adversarial key gauntlet is stopped at a hard stop; the live
+adversarial-input feature has a round-3 specification and no implementation; the real
+ERC-20 workload is not started.
+
+WHAT IS NOT TRUE YET
+
+A proof carries the verdict's authority. It does not by itself prove the committed
+pre-state was the chain's real state: on EVM that anchoring lives in an off-chain layer,
+and on Solana the provenance of the committed bank_hash is not proven on-chain — a
+fabricated account set hashes just as well, and there is a test that says so. "No bridge,
+no light client" is true of the ADJUDICATION and not yet of the anchoring. Cross-VM
+settlement also created a new risk for the seller: a buyer can name a verifier that always
+returns Failed, and on-chain that is indistinguishable from an honest failure, so sellers
+must read the deal's verifier before working. Our open gaps are in the README, not in a
+footnote.
 
 HOW TO CHECK ANY OF THIS WITHOUT TRUSTING US. Open https://psyto.github.io/reckn/ — your
-browser reads Arc directly and compares the deployed bytecode against the source in the
+browser reads Arc directly and compares the deployed bytecode against the source in this
 repository. RecknZkEscrow has no constructor, so the same source always produces the same
-deployment, which is what makes that comparison mean something.
-
-WHAT THIS SUBMISSION DOES NOT CLAIM.
-- "No bridge, no light client" describes the ADJUDICATION PATH, not anchoring. The Solana
-  guest recomputes a bank_hash over the account set the deal committed to; that proves
-  internal consistency, not provenance. A fabricated account set hashes just as well, and
-  there is a test that says so.
-- 009 created a new risk for the seller: a buyer can name a verifier that always returns
-  Failed, and on-chain that is indistinguishable from an honest failure. Sellers must read
-  the deal's verifier before working. This is written in the contract's own comments.
-- The EVM binding still has one implementation. The Solana one has two, deliberately
-  unshared, so a transcription error shows up as a mismatch.
-- Arc mainnet is not deployed; Circle had not published mainnet addresses as of
-  2026-09-06.
+deployment, which is what makes that comparison mean anything.
 ```
 
-### 6b — the disclosure, reproduced in full
+### 5b — the disclosure, reproduced in full (**required**)
 
 > **This block is not written — it is rendered from `DISCLOSURE.md`** by
 > `docs/ethonline-2026/build-form.py`, markdown stripped because the form field is plain
@@ -287,40 +330,216 @@ standing, because a disclosure that carries a false sentence is not a disclosure
 
 ---
 
-## 7. How it's made
+## 6. How it's made
+
+> This is the form's own text with **two corrections**: check 4 no longer says what it
+> said before 009, and "no partner technology is integrated yet" stopped being true when
+> Arc was deployed.
 
 ```
-Solidity (Foundry) for the escrow and the verifier; Rust for the re-execution engines and
-the SP1 zkVM guests; real Groth16 proofs, no mock verifier anywhere in the settlement
-tests. Arc is an EVM-compatible L1 where USDC is the native gas token, with an ERC-20
-face predeployed at 0x3600000000000000000000000000000000000000 at six decimals — the
-escrow settles against that face unchanged, because a deal names its payment token when
-it is funded.
+The re-execution engines are Rust. On EVM, reexec-evm drives revm 38 and verifies each
+account and storage slot against the committed state root with alloy-trie before replay;
+on Solana, reexec-svm replays a committed signed transaction against a committed account
+snapshot under LiteSVM. Both emit the identical VM-neutral ReplayRecordV1 through one
+shared codec, which is what makes the trace hashes comparable across VMs at all, and a
+cross-VM router replays either kind through a single interface.
 
-The part worth describing is the acceptance discipline, because it is what makes the
-numbers above checkable rather than assertable. Each task carries a gate whose manifest
-is parsed out of that task's own specification, so the document and the checker cannot
-drift apart. Every script row ends in a witness= digest that the runner RECOMPUTES ITSELF
-from repository bytes — never read out of the checked program's output — so a stub that
-prints the expected line does not pass; it would have to print a hardcoded digest, which
-goes stale the moment any witnessed byte moves. And each gate is mutation-tested: the
-code is broken twenty-one and fifteen different ways, and the rows that claim to guard
-each break are required to go red.
+The keyless path runs that same re-execution inside an SP1 zkVM. The EVM guest
+MPT-verifies the prestate in-guest with alloy-trie and then runs real revm over the
+seller's committed CALL (406,715 cycles, measured); the Solana guest recomputes the block
+bank_hash from the committed accounts with solana-lattice-hash, signature-verifies the
+real transaction, and re-executes its transfer (986,097 cycles). Both commit the same
+public values, and one generic verifier contract checks either Groth16 proof against
+SP1's canonical verifier. Settlement contracts are Foundry/Solidity; the Solana escrow
+half is Pinocchio.
 
-The gates repaid this. Three full runs were red before one was green, for three different
-reasons, and two of them were the same defect wearing different clothes: a correct
-sentence in a specification sitting on top of code that enumerated names. One
-specification said its mutation witness covered a glob; the gate globbed wider and swept
-in a sibling task's files. Another said a sandbox holds "this task's scripts only"; the
-script implemented "only" as a list of two filenames. Both were invisible while exactly
-one sibling gate existed — landing a second one exposed both in a single run. The second
-is the one worth reading twice: the mutant that exists to prove a discovery rule is a
-closure was itself defeated by one new name.
+ARC IS THE PARTNER TECHNOLOGY, AND IT IS DEPLOYED. On Arc, USDC is the native gas token
+and Circle predeploys an ERC-20 face over the same balance at six decimals. Reckn's
+escrow settles against that face with no contract change at all, because a deal names its
+payment token when it is funded — which is the whole reason a chain whose money is USDC
+needed evidence from us rather than adaptation. Adding a payable path would have been the
+easy move and was refused: the function surface is part of the central claim, and
+widening it to chase a chain's ergonomics would have cost the thing the project is for.
+The escrow is live on Arc testnet with four settlements behind it.
+
+The part worth calling out is not a library. Our whole claim is "no key can judge", and a
+claim like that decays the moment someone adds one privileged field — so it is a build
+condition rather than a promise. scripts/no-keys.sh fails the build if a privileged role
+appears, if the state-changing surface grows beyond the enumerated functions, if any
+msg.sender gate is introduced, or if any deployment-time configuration exists at all —
+and it is itself tested against negative controls. During the event it grew from a
+denylist of forbidden names into a property: every call-shaped token in the audited files
+must belong to a closed allowlist, and the verifier contract is pinned to a 43-token
+vocabulary and a fixed twenty-piece skeleton — so approve, permit, low-level calls and
+inline assembly are each rejected by a rule that never mentions them. The old check said
+"the constructor does not store msg.sender"; after the constructor was removed entirely
+that sentence would have matched an empty range and passed vacuously, so it was replaced.
+An observer that watches nothing is not an observer.
+
+Development runs through a harness that writes a spec with mechanically checkable
+acceptance criteria, has a second independent model review it adversarially, and only
+then implements. Every spec and every review verdict is committed, including the ones
+that failed. That process is why the soundness bug above was found on day one rather than
+after shipping, and why we know things like: both test runners exit 0 on a filter
+matching nothing, so criteria that only check exit status pass with no tests written; our
+one-command demo discarded its suite's exit status; and regenerating one Groth16 fixture
+takes 335 seconds, not the 34 the repo advertised for a different guest.
+
+The gates repaid the effort in a way worth reporting, because it is the opposite of a
+success story. Three full acceptance runs were red before one was green, for three
+different reasons, and two of them were the same defect wearing different clothes: a
+correct sentence in a specification sitting on top of code that enumerated names. One
+specification said its mutation witness covered a narrow glob; the gate globbed wider and
+swept in a sibling task's files. Another said a sandbox holds "this task's scripts only";
+the script implemented "only" as a list of two filenames. Both were invisible while
+exactly one sibling gate existed — landing a second one exposed both in a single run. The
+second is the one worth reading twice: the mutant that exists to prove a discovery rule is
+a closure was itself defeated by one new name.
 ```
 
----
+## 7. GitHub repositories
 
-## 8. Measured, on the tree at commit `437d541` (2026-09-07)
+```
+psyto/reckn — Primary, Monorepo
+```
+
+## 8. Tech Stack page
+
+**Ethereum developer tools**
+
+```
+Foundry   (forge / cast / anvil — the settlement contracts, the gates, and the local demo chain)
+```
+
+**Blockchain networks**
+
+```
+Arc        (testnet — the escrow is deployed and has settled four times)
+Solana     (the SVM guest re-executes a committed Solana transaction)
+Ethereum   (the EVM guest re-executes against an MPT-verified prestate)
+```
+
+**Programming languages**
+
+```
+Rust · Solidity · JavaScript · Python · Shell
+```
+
+**Web frameworks** — none. The pages are plain HTML and vanilla JavaScript on purpose:
+the live page must run from a static host with no build step, so that "open this and
+check it yourself" has nothing between the reader and the chain.
+
+**Databases** — none. There is no server-side state to keep.
+
+**Design tools** — none.
+
+**Other technologies you make heavy use of**
+
+```
+SP1 (Succinct) · revm · alloy / alloy-trie · LiteSVM · Pinocchio ·
+solana-lattice-hash (SIMD-0215) · Groth16 · Puppeteer
+```
+
+## 9. "Describe how AI tools were used" — **the form currently holds its own example text**
+
+> What is in the field now — *"ChatGPT was used to generate the initial boilerplate code
+> with the client and server. Claude Code was used to implement the smart contract
+> logic."* — is the form's placeholder, and it is **false for this project**. It is also
+> the field where the truth happens to be a differentiator, so it is worth writing
+> properly rather than dismissing.
+
+```
+Heavily, and the interesting part is not that code was generated — it is the structure the
+generation was forced through.
+
+Development runs as a harness with a deliberate separation of powers. One model (Claude,
+via Claude Code) writes a specification with mechanically checkable acceptance criteria
+before any implementation exists. A DIFFERENT model (OpenAI's Codex CLI) then reviews that
+specification adversarially, as an independent author, and returns a verdict. Only after
+that does implementation begin, and the acceptance gate is derived from the specification
+document itself, so the two cannot drift apart.
+
+Every specification and every review verdict is committed to the repository, including —
+especially — the ones that failed. Six specifications have produced sixteen review
+verdicts, and fifteen of those sixteen were CHANGES rather than APPROVE. That ratio is the
+honest output of the process, not a sign it went badly: the soundness bug in our own zk
+proof, where a decreasing balance proved as a maximal credit, was found by writing the
+specification rather than by a test failing, on day one.
+
+Two things this process caught that a human reviewer plausibly would not have, both
+verified against the code rather than argued: an acceptance criterion that no
+implementation could ever satisfy, because the fixture-reconstruction recipe it named had
+been deleted by a sibling task; and a black-box criterion set that a twenty-six-row lookup
+table would pass without an engine behind it. Both are written up in the specifications
+under docs/specs/.
+
+The models are also wrong regularly, and the repository records that too. A review cited a
+line range in a sibling specification that had since moved to different content; a page of
+live transaction hashes was transcribed by hand and two of four were wrong, which is why
+that page is now generated from the deployment record rather than typed. The commit
+messages say so where it happened.
+
+AI tools were used for: specification writing, adversarial specification review,
+implementation, the acceptance gates and their mutation tests, and the demo tooling. They
+were not used to generate the cryptographic constructions, the measurements, or any number
+in this submission — every figure here came from running something and reading the output.
+```
+
+## 10. Judging & Prizes page
+
+**Track**: Continuity Track.
+
+**Partner prizes — select Arc, and only Arc.** Three are allowed; claiming partners whose
+technology is not integrated is the kind of thing a judge checks. Hedera is the largest
+purse on offer at $15,000 and is deliberately **not** selected: nothing here runs on
+Hedera, and the founder ruled it out of scope on 2026-09-06.
+
+**Submission type — this one is the founder's call, and it has a calendar conflict.**
+*Top 10 Finalist & Partner Prizes* requires a **Live Judging session on Monday
+2026-09-14 at 12:00 EDT**, which is **01:00 JST on 2026-09-15** — inside the window
+already committed to the R[3]sidency application (deadline 09-15). *Partner Prizes only*
+removes that obligation and keeps the Arc prizes, which are what this submission is
+actually shaped for. Round 1 is asynchronous either way and judges on video quality,
+demo quality, and git history — all three of which are in good shape.
+
+## 11. Images page
+
+All three fields are required and none was uploaded.
+
+| field | file | size |
+|---|---|---|
+| **Logo** (square) | `dashboard/media/brand/logo-512.png` | 512 × 512 |
+| **Cover** (16:9) | `dashboard/media/brand/cover-1280x720.png` | 1280 × 720 |
+| **Screenshot 1** | `dashboard/media/arc-demo-steal.jpg` | the theft attempt: a **real** Groth16 proof of another execution, submitted against a funded deal — reverted, `BindingMismatch()`, the money did not move |
+| **Screenshot 2** | `dashboard/media/arc-live-page.jpg` | the live page: the browser has compared the deployed bytecode against the source and read four settlements off Arc |
+| **Screenshot 3** | `dashboard/media/arc-demo-solana.jpg` | USDC released by a proof about work performed on Solana |
+
+Screenshot 1 first if the order is preserved. It is the only one that shows the claim
+being *attacked*, and a judge scrolling a gallery gives the first image the most attention.
+
+## 12. Video page — **the cut on disk does not yet satisfy the requirements**
+
+| requirement | screen footage as it stands |
+|---|---|
+| 2–4 minutes | **1:41** — under the floor |
+| ≥ 720p | **1920 × 1080** ✅ |
+| audio, no music | **no audio track at all** |
+
+Both cuts are 1080p **16:9**, re-recorded on 2026-09-07 for exactly this reason: the
+earlier one was 1280 × 800, which is 16:10, and putting that on a 16:9 timeline either
+letterboxes it or crops it — and cropping a screen recording eats the thing being shown.
+
+| file | use |
+|---|---|
+| `dashboard/media/reckn-arc-demo-clean.mp4` | **for compositing.** No title cards, so narration and titles can be added in the editor without the screen repeating the voice. |
+| `dashboard/media/reckn-arc-demo.mp4` | titles burned in — the standalone cut, if no voice is added |
+
+**Both hold for identical durations**, so [`dashboard/video/NARRATION.md`](../../dashboard/video/NARRATION.md)
+— which is timed from the recorder's own beat lengths, not estimated — fits either.
+It carries a 60–75 s pitch script for the front, which is what closes the gap to the
+two-minute floor.
+
+## 12. Measured, on the tree at commit `5d86292` (2026-09-07)
 
 | what | result |
 |---|---|
@@ -342,7 +561,7 @@ is a founder decision, not a scheduling one; 002 (real ERC-20 workload) is not s
 
 ---
 
-## 9. Superseded drafts outside the repository
+## 13. Superseded drafts outside the repository
 
 These were the working copies. **They are no longer current** and should not be pasted
 from. Each is listed with what it got wrong, because "it is old" is not a useful warning.

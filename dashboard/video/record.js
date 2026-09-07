@@ -17,7 +17,8 @@ import { PuppeteerScreenRecorder } from "puppeteer-screen-recorder";
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.join(dir, "..", "..");
-const out = path.join(repo, "dashboard", "media", "reckn-arc-demo.mp4");
+const OUT_CARDED = path.join(repo, "dashboard", "media", "reckn-arc-demo.mp4");
+const OUT_CLEAN  = path.join(repo, "dashboard", "media", "reckn-arc-demo-clean.mp4");
 const BASE = "http://127.0.0.1:8787";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -60,15 +61,29 @@ if (!/the claim holds/.test(noKeys)) {
 }
 
 // ---------------------------------------------------------------- recording ----
+// 1920x1080, because the footage is COMPOSITED onto a 16:9 timeline with a pitch video
+// and a voice track. The first cut was 1280x800 — 16:10 — which on a 16:9 timeline is
+// letterboxed or cropped, and cropping a screen recording eats the thing being shown.
+// 1080 also clears the event's 720p floor with room to scale.
+const W = 1920, H = 1080;
+// RECKN_CARDS=0 renders the beats with no title cards, for when narration and titles are
+// added in the editor. Duplicating a voiceover as on-screen text is how a good demo reads
+// like a bad one.
+const CARDS = process.env.RECKN_CARDS !== "0";
+const out = CARDS ? OUT_CARDED : OUT_CLEAN;
+
 const browser = await puppeteer.launch({
   headless: "new",
-  defaultViewport: { width: 1280, height: 800 },
-  args: ["--window-size=1280,800", "--force-color-profile=srgb", "--hide-scrollbars"],
+  defaultViewport: { width: W, height: H },
+  args: [`--window-size=${W},${H}`, "--force-color-profile=srgb", "--hide-scrollbars"],
 });
 const page = await browser.newPage();
-const rec = new PuppeteerScreenRecorder(page, { fps: 30, videoFrame: { width: 1280, height: 800 } });
+const rec = new PuppeteerScreenRecorder(page, { fps: 30, videoFrame: { width: W, height: H } });
 
 async function card(text, ms = 2600) {
+  // With cards off, hold for the same duration so both cuts have IDENTICAL timing and the
+  // narration script's timestamps fit either one.
+  if (!CARDS) { await sleep(ms + 600); return; }
   await page.evaluate((t) => {
     const d = document.createElement("div");
     d.id = "__card";
@@ -76,8 +91,8 @@ async function card(text, ms = 2600) {
     Object.assign(d.style, {
       position: "fixed", inset: "0", zIndex: "99999", display: "flex",
       alignItems: "center", justifyContent: "center", textAlign: "center",
-      padding: "0 12%", background: "rgba(5,7,10,.94)", color: "#e8edf4",
-      font: "600 34px/1.35 ui-sans-serif,-apple-system,'SF Pro Display',Inter,sans-serif",
+      padding: "0 14%", background: "rgba(5,7,10,.94)", color: "#e8edf4",
+      font: "600 50px/1.35 ui-sans-serif,-apple-system,'SF Pro Display',Inter,sans-serif",
       letterSpacing: "-.02em", opacity: "0", transition: "opacity .45s ease",
       whiteSpace: "pre-line",
     });
@@ -199,7 +214,7 @@ await card("Your browser just checked the bytecode\nagainst the source. Not a sc
 
 // 9 · the build condition, in this run's own bytes.
 await page.setContent(`<!doctype html><meta charset="utf-8"><style>
-  body{margin:0;background:#05070a;color:#e8edf4;font:13.5px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;
+  body{margin:0;background:#05070a;color:#e8edf4;font:19px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;
        display:flex;align-items:center;justify-content:center;height:100vh}
   pre{margin:0;padding:26px 30px;white-space:pre-wrap}
   .g{color:#3fb950}</style>
