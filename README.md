@@ -12,6 +12,12 @@ promise: `scripts/no-keys.sh` fails the build if one appears.
 
 [![The live page: the deployed bytecode on Arc verified byte-identical to this repository, and four settlements read live from chain — two of them decided by proofs about work performed on Solana.](dashboard/media/arc-live-page.jpg)](https://psyto.github.io/reckn/)
 
+**And it lets you try to break the claim yourself.** Type anything you like into it —
+argue, insist, paste an instruction telling the system to approve — and watch the hash of
+your words change on every keystroke while the `dealBinding`, the proof's `traceHash` and
+the verdict, all read live from Arc, do not move. Prose is real and it is recorded. It is
+simply not something the verdict is a function of.
+
 One page, no server, no wallet, no clone. It calls Arc's public RPC from *your* browser
 and checks three things in front of you: that the bytecode holding the money is
 byte-identical to the source in this repository (`RecknZkEscrow` has no constructor, so

@@ -417,7 +417,8 @@ All three fields are required and none was uploaded.
 | **Cover** (16:9) | `dashboard/media/brand/cover-1280x720.png` | 1280 × 720 |
 | **Screenshot 1** | `dashboard/media/arc-demo-steal.jpg` | the theft attempt: a **real** Groth16 proof of another execution, submitted against a funded deal — reverted, `BindingMismatch()`, the money did not move |
 | **Screenshot 2** | `dashboard/media/arc-live-page.jpg` | the live page: the browser has compared the deployed bytecode against the source and read four settlements off Arc |
-| **Screenshot 3** | `dashboard/media/arc-demo-solana.jpg` | USDC released by a proof about work performed on Solana |
+| **Screenshot 3** | `dashboard/media/arc-live-prose.jpg` | the interactive half: sixty-one different claims typed, one dealBinding, one verdict — read live from Arc |
+| Screenshot 4 (optional) | `dashboard/media/arc-demo-solana.jpg` | USDC released by a proof about work performed on Solana |
 
 Screenshot 1 first if the order is preserved. It is the only one that shows the claim
 being *attacked*, and a judge scrolling a gallery gives the first image the most attention.
