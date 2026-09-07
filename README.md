@@ -331,6 +331,13 @@ criteria and an adversarial review by a second model before any implementation. 
 specs and every review verdict are committed under [`docs/specs/`](docs/specs) and
 [`docs/reviews/`](docs/reviews) — including the ones that failed.
 
+**The submission form's contents live in the repository**, paste-ready and current:
+[`docs/ethonline-2026/SUBMISSION-FORM.md`](docs/ethonline-2026/SUBMISSION-FORM.md). Its
+reproduction of the disclosure is **rendered from
+[`DISCLOSURE.md`](docs/ethonline-2026/DISCLOSURE.md)** by a script rather than retyped,
+so the two cannot silently disagree; the working drafts that used to live outside the
+repository are listed there as superseded, each with the specific thing it now gets wrong.
+
 The repository is developed by an autonomous harness — `reckn-spec` (frame-thin:
 closes the frame) → `reckn-codex-review` (adversarial, second model) →
 `reckn-codex-impl` (frame-thick: fills the frame) → review → commit, with
