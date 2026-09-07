@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate SUBMISSION-FORM.md §6b from DISCLOSURE.md, so the two cannot disagree.
+"""Generate the Description field of SUBMISSION-FORM.md — ONE block, pasted once.
 
 The rules require the disclosure to be reproduced IN FULL in the submission description.
 A human retyping a 100-line document into a form is a transcription, and this repository
@@ -60,6 +60,18 @@ body = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r"\1 (\2)", body)
 body = body.replace("**", "").replace("*", "").replace("`", "")
 body = re.sub(r"\n{3,}", "\n\n", body).strip()
 
+# The field is pasted in a single action, so the narrative and the disclosure are ONE
+# block. They were two for a while, with an instruction to "paste 5a, then 5b" — which is
+# a form filled in two operations, and the second is the one a tired person forgets. The
+# narrative is a plain-text file so it can be edited without touching this script.
+intro = (here / "description-intro.txt").read_text().strip()
+body = (intro
+        + "\n\n"
+        + "=" * 78 + "\n"
+        + "PRE-EXISTING WORK DISCLOSURE — reproduced in full, as ETHGlobal's rules require\n"
+        + "=" * 78 + "\n\n"
+        + body)
+
 start, end = "<!--DISCLOSURE:BEGIN-->", "<!--DISCLOSURE:END-->"
 if start not in form or end not in form:
     sys.exit("build-form: the markers are missing from SUBMISSION-FORM.md")
@@ -67,5 +79,6 @@ head, rest = form.split(start, 1)
 _, tail = rest.split(end, 1)
 form = f"{head}{start}\n```\n{body}\n```\n{end}{tail}"
 form_path.write_text(form)
-print(f"SUBMISSION-FORM.md §6b rendered from DISCLOSURE.md verbatim "
-      f"({len(body.splitlines())} lines, 0 divergences, {len(REQUIRED)} guards held)")
+print(f"SUBMISSION-FORM.md: Description rendered as ONE block "
+      f"({len(body.splitlines())} lines, {len(body)} chars — narrative + disclosure verbatim, "
+      f"{len(REQUIRED)} guards held)")

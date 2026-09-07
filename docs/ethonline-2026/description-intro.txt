@@ -1,0 +1,97 @@
+When one AI agent pays another, the hard question is not which chain to deploy on. It is:
+when the payment is disputed, who decides — and does that decider belong to a chain?
+Every answer on offer is a party with a key: an operator inside a TEE, a bonded resolver,
+a quorum of voters. Each of those is per-chain — you redeploy the judge and re-earn the
+reputation on every chain your agent touches.
+
+Reckn's answer is that the decider should not be a party at all. A disputed delivery is
+re-executed: the pre-state is pinned, the disputed work is replayed against it, and the
+predicate the deal was funded against is evaluated. Reproduce, or refund. Because
+re-execution is deterministic anyone can redo it and reach the same verdict, and because
+it is a computation rather than an authority, it does not live on a chain.
+
+SUBMITTING FOR: Arc — Launch on Arc Testnet & Push to Mainnet (primary), and Arc — Best
+DeFi or Agentic Application. Arc mainnet is not deployed and the reason is not ours:
+Circle had not published Arc mainnet contract addresses as of 2026-09-06, so the bounty's
+"deployed OR deployment-ready" is met on the second branch, and the same script deploys
+there unchanged once that address list exists.
+
+WHAT EXISTED BEFORE THE EVENT (built July–August 2026; the disclosure below is exact)
+
+The disputed work is re-executed inside an SP1 zkVM and a real Groth16 proof settles the
+escrow directly. RecknZkEscrow has no owner, admin, resolver, pause or upgrade path, and
+settleWithProof is permissionless: the right to move money comes from a proof verifying
+and nothing else. That is enforced as a build condition — scripts/no-keys.sh fails the
+build if a privileged role, an unlisted state-changing function, or a msg.sender gate
+appears.
+
+The same re-execution runs on two deliberately dissimilar runtimes. On EVM, every account
+and storage slot is MPT-verified against the committed state root before real revm
+executes the seller's committed CALL in-guest. On Solana, the block bank_hash is
+recomputed with the SIMD-0215 lattice hash, the real transaction is signature-verified,
+and its transfer is re-executed. Two state models with nothing in common, and one generic
+on-chain verifier accepts both proofs.
+
+WHAT WAS BUILT DURING ETHONLINE (Continuity Track) — all of the following has LANDED
+
+1. VERDICT DOMAIN SOUNDNESS. On day one we found a soundness bug in our own proof: the
+   guest judged the balance delta on the low 64 bits while the off-chain engine used the
+   full U256, so a DECREASE — pre = 2^64, post = 2^64 - 1 — proved as a maximal credit and
+   released to the seller. A false release, found by writing the specification rather than
+   by a test failing. Verdict values are uint256 on both sides now, the guest runs under a
+   committed hardfork and block environment whose fields are bound into dealBinding, and
+   every vector is decided twice — replayed off-chain and executed in-guest — and required
+   to agree.
+
+2. CROSS-VM SETTLEMENT — the headline, and it is done. One escrow settles an EVM proof and
+   a Solana proof. The adjudicating program is named by the FUNDER, per deal, and pinned by
+   its codehash; settleWithProof has no parameter with which a settler could name an
+   adjudicator, and the dispatch is view-typed, so funder-chosen code runs under STATICCALL
+   and cannot write state. The escrow lost its constructor, so any deployment of the same
+   source is behaviourally identical. No resolver, no bridge, no light client on the path
+   that decides who gets paid.
+
+3. ARC / USDC — and it went to a public chain. The contract needed no change to settle in
+   Circle's USDC, because a deal names its payment token at funding; what it needed was
+   evidence in USDC's own units and semantics — six decimals, revert rather than a false
+   return, and a blacklisting token. Then it was deployed to Arc testnet, where four
+   settlements moved real testnet USDC: a proof released the seller, a proof of a decrease
+   refunded the buyer, and TWO OF THE FOUR WERE DECIDED BY PROOFS ABOUT WORK PERFORMED ON
+   SOLANA.
+
+4. A KEYLESS TIMEOUT. Before it, a funded deal whose prover never appeared stayed funded
+   forever. refundAfterDeadline returns it to the buyer after 30 days, permissionless —
+   anyone may call it, and calling it gives the caller nothing. The waiting period is fixed
+   in the protocol, chosen by no deployer and no funder.
+
+5. THE BUILD CONDITION GREW. The script enforcing "no key can move a funded escrow" now
+   reads two files rather than one, because the verifier the escrow calls carries the same
+   authority. Its entry-point check became a CLOSURE rather than a list of forbidden names
+   — a fallback() draining any funded deal passed all four of the old checks.
+
+WHAT WE DID NOT PLAN, AND KEPT. The first live settlement reverted with "Blocked address":
+Circle's USDC blacklists well-known compromised keys and the first deal had named one as
+its seller. That deal still holds 1.000000 USDC and can never release, because the seller
+is fixed at funding — and it is not lost, because the keyless timeout returns it. It is on
+the live page and in the repository rather than quietly redeployed around.
+
+STILL OPEN, AND NAMED: the adversarial key gauntlet is stopped at a hard stop; the live
+adversarial-input feature has a round-3 specification and no implementation; the real
+ERC-20 workload is not started.
+
+WHAT IS NOT TRUE YET
+
+A proof carries the verdict's authority. It does not by itself prove the committed
+pre-state was the chain's real state: on EVM that anchoring lives in an off-chain layer,
+and on Solana the provenance of the committed bank_hash is not proven on-chain — a
+fabricated account set hashes just as well, and there is a test that says so. "No bridge,
+no light client" is true of the ADJUDICATION and not yet of the anchoring. Cross-VM
+settlement also created a new risk for the seller: a buyer can name a verifier that always
+returns Failed, and on-chain that is indistinguishable from an honest failure, so sellers
+must read the deal's verifier before working. Our open gaps are in the README, not in a
+footnote.
+
+HOW TO CHECK ANY OF THIS WITHOUT TRUSTING US. Open https://psyto.github.io/reckn/ — your
+browser reads Arc directly and compares the deployed bytecode against the source in this
+repository. RecknZkEscrow has no constructor, so the same source always produces the same
+deployment, which is what makes that comparison mean anything.

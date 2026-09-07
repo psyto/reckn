@@ -79,10 +79,19 @@ https://psyto.github.io/reckn/
 Agent-payment escrow where a disputed delivery is re-executed, not judged. Reproduce, or refund.
 ```
 
-## 5. Description — paste 5a, then 5b
+## 5. Description — **one block, copy it once**
 
-### 5a — the narrative
+> Everything between the markers below is the whole field: the narrative, then the
+> pre-existing-work disclosure reproduced in full because ETHGlobal's rules require it in
+> this field and there is nowhere else to file it.
+>
+> **It is generated, not written.** `docs/ethonline-2026/build-form.py` assembles it from
+> `description-intro.txt` and `DISCLOSURE.md`, so the disclosure here and the disclosure in
+> the repository cannot drift apart, and the script refuses to run if either of the two
+> corrections recorded in `DISCLOSURE.md` §0 has been lost. Edit the narrative in
+> `description-intro.txt` and re-run the script; do not edit the block by hand.
 
+<!--DISCLOSURE:BEGIN-->
 ```
 When one AI agent pays another, the hard question is not which chain to deploy on. It is:
 when the payment is disputed, who decides — and does that decider belong to a chain?
@@ -181,24 +190,11 @@ HOW TO CHECK ANY OF THIS WITHOUT TRUSTING US. Open https://psyto.github.io/reckn
 browser reads Arc directly and compares the deployed bytecode against the source in this
 repository. RecknZkEscrow has no constructor, so the same source always produces the same
 deployment, which is what makes that comparison mean anything.
-```
 
-### 5b — the disclosure, reproduced in full (**required**)
+==============================================================================
+PRE-EXISTING WORK DISCLOSURE — reproduced in full, as ETHGlobal's rules require
+==============================================================================
 
-> **This block is not written — it is rendered from `DISCLOSURE.md`** by
-> `docs/ethonline-2026/build-form.py`, markdown stripped because the form field is plain
-> text. Retyping a hundred lines into a form is a transcription, and this repository spent
-> 2026-09-06 learning what transcriptions do to it.
->
-> **It is now verbatim: zero divergences.** Until 2026-09-07 the script applied two
-> corrections on the way through, because two sentences in the committed disclosure had
-> stopped being true. Both are now applied to `DISCLOSURE.md` itself — with the superseded
-> wording quoted in its new §0 Amendments rather than deleted — so the form and the
-> disclosure say the same words. What the script still does is refuse to render if either
-> correction has been lost again.
-
-<!--DISCLOSURE:BEGIN-->
-```
 Pre-existing work disclosure — Reckn (ETHOnline 2026, Continuity: Ship a Feature)
 
 Project: Reckn — escrow for agent-to-agent payments where the dispute adjudicator is
