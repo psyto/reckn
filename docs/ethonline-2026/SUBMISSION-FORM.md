@@ -464,12 +464,12 @@ being *attacked*, and a judge scrolling a gallery gives the first image the most
 
 | requirement | as it stands |
 |---|---|
-| 2–4 minutes | **3:06** ✅ |
+| 2–4 minutes | **3:19** ✅ |
 | ≥ 720p | **1920 × 1080** ✅ |
 | 16:9 | **1.7778** ✅ |
 | opens at all | **faststart** ✅ — `moov` at the front |
 | moves at all | **8/8** distinct frames per 4 s ✅ |
-| size | **14.4 MB** |
+| size | **13.6 MB** |
 | audio, no music | **no audio track** — the one thing outstanding, and it is the founder's |
 
 `bash dashboard/video/check.sh <file>` measures all of these. Two of the rows exist because

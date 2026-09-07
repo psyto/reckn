@@ -23,26 +23,25 @@ The `words / budget` column is the count against 145 wpm for that shot. Every li
 
 | # | in | for | words | line |
 |---|---|---|---|---|
-| — | 0:00 | 4.7 s | — | *(card: **Reckn** — an agent-payment escrow, re-executed, not judged)* |
-| — | 0:04 | 3.9 s | — | *(card: **An agent paid another agent. They disagree. Who decides?**)* |
-| 1 | 0:08 | 7.0 s | 12 / 16 | "Two judges, one dispute. One reads the seller's claim and believes it." |
-| 2 | 0:16 | 6.5 s | 13 / 15 | "The other replays the work. It produced six, not a thousand and twenty-four." |
-| 3 | 0:27 | 9.0 s | 21 / 21 | "That page is not a screenshot. Your browser just read Arc and compared the contract holding the money against our source." |
-| 4 | 0:36 | 9.0 s | 20 / 21 | "Byte for byte. And it is a build condition — an owner, an admin, a pause, and the build fails." |
-| 5 | 0:55 | 7.0 s | 12 / 16 | "A funded deal in USDC. Its release condition is not a signature." |
-| 6 | 1:03 | 9.5 s | 20 / 22 | "Now a real Groth16 proof goes in — valid, of a different execution. Binding mismatch. The money does not move." |
-| 7 | 1:13 | 8.0 s | 17 / 19 | "The deal's own proof releases it. A proof of a decrease refunds the buyer. Nobody approved either." |
-| 8 | 1:37 | 8.0 s | 16 / 19 | "Normally a person approves a release. That person is a queue, and agents do not stop." |
-| 9 | 1:45 | 8.0 s | 14 / 19 | "All four settlements cost under three cents to decide, computed here from their receipts." |
-| 10 | 1:56 | 7.0 s | 13 / 16 | "Four settlements on Arc testnet, read out of the receipts by your browser." |
-| 11 | 2:03 | 6.0 s | 9 / 14 | "Two were decided by proofs about work on Solana." |
-| 12 | 2:11 | 7.0 s | 11 / 16 | "Nothing is bridged. The USDC is on Arc at both ends." |
-| 13 | 2:18 | 7.0 s | 11 / 16 | "Only a proof crosses. Arc never runs a Solana virtual machine." |
-| 14 | 2:27 | 6.0 s | 9 / 14 | "That distinction is ours to make, not to hide." |
-| 15 | 2:34 | 8.0 s | 14 / 19 | "It recomputes a bank hash over the set the deal named. Consistency, not provenance." |
-| 16 | 2:43 | 7.0 s | 13 / 16 | "The one thing an observer controls is the story. Watch what it moves." |
-| 17 | 2:51 | 7.0 s | 14 / 16 | "Every keystroke, a new hash. The binding and the verdict come from Arc, unmoved." |
-| — | 2:57 | 4.1 s | — | *(card: **Reproduce, or refund.** — hold, then silence)* |
+| — | 0:00 | 7.3 s | — | *(plate: **Reckn** — the one-liner, then *An agent paid another agent. They disagree. Who decides?*)* |
+| 1 | 0:09 | 7.5 s | 12 / 18 | "Two judges, one dispute. One reads the seller's claim and believes it." |
+| 2 | 0:17 | 7.0 s | 13 / 16 | "The other replays the work. It produced six, not a thousand and twenty-four." |
+| 3 | 0:26 | 10.0 s | 21 / 24 | "That page is not a screenshot. Your browser just read Arc and compared the contract holding the money against our source." |
+| 4 | 0:36 | 9.5 s | 20 / 22 | "Byte for byte. And it is a build condition — an owner, an admin, a pause, and the build fails." |
+| 5 | 1:02 | 7.5 s | 12 / 18 | "A funded deal in USDC. Its release condition is not a signature." |
+| 6 | 1:10 | 10.0 s | 20 / 24 | "Now a real Groth16 proof goes in — valid, of a different execution. Binding mismatch. The money does not move." |
+| 7 | 1:21 | 8.0 s | 17 / 19 | "The deal's own proof releases it. A proof of a decrease refunds the buyer. Nobody approved either." |
+| 8 | 1:46 | 9.0 s | 16 / 21 | "Normally a person approves a release. That person is a queue, and agents do not stop." |
+| 9 | 1:55 | 9.0 s | 14 / 21 | "All four settlements cost under three cents to decide, computed here from their receipts." |
+| 10 | 2:07 | 8.0 s | 13 / 19 | "Four settlements on Arc testnet, read out of the receipts by your browser." |
+| 11 | 2:15 | 8.0 s | 10 / 19 | "Two were decided by proofs about work performed on Solana." |
+| 12 | 2:26 | 7.0 s | 12 / 16 | "Nothing is bridged. The work happened on Solana; a zkVM re-executed it." |
+| 13 | 2:33 | 6.5 s | 13 / 15 | "The proof crosses. Nothing else does. Arc never runs a Solana virtual machine." |
+| 14 | 2:40 | 7.0 s | 9 / 16 | "That distinction is ours to make, not to hide." |
+| 15 | 2:47 | 8.0 s | 14 / 19 | "It recomputes a bank hash over the set the deal named. Consistency, not provenance." |
+| 16 | 2:57 | 8.0 s | 13 / 19 | "The one thing an observer controls is the story. Watch what it moves." |
+| 17 | 3:05 | 9.0 s | 14 / 21 | "Every keystroke, a new hash. The binding and the verdict come from Arc, unmoved." |
+| — | 3:11 | 7.0 s | — | *(plate: **Reckn makes payment conditional on reproducible work. / Reproduce, or refund.** — hold, then silence)* |
 
 ---
 

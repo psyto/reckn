@@ -37,6 +37,17 @@ const demo = spawn("bash", [path.join(repo, "scripts", "arc-demo.sh")], {
 const LIVE = "http://127.0.0.1:8898";
 const docs = spawn("python3", ["-m", "http.server", "8898", "--directory",
   path.join(repo, "docs")], { cwd: repo, stdio: "ignore", detached: true });
+const cleanRaw = () => {
+  // A crashed take used to leave a ~100 MB raw capture in dashboard/media/. The delivered
+  // path is only ever written by a successful encode; the scratch file should not outlive
+  // a failure either.
+  for (const p2 of [RAW(OUT_CARDED), RAW(OUT_CLEAN)]) {
+    try { if (fs.existsSync(p2)) fs.unlinkSync(p2); } catch {}
+  }
+};
+process.on("uncaughtException", (e) => { cleanRaw(); console.error(e); process.exit(1); });
+process.on("unhandledRejection", (e) => { cleanRaw(); console.error(e); process.exit(1); });
+
 const stopDemo = () => {
   try { process.kill(-demo.pid, "SIGTERM"); } catch {}
   try { process.kill(-docs.pid, "SIGTERM"); } catch {}
@@ -111,7 +122,7 @@ async function title(name, oneLiner, ms = 4000) {
       position: "fixed", inset: "0", zIndex: "99999", display: "flex",
       flexDirection: "column", alignItems: "center", justifyContent: "center",
       textAlign: "center", padding: "0 12%", background: "#17130f", color: "#f2ede6",
-      opacity: "0", transition: "opacity .5s ease",
+      opacity: "0", transition: "opacity .7s ease",
     });
     const h = document.createElement("div");
     h.textContent = nm;
@@ -135,24 +146,21 @@ async function title(name, oneLiner, ms = 4000) {
   await sleep(ms);
   await page.evaluate(() => {
     const d = document.getElementById("__card");
-    if (d) { d.style.opacity = "0"; setTimeout(() => d.remove(), 550); }
+    if (d) { d.style.opacity = "0"; setTimeout(() => d.remove(), 750); }
   });
-  await sleep(700);
+  // A beat of quiet after the door closes, so the new scene lands before anything moves.
+  await sleep(900);
 }
 
-async function card(text, ms = 3000, { number = true } = {}) {
-  // With cards off, hold for the same duration so both cuts have IDENTICAL timing and the
-  // narration script's timestamps fit either one.
-  if (!CARDS) { await sleep(ms + 700); return; }
-  const n = number ? String(++chapter).padStart(2, "0") : "";
-  await page.evaluate((t, kicker) => {
+async function paintCard(t0, n0, instant = false) {
+  await page.evaluate((t, kicker, inst) => {
     const d = document.createElement("div");
     d.id = "__card";
     Object.assign(d.style, {
       position: "fixed", inset: "0", zIndex: "99999", display: "flex",
       flexDirection: "column", alignItems: "center", justifyContent: "center",
       textAlign: "center", padding: "0 12%", background: "#17130f", color: "#f2ede6",
-      opacity: "0", transition: "opacity .5s ease",
+      opacity: inst ? "1" : "0", transition: inst ? "none" : "opacity .7s ease",
     });
     if (kicker) {
       const k = document.createElement("div");
@@ -177,26 +185,67 @@ async function card(text, ms = 3000, { number = true } = {}) {
     d.appendChild(rule);
     document.body.appendChild(d);
     requestAnimationFrame(() => (d.style.opacity = "1"));
-  }, text, n);
-  beat(`CARD ${n ? n + " " : ""}${text.replace(/\n/g, " ")}`);
-  await sleep(ms);
-  await page.evaluate(() => {
-    const d = document.getElementById("__card");
-    if (d) { d.style.opacity = "0"; setTimeout(() => d.remove(), 550); }
-  });
-  await sleep(700);
+  }, t0, n0, instant);
 }
 
+/// How long a door stays open is not a per-call guess. Cards ran 3.0–4.0 s regardless of
+/// whether they carried three words or eleven, with half a second of fade at each end — so
+/// a short card sat there and a long one was snatched away, which is what "choppy" is.
+/// The hold now scales with what there is to read, and every fade is the same length.
+function holdFor(text) {
+  return Math.max(2600, text.split(/\s+/).length * 330 + 1200);
+}
+
+async function card(text, ms = 0, { number = true, navigate = null, during = null } = {}) {
+  if (!ms) ms = holdFor(text);
+  const lead = Math.min(900, ms * 0.4);
+
+  // Change the scene WHILE the card covers it. Without this the fade-out reveals the
+  // PREVIOUS scene and the navigation happens in full view — nine cards of watching
+  // something already seen.
+  //
+  // `domcontentloaded` rather than `networkidle2`, so the repaint lands within tens of
+  // milliseconds of the document existing. An earlier attempt used
+  // `evaluateOnNewDocument` to close that window completely; the registration is never
+  // removed, so the card was repainted on EVERY later navigation and the whole film came
+  // out as one flat card — 1.4 MB for three minutes. Six sampled frames, six card-coloured.
+  const swap = async () => {
+    if (navigate) {
+      await page.goto(navigate, { waitUntil: "domcontentloaded" });
+      if (CARDS) await paintCard(text, number ? String(chapter).padStart(2, "0") : "", true);
+      await page.waitForNetworkIdle({ idleTime: 400, timeout: 30000 }).catch(() => {});
+      await cursor();
+    }
+    if (during) await during();
+  };
+
+  if (!CARDS) {
+    // The card is off; the scene change it carries is not optional. Same total hold, so
+    // both cuts keep identical timing and one VO table fits either.
+    await sleep(lead);
+    await swap();
+    await sleep(ms + 900 - lead);
+    return;
+  }
+
+  const n = number ? String(++chapter).padStart(2, "0") : "";
+  await paintCard(text, n);
+  beat(`CARD ${n ? n + " " : ""}${text.replace(/\n/g, " ")}`);
+  await sleep(lead);
+  await swap();
+  await sleep(Math.max(400, ms - lead));
+  await page.evaluate(() => {
+    const d = document.getElementById("__card");
+    if (d) { d.style.opacity = "0"; setTimeout(() => d.remove(), 750); }
+  });
+  // A beat of quiet after the door closes, so the new scene lands before anything moves.
+  await sleep(900);
+}
 
 // ---------------------------------------------------------------- motion ------
 // A screen recording of a page that only repaints on events is a slideshow: sampling one
 // nine-second hold of the first cut found TWO distinct frames in it. Nothing was wrong
 // with the evidence; there was simply nothing moving, and a judge reads that as broken.
-//
-// Two fixes, both honest — neither invents anything that did not happen:
-//   · a pointer that TRAVELS to the element it is about to click, so an action is legible
-//     as an action rather than as a jump cut between two stills;
-//   · smooth scrolling and a slow drift across long panels, so a held shot is alive.
 
 async function cursor() {
   await page.evaluate(() => {
@@ -215,27 +264,29 @@ async function cursor() {
   });
 }
 
-/// Move the pointer onto `el` and let the viewer watch it arrive.
+/// Move the pointer onto `el` and let the viewer watch it arrive, so an action reads as an
+/// action rather than as a jump cut between two stills.
 async function pointTo(selector, nth = 0) {
   const box = await page.evaluate((s, n) => {
     const el = document.querySelectorAll(s)[n];
     if (!el) return null;
     el.scrollIntoView({ behavior: "smooth", block: "center" });
+    return true;
+  }, selector, nth);
+  if (!box) return;
+  await sleep(650);
+  const at = await page.evaluate((s, n) => {
+    const el = document.querySelectorAll(s)[n];
+    if (!el) return null;
     const r = el.getBoundingClientRect();
     return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
   }, selector, nth);
-  if (!box) return;
-  await sleep(650);                                  // let the smooth scroll settle
-  const after = await page.evaluate((s, n) => {
-    const r = document.querySelectorAll(s)[n].getBoundingClientRect();
-    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
-  }, selector, nth);
+  if (!at) return;
   await page.evaluate(({ x, y }) => {
     const c = document.getElementById("__cur");
     if (c) c.style.transform = `translate(${x}px, ${y}px)`;
-  }, after);
+  }, at);
   await sleep(850);
-  // a press: the ring contracts, then releases
   await page.evaluate(() => {
     const c = document.getElementById("__cur");
     if (!c) return;
@@ -248,10 +299,9 @@ async function pointTo(selector, nth = 0) {
 }
 
 /// A held shot that is not a still. `scrollBy` in small steps does not work: a CSS smooth
-/// scroll of nine pixels finishes in a frame and leaves the rest of the interval static —
-/// measured at three distinct frames over four seconds, which still reads as a slideshow.
-/// This drives the scroll from requestAnimationFrame inside the page, so the shot moves on
-/// every frame for its whole duration.
+/// scroll of nine pixels finishes in a frame and leaves the rest of the interval static,
+/// measured at three distinct frames over four seconds. This drives the scroll from
+/// requestAnimationFrame inside the page, so the shot moves on every frame.
 async function dwell(selector, ms, distance = 220) {
   await page.evaluate((sel, dur, dist) => {
     const el = document.querySelector(sel);
@@ -260,7 +310,6 @@ async function dwell(selector, ms, distance = 220) {
       const from = window.scrollY, t0 = performance.now();
       const step = (t) => {
         const k = Math.min(1, (t - t0) / dur);
-        // ease-in-out so it starts and stops without a jolt
         const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
         window.scrollTo(0, from + dist * e);
         k < 1 ? requestAnimationFrame(step) : done();
@@ -268,6 +317,121 @@ async function dwell(selector, ms, distance = 220) {
       requestAnimationFrame(step);
     }, 750));
   }, selector, Math.max(400, ms - 750), distance);
+}
+
+
+/// The one thing a judge who missed the narration still has to understand: what actually
+/// crosses. Its own full-screen plate rather than a scroll of the page panel, revealed a
+/// step at a time so the chain reads in order, ending on the sentence that separates this
+/// from a bridge.
+async function crossingDiagram(ms = 7000) {
+  await page.setContent(`<!doctype html><meta charset="utf-8"><style>
+    body{margin:0;background:#17130f;color:#f2ede6;height:100vh;display:flex;
+         align-items:center;justify-content:center;
+         font:400 30px/1.45 ui-sans-serif,-apple-system,'SF Pro Display',Inter,sans-serif}
+    .w{text-align:center}
+    .s{opacity:0;transition:opacity .45s ease}
+    .box{display:inline-block;border:1px solid #3a3129;border-radius:10px;
+         padding:16px 30px;font-weight:600}
+    .arr{color:#8a7f72;font:400 22px/1.9 ui-monospace,SFMono-Regular,Menlo,monospace;margin:10px 0}
+    .arr b{color:#cbbfae;font-weight:400}
+    .arc{border-color:#2f5f43;background:#12241a}
+    #punch{opacity:0;transition:opacity .6s ease;margin-top:46px;padding-top:30px;
+           border-top:1px solid #2b241d;
+           font:700 42px/1.3 ui-sans-serif,-apple-system,Inter,sans-serif;color:#3fb950}
+  </style><div class="w">
+    <div class="s" id="s0"><span class="box">Work performed on Solana</span></div>
+    <div class="s arr" id="s1">&#8595;&nbsp; re-executed inside an SP1 zkVM</div>
+    <div class="s" id="s2"><span class="box">Groth16 proof</span></div>
+    <div class="s arr" id="s3">&#8595;&nbsp; <b>this, and nothing else, crosses</b></div>
+    <div class="s" id="s4"><span class="box arc">Arc verifier &nbsp;&rarr;&nbsp; USDC escrow on Arc</span></div>
+    <div id="punch">No asset moves. Only a proof crosses.</div>
+  </div>`);
+  await sleep(400);
+  for (let i = 0; i < 5; i++) {
+    await page.evaluate((id) => { const e = document.getElementById(id); if (e) e.style.opacity = "1"; }, `s${i}`);
+    await sleep(560);
+  }
+  await page.evaluate(() => { const e = document.getElementById("punch"); if (e) e.style.opacity = "1"; });
+  await sleep(Math.max(1500, ms - 3200));
+}
+
+
+/// The last thing on screen. Two lines on one plate, because two cards in a row reveal the
+/// page between them.
+async function closingPlate(ms = 7000) {
+  if (!CARDS) { await sleep(ms); return; }
+  beat("CARD close");
+  await page.setContent(`<!doctype html><meta charset="utf-8"><style>
+    body{margin:0;background:#17130f;color:#f2ede6;height:100vh;display:flex;
+         align-items:center;justify-content:center;text-align:center;
+         font:400 30px/1.5 ui-sans-serif,-apple-system,'SF Pro Display',Inter,sans-serif}
+    .w{max-width:24em}
+    .a{opacity:0;transition:opacity .7s ease;
+       font:400 40px/1.35 ui-sans-serif,-apple-system,Inter,sans-serif;color:#cbbfae}
+    .r{width:72px;height:3px;background:#3fb950;margin:34px auto;opacity:0;
+       transition:opacity .7s ease}
+    .b{opacity:0;transition:opacity .7s ease;
+       font:700 58px/1.25 ui-sans-serif,-apple-system,Inter,sans-serif;
+       letter-spacing:-.02em;color:#f2ede6}
+  </style><div class="w">
+    <div class="a" id="a">Reckn makes payment conditional<br>on reproducible work.</div>
+    <div class="r" id="r"></div>
+    <div class="b" id="b">Reproduce, or refund.</div>
+  </div>`);
+  await sleep(500);
+  for (const id of ["a", "r", "b"]) {
+    await page.evaluate((x) => { const e = document.getElementById(x); if (e) e.style.opacity = "1"; }, id);
+    await sleep(900);
+  }
+  await sleep(Math.max(1500, ms - 3200));
+}
+
+
+/// The opening. ONE plate, not a title card followed by a question card: consecutive cards
+/// leave a gap where the page underneath shows through, measured at 0.6 s of flash between
+/// these two lines. The name and the one-liner land first, then the question that the rest
+/// of the film answers, then the whole thing lifts onto the money-shot.
+async function openingPlate(navigateTo, ms = 9500) {
+  const go = async () => {
+    await page.goto(navigateTo, { waitUntil: "domcontentloaded" });
+    await page.waitForNetworkIdle({ idleTime: 400, timeout: 30000 }).catch(() => {});
+    await cursor();
+  };
+  if (!CARDS) { await sleep(2000); await go(); await sleep(ms - 2000); return; }
+  beat("TITLE Reckn");
+  await page.setContent(`<!doctype html><meta charset="utf-8"><style>
+    body{margin:0;background:#17130f;color:#f2ede6;height:100vh;display:flex;
+         align-items:center;justify-content:center;text-align:center;
+         font:400 30px/1.5 ui-sans-serif,-apple-system,'SF Pro Display',Inter,sans-serif}
+    .w{max-width:26em}
+    .n{font:700 92px/1 ui-sans-serif,-apple-system,'SF Pro Display',Inter,sans-serif;
+       letter-spacing:-.03em;opacity:0;transition:opacity .7s ease}
+    .r{width:72px;height:3px;background:#3fb950;margin:32px auto;opacity:0;
+       transition:opacity .7s ease}
+    .o{font:400 34px/1.45 ui-sans-serif,-apple-system,Inter,sans-serif;color:#cbbfae;
+       opacity:0;transition:opacity .7s ease}
+    .q{margin-top:52px;padding-top:34px;border-top:1px solid #2b241d;opacity:0;
+       transition:opacity .7s ease;
+       font:600 44px/1.3 ui-sans-serif,-apple-system,Inter,sans-serif;color:#f2ede6}
+  </style><div class="w">
+    <div class="n" id="n">Reckn</div>
+    <div class="r" id="r"></div>
+    <div class="o" id="o">Agent-payment escrow where a disputed delivery is
+      re-executed, not judged. Reproduce, or refund.</div>
+    <div class="q" id="q">An agent paid another agent.<br>They disagree. Who decides?</div>
+  </div>`);
+  await sleep(400);
+  for (const id of ["n", "r", "o"]) {
+    await page.evaluate((x) => { const e = document.getElementById(x); if (e) e.style.opacity = "1"; }, id);
+    await sleep(700);
+  }
+  await sleep(2200);
+  await page.evaluate(() => { const e = document.getElementById("q"); if (e) e.style.opacity = "1"; });
+  beat("CARD who decides");
+  await sleep(2600);
+  await go();
+  await sleep(900);
 }
 
 async function press(selector, expect, { hold = 1600, nth = 0, timeout = 40000 } = {}) {
@@ -300,82 +464,120 @@ t0 = Date.now();
 
 // ---- 00 · the setup ------------------------------------------------------------
 // Word for word the submission form's short description.
-await title("Reckn",
-  "Agent-payment escrow where a disputed delivery is re-executed, not judged.\nReproduce, or refund.");
-await card("An agent paid another agent.\nThey disagree. Who decides?", 3200, { number: false });
+await openingPlate(BASE + "/index.html");
 // The money-shot: the same dispute judged by an opinion and by re-execution, disagreeing
 // over who gets paid. No card over it — the picture is the explanation, and a caption
 // repeating it is the thing this film is trying not to be.
 beat("00 evidence: opinion vs re-execution");
-await page.goto(BASE + "/index.html", { waitUntil: "networkidle2" });
-await cursor();
-await sleep(1200);
+await sleep(500);
 await page.evaluate(() => document.getElementById("btnFalse")?.click());
 await sleep(900);
 await page.evaluate(() => document.getElementById("btnReplay")?.click());
-await sleep(12000);
+await sleep(15000);
 
 // ---- 01 ------------------------------------------------------------------------
-await card("No key can move the money.", 3000);
 beat("01 evidence: live page, bytecode check");
-await page.goto(LIVE + "/", { waitUntil: "networkidle2" });
-await cursor();
+await card("No key can move the money.", 0, { navigate: LIVE + "/" });
 await page.waitForFunction(
   () => document.querySelector("#s-code")?.textContent === "\u2713",
   { timeout: 60000 },
 ).catch(() => { throw new Error("the live page's bytecode check did not go green"); });
 await sleep(2200);
-await dwell("#d-code", 6500);
+await dwell("#d-code", 9000);
 
-// the build condition, in this run's own bytes — not a transcription of an older run
-await page.setContent(`<!doctype html><meta charset="utf-8"><style>
-  body{margin:0;background:#17130f;color:#f2ede6;font:20px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;
-       display:flex;align-items:center;justify-content:center;height:100vh}
-  pre{margin:0;padding:30px 34px;white-space:pre-wrap}
-  .g{color:#3fb950}</style>
-  <pre>${noKeys.replace(/[<&]/g, (c) => (c === "<" ? "&lt;" : "&amp;"))
-        .replace(/(\u2713[^\n]*)/g, '<span class="g">$1</span>')}</pre>`);
-await sleep(9000);
+// The build condition, in this run's own bytes. The first version of this shot was the
+// raw stdout — seventeen lines of monospace with no caption, which an engineer reads as
+// "the gate passed" and a judge reads as a wall of green text. The output is unchanged;
+// what is added is a sentence saying what it IS, section headings at full weight with the
+// detail dimmed behind them, and the conclusion at a size you cannot miss. Revealed a
+// section at a time so it reads as running rather than as a screenshot.
+{
+  const lines = noKeys.split("\n");
+  const esc = (x) => x.replace(/[<&]/g, (c) => (c === "<" ? "&lt;" : "&amp;"));
+  const groups = [];
+  let cur = null;
+  for (const l of lines) {
+    if (l.startsWith("▶")) { cur = { head: l, items: [] }; groups.push(cur); }
+    else if (l.trim().startsWith("✓") && cur && !l.includes("the claim holds")) cur.items.push(l);
+  }
+  const verdict = lines.find((l) => l.includes("the claim holds")) || "";
+  await page.setContent(`<!doctype html><meta charset="utf-8"><style>
+    body{margin:0;background:#17130f;color:#f2ede6;height:100vh;display:flex;
+         align-items:center;justify-content:center;
+         font:400 26px/1.5 ui-sans-serif,-apple-system,'SF Pro Display',Inter,sans-serif}
+    .w{width:1500px}
+    .cap{color:#cbbfae;font-size:30px;line-height:1.4;margin-bottom:34px}
+    .cap b{color:#f2ede6}
+    .cmd{font:600 22px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:#8a7f72;
+         letter-spacing:.06em;margin-bottom:22px}
+    .g{opacity:0;transition:opacity .35s ease;margin:14px 0}
+    .g .h{font:600 27px/1.4 ui-sans-serif,-apple-system,Inter,sans-serif;color:#f2ede6}
+    .g .i{font:400 19px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:#7e756a;
+          margin-left:26px;white-space:pre-wrap}
+    #v{opacity:0;transition:opacity .5s ease;margin-top:40px;padding-top:28px;
+       border-top:1px solid #2b241d;
+       font:700 44px/1.25 ui-sans-serif,-apple-system,Inter,sans-serif;color:#3fb950}
+  </style><div class="w">
+    <div class="cap">Every build runs this. If an <b>owner</b>, an <b>admin</b>, a
+      <b>pause</b> or an <b>upgrade path</b> ever appeared in the escrow, <b>the build
+      would fail</b>.</div>
+    <div class="cmd">$ bash scripts/no-keys.sh</div>
+    ${groups.map((g, k) => `<div class="g" id="g${k}">
+        <div class="h">${esc(g.head)}</div>
+        <div class="i">${esc(g.items.map((x) => x.trim()).join("\n"))}</div></div>`).join("")}
+    <div id="v">${esc(verdict)}</div>
+  </div>`);
+  await sleep(1600);
+  for (let k = 0; k < groups.length; k++) {
+    await page.evaluate((id) => { const e = document.getElementById(id); if (e) e.style.opacity = "1"; }, `g${k}`);
+    await sleep(1050);
+  }
+  await page.evaluate(() => { const e = document.getElementById("v"); if (e) e.style.opacity = "1"; });
+  await sleep(4200);
+}
 
 // ---- 02 ------------------------------------------------------------------------
-await card("A real proof can still be\nthe wrong proof.", 3500);
-await page.goto(BASE + "/arc.html", { waitUntil: "networkidle2" });
-await cursor();
-await sleep(1600);
+await card("A real proof can still be\nthe wrong proof.", 0, {
+  navigate: BASE + "/arc.html",
+  during: () => page.evaluate(() => window.scrollTo(0, 0)),
+});
+await sleep(900);
 // Stay at the TOP. The log and the balances live above the step cards, and scrolling to
 // the cards pushes the outcome off-screen — which is how the first take of this chapter
 // showed the buttons and never showed what pressing them did.
 await page.evaluate(() => window.scrollTo(0, 0));
 await sleep(1200);
 beat("02 evidence: fund");
-await press('button[data-act="fund"][data-deal="honest"]', "tx 0x", { hold: 5000 });
+await press('button[data-act="fund"][data-deal="honest"]', "tx 0x", { hold: 5500 });
 // the beat the whole project turns on: a proof that VERIFIES, of another execution
 await page.evaluate(() => document.getElementById("log")
   ?.scrollIntoView({ behavior: "smooth", block: "center" }));
 await sleep(700);
 beat("02 evidence: BindingMismatch");
-await press('button[data-act="settle"][data-proof="decrease"]', "BindingMismatch", { hold: 9000 });
-await press('button[data-act="settle"][data-deal="honest"]:not([data-proof])', "tx 0x", { hold: 6000 });
+await press('button[data-act="settle"][data-proof="decrease"]', "BindingMismatch", { hold: 10000 });
+await press('button[data-act="settle"][data-deal="honest"]:not([data-proof])', "tx 0x", { hold: 6500 });
 await press('button[data-act="fund"][data-deal="decrease"]', "tx 0x", { hold: 1400 });
-await press('button[data-act="settle"][data-deal="decrease"]', "tx 0x", { hold: 6000 });
+await press('button[data-act="settle"][data-deal="decrease"]', "tx 0x", { hold: 6500 });
 
 // ---- 03 · what it is worth, and to whom -----------------------------------------
 // Six chapters of mechanism and none of consequence is how a technically strong demo
 // loses: the founder had to ask twice why a viewer should care. In a machine economy the
 // binding constraint is human attention, not price — so this chapter is the person being
 // removed, and the cost of doing it is computed live from the receipts.
-await card("Nobody approves it.\nThat is what it replaces.", 3500);
+await card("Nobody approves it.", 0, {
+  during: () => page.evaluate(() => document.querySelector("#t-cost")
+    ?.scrollIntoView({ block: "center" })),
+});
 beat("03 evidence: what it replaces");
-await dwell("#t-cost", 13000, 240);
+await dwell("#t-cost", 16000, 260);
 
 // ---- 04 ------------------------------------------------------------------------
-await card("The money stays on Arc.", 3000);
+await card("The money stays on Arc.", 0, { navigate: LIVE + "/" });
 {
   const rec_ = JSON.parse(fs.readFileSync(
     path.join(repo, "zk-verdict", "contracts", "arc.json"), "utf8"));
   const txs = Object.values(rec_.deployedByReckn.settlements).map((x) => x.tx);
   if (txs.length < 4) throw new Error(`arc.json records only ${txs.length} settlements`);
-  await page.goto(LIVE + "/", { waitUntil: "networkidle2" });
   await page.waitForFunction(
     () => document.querySelectorAll("#rows .ok").length >= 4 &&
           document.querySelector("#s-frozen")?.textContent === "\u2713",
@@ -386,22 +588,35 @@ await card("The money stays on Arc.", 3000);
     if (!shown.includes(tx)) throw new Error(`the page does not carry recorded settlement ${tx}`);
   }
   beat("04 evidence: four settlements");
-await page.evaluate(() => document.getElementById("rows")?.scrollIntoView({ block: "center" }));
-  await sleep(11000);
+  await dwell("#rows", 15000);
 }
 
+
 // ---- 05 ------------------------------------------------------------------------
-await card("This is not a bridge.", 3000);
-beat("05 evidence: the flow");
-await dwell(".flow", 12000);
+await card("This is not a bridge.", 0, { number: true });
+// The diagram is this chapter's evidence, not the page's own flow panel — they say the
+// same thing, and a plate that reveals a step at a time reads in order where a scrolled
+// panel does not. It replaces the document, so the next chapter navigates back.
+beat("05 evidence: what crosses");
+await crossingDiagram(7500);
+
 
 // ---- 06 ------------------------------------------------------------------------
-await card("The proof decides the payout.\nIt does not prove state origin.", 4000);
+await card("A proof of the payout.\nNot a proof of the state.", 0, {
+  navigate: LIVE + "/",
+  during: () => page.evaluate(() => document.querySelector("table.two")
+    ?.scrollIntoView({ block: "center" })),
+});
 beat("06 evidence: the two rows");
-await dwell("table.two", 11000);
+await dwell("table.two", 14000);
 
 // ---- 07 ------------------------------------------------------------------------
-await card("Check it yourself.", 3000);
+// No door here on purpose. Ten cards was one every eighteen seconds, and the founder read
+// that as choppy — correctly. The typing beat introduces itself, and the closing door is
+// only seventeen seconds away.
+await page.evaluate(() => document.getElementById("claim")
+  ?.scrollIntoView({ behavior: "smooth", block: "center" }));
+await sleep(1200);
 await page.evaluate(() => document.getElementById("claim")
   ?.scrollIntoView({ behavior: "smooth", block: "center" }));
 await sleep(1400);
@@ -415,10 +630,14 @@ beat("07 evidence: typing");
   await sleep(3000);
   const tally = await page.$eval("#tally", (e) => e.textContent);
   if (!/distinct claim/.test(tally)) throw new Error("the claim tally did not update: " + tally);
-  await dwell("#tally", 4500);
+  await dwell("#tally", 5500);
 }
 
-await card("Reproduce, or refund.", 3400, { number: false });
+// Ending on the provenance caveat is honest and flat; the claim goes last. ONE plate, not
+// two: consecutive cards leave a gap where the page underneath shows through — measured at
+// 1.5 s of the live page between these two lines, which is the same defect as revealing
+// the previous scene after a card.
+await closingPlate(7000);
 
 beat("END");
 await rec.stop();
