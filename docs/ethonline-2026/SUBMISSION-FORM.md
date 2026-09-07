@@ -517,26 +517,17 @@ criterion where the current artefact does not yet meet a stated rule.
 
 ### "How are you using this Protocol / API?"
 
+> The field asks for **a sentence or two**. It gets two. An earlier draft here ran to four
+> paragraphs, which is not an answer to the question that was asked — and everything it
+> said already lives in the description field, where there is room for it.
+
 ```
-Reckn is a keyless escrow for agent-to-agent payments: a disputed delivery is settled by a
-zero-knowledge proof of re-execution, and no owner, resolver or admin exists to overrule
-it. On Arc it settles in Circle's USDC — through the ERC-20 face Circle predeploys at
-0x3600000000000000000000000000000000000000 over the same balance Arc uses as native gas.
-
-The contract needed no change at all, because a deal names its payment token when it is
-funded. What Arc needed from us was evidence rather than adaptation: that settlement is
-correct in USDC's units and semantics — six decimals, revert instead of a false return,
-and a blacklisting token. Seven tests cover that against real Groth16 proofs with no mock
-verifier.
-
-It is deployed on Arc testnet and has settled four times with real testnet USDC: a proof
-released the seller, a proof of a wrong execution refunded the buyer, and TWO OF THE FOUR
-WERE DECIDED BY PROOFS ABOUT WORK PERFORMED ON SOLANA — one escrow, two virtual machines,
-no bridge and no resolver anywhere on the path that chose who got paid.
-
-You can check all of it from a browser with nothing installed: https://psyto.github.io/reckn/
-compares the bytecode holding the money against the source in the repository and reads the
-four settlements off Arc as the page loads.
+Reckn's keyless escrow settles agent-to-agent payments in Circle's USDC on Arc, through
+the ERC-20 face predeployed at 0x3600000000000000000000000000000000000000 over the same
+balance Arc uses as native gas — and it needed no contract change to do it, because a deal
+names its payment token when it is funded. It is live on Arc testnet with four settlements
+behind it, two of them decided by proofs about work performed on Solana, and
+https://psyto.github.io/reckn/ lets you verify that from a browser with nothing installed.
 ```
 
 ### "Link to the line of code where the tech is used"
