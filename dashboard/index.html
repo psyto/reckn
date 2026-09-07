@@ -781,8 +781,17 @@
 
   /* ---- ledger ---- */
   function fmt(n){ return n.toLocaleString("en-US"); }
-  function setAmt(acct, n){ document.querySelector('.amt[data-acct="'+acct+'"]').firstChild.nodeValue = fmt(n); }
-  function getAmt(acct){ return parseInt(document.querySelector('.amt[data-acct="'+acct+'"]').firstChild.nodeValue.replace(/,/g,""),10) || 0; }
+  /* setAmt returns whether the node was still there. A ledger animation runs across
+     several frames, and if the document is replaced underneath it — a navigation, or the
+     recorder's setContent between shots — the queued rAF callbacks keep firing against a
+     DOM that no longer has .amt in it. That threw "Cannot read properties of null
+     (reading 'firstChild')" on every remaining frame of the animation. */
+  function amtNode(acct){
+    var n = document.querySelector('.amt[data-acct="'+acct+'"]');
+    return (n && n.firstChild) ? n.firstChild : null;
+  }
+  function setAmt(acct, n){ var t = amtNode(acct); if(!t) return false; t.nodeValue = fmt(n); return true; }
+  function getAmt(acct){ var t = amtNode(acct); return t ? (parseInt(t.nodeValue.replace(/,/g,""),10) || 0) : 0; }
   function animateLedger(acct, from, to, dur){
     if(reduced()){ setAmt(acct, to); return Promise.resolve(); }
     var t0 = null;
@@ -791,7 +800,9 @@
         if(t0===null) t0=t;
         var p = Math.min((t-t0)/dur, 1);
         var e = 1 - Math.pow(1-p, 3);
-        setAmt(acct, Math.round(from + (to-from)*e));
+        /* Gone means gone: stop the loop and settle the promise rather than throwing
+           once per frame for the rest of the animation. */
+        if(!setAmt(acct, Math.round(from + (to-from)*e))){ res(); return; }
         if(p<1) requestAnimationFrame(step); else { setAmt(acct, to); res(); }
       }
       requestAnimationFrame(step);

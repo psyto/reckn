@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" role="img" aria-labelledby="title desc">
+  <title id="title">Solana work, proof-only transfer, and Arc settlement</title>
+  <desc id="desc">A precise explanation diagram. Work is re-executed inside a zkVM using a committed Solana prestate. Only a Groth16 proof crosses to Arc. USDC stays in the Arc escrow and is released or refunded after verification. The diagram discloses that this proves consistency, not Solana mainnet provenance.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#17130f"/>
+      <stop offset="1" stop-color="#0e1110"/>
+    </linearGradient>
+    <linearGradient id="proof" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#79d8a1"/>
+      <stop offset="1" stop-color="#3fb950"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-60%" width="160%" height="220%">
+      <feGaussianBlur stdDeviation="9" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <marker id="arrowMint" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#79d8a1"/>
+    </marker>
+    <marker id="arrowGray" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#8a7f72"/>
+    </marker>
+    <style>
+      .kicker { font: 600 22px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .22em; fill: #8a7f72; }
+      .title { font: 700 58px Inter, ui-sans-serif, system-ui, sans-serif; letter-spacing: -.035em; fill: #f2ede6; }
+      .zone { font: 700 22px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .14em; fill: #c9c1b8; }
+      .cardtitle { font: 700 30px Inter, ui-sans-serif, system-ui, sans-serif; fill: #f2ede6; letter-spacing: -.02em; }
+      .body { font: 400 22px Inter, ui-sans-serif, system-ui, sans-serif; fill: #c9c1b8; }
+      .mono { font: 500 18px ui-monospace, SFMono-Regular, Menlo, monospace; fill: #a69c91; }
+      .mint { fill: #79d8a1; }
+      .warn { fill: #f0b6a8; }
+      .small { font: 400 18px Inter, ui-sans-serif, system-ui, sans-serif; fill: #a69c91; }
+      .footer { font: 500 19px Inter, ui-sans-serif, system-ui, sans-serif; fill: #d7b0a6; }
+    </style>
+  </defs>
+
+  <rect width="1920" height="1080" fill="url(#bg)"/>
+  <rect x="54" y="50" width="1812" height="980" rx="28" fill="none" stroke="#332d27" stroke-width="2"/>
+
+  <text x="108" y="130" class="kicker">RECKN / CROSS-VM SETTLEMENT</text>
+  <text x="108" y="205" class="title">The proof crosses. The USDC does not.</text>
+  <text x="108" y="246" class="body">A Solana computation is re-executed in a zkVM; Arc settles only from the verified result.</text>
+
+  <rect x="108" y="306" width="705" height="552" rx="22" fill="#1d211d" stroke="#3d4b41" stroke-width="2"/>
+  <text x="154" y="365" class="zone">SOLANA WORK CONTEXT</text>
+  <line x1="154" y1="390" x2="767" y2="390" stroke="#3d4b41" stroke-width="2"/>
+
+  <rect x="154" y="435" width="286" height="196" rx="16" fill="#171a18" stroke="#455247" stroke-width="2"/>
+  <text x="184" y="490" class="cardtitle">Deterministic work</text>
+  <text x="184" y="530" class="body">e.g. a Solana</text>
+  <text x="184" y="560" class="body">System transfer</text>
+  <text x="184" y="604" class="mono">committed prestate</text>
+
+  <path d="M 458 532 C 492 532, 506 532, 536 532" fill="none" stroke="#8a7f72" stroke-width="4" marker-end="url(#arrowGray)"/>
+
+  <rect x="554" y="435" width="213" height="196" rx="16" fill="#171a18" stroke="#79d8a1" stroke-width="2"/>
+  <text x="584" y="490" class="cardtitle">zkVM</text>
+  <text x="584" y="530" class="body">re-executes</text>
+  <text x="584" y="560" class="body">the predicate</text>
+  <text x="584" y="604" class="mono mint">reproduced / failed</text>
+
+  <path d="M 660 652 C 660 696, 660 719, 660 749" fill="none" stroke="#79d8a1" stroke-width="4" marker-end="url(#arrowMint)"/>
+  <text x="477" y="790" class="mono">Groth16 proof of the result</text>
+
+  <line x1="960" y1="300" x2="960" y2="875" stroke="#5e564d" stroke-width="3" stroke-dasharray="11 13"/>
+  <text x="960" y="352" class="zone" text-anchor="middle">VM BOUNDARY</text>
+  <text x="960" y="387" class="small" text-anchor="middle">no bridge · no light client</text>
+
+  <path d="M 700 766 C 790 766, 829 766, 928 766" fill="none" stroke="url(#proof)" stroke-width="8" filter="url(#glow)" marker-end="url(#arrowMint)"/>
+  <path d="M 992 766 C 1092 766, 1130 766, 1224 766" fill="none" stroke="url(#proof)" stroke-width="8" filter="url(#glow)" marker-end="url(#arrowMint)"/>
+  <rect x="817" y="716" width="286" height="56" rx="28" fill="#202d24" stroke="#79d8a1" stroke-width="2"/>
+  <text x="960" y="752" class="mono mint" text-anchor="middle">ONLY THE PROOF CROSSES</text>
+
+  <rect x="1107" y="306" width="705" height="552" rx="22" fill="#1b1a18" stroke="#4a453e" stroke-width="2"/>
+  <text x="1153" y="365" class="zone">ARC SETTLEMENT CONTEXT</text>
+  <line x1="1153" y1="390" x2="1766" y2="390" stroke="#4a453e" stroke-width="2"/>
+
+  <rect x="1153" y="435" width="230" height="196" rx="16" fill="#171613" stroke="#79d8a1" stroke-width="2"/>
+  <text x="1183" y="490" class="cardtitle">Arc verifier</text>
+  <text x="1183" y="530" class="body">checks one</text>
+  <text x="1183" y="560" class="body">generic proof</text>
+  <text x="1183" y="604" class="mono mint">on-chain</text>
+
+  <path d="M 1402 532 C 1437 532, 1452 532, 1481 532" fill="none" stroke="#79d8a1" stroke-width="4" marker-end="url(#arrowMint)"/>
+
+  <rect x="1498" y="435" width="268" height="196" rx="16" fill="#242019" stroke="#c9a65f" stroke-width="2"/>
+  <text x="1528" y="490" class="cardtitle">Reckn escrow</text>
+  <text x="1528" y="530" class="body">USDC stays</text>
+  <text x="1528" y="560" class="body">on Arc</text>
+  <text x="1528" y="604" class="mono" fill="#e1c582">held → settled</text>
+
+  <path d="M 1632 651 C 1632 697, 1556 714, 1515 741" fill="none" stroke="#79d8a1" stroke-width="4" marker-end="url(#arrowMint)"/>
+  <path d="M 1632 651 C 1632 697, 1706 714, 1746 741" fill="none" stroke="#d7b0a6" stroke-width="4" marker-end="url(#arrowGray)"/>
+  <!-- Centred under their own arrowheads (1515 and 1746). Left-anchored they collided:
+       at mono 18px "REPRODUCED → release" runs to x=1672 and the second label started
+       at 1647, so the frame read "releaSFAILED". Held for ten seconds it is unmissable. -->
+  <text x="1515" y="790" text-anchor="middle" class="mono mint">REPRODUCED → release</text>
+  <text x="1746" y="790" text-anchor="middle" class="mono warn">FAILED → refund</text>
+
+  <rect x="108" y="906" width="1704" height="72" rx="16" fill="#271d1a" stroke="#69463d" stroke-width="2"/>
+  <text x="145" y="951" class="footer">Scope: this proves the re-executed result matches the committed inputs. It does not yet prove those inputs came from Solana mainnet.</text>
+</svg>
