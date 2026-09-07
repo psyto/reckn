@@ -40,7 +40,7 @@ Audited 2026-09-07 against the form's live contents. Ranked, because they are no
 | 7 | how it's made | *"…or if the constructor stores its caller"* | That was check 4 **before 009**. There is no constructor at all now — and the old wording would match an empty range and pass **vacuously**, which is precisely why it was replaced. |
 | 8 | description | key gauntlet listed as being built, *"including a permissionless timeout"* | The **timeout landed** on 2026-09-06 as its own task. The key gauntlet is **stopped at a hard stop** and is a founder decision. |
 | 9 | description | *"try to talk the judge into approving"* | 004's specification removed exactly that framing: the claim is judge-independent, because a judge we wrote ourselves being persuaded is evidence of nothing. |
-| **10** | video upload | *(the cut that exists is 1 min 41 s, silent)* | The event requires **2–4 minutes, ≥720p, audio without music**. 1080p is fine; **the duration is under the floor and there is no audio track at all** — measured with `ffprobe`, not assumed. Round 1 of Live Judging grades "video presentation and quality" explicitly. |
+| ~~10~~ | video upload | **duration fixed 2026-09-07: 2:08**, six chapters, 1080p 16:9, cards 21.6% of the running time. **Audio is still absent** and is the only remaining item — the timecoded script is in `dashboard/video/VO.md` and `check.sh` will refuse the file until a track exists. |
 | **11** | images | *(nothing uploaded)* | A **logo** (square), a **cover** (16:9) and **at least three screenshots** are all required fields. |
 | 12 | AI tools | *"ChatGPT was used to generate the initial boilerplate…"* | The form's own placeholder, and false here. It is also the one field where the truthful answer is an advantage rather than a disclosure — see §9. |
 
@@ -150,7 +150,7 @@ What we deliberately do not quote is a dollar cost per proof. Succinct's network
 
 WHAT CROSSES, AND WHAT DOES NOT
 
-The common misreading is that Arc verifies Solana, or that something is bridged. Neither is true. The work happens on Solana; the JUDGING happens inside an SP1 zkVM, which verifies the signatures, recomputes the block bank_hash and re-executes the transfer; and what reaches Arc is a Groth16 proof and nothing else. No bridge is needed because no asset moves — the USDC is on Arc at the start and on Arc at the end. No light client is needed because Arc is never asked what Solana's state IS; it is asked whether a computation over a committed state is valid.
+The common misreading is that Arc verifies Solana, or that something is bridged. Neither is true. The work happens on Solana; the JUDGING happens inside an SP1 zkVM, which verifies the signatures, recomputes the block bank_hash and re-executes the transfer; and what reaches Arc is a Groth16 proof and nothing else. No bridge is needed because no asset moves — the USDC is on Arc at the start and on Arc at the end, and Arc never runs a Solana VM; it checks that one program executed correctly over public inputs. No light client is needed because Arc is never asked what Solana's state IS; it is asked whether a computation over a committed state is valid.
 
 What this does today: settle USDC on Arc conditionally on the re-executed result of work performed on Solana, with no bridge, no light client and no adjudicator anywhere on the path that decides the payout.
 
@@ -456,11 +456,12 @@ being *attacked*, and a judge scrolling a gallery gives the first image the most
 
 ## 12. Video page — **the cut on disk does not yet satisfy the requirements**
 
-| requirement | screen footage as it stands |
+| requirement | as it stands |
 |---|---|
-| 2–4 minutes | **1:41** — under the floor |
+| 2–4 minutes | **2:08** ✅ |
 | ≥ 720p | **1920 × 1080** ✅ |
-| audio, no music | **no audio track at all** |
+| 16:9 | **1.7778** ✅ |
+| audio, no music | **no audio track** — the one thing outstanding, and it is the founder's |
 
 Both cuts are 1080p **16:9**, re-recorded on 2026-09-07 for exactly this reason: the
 earlier one was 1280 × 800, which is 16:10, and putting that on a 16:9 timeline either
@@ -468,8 +469,10 @@ letterboxes it or crops it — and cropping a screen recording eats the thing be
 
 | file | use |
 |---|---|
-| `dashboard/media/reckn-arc-demo-clean.mp4` | **for compositing.** No title cards, so narration and titles can be added in the editor without the screen repeating the voice. |
-| `dashboard/media/reckn-arc-demo.mp4` | titles burned in — the standalone cut, if no voice is added |
+| `dashboard/media/reckn-arc-demo.mp4` | **the master.** Six chapter cards over the evidence; 2:08, 1920×1080, 21.6% cards / 78.4% evidence. |
+| `dashboard/media/reckn-arc-demo-clean.mp4` | the same beats with **no cards**, if titles are added in the editor instead. |
+| `dashboard/video/VO.md` | the English voice-over, timecoded from `beats.tsv` — every line fits its shot at 145 wpm |
+| `dashboard/video/check.sh` | run it on the finished file before submitting |
 
 **Both hold for identical durations**, so [`dashboard/video/NARRATION.md`](../../dashboard/video/NARRATION.md)
 — which is timed from the recorder's own beat lengths, not estimated — fits either.

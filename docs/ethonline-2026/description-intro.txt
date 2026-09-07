@@ -135,7 +135,8 @@ The common misreading is that Arc verifies Solana, or that something is bridged.
 true. The work happens on Solana; the JUDGING happens inside an SP1 zkVM, which verifies the
 signatures, recomputes the block bank_hash and re-executes the transfer; and what reaches Arc
 is a Groth16 proof and nothing else. No bridge is needed because no asset moves — the USDC is
-on Arc at the start and on Arc at the end. No light client is needed because Arc is never
+on Arc at the start and on Arc at the end, and Arc never runs a Solana VM; it checks that
+one program executed correctly over public inputs. No light client is needed because Arc is never
 asked what Solana's state IS; it is asked whether a computation over a committed state is
 valid.
 
