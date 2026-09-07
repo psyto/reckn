@@ -93,6 +93,14 @@ cent, and it does not grow with the size of the dispute.
 The number that constrains us is the other one: the average x402 payment is $0.52, and you
 cannot re-execute a fifty-cent API call under a zkVM and come out ahead.
 
+And it does not prevent disputes — it makes them not matter. The seller can insist, the
+buyer can deny, both can write at length, and the money moves the same way regardless.
+There is also no approval step: if anyone approved after seeing the re-execution, that
+approver would be a key. The proof's public values carry the outcome and the contract sends
+the money where the outcome says. Nothing decides in between. What counts as "reproduced"
+is fixed at funding, before the seller starts work, so the discretion is never created
+rather than being taken away from a judge.
+
 There is no dispute process here to invoke, either. The escrow has three states — None,
 Funded, Settled — and no Disputed one, because re-execution is not a remedy that a dispute
 triggers: it is how settlement works, every time. Money reaches the seller through exactly

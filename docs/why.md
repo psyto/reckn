@@ -47,6 +47,33 @@ disputable is selling something.
 **And Solana holding 49% of that volume is exactly why cross-VM settlement is not a stunt.**
 The money and the work are already on different chains for half of this market.
 
+### 3.0 What Reckn actually does, in one paragraph, said carefully
+
+**A large delivery that would otherwise need an escrow is settled by re-executing it, and
+the result of that re-execution IS the payout — there is no approval step.** Not "re-execute
+and then approve": if anyone approved after seeing the result, that approver would be a key,
+and the claim this project is built on would be dead. The proof's public values carry the
+outcome, and the contract sends the money where the outcome says. Nothing decides in
+between.
+
+**It does not prevent disputes. It makes them not matter.** The seller can insist, the
+buyer can deny, both can write at length — and the money moves the same way regardless.
+Type sixty different claims into the live page and you get sixty hashes and one verdict.
+That is a stronger property than prevention, and a more honest one: disagreement is not
+abolished, it is made irrelevant to the outcome.
+
+**And the terms are fixed before the work, not judged after it.** The buyer commits at
+funding to a `dealBinding` — the agreed prestate, predicate and plan. What counts as
+"reproduced" is settled before the seller starts. That is where the discretion goes: not
+removed from a judge, but never created, because there is nothing left to interpret.
+
+> ⚠ **The tooling does not yet support that ordering.** Today every script reads
+> `dealBinding` out of a proof fixture, which means the proof exists *before* the funding —
+> the reverse of the design. Computing a binding ahead of the work needs a host-side
+> implementation of the v2 EVM preimage, and there is only the in-guest one. This is the
+> gap in [`integrate.md`](integrate.md), and it is exactly the gap that stands between the
+> paragraph above and someone else being able to rely on it.
+
 ### 3.1 A correction to an earlier draft of this page, because it was wrong
 
 An earlier version of this document called Reckn *"the appeal court — invoked on the
