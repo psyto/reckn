@@ -297,12 +297,32 @@ canary() {
   return 0
 }
 
+# A long run reads its inputs at the moment each row starts and re-reads them when the row
+# ends — for ac008-selftest, seventy-seven minutes later. If the working tree moves in
+# between, the two readings disagree and the row goes red for a reason that has nothing to
+# do with the property under test. That is not hypothetical: the overnight run of
+# 2026-09-06 reported AC-13 red because commit 5009dd1 regenerated a mutant patch while the
+# run was in flight, and it cost eighty minutes of re-running to establish that the code was
+# fine. Nothing was measuring "did the tree move", so the failure could only be read as a
+# defect. Now it is measured, and it says which it was.
+tree_stamp() {
+  { git -C "$root" rev-parse HEAD 2>/dev/null || echo no-git
+    git -C "$root" status --porcelain 2>/dev/null; } | shasum -a 256 | cut -c1-16
+}
+
 run_all() {
   local ran=0 failed=0 ac
+  local tree_start; tree_start=$(tree_stamp)
   while IFS= read -r ac; do
     ran=$((ran + 1))
     run_row "$ac" || failed=$((failed + 1))
   done < <(manifest | cut -f1)
+  local tree_end; tree_end=$(tree_stamp)
+  if [[ "$tree_end" != "$tree_start" ]]; then
+    echo "ac008: THE WORKING TREE MOVED DURING THIS RUN ($tree_start -> $tree_end)."
+    echo "ac008: rows read their inputs at different times, so a red row here may be drift,"
+    echo "ac008: not a defect. Re-run on a still tree before believing any failure."
+  fi
   [[ $ran -eq 18 ]] || { echo "ac008: ran $ran rows, the manifest has 18"; return 1; }
   [[ $failed -eq 0 ]] || { echo "ac008: $failed/18 rows failed"; return 1; }
   canary || return 1                                                  # c6
