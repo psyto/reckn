@@ -8,7 +8,7 @@ promise: `scripts/no-keys.sh` fails the build if one appears.
 
 ### Open this and your browser checks Arc for you — nothing to install
 
-**→ [psyto.github.io/reckn](https://psyto.github.io/reckn/)**
+**→ [psyto.github.io/reckn](https://psyto.github.io/reckn/)** — live, no install, no wallet
 
 [![The live page: the deployed bytecode on Arc verified byte-identical to this repository, and four settlements read live from chain — two of them decided by proofs about work performed on Solana.](dashboard/media/arc-live-page.jpg)](https://psyto.github.io/reckn/)
 

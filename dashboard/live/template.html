@@ -137,9 +137,11 @@ cast receipt ${CFG.settlements[2].tx} --rpc-url ${CFG.rpc}
 cast call ${CFG.escrow} "deals(bytes32)" ${CFG.frozen} --rpc-url ${CFG.rpc}`;
 
 $('meta').innerHTML = `Escrow <a href="${CFG.explorer}/address/${CFG.escrow}"><code>${CFG.escrow}</code></a>
- · chain id ${CFG.chainId} · repository commit <code>${CFG.commit}</code>.
- This page is generated from <code>zk-verdict/contracts/arc.json</code> and forge's build
- output, never typed by hand — an earlier page had two of four transaction hashes wrong.`;
+ · chain id ${CFG.chainId} · <b>generated at commit</b> <code>${CFG.commit}</code>.
+ That stamp is when this page was BUILT, not necessarily the repository's tip — the page is
+ generated from <code>zk-verdict/contracts/arc.json</code> and forge's build output rather
+ than typed by hand, because an earlier page had two of four transaction hashes wrong. The
+ chain data above is not stamped at all: it is read live, every time you load this.`;
 
 (async () => {
   // 1 — the code
