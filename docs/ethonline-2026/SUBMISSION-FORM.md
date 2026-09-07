@@ -40,7 +40,7 @@ Audited 2026-09-07 against the form's live contents. Ranked, because they are no
 | 7 | how it's made | *"…or if the constructor stores its caller"* | That was check 4 **before 009**. There is no constructor at all now — and the old wording would match an empty range and pass **vacuously**, which is precisely why it was replaced. |
 | 8 | description | key gauntlet listed as being built, *"including a permissionless timeout"* | The **timeout landed** on 2026-09-06 as its own task. The key gauntlet is **stopped at a hard stop** and is a founder decision. |
 | 9 | description | *"try to talk the judge into approving"* | 004's specification removed exactly that framing: the claim is judge-independent, because a judge we wrote ourselves being persuaded is evidence of nothing. |
-| ~~10~~ | video upload | **duration fixed 2026-09-07: 2:08**, six chapters, 1080p 16:9, cards 21.6% of the running time. **Audio is still absent** and is the only remaining item — the timecoded script is in `dashboard/video/VO.md` and `check.sh` will refuse the file until a track exists. |
+| ~~10~~ | video upload | **v2, 2026-09-07: 3:04**, six chapters, 1080p 16:9, cards 29.6% of the running time; stills matted, no diagram close-up. Submit `reckn-arc-demo-v2.mp4`. **Audio is still absent** and is the only remaining item — the timecoded script is in `dashboard/video/VO.md` and `check.sh` will refuse the file until a track exists. |
 | **11** | images | *(nothing uploaded)* | A **logo** (square), a **cover** (16:9) and **at least three screenshots** are all required fields. |
 | 12 | AI tools | *"ChatGPT was used to generate the initial boilerplate…"* | The form's own placeholder, and false here. It is also the one field where the truthful answer is an advantage rather than a disclosure — see §9. |
 
@@ -464,12 +464,12 @@ being *attacked*, and a judge scrolling a gallery gives the first image the most
 
 | requirement | as it stands |
 |---|---|
-| 2–4 minutes | **3:19** ✅ |
+| 2–4 minutes | **3:04** ✅ |
 | ≥ 720p | **1920 × 1080** ✅ |
 | 16:9 | **1.7778** ✅ |
 | opens at all | **faststart** ✅ — `moov` at the front |
 | moves at all | **8/8** distinct frames per 4 s ✅ |
-| size | **13.6 MB** |
+| size | **15.6 MB** |
 | audio, no music | **no audio track** — the one thing outstanding, and it is the founder's |
 
 `bash dashboard/video/check.sh <file>` measures all of these. Two of the rows exist because
@@ -481,19 +481,27 @@ Both cuts are 1080p **16:9**, re-recorded on 2026-09-07 for exactly this reason:
 earlier one was 1280 × 800, which is 16:10, and putting that on a 16:9 timeline either
 letterboxes it or crops it — and cropping a screen recording eats the thing being shown.
 
+**Submit the `-v2` files.** The stills are matted — a smaller frame on a near-black
+surround with the caption in the dark below it — because printing type across the
+illustration needed a scrim to stay legible, and that scrim dimmed the picture it was
+printed on. The v1 files are kept on disk and are not the submission.
+
 | file | use |
 |---|---|
-| `dashboard/media/reckn-arc-demo.mp4` | **the master.** Six chapter cards over the evidence; 2:08, 1920×1080, 21.6% cards / 78.4% evidence. |
-| `dashboard/media/reckn-arc-demo-clean.mp4` | the same beats with **no cards**, if titles are added in the editor instead. |
+| `dashboard/media/reckn-arc-demo-v2.mp4` | **the master.** Six chapter cards over the evidence; **3:04**, 1920×1080, 29.6% cards / 70.4% evidence. |
+| `dashboard/media/reckn-arc-demo-v2-clean.mp4` | the same beats with **no cards** (3:03), if titles are added in the editor instead. |
+| `dashboard/media/reckn-arc-demo.mp4`, `-clean.mp4` | v1, 3:19 — superseded, kept for comparison, **not** the submission. |
 | `dashboard/video/VO.md` | the English voice-over, timecoded from `beats.tsv` — every line fits its shot at 145 wpm |
 | `dashboard/video/check.sh` | run it on the finished file before submitting |
 
-**Both hold for identical durations**, so [`dashboard/video/NARRATION.md`](../../dashboard/video/NARRATION.md)
-— which is timed from the recorder's own beat lengths, not estimated — fits either.
-It carries a 60–75 s pitch script for the front, which is what closes the gap to the
-two-minute floor.
+The narration is [`dashboard/video/VO.md`](../../dashboard/video/VO.md) — fifteen lines,
+generated from the recorder's `beats.tsv`, every one of them inside its word budget AND
+inside the shot it describes. `NARRATION.md` in the same directory is **superseded**: it was
+hand-timed against a 1:45 cut and every timecode on it is now wrong. Its beat 9b — the
+boundary paragraph — is still the best wording of what the proof does and does not
+establish, and that is the only reason it is kept.
 
-## 12. Measured, on the tree at commit `5d86292` (2026-09-07)
+## 13. Measured, on the tree at commit `5d86292` (2026-09-07)
 
 | what | result |
 |---|---|
@@ -515,7 +523,7 @@ is a founder decision, not a scheduling one; 002 (real ERC-20 workload) is not s
 
 ---
 
-## 13. Superseded drafts outside the repository
+## 14. Superseded drafts outside the repository
 
 These were the working copies. **They are no longer current** and should not be pasted
 from. Each is listed with what it got wrong, because "it is old" is not a useful warning.

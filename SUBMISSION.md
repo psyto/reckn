@@ -333,9 +333,9 @@ positioned; if it stalls, the verdict still reproduces anywhere.
 
 ---
 
-## Demo video — re-recorded 2026-09-07: [`dashboard/media/reckn-arc-demo.mp4`](dashboard/media/reckn-arc-demo.mp4)
+## Demo video — re-recorded 2026-09-07: [`dashboard/media/reckn-arc-demo-v2.mp4`](dashboard/media/reckn-arc-demo-v2.mp4)
 
-**101 seconds, no audio needed, title cards carry it.** The last third leaves the
+**3 minutes 4 seconds, no audio yet, title cards carry it.** The last third leaves the
 local chain and opens the live page, where the browser checks Arc itself — the recorder
 throws rather than filming that beat if the page's own checks do not go green. It is a recording, not an
 animation: the script starts the chain itself, clicks the same buttons a judge would,

@@ -121,9 +121,11 @@ virtual machine the work happened on.
 
 ![The Arc demo again: the Solana deal funded and settled with the Solana proof, the seller tile at 250.00 USDC.](dashboard/media/arc-demo-solana.jpg)
 
-**▶ Demo video (101s, 1920×1080, re-recorded 2026-09-07 — it now ends on the *public* chain):**
-[`dashboard/media/reckn-arc-demo.mp4`](dashboard/media/reckn-arc-demo.mp4) — the hook,
+**▶ Demo video (3:04, 1920×1080, re-recorded 2026-09-07 — it now ends on the *public* chain):**
+[`dashboard/media/reckn-arc-demo-v2.mp4`](dashboard/media/reckn-arc-demo-v2.mp4) — the hook,
 then the five presses above driven live, ending on this run's own `no-keys.sh` output.
+A no-cards cut for editors sits beside it as `reckn-arc-demo-v2-clean.mp4` (3:03); the v1
+files are kept for comparison and are not the submission.
 Regenerate it with `cd dashboard/video && npm install && node record.js`; the recorder
 asserts each step's result and refuses to record one that did not happen.
 

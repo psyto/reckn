@@ -1,9 +1,16 @@
-# Narration script — timed to `reckn-arc-demo-clean.mp4`
+# Narration script — **SUPERSEDED. The timings below are for a cut that no longer exists.**
 
-For the composite: pitch video + this screen footage + a generated voice track. The
-timings below are the **recorder's own beat durations**, not estimates — both cuts hold
-for identical lengths, so this script fits `reckn-arc-demo-clean.mp4` (no titles, for when
-you add your own) and `reckn-arc-demo.mp4` (titles burned in) equally.
+> **Use [`VO.md`](VO.md) for the delivered film.** That table is generated from the
+> recorder's `beats.tsv` on every run, so it cannot drift from the picture; this one was
+> hand-timed against a 1:45 cut, and the film has since been re-recorded twice — v1 at 3:19
+> and v2 at **3:04**. Every timecode on this page is therefore wrong, and a script whose
+> timings are wrong is worse than no script, because it reads as authoritative.
+>
+> **What is still good here is the WORDING**, and beat 9b in particular: the boundary
+> paragraph that says what the proof does and does not establish. That paragraph is the
+> reason this file is kept rather than deleted.
+
+For the composite: pitch video + this screen footage + a generated voice track.
 
 **Read at ~145 words per minute.** Each line's word budget is the cell next to it; going
 over means the voice runs past its shot. Every line is written to say something the
