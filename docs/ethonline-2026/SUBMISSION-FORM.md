@@ -494,13 +494,24 @@ technology is not integrated is the kind of thing a judge checks. Hedera is the 
 purse on offer at $15,000 and is deliberately **not** selected: nothing here runs on
 Hedera, and the founder ruled it out of scope on 2026-09-06.
 
-**Submission type — this one is the founder's call, and it has a calendar conflict.**
-*Top 10 Finalist & Partner Prizes* requires a **Live Judging session on Monday
-2026-09-14 at 12:00 EDT**, which is **01:00 JST on 2026-09-15** — inside the window
-already committed to the R[3]sidency application (deadline 09-15). *Partner Prizes only*
-removes that obligation and keeps the Arc prizes, which are what this submission is
-actually shaped for. Round 1 is asynchronous either way and judges on video quality,
-demo quality, and git history — all three of which are in good shape.
+**Submission type — decided 2026-09-07: `Top 10 Finalist & Partner Prizes`.**
+
+That commits to a **Live Judging session, Monday 2026-09-14, 12:00 EDT = 01:00 JST on
+2026-09-15**. Put it in the calendar as a JST time, because it is the small hours of the
+next day and it lands inside the window already given to the R[3]sidency application
+(deadline 09-15). Reaching it is not automatic: round 1 is an asynchronous review and
+only projects that pass it present live.
+
+**Round 1's three criteria, against where we actually stand:**
+
+| criterion | state |
+|---|---|
+| **Video presentation and quality** | **The weakest of the three, and the only one not finished.** 1080p 16:9 footage exists in two cuts with a timed narration script; the pitch section and the voice are being produced. Until they are, the cut on disk is 1:41 and silent against a 2–4 minute, audio-required rule. |
+| **Project live demo quality** | Strong. <https://psyto.github.io/reckn/> needs no install, no wallet and no clone: the visitor's own browser compares the deployed bytecode against the source and reads four settlements off Arc testnet. |
+| **Proper use of git commit history** | Strong, and measured rather than asserted — **89 commits inside the event window, spread across every day of it** (23 / 37 / 18 / 11 on 09-04 → 09-07), no squash, the largest touching 22 files. This is the same evidence the Continuity boundary rests on, so it was going to be true anyway. |
+
+The one thing to protect between now and then is the video, because it is the only
+criterion where the current artefact does not yet meet a stated rule.
 
 ## 10b. Arc prize application — the four sub-fields
 
