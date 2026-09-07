@@ -128,7 +128,13 @@ WHAT WE DID NOT PLAN, AND KEPT. The first live settlement reverted with "Blocked
 
 STILL OPEN, AND NAMED: the adversarial key gauntlet is stopped at a hard stop; the live adversarial-input feature has a round-3 specification and no implementation; the real ERC-20 workload is not started.
 
-WHO PAYS FOR THIS, AND WHAT IT SAVES
+WHAT IT REMOVES IS NOT A FEE — IT IS THE PERSON
+
+In a machine economy the binding constraint is human attention, not cost. An escrow that a person approves is a serialisation point: agents run continuously and in parallel, and every release queues behind somebody reading something.
+
+x402 has processed 165 million payments across 69,000 active agents. At the dispute rate card payments actually run at — about 0.5% — that is 825,000 decisions, or 14 to 34 person-years of reading depending on whether you allow two minutes each or five. That figure is DERIVED: the transaction count and the dispute rate are cited, the minutes-per-decision is an assumption, and it is stated so you can move it. Halve it and the shape is unchanged, because transaction count is the thing that grows and human attention is the thing that does not.
+
+Reckn's release condition is fixed BEFORE the work begins and evaluated by a computation both parties can run. Nobody reads anything, nobody approves anything, and nothing queues behind anybody. That is the point; the money below is what it costs to do it.
 
 A decided payment dispute costs a merchant $110 to $128 all-in today, against a $20-50 processor fee — the rest is people reading conflicting stories. Global chargeback volume is $33.79B in 2025 heading to $41.69B by 2028, and every $1 lost to one costs $5.13 once you count the disputes never contested. That cost exists because somebody has to decide.
 
@@ -458,10 +464,18 @@ being *attacked*, and a judge scrolling a gallery gives the first image the most
 
 | requirement | as it stands |
 |---|---|
-| 2–4 minutes | **2:08** ✅ |
+| 2–4 minutes | **3:06** ✅ |
 | ≥ 720p | **1920 × 1080** ✅ |
 | 16:9 | **1.7778** ✅ |
+| opens at all | **faststart** ✅ — `moov` at the front |
+| moves at all | **8/8** distinct frames per 4 s ✅ |
+| size | **14.4 MB** |
 | audio, no music | **no audio track** — the one thing outstanding, and it is the founder's |
+
+`bash dashboard/video/check.sh <file>` measures all of these. Two of the rows exist because
+the video failed them silently: the first cut had **two distinct frames inside a nine-second
+hold** while every other row was green, and the delivered file had its `moov` atom at the
+end, so it would not open at all.
 
 Both cuts are 1080p **16:9**, re-recorded on 2026-09-07 for exactly this reason: the
 earlier one was 1280 × 800, which is 16:10, and putting that on a 16:9 timeline either

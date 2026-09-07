@@ -79,7 +79,22 @@ STILL OPEN, AND NAMED: the adversarial key gauntlet is stopped at a hard stop; t
 adversarial-input feature has a round-3 specification and no implementation; the real
 ERC-20 workload is not started.
 
-WHO PAYS FOR THIS, AND WHAT IT SAVES
+WHAT IT REMOVES IS NOT A FEE — IT IS THE PERSON
+
+In a machine economy the binding constraint is human attention, not cost. An escrow that a
+person approves is a serialisation point: agents run continuously and in parallel, and every
+release queues behind somebody reading something.
+
+x402 has processed 165 million payments across 69,000 active agents. At the dispute rate card
+payments actually run at — about 0.5% — that is 825,000 decisions, or 14 to 34 person-years of
+reading depending on whether you allow two minutes each or five. That figure is DERIVED: the
+transaction count and the dispute rate are cited, the minutes-per-decision is an assumption,
+and it is stated so you can move it. Halve it and the shape is unchanged, because transaction
+count is the thing that grows and human attention is the thing that does not.
+
+Reckn's release condition is fixed BEFORE the work begins and evaluated by a computation both
+parties can run. Nobody reads anything, nobody approves anything, and nothing queues behind
+anybody. That is the point; the money below is what it costs to do it.
 
 A decided payment dispute costs a merchant $110 to $128 all-in today, against a $20-50
 processor fee — the rest is people reading conflicting stories. Global chargeback volume is

@@ -5,6 +5,44 @@ are the interesting ones and are not estimated into looking better.
 
 ---
 
+## 0. The constraint, before the costs
+
+**In a machine economy the binding constraint is not the fee. It is human attention.**
+
+An escrow that a person approves is a serialisation point: agents run continuously, in
+parallel, at machine speed, and every release queues behind someone reading something. The
+10–20% a platform charges is a *symptom* of that person existing. The ceiling is that you
+cannot build an economy of software counterparties whose settlement path requires a human
+to form an opinion.
+
+The magnitude, from the one cited number available. x402 has processed **165 million
+payments** across **69,000 active agents**
+([Chainalysis](https://www.chainalysis.com/blog/x402-agentic-payments-adoption/)). Applying
+the dispute rate card payments actually run at — **~0.5%**
+([Chargebacks911](https://chargebacks911.com/chargeback-stats/)) — and assuming a human
+needs somewhere between two and five minutes to read two conflicting accounts and decide:
+
+| | |
+|---|---|
+| disputed payments | **825,000** |
+| human decisions, at 2 min each | 27,500 hours = **14 person-years** |
+| at 5 min each | 68,750 hours = **34 person-years** |
+
+**This is derived, not measured**: the transaction count and the dispute rate are cited,
+the minutes-per-decision is an assumption, and it is stated so you can move it. Halve it
+and the conclusion does not change, because the shape is what matters — **transaction count
+is the thing that grows and human attention is the thing that does not.**
+
+And note where those numbers come from: payments averaging **$0.52**, which nobody would
+staff a reviewer for. The argument only sharpens as agent work moves up in value into the
+range where an escrow is actually wanted, because that is exactly where the human-approval
+model is used today.
+
+**What Reckn removes is not a fee. It is the person.** The release condition is fixed before
+the work begins and evaluated by a computation both parties can run; nobody reads anything,
+nobody approves anything, and there is no queue behind anybody. The cost sections below are
+what that costs to do — but the reason to do it is above.
+
 ## 1. The loss Reckn is aimed at, in the economy that already has this problem
 
 Disputed payments are not a hypothetical cost; card payments have been paying it for

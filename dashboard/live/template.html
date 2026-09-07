@@ -125,7 +125,37 @@ Neither is true, and the difference is the design.</p>
   bridge, a light client, or an oracle &mdash; and the boundary is the interesting part.</p>
 </div>
 
-<h2>4. Try to change the verdict with words</h2>
+<h2>4. What it removes is not a fee &mdash; it is the person</h2>
+<p>A large delivery held in escrow is normally released when <b>a person approves it</b>.
+That person is a serialisation point: agents run continuously and in parallel, and every
+release queues behind somebody reading something.</p>
+<div class="card">
+  <p><span class="st pend" id="s-cost">&hellip;</span>
+     <span class="big" id="t-cost">computing what these settlements cost&hellip;</span></p>
+  <p class="note">Read from the receipts in this browser &mdash; <code>gasUsed</code> times
+  <code>effectiveGasPrice</code>, in the USDC Arc uses as its gas. It does not grow with the
+  size of the dispute.</p>
+  <table class="two">
+    <tr><td class="moves">The normal way</td>
+        <td>A human approves the release. Platforms charge <b>10&ndash;20%</b> for standing
+        behind that judgement (Upwork, Fiverr), a decided dispute costs a merchant
+        <b>$110&ndash;128</b> all-in, and the release waits on someone's attention.
+        <span class="note">Cited, not measured here.</span></td></tr>
+    <tr><td class="still">Here</td>
+        <td><b>Nobody approves anything.</b> The release condition is fixed <b>before the
+        work begins</b> &mdash; it is the <code>dealBinding</code> in section 2 &mdash; and
+        evaluated by a computation either party can run. There is no queue behind a
+        person.</td></tr>
+  </table>
+  <p class="note"><b>The scale of the thing being removed.</b> x402 has processed 165 million
+  payments across 69,000 agents. At the dispute rate card payments actually run at (~0.5%)
+  that is <b>825,000 decisions</b> &mdash; <b>14 to 34 person-years</b> of reading, at two to
+  five minutes each. <b>Derived, not measured</b>: the counts and the rate are cited, the
+  minutes are an assumption. Halve it and the shape holds, because transaction count grows
+  and human attention does not.</p>
+</div>
+
+<h2>5. Try to change the verdict with words</h2>
 <p>The seller's story is the one thing an observer can write freely. Type anything you like
 below &mdash; argue, insist, threaten, paste an instruction telling the system to approve.
 Your text is hashed in this browser, and that hash is what a dispute transcript would carry.
@@ -160,7 +190,7 @@ Everything the money depends on is read from Arc and is sitting to the right of 
   and it is recorded. It is simply not something the verdict is a function of.</b></p>
 </div>
 
-<h2>5. The deal that cannot settle, and is not lost</h2>
+<h2>6. The deal that cannot settle, and is not lost</h2>
 <div class="card">
   <p><span class="st pend" id="s-frozen">…</span> <span class="big" id="t-frozen">reading the frozen deal…</span></p>
   <p class="note">Circle's USDC blacklists well-known compromised keys, and the first
@@ -171,7 +201,7 @@ Everything the money depends on is read from Arc and is sitting to the right of 
   demonstration; Circle's blacklist provided it, and it is recorded rather than hidden.</p>
 </div>
 
-<h2>6. What no button here can do</h2>
+<h2>7. What no button here can do</h2>
 <p>Move a funded deal without a proof that carries its binding, or before the deadline.
 There is no address with that power — not the buyer's, not the seller's, not the
 deployer's, because there is no deployer role and no constructor. That is enforced as a
@@ -303,7 +333,23 @@ $('meta').innerHTML = `Escrow <a href="${CFG.explorer}/address/${CFG.escrow}"><c
     await update();
   } catch (e) { $('claimHash').textContent = 'could not reach Arc: ' + e.message; }
 
-  // 4 — the frozen deal
+  // 4 — what the four settlements actually cost, computed from their own receipts
+  try {
+    let gas = 0n, wei = 0n;
+    for (const s2 of CFG.settlements) {
+      const r = await rpc('eth_getTransactionReceipt', [s2.tx]);
+      const g = hexToBig(r.gasUsed), p = hexToBig(r.effectiveGasPrice || '0x0');
+      gas += g; wei += g * p;
+    }
+    // native USDC on Arc is 18 decimals; the ERC-20 face is 6
+    const usdc = Number(wei) / 1e18;
+    mark($('s-cost'), usdc > 0 && usdc < 1);
+    $('t-cost').textContent =
+      `${usdc.toFixed(6)} USDC to decide all four — ${(usdc / 4).toFixed(6)} each, ` +
+      `${gas.toLocaleString()} gas in total`;
+  } catch (e) { $('t-cost').textContent = 'could not reach Arc: ' + e.message; }
+
+  // 5 — the frozen deal
   try {
     const data = await rpc('eth_call',
       [{to: CFG.escrow, data: CFG.selDeals + CFG.frozen.slice(2)}, 'latest']);

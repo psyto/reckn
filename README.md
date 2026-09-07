@@ -351,10 +351,25 @@ closes the frame) → `reckn-codex-review` (adversarial, second model) →
 Continuity discipline are in [`AGENTS.md`](AGENTS.md); the plan and the advance
 disclosure are in [`docs/ethonline-2026/`](docs/ethonline-2026).
 
-## Who pays for this, and what it saves
+## What it removes is not a fee — it is the person
 
-A decided payment dispute costs a merchant **$110–128 all-in** today, against a $20–50
-processor fee — the rest is people reading conflicting stories. Global chargeback volume is
+**In a machine economy the binding constraint is human attention, not cost.** An escrow a
+person approves is a serialisation point: agents run continuously and in parallel, and every
+release queues behind someone reading something.
+
+x402 has processed **165 million payments** across **69,000 agents**. At the dispute rate
+card payments actually run at (~0.5%) that is **825,000 decisions** — **14 to 34
+person-years** of reading, depending on whether you allow two minutes or five.
+*(Derived: the counts and the rate are cited, the minutes are an assumption. Halve it and
+the shape is unchanged — transaction count grows, human attention does not.)*
+
+Reckn's release condition is fixed **before the work begins** and evaluated by a computation
+both parties can run. Nobody reads anything, nobody approves anything, and there is no queue
+behind anybody.
+
+The fee is the symptom of that person existing. A decided payment dispute costs a merchant
+**$110–128 all-in** today, against a $20–50 processor fee — the rest is people reading
+conflicting stories. Global chargeback volume is
 **$33.79B in 2025, heading to $41.69B by 2028**, and every $1 lost to one costs **$5.13**
 once you count the disputes never contested. That cost exists because **somebody has to
 decide**.

@@ -33,6 +33,24 @@ print(f"  {ok(abs(r - 16/9) < 0.01)} aspect        {r:.4f}  (16:9 is {16/9:.4f})
 sys.exit(0 if (120 <= d <= 240 and h >= 720 and abs(r - 16/9) < 0.01) else 1)
 PY
 rc=$?
+# motion: a screen recording of a page that only repaints on events is a SLIDESHOW. The
+# first cut of this film had two distinct frames inside a nine-second hold while duration,
+# resolution, aspect and the card ratio were ALL green — see motion.py.
+mot=$(python3 "$(dirname "$0")/motion.py" "$f" 2>/dev/null || echo 0)
+if [[ "${mot:-0}" -ge 5 ]]; then say "✓" "motion        $mot/8 distinct frames per 4 s at the least lively point"
+else say "✗" "motion        only ${mot:-0}/8 distinct frames per 4 s — this reads as a slideshow"; fail=1; fi
+
+# faststart: the moov atom must be near the FRONT, or the file opens only after a full
+# download — and a file still being written has no moov at all, which is how "it will not
+# open" was first reported rather than measured.
+fs_ok=$(python3 -c "
+import sys
+h=open(sys.argv[1],'rb').read(1<<16)
+m,d=h.find(b'moov'),h.find(b'mdat')
+print('yes' if m!=-1 and (d==-1 or m<d) else 'no')" "$f")
+if [[ "$fs_ok" == "yes" ]]; then say "✓" "faststart     moov is at the front"
+else say "✗" "faststart     moov is NOT at the front — opens only after a full download"; fail=1; fi
+
 if [[ -n "$acodec" ]]; then say "✓" "audio         a $acodec track is present"
 else say "✗" "audio         NO TRACK — the event requires audio"; fail=1; fi
 say " " "size          $mb MB"
