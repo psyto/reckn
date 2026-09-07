@@ -146,6 +146,43 @@ r2 の findings 3–12 のうち、文言修正（8/9/10/11/12）は全部入れ
 
 ---
 
+## 0.6.1 実装の第一段（2026-09-07 着地。**仕様の一部でなく、実装の記録**）
+
+r3 の §0.1 が「**AC を足さず、効いている 2 つに寄せる**」と決めた、その 2 つを実装した。
+`reckn-live` crate と `scripts/004-negative-controls.sh`。**全 26 gate ではない**——
+凍結まで 5 日で広く未完成にするより、**狭くても負のコントロールで裏打ちされた単位**を選んだ。
+
+| 実装した | 実測 |
+|---|---|
+| `--prose-invariance --seed S` | **512 件の相異なる claim、記録は 1 つ、バイト同一** |
+| `--gas-seeded --seed S` | **64 件**の実行時 seed 由来 amount、`gasUsed` が解析式と一致 |
+| `scripts/004-negative-controls.sh` | **3/3 検出** |
+
+**実装で分かった 3 つ。仕様が間違っていた／私が間違えた側から書く。**
+
+1. **`TARGET_RUNTIME` の意味論は `post = pre + delivered` ではない。** 現物の
+   `SSTORE_SLOT7_RUNTIME` は `PUSH0 CALLDATALOAD PUSH1 07 SSTORE STOP` ——
+   **slot 7 を calldata の語で上書き**する。§6.1 の「`post = pre + delivered`」は
+   008 が使う別の加算版（`CODE_HASH` = `keccak256(0x5f545f35015f5500)`、slot 0）の話であり、
+   r2 finding 1 が指摘した「構成子が 008 後の値を作れない」と同じ根である。
+   実装は述語を `PostStateBounded`（slot 7 が `MIN_OUT` 以上）にした。
+   **claim が再実行に入らないことの証明に、述語の形は効かない。**
+2. **解析式は最初 8 gas ずれた。** intrinsic + cold SLOAD + SSTORE だけを数えて、
+   **target 自身のオペコード（`PUSH0` 2 + `CALLDATALOAD` 3 + `PUSH1` 3 = 8）を落としていた。**
+   これが「revm の答えを写す」でなく「式を立てる」ことの値段であり、同時にその価値でもある。
+   NC-26 はこの項を落とす変異で、いま赤くなる。
+3. **不変性はシグネチャで担保した。** `reexec_json` は `claim` を**引数に取らない**。
+   claim を取れる関数でも正直ではありうるが、**取れない関数は事故で不正直になれない。**
+
+**負のコントロールを書いていて、自分で偽の緑を作った。** NC-25 の変異がコンパイルに失敗したのに、
+`build || { fail=1; }` の後をそのまま進んでしまい、**古いバイナリで評価して `3/3 detected` と
+表示した**。ビルド失敗時は評価に進まず即座に止めるよう直した。
+**今日ずっと潰してきたのと同じ形を、それを潰す道具の中で作った。**
+
+**未実装（開示する）**: 残る 24 gate、transcript とその append-only 機構、判事関連の 4 行、
+`dashboard/live.html` の入力面。**004 は「実装済み」ではない。中心主張の 1 行が機械で示された、
+という状態である。**
+
 ## 0.7 round 2 の枠（過去分・founder 裁定 2026-09-04 と r1 findings への対応）
 
 ### 0.7.1 founder 裁定（round 2 の枠）
