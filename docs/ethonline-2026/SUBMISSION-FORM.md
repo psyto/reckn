@@ -614,6 +614,32 @@ do not regress it. It converted our strongest claim from "trust our README" into
 the chain yourself", which is worth more than any amount of writing.
 ```
 
+### "Which other partners' technologies have you used?" (not applying for prizes)
+
+**Of the ten partners offering Continuity prizes, exactly one is used: Arc.** The Graph,
+Hedera, World, 1inch, ENS, Uniswap, Ledger, Chainlink and Bazantic appear nowhere in the
+dependency graph — checked, not assumed, and the one apparent hit for ENS was substring
+noise across `tokens`. Selecting a partner whose technology is not integrated is the kind
+of claim a judge opens the repository to check.
+
+**This dropdown is usually wider than the prize list**, so look for these two, which are
+used heavily and should be selected if they appear:
+
+```
+Succinct (SP1)   — three zkVM guests (program / program-revm / program-svm) on sp1-zkvm
+                   6.0.1, proving real Groth16 through sp1-sdk with native-gnark. This is
+                   the whole keyless path: the proof IS the settlement authority.
+Solana           — the SVM guest re-executes a committed Solana transaction under LiteSVM,
+                   recomputing the block bank_hash with the SIMD-0215 lattice hash and
+                   signature-verifying the real transaction in-guest.
+```
+
+If **Circle** is listed separately from Arc, it is honest to select it too — the token
+being settled is Circle's USDC, and the blacklist behaviour in the feedback above is
+Circle's, not Arc's. If Circle appears only as Arc, do not double-count.
+
+**Select nothing else.**
+
 ## 11. Images page
 
 All three fields are required and none was uploaded.
