@@ -183,6 +183,32 @@ r3 の §0.1 が「**AC を足さず、効いている 2 つに寄せる**」と
 `dashboard/live.html` の入力面。**004 は「実装済み」ではない。中心主張の 1 行が機械で示された、
 という状態である。**
 
+## 0.6.2 受入ゲート `ac004.sh`（2026-09-07）
+
+実装した2行と負のコントロールに**gate を与えた**。これが無い間、`reckn-live` は
+**どの受入条件からも走らない出荷物**であり、それは 005 の着地時に自分で名指しした状態
+（「新しい資産は gate に担がせないと未検査の出荷物になる」）そのものだった。
+
+`both-green.sh` は `^ac[0-9]{3}\.sh$` で兄弟を発見するので、**009 の `{G}` は 2→3 に動く**。
+009 の manifest は一文字も変えない——変える必要があるなら、そのパラメータ化は飾りだった、
+というのが 005 のときの検定であり、ここが**3本目での再検定**になる。
+
+### 0.6.2.1 manifest
+
+```ac004-manifest
+AC-0    script  -       bash scripts/no-keys.sh                       -    ✓ the claim holds: no key can move a funded escrow.
+AC-3    live    -       --prose-invariance                            512  gate=prose-invariance expected=512 ran=512 passed=512 failed=0
+AC-4b   live    -       --gas-seeded                                  64   gate=gas-seeded expected=64 ran=64 passed=64 failed=0
+AC-NC   script  -       bash scripts/004-negative-controls.sh         3    004-nc: {D}/3 controls detected; witness={witness}
+```
+
+**`live` 行の seed は毎回 `/dev/urandom` から引く。** 固定 seed を manifest に書けば、
+入力集合はまた「仕様に列挙された有限集合」に戻り、r3 が §6.1 で殺した当のものが復活する。
+証拠行に seed は現れない（件数と結果だけ）ので、**入力が毎回変わっても証拠は安定**する。
+
+**AC-NC の witness は `reckn-live/src/main.rs` の digest。** 負のコントロールが検定している
+対象そのものであり、変異が当たる先でもある。`{D}` は検出数で、runner が manifest から取る。
+
 ## 0.7 round 2 の枠（過去分・founder 裁定 2026-09-04 と r1 findings への対応）
 
 ### 0.7.1 founder 裁定（round 2 の枠）
