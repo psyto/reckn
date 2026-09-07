@@ -9,12 +9,13 @@
 > next to it. Nothing is transcribed from an older document — that is how the earlier
 > drafts went stale without anyone noticing.
 >
-> **One number is deliberately not stated in §5a**: the pre-event test total. The live
-> form says *129, re-measured 2026-09-04*; the disclosure reproduced in §5b says *~140*.
-> Both are in the same submission and they disagree, and neither was re-measured today —
-> counting them means checking out the pre-event baseline `a122b44`, which nobody has
-> done. §5a therefore points at the disclosure instead of repeating a number. **Settle it
-> before submitting, or leave it only in the disclosure**; do not paste both.
+> **One number is deliberately absent from the narrative half of §5**: the pre-event test
+> total. The live form says *129, re-measured 2026-09-04*; the disclosure — which is the
+> second half of that same block — says *~140*. They disagree inside one submission, and
+> neither was re-measured today, because counting them means checking out the pre-event
+> baseline `a122b44` and nobody has. The narrative therefore points at the disclosure
+> rather than repeating a number, so the block states it **once**. **Settle it before
+> submitting** if you want the number to be right rather than merely consistent.
 
 ---
 
