@@ -44,15 +44,42 @@ easiest lie in this document.** You cannot re-execute a fifty-cent API call unde
 and come out ahead. Anyone who tells you their proof system makes every micro-payment
 disputable is selling something.
 
-So Reckn is **not** a checkout. It is the **appeal court**: the thing you invoke on the
-small fraction of payments where the delivery is contested and the amount is worth
-arguing about. The 0.5% dispute rate above is the right order of magnitude for how often
-it runs — and in the agent economy the disputed items are not the $0.52 API calls, they
-are the compute jobs, data deliveries and execution mandates where one contested delivery
-is worth more than the proof that settles it.
-
 **And Solana holding 49% of that volume is exactly why cross-VM settlement is not a stunt.**
 The money and the work are already on different chains for half of this market.
+
+### 3.1 A correction to an earlier draft of this page, because it was wrong
+
+An earlier version of this document called Reckn *"the appeal court — invoked on the
+fraction of payments where the delivery is contested"*. **That describes a product this
+contract does not implement**, and the founder's question — *does Reckn prevent disputes by
+re-executing automatically?* — is what exposed it.
+
+`RecknZkEscrow` has three states: `None`, `Funded`, `Settled`. **There is no `Disputed`
+state.** There is no dispute to open, no window to challenge in, and no escalation path,
+because re-execution is not a remedy that a dispute triggers — **it is the settlement
+mechanism itself.** Money reaches the seller through exactly one function,
+`settleWithProof`, and that function requires a proof. Every time.
+
+There is no cheap happy path, and **there cannot be one**: "the buyer voluntarily releases"
+is a key moving a funded escrow, which is the one thing the whole design exists to make
+impossible. The absence of a happy path is not an omission. It is the claim.
+
+So the comparison set is not *all agent payments*. It is **the payments that would
+otherwise need an escrow at all** — and nobody escrows a $0.52 API call either.
+
+## 3.2 What those payments cost today
+
+The thing Reckn replaces is not a chargeback desk. It is an escrow with an operator, and
+those are priced as a **percentage**:
+
+| | | |
+|---|---|---|
+| Upwork | **20%** on the first $500 with a client, **10%** to $10k, **5%** above — effectively 10–12% — plus **3–5%** from the client | cited — [Jobbers](https://www.jobbers.io/freelance-platform-fees-comparison-calculator-2026-the-complete-guide-to-maximizing-your-earnings/) |
+| Fiverr | **20%** flat from the seller, **5.5%** from the buyer, and a **$2.50** surcharge under $75 | cited — same |
+
+Fiverr's small-order surcharge is worth noticing: **the incumbents already concede that
+below a threshold, mediated escrow does not pay for itself.** They charge a flat fee there
+because a percentage of a small order does not cover the cost of standing behind it.
 
 ## 4. What it costs, measured on the real chain
 
@@ -74,23 +101,26 @@ have not paid.
 
 ## 5. The arithmetic, stated so you can disagree with it
 
-Re-execution is worth invoking when
+Reckn charges a **fixed** cost per settlement where the alternative charges a
+**percentage**. That is the whole shape of it:
 
-> **disputed amount > (cost of one proof) + $0.007**
+> **fixed:** one proof + **$0.007**  ·  **percentage:** 10–20% of the amount
 
-Everything on the right is fixed per dispute; the left side is not. That single inequality
-is the whole business, and it says three things:
+They cross where `0.10 × amount = proof + $0.007`. If a proof costs **$1**, that is about a
+**$10** delivery; at **$5** a proof, about **$50**. Above the crossover the saving is not
+marginal, it is structural — a $1,000 delivery pays **$100–200** to a platform today, and
+would pay a proof plus two thirds of a cent here.
 
-1. **Below some threshold, do not use this.** Refund the $0.52 and move on. Any system
-   that claims otherwise is charging you more than the dispute is worth.
-2. **Above it, the comparison is not against nothing — it is against $110–128.** That is
-   what a decided dispute costs in the economy that already does this at scale. Even if a
-   proof costs a few dollars, the resolution cost falls by an order of magnitude *and* the
-   arbiter disappears.
-3. **The saving that does not show up in either figure is the $5.13.** Every $1 lost to a
-   chargeback costs $5.13 all-in because of the disputes that are never contested, the
-   evidence never gathered, the customers written off. A verdict that anyone can reproduce
-   from public inputs does not need to be argued for.
+Three things follow, and the first one is a limit rather than a benefit:
+
+1. **Below the crossover, do not use this.** Refund and move on. Fiverr reaches the same
+   conclusion from the other side and charges a flat surcharge under $75.
+2. **The comparison is not against zero.** It is against 10–20%, or against the $110–128 a
+   *decided* dispute costs when a human has to read both stories.
+3. **What neither figure prices is the operator.** A percentage buys you an arbiter who can
+   be lobbied, subpoenaed, acquired, or simply wrong — and who has to be re-established on
+   every chain. The fixed cost buys a computation that both parties can run themselves.
+   That is the part that does not appear in any fee table.
 
 ## 6. What the user actually gets, and loses without it
 

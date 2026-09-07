@@ -134,7 +134,13 @@ A decided payment dispute costs a merchant $110 to $128 all-in today, against a 
 
 Settling a dispute here costs 0.0070-0.0077 USDC — measured on Arc against our four live settlements at the real gas price. Verifying a Groth16 proof and paying out is under a cent, and it does not grow with the size of the dispute.
 
-The number that constrains us is the other one: the average x402 payment is $0.52, and you cannot re-execute a fifty-cent API call under a zkVM and come out ahead. So this is not a checkout. It is the appeal court — for the fraction of payments where the delivery is contested and the amount is worth arguing about, which is roughly the 0.5% dispute rate card payments already run at. The rule is: disputed amount > cost of one proof + $0.007. Below that, refund and move on; any system claiming otherwise charges more than the dispute is worth.
+The number that constrains us is the other one: the average x402 payment is $0.52, and you cannot re-execute a fifty-cent API call under a zkVM and come out ahead.
+
+There is no dispute process here to invoke, either. The escrow has three states — None, Funded, Settled — and no Disputed one, because re-execution is not a remedy that a dispute triggers: it is how settlement works, every time. Money reaches the seller through exactly one function and that function requires a proof. There is no cheap happy path and there cannot be one, because "the buyer voluntarily releases" is a key moving a funded escrow, which is the thing this whole design exists to make impossible.
+
+So the comparison set is not every agent payment. It is the payments that would otherwise need an escrow at all — and nobody escrows a $0.52 API call either. Those payments are priced as a PERCENTAGE today: Upwork takes 20% on the first $500 with a client, 10% to $10k, 5% above, plus 3-5% from the client; Fiverr takes a flat 20% from the seller, 5.5% from the buyer, and a $2.50 surcharge under $75 — the incumbents already concede that below a threshold, mediated escrow does not pay for itself.
+
+Reckn charges a FIXED cost instead: one proof plus $0.007. Fixed and percentage cross at roughly a $10 delivery if a proof costs $1, or $50 if it costs $5. Above the crossover a $1,000 job pays $100-200 to a platform today, or a proof plus two thirds of a cent here — and what neither fee table prices is the operator: an arbiter who can be lobbied, subpoenaed, acquired or simply wrong, and who has to be re-established on every chain.
 
 What we deliberately do not quote is a dollar cost per proof. Succinct's network prices proofs by reverse auction and we have never bought one — we prove locally, 335 seconds for a fixture. That figure is unknown rather than estimated, and it is the one an adopter has to price.
 

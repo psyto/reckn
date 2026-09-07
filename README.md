@@ -364,10 +364,19 @@ live settlements, at the real gas price. Verifying a Groth16 proof and moving th
 under a cent, and it does not grow with the size of the dispute.
 
 **The number that constrains us is the other one.** The average x402 payment is **$0.52**,
-and you cannot re-execute a fifty-cent API call under a zkVM and come out ahead. So this is
-not a checkout — it is the **appeal court**, for the fraction of payments where the
-delivery is contested and the amount is worth arguing about. The full arithmetic, including
-the cost we have *not* measured and what would falsify the whole case, is in
+and you cannot re-execute a fifty-cent API call under a zkVM and come out ahead.
+
+So the comparison set is not *every* agent payment — it is **the payments that would
+otherwise need an escrow at all**, and those pay a **percentage** today: Upwork takes
+10–20% from the seller plus 3–5% from the client, Fiverr a flat 20% plus 5.5%. Reckn
+charges a **fixed** cost instead. They cross at roughly a **$10** delivery if a proof costs
+$1, or **$50** if it costs $5 — and above that a $1,000 job pays $100–200 to a platform, or
+a proof plus two thirds of a cent here.
+
+Note there is **no dispute process** in any of this. `RecknZkEscrow` has three states —
+`None`, `Funded`, `Settled` — and no `Disputed` one, because re-execution is not a remedy a
+dispute triggers: it is how settlement works, every time. The full arithmetic, the cost we
+have *not* measured, and what would falsify the whole case are in
 **[`docs/why.md`](docs/why.md)**.
 
 ## What crosses, and what does not

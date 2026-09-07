@@ -68,9 +68,12 @@ about thirty seconds. Say the concession first.
 > the variable and I won't quote a number we haven't paid; we prove locally, 335 seconds a
 > fixture. The comparison isn't against zero, though: a decided card dispute costs a merchant
 > **$110 to $128** all-in today. The rule is disputed amount > proof + $0.007, and below that
-> threshold you should refund and move on. The average x402 payment is 52 cents, so this is
-> the appeal court, not the checkout — and I'd rather say that than pretend every
-> micropayment is disputable.
+> threshold you should refund and move on. And note there's no dispute process to invoke —
+> the escrow has three states and none of them is Disputed. A proof is how settlement works,
+> every time. So we're not competing with a chargeback desk, we're competing with escrows
+> that take **10 to 20 percent**: Upwork, Fiverr. They charge a percentage; we charge a fixed
+> cost. Those cross around a ten-dollar job, and a thousand-dollar one pays them a hundred
+> to two hundred, or pays us a proof and two thirds of a cent.
 
 **"Why would I not just use an optimistic escrow with a challenge window?"**
 > You should, if you have someone to trust and time to wait. That path exists in this same
