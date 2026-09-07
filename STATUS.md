@@ -113,6 +113,12 @@ blacklist する。** 最初の deal は seller に anvil の開発鍵 #1 を指
 **30日後に `refundAfterDeadline` が buyer へ返す**。公開チェーンでは時間を進められないので、
 **その返金は「予定」であって実演ではない**（実演できるのはローカルデモの側）。
 
+**⚠ 提出期限は 9/16 でなく `2026-09-13 12:00 EDT = 09-14 01:00 JST`（2026-09-07 に確認）。**
+`PLAN.md` の「提出は 9/12 に凍結し、9/13–15 は R[3]sidency に明け渡す」は、**提出締切が
+その窓の内側（14日 01:00 JST）に来るため成立しない**。9/12 凍結の後に残るのは12時間で、
+そこに**実時間8時間のフル走行**が入る。余裕でなく衝突。`PLAN.md` は founder 文書なので
+こちらでは直さない。判定は [JUDGING-GAPS.md](docs/ethonline-2026/JUDGING-GAPS.md) に全部ある。
+
 **提出形態を決定（2026-09-07・founder）: `Top 10 Finalist & Partner Prizes`。**
 → **Live Judging = 2026-09-14 12:00 EDT = 09-15 01:00 JST**（翌日未明。R[3]sidency 締切 09-15 と同じ窓）。
 round 1 の非同期審査を通った案件だけが登壇する。基準は3つで、**現状の弱点は動画1つだけ**:
@@ -1374,7 +1380,9 @@ AC-11(a) の静的リテラル検査は base64 化 1 行で抜けられ、AC-11(
    `DISCLOSURE.md` 自身の指定は「ETHGlobal チームへハック開始前／開始時に送り、**提出時の
    description に全文を再掲する**」なので、残る実行項目は次の2つ:
    - **受理後**: Discord 接続時に全文を主催者へ渡す
-   - **提出時（9/16 まで）**: submission description に全文を再掲
+   - **提出時（〜2026-09-13 12:00 EDT = 09-14 01:00 JST）**: submission description に全文を再掲
+     ⚠ **9/16 ではない**（2026-09-07 に ethglobal.com の event details で確認、原文
+     "All projects must be submitted by Sunday, September 13th 2026 at 12:00 pm EDT"）
    - ✅ **`DISCLOSURE.md` の該当箇所は 2026-09-04 に修正済み**。「the repository is still
      private」は public 化で偽になっていた → 「private until 2026-09-04, when it was made
      public so that this application could be reviewed against the actual source」に差し替え。
