@@ -128,6 +128,18 @@ WHAT WE DID NOT PLAN, AND KEPT. The first live settlement reverted with "Blocked
 
 STILL OPEN, AND NAMED: the adversarial key gauntlet is stopped at a hard stop; the live adversarial-input feature has a round-3 specification and no implementation; the real ERC-20 workload is not started.
 
+WHO PAYS FOR THIS, AND WHAT IT SAVES
+
+A decided payment dispute costs a merchant $110 to $128 all-in today, against a $20-50 processor fee — the rest is people reading conflicting stories. Global chargeback volume is $33.79B in 2025 heading to $41.69B by 2028, and every $1 lost to one costs $5.13 once you count the disputes never contested. That cost exists because somebody has to decide.
+
+Settling a dispute here costs 0.0070-0.0077 USDC — measured on Arc against our four live settlements at the real gas price. Verifying a Groth16 proof and paying out is under a cent, and it does not grow with the size of the dispute.
+
+The number that constrains us is the other one: the average x402 payment is $0.52, and you cannot re-execute a fifty-cent API call under a zkVM and come out ahead. So this is not a checkout. It is the appeal court — for the fraction of payments where the delivery is contested and the amount is worth arguing about, which is roughly the 0.5% dispute rate card payments already run at. The rule is: disputed amount > cost of one proof + $0.007. Below that, refund and move on; any system claiming otherwise charges more than the dispute is worth.
+
+What we deliberately do not quote is a dollar cost per proof. Succinct's network prices proofs by reverse auction and we have never bought one — we prove locally, 335 seconds for a fixture. That figure is unknown rather than estimated, and it is the one an adopter has to price.
+
+(And Solana holding 49% of x402 volume is why cross-VM settlement is not a stunt: for half of this market the money and the work are already on different chains.)
+
 WHAT CROSSES, AND WHAT DOES NOT
 
 The common misreading is that Arc verifies Solana, or that something is bridged. Neither is true. The work happens on Solana; the JUDGING happens inside an SP1 zkVM, which verifies the signatures, recomputes the block bank_hash and re-executes the transfer; and what reaches Arc is a Groth16 proof and nothing else. No bridge is needed because no asset moves — the USDC is on Arc at the start and on Arc at the end. No light client is needed because Arc is never asked what Solana's state IS; it is asked whether a computation over a committed state is valid.

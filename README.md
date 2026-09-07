@@ -351,6 +351,25 @@ closes the frame) → `reckn-codex-review` (adversarial, second model) →
 Continuity discipline are in [`AGENTS.md`](AGENTS.md); the plan and the advance
 disclosure are in [`docs/ethonline-2026/`](docs/ethonline-2026).
 
+## Who pays for this, and what it saves
+
+A decided payment dispute costs a merchant **$110–128 all-in** today, against a $20–50
+processor fee — the rest is people reading conflicting stories. Global chargeback volume is
+**$33.79B in 2025, heading to $41.69B by 2028**, and every $1 lost to one costs **$5.13**
+once you count the disputes never contested. That cost exists because **somebody has to
+decide**.
+
+Settling a dispute here costs **0.0070–0.0077 USDC** — measured on Arc against the four
+live settlements, at the real gas price. Verifying a Groth16 proof and moving the money is
+under a cent, and it does not grow with the size of the dispute.
+
+**The number that constrains us is the other one.** The average x402 payment is **$0.52**,
+and you cannot re-execute a fifty-cent API call under a zkVM and come out ahead. So this is
+not a checkout — it is the **appeal court**, for the fraction of payments where the
+delivery is contested and the amount is worth arguing about. The full arithmetic, including
+the cost we have *not* measured and what would falsify the whole case, is in
+**[`docs/why.md`](docs/why.md)**.
+
 ## What crosses, and what does not
 
 The most common misreading of this project is that Arc verifies Solana, or that something

@@ -62,12 +62,15 @@ about thirty seconds. Say the concession first.
 > settlement, the Arc deployment, a keyless timeout, and turning the build condition from a
 > denylist into a closure. The pre-existing work is disclosed in full in the submission.
 
-**"Who pays for this?"**
-> The buyer, as part of the payment — settlement gas plus proving. Today proving a fixture
-> end to end takes 335 seconds, so this is priced for disputes, not for every transaction:
-> the honest position is that re-execution is the *appeal court*, not the checkout. The
-> business is whoever needs an adjudicator that no counterparty can lean on — which today
-> is agent marketplaces, and tomorrow is anyone whose counterparty is software.
+**"Who pays for this, and is it worth it?"**
+> The buyer, as part of the payment. Settling costs **seven tenths of a US cent** — measured
+> on Arc against our four live settlements — and it doesn't grow with the dispute. Proving is
+> the variable and I won't quote a number we haven't paid; we prove locally, 335 seconds a
+> fixture. The comparison isn't against zero, though: a decided card dispute costs a merchant
+> **$110 to $128** all-in today. The rule is disputed amount > proof + $0.007, and below that
+> threshold you should refund and move on. The average x402 payment is 52 cents, so this is
+> the appeal court, not the checkout — and I'd rather say that than pretend every
+> micropayment is disputable.
 
 **"Why would I not just use an optimistic escrow with a challenge window?"**
 > You should, if you have someone to trust and time to wait. That path exists in this same
