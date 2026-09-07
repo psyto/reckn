@@ -308,8 +308,15 @@ which is how the two barriers are shown to be independent.
   they were shown. *(A shared helper would have made the value computable but not
   independently checkable; it is the disagreement between two transcriptions that
   catches a formula error, and one of the tests exists only to catch the width trap —
-  `min` and `max` are `u64` that enter the preimage as 32-byte words.)* The **EVM**
-  binding still has one implementation.
+  `min` and `max` are `u64` that enter the preimage as 32-byte words.)* ~~The **EVM** binding still has one implementation.~~
+  **Closed 2026-09-07.** `verdict_script::evm_deal_binding` transcribes the guest's
+  four-step v2 preimage — `env_hash`, `check_hash`, `plan_hash`, nested under
+  `bind/evm/v2` — and `script/tests/evm_binding.rs` requires it to reproduce, byte for
+  byte, the `deal_binding` the guest committed inside SP1 in the shipped fixture. Dropping
+  one field from the preimage makes that test fail, which is how it was checked rather
+  than reviewed. This is what makes the escrow's ordering reachable at all: a buyer must
+  commit to the binding **before** the seller works, and until now that required already
+  holding a proof.
 - **Tier.** Local, in-memory, one process. No chain of any kind was contacted. Green
   tests here say nothing about testnet or mainnet.
 

@@ -67,12 +67,14 @@ funding to a `dealBinding` — the agreed prestate, predicate and plan. What cou
 "reproduced" is settled before the seller starts. That is where the discretion goes: not
 removed from a judge, but never created, because there is nothing left to interpret.
 
-> ⚠ **The tooling does not yet support that ordering.** Today every script reads
-> `dealBinding` out of a proof fixture, which means the proof exists *before* the funding —
-> the reverse of the design. Computing a binding ahead of the work needs a host-side
-> implementation of the v2 EVM preimage, and there is only the in-guest one. This is the
-> gap in [`integrate.md`](integrate.md), and it is exactly the gap that stands between the
-> paragraph above and someone else being able to rely on it.
+> **Closed 2026-09-07.** Until that day the tooling could not do this ordering: every script
+> read `dealBinding` out of a proof fixture, so the proof existed *before* the funding — the
+> reverse of the design, and the one thing standing between the paragraph above and someone
+> else relying on it. `verdict_script::evm_deal_binding` now computes a binding from the
+> agreed terms with no prover, and is checked against ground truth rather than review — it
+> must reproduce, byte for byte, the value the guest committed inside SP1 in the shipped
+> fixture. The demo scripts still take the fixture route and have not been rewired; the
+> capability changed, not the demo. See [`integrate.md`](integrate.md).
 
 ### 3.1 A correction to an earlier draft of this page, because it was wrong
 

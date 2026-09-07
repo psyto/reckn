@@ -60,28 +60,47 @@ bash scripts/arc-usdc-e2e.sh      # local anvil at Arc's chain id: deploy, fund,
 
 ---
 
+## Computing `DEAL_BINDING` yourself
+
+This is the part that was missing until 2026-09-07, and it is the reason the ordering
+above works at all: a buyer has to commit to the terms **before** the seller does the work,
+which means computing the binding **without a proof**.
+
+```rust
+use verdict_script::{evm_deal_binding, to_guest_input};
+
+// the terms you and the seller agreed: the prestate you both anchor to, the plan you
+// expect to be executed, and the predicate that decides "reproduced".
+let input   = to_guest_input(&anchor, &witness, &plan, &predicate)?;
+let binding = evm_deal_binding(&input);          // -> [u8; 32], no prover involved
+```
+
+That value is what goes into `fund`. When the seller's work is later proved, the guest
+computes the same commitment inside SP1 and `settleWithProof` requires the two to be equal
+— a proof of some other, more favourable execution carries a different binding and reverts.
+
+**Why this is a second implementation and not a shared one.** `evm_deal_binding` is
+transcribed from the guest rather than imported from it, exactly as `svm_deal_binding` is.
+Two independent transcriptions make an error surface as a *mismatch*; one shared
+implementation makes the same error surface as agreement, which is indistinguishable from
+correctness. It is checked against ground truth rather than against review:
+`zk-verdict/script/tests/evm_binding.rs` requires it to reproduce, byte for byte, the
+`deal_binding` the guest committed inside SP1 in the shipped fixture — and dropping a
+single field from the preimage makes that test fail.
+
 ## What is not ready, stated plainly
 
-**You cannot yet compute `DEAL_BINDING` on the host for an EVM deal.** The binding is
-computed **inside the guest**, and today the only implementation is that one:
-`zk-verdict/program-revm/src/main.rs`. Every script here reads it out of a proof fixture
-(`jq -r '.deal_binding'`), which is fine for a demo and wrong for a buyer, because a buyer
-must commit to the binding *before* the seller does the work.
+**The demo scripts still take the old route.** `arc-usdc-e2e.sh` and the recorded demo
+read `deal_binding` out of a fixture with `jq`, because they were written before
+`evm_deal_binding` existed and rewiring them days before a freeze buys nothing a judge can
+see while risking gates that currently pass. **The capability is what changed, not the
+scripts**: an integrator can compute a binding today; our own demo has not been switched
+over. Said here rather than left for someone to discover.
 
-So the flow that works end to end today is: **agree the terms, produce the proof, fund
-against its binding, settle.** The flow a production integrator wants — **fund first,
-against a binding you computed yourself** — needs a host-side implementation of the v2
-preimage. It is not hard; it is a day of work and a second implementation to keep in step.
-It is not done, and until it is, this is a payment rail you can settle on rather than one
-you can open a deal on unattended.
+**Both bindings are now two implementations. Neither is anchored.** A proof carries the
+verdict's authority; it does not prove the committed prestate was the chain's real state.
+On EVM that binding lives in an off-chain layer; on Solana the guest recomputes a
+`bank_hash` over the account set the deal committed to, which is internal consistency and
+not provenance.
 
-The Solana side already has that second implementation
-(`svm_deal_binding` in `zk-verdict/script/src/lib.rs`), deliberately not shared with the
-guest so a transcription error shows up as a mismatch rather than as agreement. The EVM
-side should look the same and does not yet.
-
-**And the anchoring limit applies to both.** A proof carries the verdict's authority; it
-does not by itself prove the committed prestate was the chain's real state. On EVM that
-binding lives in an off-chain layer; on Solana the guest recomputes a `bank_hash` over the
-account set the deal committed to, which proves internal consistency and not provenance.
 *No bridge, no light client* describes the adjudication path, not the anchoring.

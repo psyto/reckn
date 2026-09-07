@@ -274,3 +274,120 @@ pub fn svm_demo_terms(amount: u64, min: u64) -> SvmDealTerms {
     signature.copy_from_slice(tx.signatures[0].as_ref());
     SvmDealTerms { bank_hash, account: to.to_bytes(), min, max: u64::MAX, signature }
 }
+
+/// Compute a deal's **EVM** binding from the guest's input, without a prover and without
+/// the guest. Transcribed from `zk-verdict/program-revm/src/main.rs`'s four-step preimage:
+///
+/// ```text
+/// env_hash   = keccak256("reckn/zk/env/evm/v2"   ‖ chain_id:u64be ‖ spec_id:u8
+///                        ‖ block_number:u64be ‖ timestamp:u64be ‖ base_fee:u64be
+///                        ‖ block_gas_limit:u64be ‖ coinbase[20] ‖ prevrandao[32])
+/// check_hash = keccak256("reckn/zk/check/evm/v2" ‖ address[20] ‖ slot[32] ‖ min[32] ‖ max[32])
+/// plan_hash  = keccak256("reckn/zk/plan/evm/v2"  ‖ caller[20] ‖ target[20] ‖ value[32]
+///                        ‖ gas_limit:u64be ‖ len(calldata):u64be ‖ calldata)
+/// binding    = keccak256("reckn/zk/bind/evm/v2"  ‖ state_root[32] ‖ env_hash ‖ check_hash ‖ plan_hash)
+/// ```
+///
+/// **Why this exists.** Until 2026-09-07 the only implementation of this was in-guest, so a
+/// buyer could not compute a binding without first having a proof — and every script read
+/// `deal_binding` out of a fixture, which is the reverse of the design. The escrow's whole
+/// soundness rests on the buyer committing to the terms *before* the seller works; that
+/// ordering was unreachable with one implementation.
+///
+/// **Why it is deliberately not shared with the guest**, exactly as `svm_deal_binding` is
+/// not: two independent transcriptions make an error show up as a *mismatch*. One shared
+/// implementation makes the same error show up as agreement, which is indistinguishable
+/// from correctness and is the failure this repository spent 2026-09-06 finding twice.
+/// The nesting is the part worth transcribing carefully — a flat preimage over the same
+/// fields produces a plausible binding that no proof will ever match.
+pub fn evm_deal_binding(input: &reexec_io::GuestInput) -> [u8; 32] {
+    use revm::primitives::keccak256;
+
+    let mut env_pre = Vec::new();
+    env_pre.extend_from_slice(b"reckn/zk/env/evm/v2");
+    env_pre.extend_from_slice(&input.env.chain_id.to_be_bytes());
+    env_pre.push(input.env.spec_id);
+    env_pre.extend_from_slice(&input.env.block_number.to_be_bytes());
+    env_pre.extend_from_slice(&input.env.timestamp.to_be_bytes());
+    env_pre.extend_from_slice(&input.env.base_fee.to_be_bytes());
+    env_pre.extend_from_slice(&input.env.block_gas_limit.to_be_bytes());
+    env_pre.extend_from_slice(&input.env.coinbase);
+    env_pre.extend_from_slice(&input.env.prevrandao);
+    let env_hash = keccak256(&env_pre);
+
+    let mut check_pre = Vec::new();
+    check_pre.extend_from_slice(b"reckn/zk/check/evm/v2");
+    check_pre.extend_from_slice(&input.check.address);
+    check_pre.extend_from_slice(&input.check.slot);
+    check_pre.extend_from_slice(&input.check.min);
+    check_pre.extend_from_slice(&input.check.max);
+    let check_hash = keccak256(&check_pre);
+
+    // The length is a u64 big-endian word, NOT a usize cast — on a 32-bit host a naive
+    // `len().to_be_bytes()` is four bytes and every binding would differ.
+    let mut len_be = [0u8; 8];
+    let src = input.plan.calldata.len().to_be_bytes();
+    len_be[8 - src.len()..].copy_from_slice(&src);
+
+    let mut plan_pre = Vec::new();
+    plan_pre.extend_from_slice(b"reckn/zk/plan/evm/v2");
+    plan_pre.extend_from_slice(&input.plan.caller);
+    plan_pre.extend_from_slice(&input.plan.target);
+    plan_pre.extend_from_slice(&input.plan.value);
+    plan_pre.extend_from_slice(&input.plan.gas_limit.to_be_bytes());
+    plan_pre.extend_from_slice(&len_be);
+    plan_pre.extend_from_slice(&input.plan.calldata);
+    let plan_hash = keccak256(&plan_pre);
+
+    let mut binding_pre = Vec::new();
+    binding_pre.extend_from_slice(b"reckn/zk/bind/evm/v2");
+    binding_pre.extend_from_slice(&input.state_root);
+    binding_pre.extend_from_slice(env_hash.as_slice());
+    binding_pre.extend_from_slice(check_hash.as_slice());
+    binding_pre.extend_from_slice(plan_hash.as_slice());
+    let out = keccak256(&binding_pre);
+    let mut b = [0u8; 32];
+    b.copy_from_slice(out.as_slice());
+    b
+}
+
+/// Rebuild the **EVM** demo deal's guest input without running the prover — the mirror of
+/// `svm_demo_terms`, and the thing that makes `evm_deal_binding` usable by a buyer.
+///
+/// The defaults are the ones 008 left the shipped fixture on: `pre = 2^64`,
+/// `post = 2^64 + 100`, a floor of 100 and no ceiling. If the demo's parameters move and
+/// the fixture is regenerated, this must move in the same commit — and
+/// `tests/evm_binding.rs` fails until it does, because the binding stops matching the one
+/// the guest committed. That coupling is deliberate: it is the same shape as the SVM side.
+pub fn evm_demo_input() -> GuestInput {
+    use reckn_reexec_evm::testkit::{self, PrestateSpec, SlotSpec, SSTORE_SLOT7_RUNTIME};
+    use reckn_reexec_evm::EvmCallPlanV1;
+    use revm::primitives::Bytes;
+
+    let pre = U256::from(1u128 << 64);
+    let post = pre + U256::from(100u64);
+    let caller = testkit::addr(0xca);
+    let target = testkit::addr(0x77);
+    let (anchor, witness) = testkit::anchored_witness(PrestateSpec {
+        caller,
+        target,
+        caller_nonce: 0,
+        target_code: Bytes::from_static(&SSTORE_SLOT7_RUNTIME),
+        coinbase: testkit::addr(0xc0),
+        slot7: SlotSpec::Value(pre),
+        extra_accounts: vec![],
+        extra_slots: vec![],
+        empty_account_proof_for: None,
+    });
+    let predicate = to_predicate(target, U256::from(7u64), U256::from(100u64), U256::MAX);
+    let mut calldata = [0u8; 32];
+    calldata.copy_from_slice(&post.to_be_bytes::<32>());
+    let plan = EvmCallPlanV1 {
+        caller,
+        target,
+        calldata: Bytes::copy_from_slice(&calldata),
+        value: U256::ZERO,
+        gas_limit: 100_000,
+    };
+    to_guest_input(&anchor, &witness, &plan, &predicate).expect("in-domain demo input")
+}
