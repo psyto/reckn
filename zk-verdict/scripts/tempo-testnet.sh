@@ -79,13 +79,25 @@ else
     trap 'rm -rf "$pwdir"' EXIT INT TERM
     printf 'keystore password for account "%s" (not echoed): ' "$TEMPO_ACCOUNT" >&2
     IFS= read -rs pw; echo >&2
-    umask 177
-    printf '%s' "$pw" > "$pwdir/p"
+    # The umask is scoped to a SUBSHELL. The first version set `umask 177` inline and never
+    # restored it, so every directory created for the rest of the run came out `drw-------`
+    # -- no execute bit, which makes a directory unusable -- and `forge script` died on
+    # "failed to create dir .../broadcast/DeployTempo.s.sol/42431" before sending anything.
+    # A umask is process-wide state; changing it for one line means changing it for one line.
+    ( umask 177; printf '%s' "$pw" > "$pwdir/p" )
     unset pw
     ACCT+=(--password-file "$pwdir/p")
     # Fail here, not eleven transactions in, if the password is wrong.
     cast wallet address "${ACCT[@]}" >/dev/null 2>&1 || {
       echo "tempo-testnet: that password does not open keystore \"$TEMPO_ACCOUNT\". Nothing was sent."; exit 1; }
+    # Prove the umask really was scoped. This is not paranoia about the line above: it is the
+    # bug that actually happened, and it surfaced as a permissions error from `forge` three
+    # steps later, which is a long way from its cause.
+    probe="$pwdir/dirtest"
+    mkdir -p "$probe" && [[ -x "$probe" ]] || {
+      echo "tempo-testnet: the umask leaked -- new directories are being created unusable."
+      echo "  forge would fail later with 'failed to create dir'. Nothing was sent."; exit 2; }
+    rmdir "$probe"
   fi
 fi
 
@@ -155,10 +167,22 @@ VKEY=$(jq -r .vkey "$REPRO")
 
 if [[ $preflight -eq 1 ]]; then
   echo
+  echo "  simulating the deploy (no --broadcast, no key, nothing sent)"
+  if VKEY="$VKEY" TIP20="$TOKEN" forge script script/DeployTempo.s.sol:DeployTempo \
+       --rpc-url "$RPC" --sender "$BUYER" >/dev/null 2>"$root/.tempo-preflight.err"; then
+    echo "    DeployTempo simulates cleanly against chain $CHAIN"
+    rm -f "$root/.tempo-preflight.err"
+  else
+    echo "    DeployTempo FAILED to simulate. The real run would fail the same way:"
+    sed 's/^/      /' "$root/.tempo-preflight.err" | tail -20
+    rm -f "$root/.tempo-preflight.err"
+    exit 1
+  fi
+  echo
   echo "tempo-testnet --preflight: every check that does not need a signature passed."
-  echo "  chain id, buyer/seller/token distinctness, TIP-20 balance, and that both fixtures"
-  echo "  carry the same vkey so ONE verifier can judge both (on Arc a second verifier was"
-  echo "  deployed before that was checked)."
+  echo "  chain id, buyer/seller/token distinctness, TIP-20 balance, that both fixtures carry"
+  echo "  the same vkey so ONE verifier can judge both (on Arc a second verifier was deployed"
+  echo "  before that was checked), and a full simulation of the deploy."
   echo "  Nothing was sent. Run without --preflight, with TEMPO_ACCOUNT set, to deploy."
   exit 0
 fi
@@ -241,11 +265,14 @@ deal() { # $1 label, $2 fixture, $3 binding-override(optional)
              "settleWithProof(bytes32,bytes,bytes)" "$id" "$pv" "$pr" 2>&1); then
       echo "  MISMATCH SETTLED. That is a central-claim failure, not a test failure."; exit 1
     fi
-    local held; held=$(cast call --rpc-url "$RPC" "$ESCROW" "deals(bytes32)(address,address,address,uint256,address,bytes32,bytes32,uint64,uint8)" "$id" | sed -n '9p')
-    jq --arg id "$id" --arg st "$held" --arg e "$(grep -o 'BindingMismatch\|0x0d301b3f' <<<"$err" | head -1)" \
+    local held reason
+    held=$(cast call --rpc-url "$RPC" "$ESCROW" "deals(bytes32)(address,address,address,uint256,address,bytes32,bytes32,uint64,uint8)" "$id" 2>/dev/null | sed -n '9p')
+    held=${held:-unreadable}
+    reason=$(grep -oE 'BindingMismatch|0x[0-9a-fA-F]{8}' <<<"$err" | head -1 || true)
+    jq --arg id "$id" --arg st "$held" --arg e "${reason:-unknown}" \
        '.steps += [{step:"settle (mismatch)", note:"a real proof of ANOTHER execution was rejected; no transaction exists because it never landed", dealId:$id, stateAfter:$st, revert:$e}]' \
        "$run" > "$run.tmp" && mv "$run.tmp" "$run"
-    echo "  settle (mismatch)            rejected: ${e:-BindingMismatch}; deal state $held (1 = Funded)"
+    echo "  settle (mismatch)            rejected: ${reason:-unknown}; deal state $held (1 = Funded)"
   else
     note "settle ($label)" "$(send "$ESCROW" "settleWithProof(bytes32,bytes,bytes)" "$id" "$pv" "$pr")" \
          "settled on a real Groth16 proof of a Solana execution"
