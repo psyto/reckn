@@ -40,27 +40,39 @@ SCRIPT = [
      "Binding mismatch. The money didn't move. Being valid wasn't enough."),
     (at("TITLE Reckn"), 9.0, None,
      "plate: **Reckn — Keep assets native. Settle on proof.** then the door question"),
-    (at("CARD 01 Nobody could have overridden that."), 9.0, 4,
+    # Over the problem slide. It does NOT read the table out — a narrator reciting what is
+    # already on screen is the fastest way to make a good demo feel like a bad one. One line
+    # names the insight, then silence while it is read.
+    (at("SLIDE 02 the problem"), 6.0, 4,
+     "Both are guessing. One from a claim, one from nothing."),
+    (at("CARD 01 Nobody could have overridden that."), 9.0, 5,
      "Nobody could have stepped in and overridden that. There's no owner, no admin, no resolver."),
-    (at("CARD 01 Nobody could have overridden that.") + 9.5, 7.5, 5,
+    (at("CARD 01 Nobody could have overridden that.") + 9.5, 7.5, 6,
      "And it isn't a promise. If one ever appeared, the build would fail."),
-    (at("02 evidence: release"), 7.0, 6,
+    (at("02 evidence: release"), 7.0, 7,
      "Here's the proof this deal was funded against. It reproduces, so the seller gets paid."),
-    (at("02 evidence: refund"), 8.5, 7,
+    (at("02 evidence: refund"), 8.5, 10,
      "And when the work doesn't reproduce, the same machinery sends the money back."),
     (at("03 evidence: what it replaces"), 8.5, 8,
      "What we took out isn't a fee. It's the person who used to approve this."),
+    # SLIDE 03, the inversion, is DELIBERATELY silent. It carries one sentence in very large
+    # type; a voice over it either repeats it or competes with it, and seven seconds of
+    # quiet before the diagram is the only pause this film has.
     (at("17 SVG: out to Arc, scope held"), 8.5, 9,
      "The work happened on Solana. We re-ran it inside a zkVM. The proof crosses — the money never does."),
-    (at("04 evidence: four settlements"), 10.0, 10,
+    (at("04 evidence: four settlements"), 10.0, 11,
      "Four settlements on Arc testnet, read straight off the chain by your browser. Two were decided by proofs about work done on Solana."),
-    (at("06 evidence: the two rows"), 7.5, 11,
+    # Over "what this does not claim". Three refusals are on the slide; the voice adds the
+    # reason they are there at all, and then gets out of the way.
+    (at("SLIDE 07 what this does not claim"), 5.5, 12,
+     "We would rather you heard this part from us."),
+    (at("06 evidence: the two rows"), 7.5, 13,
      "Arc never runs a Solana virtual machine — and we put that limit on the page."),
-    (at("06 evidence: the two rows") + 8.0, 5.0, 12,
+    (at("06 evidence: the two rows") + 8.0, 5.0, 14,
      "It's consistency. It isn't provenance."),
-    (at("07 evidence: typing"), 6.5, 13,
+    (at("07 evidence: typing"), 6.5, 15,
      "The one thing an observer controls is the story. So watch what the story moves."),
-    (at("07 evidence: typing") + 7.0, 6.0, 14,
+    (at("07 evidence: typing") + 7.0, 6.0, 16,
      "Every keystroke, a new hash. The verdict comes from the chain. It doesn't budge."),
     (END - CLOSE, CLOSE, None,
      "plate: **Keep assets native. Settle on proof.** then the door's last line"),

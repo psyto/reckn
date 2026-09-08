@@ -95,7 +95,7 @@ Current state, measured:
 
 | requirement | `reckn-demo-v3.mp4` |
 |---|---|
-| 2–4 minutes | **2:41** ✅ |
+| 2–4 minutes | **2:55** ✅ |
 | ≥ 720p | **1920 × 1080** ✅ |
 | 16:9 | 1.7778 ✅ |
 | opens at all (faststart) | ✅ |
@@ -105,6 +105,15 @@ Current state, measured:
 **The narration is the open item and it belongs to the founder.** The script is
 [`../../dashboard/video/VO.md`](../../dashboard/video/VO.md) — timecoded from the recorder's
 own beats, every line inside its word budget *and* inside the shot it describes.
+
+Three of the film's beats are **deck slides** and are deliberately under-narrated: the voice
+names what a slide does not say and then stops, and the inversion slide is silent end to end.
+A narrator reciting text already on screen is the fastest way to make a good demo feel like a
+bad one, so silence there is the script, not a gap in it.
+
+The pitch deck itself — [`../../dashboard/media/reckn-deck.pdf`](../../dashboard/media/reckn-deck.pdf),
+also served at `docs/deck.html` — is built from the same file the film's slides come from, so
+the two cannot disagree.
 
 ### Verification procedure for the final file
 

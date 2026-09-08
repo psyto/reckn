@@ -597,6 +597,60 @@ function lower(html, ms = 4200, { near = null } = {}) {
 }
 
 
+// A deck slide, shown full-frame. The slides are built at exactly 1920x1080 by
+// dashboard/video/build-deck.mjs from dashboard/deck/deck.html, so a slide IS a frame and
+// nothing is scaled or letterboxed. Using them here rather than re-typing their words is
+// the point: the film and the PDF cannot say different things because one file says both.
+//
+// It breathes by 1.5% over the hold. A slide that is byte-identical for eight seconds is a
+// stalled video to anyone watching and a duplicate frame to motion.py, and neither is what
+// a held title should look like.
+const deckDir = path.join(repo, "dashboard", "media", "deck");
+const slideCache = new Map();
+function slideUri(n) {
+  const key = String(n).padStart(2, "0");
+  if (slideCache.has(key)) return slideCache.get(key);
+  const f = path.join(deckDir, `slide-${key}.png`);
+  if (!fs.existsSync(f)) {
+    throw new Error(`slide ${key} is missing — run \`node dashboard/video/build-deck.mjs\` first`);
+  }
+  const u = `data:image/png;base64,${fs.readFileSync(f).toString("base64")}`;
+  slideCache.set(key, u);
+  return u;
+}
+
+async function deckSlide(n, ms, { navigate = null, during = null, label = "" } = {}) {
+  if (!CARDS) {
+    await sleep(ms);
+    if (navigate) { await page.goto(navigate, { waitUntil: "domcontentloaded" }); await cursor(); }
+    if (during) await during();
+    return;
+  }
+  const uri = slideUri(n);
+  beat(`SLIDE ${String(n).padStart(2, "0")}${label ? " " + label : ""}`);
+  await page.setContent(`<!doctype html><meta charset="utf-8"><style>
+    html,body{margin:0;height:100%;background:#17130f;overflow:hidden}
+    img{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;
+        transform:scale(1);transition:transform ${ms}ms linear;
+        opacity:0;transition:transform ${ms}ms linear, opacity .55s ease}
+  </style><img id="s" src="${uri}">`);
+  await sleep(120);
+  await page.evaluate(() => {
+    const e = document.getElementById("s");
+    if (e) { e.style.opacity = "1"; e.style.transform = "scale(1.015)"; }
+  });
+  await sleep(Math.max(600, ms - 600));
+  await page.evaluate(() => { const e = document.getElementById("s"); if (e) e.style.opacity = "0"; });
+  await sleep(450);
+  if (navigate) {
+    await page.goto(navigate, { waitUntil: "domcontentloaded" });
+    await page.waitForNetworkIdle({ idleTime: 400, timeout: 30000 }).catch(() => {});
+    await cursor();
+  }
+  if (during) await during();
+}
+
+
 async function panStill(file, from, to, ms, caption = null, captionAt = 900, opts = {}) {
   // Matted by default: the picture sits in a smaller frame on a near-black surround and
   // the caption goes in the dark below it, the way a documentary treats a still. Full-bleed
@@ -740,6 +794,13 @@ await sleep(6200);
 // ---- the title, once it has been earned ----------------------------------------
 await openingPlate(LIVE + "/");
 
+// ---- the argument, before any more mechanism ------------------------------------
+// The founder's note was that the artefacts explained HOW and never WHY. This is the why,
+// and it is a deck slide rather than a title card because a card is a sentence on black and
+// this is a table a viewer has to read: two parties decide whether you get paid, and neither
+// of them can see the work.
+await deckSlide(2, 8000, { label: "the problem" });
+
 // ---- 01 · the answer to the cold open ------------------------------------------
 await card("Nobody could have\noverridden that.", 0, { navigate: LIVE + "/" });
 await page.waitForFunction(
@@ -834,7 +895,9 @@ await dwell("#t-cost", 9000, 260);
 // This chapter used to be titled "This is not a bridge." A viewer cannot build a picture
 // out of what something is not, and it landed at 2:09 of a 3:04 film — after five chapters
 // of mechanism. It is the argument, so it is stated affirmatively and it comes early.
-await card("Only the proof crosses.", 0, { number: true });
+// The slide states the inversion — "don't move the asset to reach the work; move a proof of
+// the work to reach the asset" — and the diagram behind it is the same SVG the deck uses.
+await deckSlide(3, 7000, { label: "the inversion" });
 beat("17 SVG: out to Arc, scope held");
 await panStill("solana-proof-to-arc-settlement.svg",
   { s: 1.06, x: 1, y: 1 }, { s: 1.0, x: 0, y: 0 }, 5000, null, 900, { mat: false });
@@ -862,7 +925,11 @@ await card("The money never left Arc.", 0, { navigate: LIVE + "/" });
 }
 
 // ---- 06 · the half that is easy to leave out ----------------------------------
-await card("A proof of the payout.\nNot a proof of the state.", 0, {
+// Three refusals on one slide, where a card could hold one: bridges are not made
+// unnecessary, liquidity is not fixed, and mainnet provenance is not proven. The live page
+// then shows the third of them in its own words.
+await deckSlide(7, 9000, {
+  label: "what this does not claim",
   navigate: LIVE + "/",
   during: () => page.evaluate(() => document.querySelector("table.two")
     ?.scrollIntoView({ block: "center" })),
