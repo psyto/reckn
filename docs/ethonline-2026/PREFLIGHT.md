@@ -110,7 +110,7 @@ Current state, measured:
 
 | requirement | `reckn-demo-v3.mp4` |
 |---|---|
-| 2–4 minutes | **2:55** ✅ |
+| 2–4 minutes | **3:15** ✅ |
 | ≥ 720p | **1920 × 1080** ✅ |
 | 16:9 | 1.7778 ✅ |
 | opens at all (faststart) | ✅ |
@@ -125,8 +125,10 @@ own beats, every line inside its word budget *and* inside the shot it describes.
 move this money, including us — says that is easy to say, and then spends its whole running
 time on four checks a judge can repeat: a real proof that cannot take the money; the deployed
 bytecode compared against source in their own browser; four settlements in real USDC, two
-decided by proofs about Solana work; and **what it does not prove**. It ends on the URL,
-because the film's job is to get the page opened, not to be believed.
+decided by proofs about Solana work; and **what it does not prove** — which is the longest slide in the film, and names all three
+limits: no Solana mainnet provenance, Arc **testnet** rather than production, and a thirty-day
+timeout refund that a public chain cannot be fast-forwarded to demonstrate. It ends on the
+URL, because the film's job is to get the page opened, not to be believed.
 A narrator reciting text already on screen is the fastest way to make a good demo feel like a
 bad one, so silence there is the script, not a gap in it.
 

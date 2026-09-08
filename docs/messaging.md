@@ -24,6 +24,32 @@ that must never be said.
 >
 > *ブリッジに送金可否を決めさせず、プルーフに決めさせる。*
 
+## What Reckn is, in the words that are load-bearing
+
+> Reckn is **not a bridge**. It is a **proof-gated settlement layer**: instead of moving
+> capital between chains, it leaves assets where they already are and settles conditionally.
+>
+> The payer's asset is locked **in advance**, in a **local** escrow. It releases only when a
+> **machine-verifiable action, agreed beforehand**, is shown on the execution chain by a
+> **reproducible proof**. If it is not, the buyer is refunded.
+>
+> **Therefore no bridge and no relayer has the authority to permit the payment.**
+
+**The last line is the thesis, and it is not "bridges are unnecessary".** What is removed is
+the bridge's place in the **trust root that authorises payment** — not the bridge. Getting
+that distinction wrong is the difference between a claim that survives a judge and one that
+does not, and §2 forbids the wrong version outright.
+
+Three phrases are load-bearing and were absent from the film until 2026-09-08 — an audit
+against this section found `in advance` and `agreed beforehand` appearing zero times, and the
+cross-chain setting arriving 94 seconds into a 175-second cut:
+
+| phrase | why it carries weight |
+|---|---|
+| **in advance** | the money is already locked before any work happens; nothing is moved to settle |
+| **local escrow** | it is locked on the chain it already lives on; that is what makes this not a transfer |
+| **agreed beforehand** | the predicate is named when the deal is funded, so a dispute cannot be invented afterwards |
+
 ## Three lines
 
 > An escrow releases only when the work it was funded against can be **re-executed and
@@ -160,7 +186,7 @@ Nothing here is claimed on the strength of a file appearing.*
 
 | never | say instead |
 |---|---|
-| Reckn removes the need for bridges | it removes **the bridge as the decider**. Moving funds to where you pay is a separate problem and it remains |
+| Reckn removes the need for bridges | it removes the bridge from the **trust root that authorises payment** — *no bridge and no relayer has the authority to permit the payment*. Moving funds to where you pay is a separate problem and it remains |
 | Reckn fixes fragmented balances or cross-chain liquidity | **it does not.** The buyer must already hold the settlement asset on the payment chain |
 | It can prove arbitrary Solana mainnet state | it proves **consistency over the account set the deal named** — not provenance. It does not establish that those inputs came from mainnet |
 | The Arc × Solana demonstration also runs on Tempo | **Tempo is not deployed.** Only local tests and unauthenticated measurements exist |

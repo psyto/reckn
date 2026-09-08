@@ -449,9 +449,16 @@ async function openingPlate(navigateTo, ms = 10000) {
   // pans over it cost fourteen seconds of a three-minute film and were the only thing on
   // screen a judge could not check. The identity is worth keeping; the running time is not.
   const art = dataUri("proof-gated-escrow-storyboard-v1.png");
+  // The door sets the CROSS-CHAIN frame in the first ten seconds. The previous question —
+  // "an agent paid another agent, they disagree, who decides?" — is true of any escrow, and
+  // the thing that separates this one (the payment and the work are on different chains)
+  // did not arrive until 94s of a 175s film. Founder's framing, compressed to a plate.
+  // Founder's wording, verbatim. It sets the cross-chain frame and names the thesis in the
+  // first ten seconds, which is what the previous question ("they disagree, who decides?")
+  // did not do — that question is true of any escrow.
   const DOORQ = DOOR === "cwf"
-    ? "The money is on one chain.<br>The work happened on another.<br>Why should a bridge decide if you get paid?"
-    : "An agent paid another agent.<br>They disagree. Who decides?";
+    ? "Agents will work across chains.<br>Reckn keeps assets native to each chain and settles<br>only when the cross-chain work is proven."
+    : "A payment lives on Arc.<br>The work happens on Solana.<br>No bridge and no judge decides the payout.<br>A proof does.";
   beat("TITLE Reckn");
   await page.setContent(`<!doctype html><meta charset="utf-8"><style>
     body{margin:0;background:#0d0b09;color:#f2ede6;height:100vh;overflow:hidden;
