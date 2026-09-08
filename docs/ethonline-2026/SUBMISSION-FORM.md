@@ -365,12 +365,15 @@ only projects that pass it present live.
 
 | criterion | state |
 |---|---|
-| **Video presentation and quality** | **The weakest of the three, and the only one not finished.** 1080p 16:9 footage exists in two cuts with a timed narration script; the pitch section and the voice are being produced. Until they are, the cut on disk is 1:41 and silent against a 2–4 minute, audio-required rule. |
+| **Video presentation and quality** | **Still the weakest, and still the only one not finished — but the footage now meets every rule except one.** `dashboard/media/reckn-demo-v3.mp4` is **2:41**, 1920×1080 16:9, faststart, and opens on the theft rather than on a title. What is missing is **audio**: the rule requires it, and it must be a **human** English voice — no TTS. The timed script is `dashboard/video/VO.md`. (Superseded numbers: this row once read "1:41 and silent", which was a cut ago.) |
 | **Project live demo quality** | Strong. <https://psyto.github.io/reckn/> needs no install, no wallet and no clone: the visitor's own browser compares the deployed bytecode against the source and reads four settlements off Arc testnet. |
-| **Proper use of git commit history** | Strong, and measured rather than asserted — **89 commits inside the event window, spread across every day of it** (23 / 37 / 18 / 11 on 09-04 → 09-07), no squash, the largest touching 22 files. This is the same evidence the Continuity boundary rests on, so it was going to be true anyway. |
+| **Proper use of git commit history** | Strong, and measured rather than asserted — **129 commits inside the event window, spread across every day of it** (34 / 37 / 18 / 30 / 10 on 09-04 → 09-08), no squash, no `wip:` subjects, the largest touching 22 files. This is the same evidence the Continuity boundary rests on, so it was going to be true anyway. **Ask git the way `PREFLIGHT.md` §1 does**: `--since=2026-09-04` answers 117, because it resolves the date in another timezone and drops twelve commits from the morning of 09-04 JST. |
 
-The one thing to protect between now and then is the video, because it is the only
-criterion where the current artefact does not yet meet a stated rule.
+The one thing to protect between now and then is the video's **audio**, because it is the
+only place where the artefact still does not meet a stated rule. The full pre-submission
+checklist — Continuity boundary, event work, AI disclosure, git evidence, the video
+verification procedure, and the partner-prize decision — is
+[`PREFLIGHT.md`](PREFLIGHT.md); the AI disclosure it points at is [`AI-USAGE.md`](AI-USAGE.md).
 
 ## 10b. Arc prize application — the four sub-fields
 

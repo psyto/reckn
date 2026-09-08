@@ -12,7 +12,15 @@ the picture is doing the arguing and the voice must not race it.
 **The `-cwf` cut is the same film**: identical footage, identical timings, and only the
 opening question and the closing line differ. Lines 1–14 fit it unchanged.
 
-**Read at ~145 words per minute, conversational, no music.** Each line's word budget is the
+**A HUMAN must read this. The event forbids a synthetic voice, and there is no instrument
+in this repository that can tell one from the other** — `check.sh` can prove an audio track
+exists and is not silence, and it stops there. That last step is a person's signature, not a
+green tick.
+
+**Read at ~145 words per minute, conversational, no music.** The lines are written to be
+spoken on a first take: contractions, one idea per breath, no stacked noun phrases. If a
+line makes you stumble, change it and re-run `vo-table.py` — it will tell you whether the
+new wording still fits its shot. Each line's word budget is the
 cell beside it: going over means the voice runs past its shot. Lines are written to say what
 the picture does *not* — the on-screen chapter cards are already saying the claim, so the
 voice supplies the evidence, never the caption.
@@ -37,22 +45,22 @@ and no line runs past its shot.
 
 | # | in | for | words | line |
 |---|---|---|---|---|
-| 1 | 0:01 | 7.0 s | 14 / 16 | "This escrow holds two hundred and fifty dollars. Nobody has a key to it." |
-| 2 | 0:09 | 7.5 s | 16 / 18 | "That is a real Groth16 proof. It verifies. It is a proof of a different execution." |
-| 3 | 0:17 | 7.0 s | 13 / 16 | "Binding mismatch. The money did not move. A valid proof was not enough." |
-| — | 0:24 | 9.0 s | — | *(plate: **Reckn — Keep assets native. Settle on proof.** then the door question)* |
-| 4 | 0:35 | 9.0 s | 15 / 21 | "Nobody could have overridden it. This escrow has no owner, no admin and no resolver." |
-| 5 | 0:44 | 7.5 s | 14 / 18 | "And that is a build condition — if one appeared, the build would fail." |
-| 6 | 0:59 | 7.0 s | 13 / 16 | "The proof this deal was funded against reproduces, and the seller is paid." |
-| 7 | 1:07 | 8.5 s | 13 / 20 | "A delivery that did not reproduce refunds the buyer. Same machinery, both directions." |
-| 8 | 1:22 | 8.5 s | 16 / 20 | "What was removed is not a fee. It is the person who had to approve it." |
-| 9 | 1:34 | 8.5 s | 16 / 20 | "The work happened on Solana; a zkVM re-executed it. The proof crosses. The money does not." |
-| 10 | 1:49 | 10.0 s | 23 / 24 | "Four settlements on Arc testnet, read out of the receipts by your browser. Two were decided by proofs about work performed on Solana." |
-| 11 | 2:07 | 7.5 s | 14 / 18 | "Arc never runs a Solana virtual machine, and that limit is on the page." |
-| 12 | 2:15 | 5.0 s | 3 / 12 | "Consistency, not provenance." |
-| 13 | 2:20 | 6.5 s | 13 / 15 | "The one thing an observer controls is the story. Watch what it moves." |
-| 14 | 2:27 | 6.0 s | 14 / 14 | "Every keystroke, a new hash. The binding and the verdict come from Arc, unmoved." |
-| — | 2:34 | 8.0 s | — | *(plate: **Keep assets native. Settle on proof.** then the door's last line)* |
+| 1 | 0:00 | 7.0 s | 15 / 16 | "This escrow is holding two hundred and fifty dollars. Nobody has a key to it." |
+| 2 | 0:08 | 7.5 s | 16 / 18 | "Now watch. That's a real proof, and it verifies — it's just about a different job." |
+| 3 | 0:16 | 7.0 s | 10 / 16 | "Binding mismatch. The money didn't move. Being valid wasn't enough." |
+| — | 0:23 | 9.0 s | — | *(plate: **Reckn — Keep assets native. Settle on proof.** then the door question)* |
+| 4 | 0:34 | 9.0 s | 15 / 21 | "Nobody could have stepped in and overridden that. There's no owner, no admin, no resolver." |
+| 5 | 0:43 | 7.5 s | 13 / 18 | "And it isn't a promise. If one ever appeared, the build would fail." |
+| 6 | 0:57 | 7.0 s | 15 / 16 | "Here's the proof this deal was funded against. It reproduces, so the seller gets paid." |
+| 7 | 1:05 | 8.5 s | 13 / 20 | "And when the work doesn't reproduce, the same machinery sends the money back." |
+| 8 | 1:20 | 8.5 s | 15 / 20 | "What we took out isn't a fee. It's the person who used to approve this." |
+| 9 | 1:32 | 8.5 s | 19 / 20 | "The work happened on Solana. We re-ran it inside a zkVM. The proof crosses — the money never does." |
+| 10 | 1:47 | 10.0 s | 23 / 24 | "Four settlements on Arc testnet, read straight off the chain by your browser. Two were decided by proofs about work done on Solana." |
+| 11 | 2:05 | 7.5 s | 16 / 18 | "Arc never runs a Solana virtual machine — and we put that limit on the page." |
+| 12 | 2:13 | 5.0 s | 5 / 12 | "It's consistency. It isn't provenance." |
+| 13 | 2:18 | 6.5 s | 15 / 15 | "The one thing an observer controls is the story. So watch what the story moves." |
+| 14 | 2:25 | 6.0 s | 14 / 14 | "Every keystroke, a new hash. The verdict comes from the chain. It doesn't budge." |
+| — | 2:32 | 8.0 s | — | *(plate: **Keep assets native. Settle on proof.** then the door's last line)* |
 
 ## Recording it
 

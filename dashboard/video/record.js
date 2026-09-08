@@ -532,31 +532,54 @@ async function holdStill(file, at, ms, opts = {}) {
 // go on driving the page underneath it. The body is guarded rather than `.catch()`-ed,
 // because puppeteer's send() throws SYNCHRONOUSLY when a session is gone and a bare catch
 // never sees it — that defect killed three takes before it was found.
-function lower(html, ms = 4200) {
+function lower(html, ms = 4200, { near = null } = {}) {
   const inject = () => {
     try {
-      page.evaluate((h) => {
+      page.evaluate((h, sel) => {
         document.getElementById("__lower")?.remove();
         const d = document.createElement("div");
         d.id = "__lower";
-        d.innerHTML = `<div id="__lowerbg"></div><div id="__lowertx">${h}</div>`;
-        Object.assign(d.style, { position: "fixed", inset: "0", zIndex: "99998", pointerEvents: "none",
-                                 opacity: "0", transition: "opacity .55s ease" });
+        d.innerHTML = `<div id="__lowertx">${h}</div>`;
+        Object.assign(d.style, { position: "fixed", inset: "0", zIndex: "99998",
+                                 pointerEvents: "none", opacity: "0",
+                                 transition: "opacity .5s ease" });
         document.body.appendChild(d);
-        const bg = d.querySelector("#__lowerbg");
-        Object.assign(bg.style, { position: "fixed", left: "0", right: "0", bottom: "0", height: "34%",
-          background: "linear-gradient(to top, rgba(8,7,6,.94) 0%, rgba(8,7,6,.80) 42%, rgba(8,7,6,0) 100%)" });
         const tx = d.querySelector("#__lowertx");
-        Object.assign(tx.style, { position: "fixed", left: "6%", right: "6%", bottom: "7.5%",
-          color: "#f2ede6", textWrap: "balance",
-          font: "600 40px/1.3 ui-sans-serif,-apple-system,'SF Pro Display',Inter,sans-serif",
-          letterSpacing: "-.015em", textShadow: "0 2px 18px rgba(0,0,0,.8)" });
+        Object.assign(tx.style, {
+          position: "fixed", color: "#f2ede6", textWrap: "balance",
+          background: "rgba(10,9,8,.94)", borderRadius: "12px",
+          borderLeft: "4px solid #3fb950", padding: "20px 26px",
+          boxShadow: "0 18px 48px rgba(0,0,0,.55)",
+          font: "600 34px/1.32 ui-sans-serif,-apple-system,'SF Pro Display',Inter,sans-serif",
+          letterSpacing: "-.012em",
+        });
+        // Anchored UNDER the thing it describes. Fixed at the page's bottom-left, the caption
+        // sat 450-530 px below the line that was changing — on a 1080 frame that is beyond
+        // what one pair of eyes can hold at once, so a viewer read the words OR watched the
+        // log and missed whichever they were not looking at. In a cold open that is the
+        // whole shot. Now it shares the x-range of its subject and sits just beneath it.
+        const el = sel && document.querySelector(sel);
+        if (el) {
+          const r = el.getBoundingClientRect();
+          const width = Math.max(560, Math.min(r.width, window.innerWidth * 0.72));
+          tx.style.left = Math.round(Math.max(24, r.left)) + "px";
+          tx.style.width = Math.round(width) + "px";
+          tx.style.top = Math.round(r.bottom + 22) + "px";
+          // If the anchor sits low enough that the card would fall off the frame, put it
+          // ABOVE instead. Off-screen is worse than unconventional.
+          if (r.bottom + 22 + 180 > window.innerHeight) {
+            tx.style.top = "";
+            tx.style.bottom = (window.innerHeight - r.top + 22) + "px";
+          }
+        } else {
+          tx.style.left = "6%"; tx.style.right = "6%"; tx.style.bottom = "7.5%";
+        }
         for (const e of tx.querySelectorAll("i")) {
           Object.assign(e.style, { display: "block", fontStyle: "normal", color: "#3fb950",
-                                   fontSize: "30px", fontWeight: "600", marginTop: "10px" });
+                                   fontSize: "27px", fontWeight: "600", marginTop: "9px" });
         }
         requestAnimationFrame(() => { d.style.opacity = "1"; });
-      }, html).catch(() => {});
+      }, html, near).catch(() => {});
     } catch {}
   };
   const drop = () => {
@@ -565,7 +588,7 @@ function lower(html, ms = 4200) {
         const d = document.getElementById("__lower");
         if (!d) return;
         d.style.opacity = "0";
-        setTimeout(() => d.remove(), 700);
+        setTimeout(() => d.remove(), 600);
       }).catch(() => {});
     } catch {}
   };
@@ -701,7 +724,7 @@ t0 = Date.now();
 // Motion from the first frame: the caption fades in at ~0.2 s and the cursor is already
 // travelling to the button while it is read. Nothing waits for anything here.
 beat("00 cold open: fund");
-lower("This escrow holds 250.00 USDC on a chain running Arc's rules.<i>Nobody has a key to it. Watch me try to take it anyway.</i>", 6200);
+lower("This escrow holds 250.00 USDC on a chain running Arc's rules.<i>Nobody has a key to it. Watch me try to take it anyway.</i>", 6200, { near: ".acct, #log" });
 await sleep(250);
 await press('button[data-act="fund"][data-deal="honest"]', "tx 0x", { hold: 5200 });
 
@@ -709,9 +732,9 @@ await page.evaluate(() => document.getElementById("log")
   ?.scrollIntoView({ behavior: "smooth", block: "center" }));
 await sleep(600);
 beat("00 cold open: BindingMismatch");
-lower("I am submitting a <b>real</b> Groth16 proof. It verifies.<i>It is a proof of a different execution.</i>", 7000);
+lower("I am submitting a <b>real</b> Groth16 proof. It verifies.<i>It is a proof of a different execution.</i>", 7000, { near: "#log" });
 await press('button[data-act="settle"][data-proof="decrease"]', "BindingMismatch", { hold: 7200 });
-lower("<b>BindingMismatch.</b> The money did not move.<i>A valid proof was not enough. It had to be a proof about THIS deal.</i>", 6000);
+lower("<b>BindingMismatch.</b> The money did not move.<i>A valid proof was not enough. It had to be a proof about THIS deal.</i>", 6000, { near: "#log" });
 await sleep(6200);
 
 // ---- the title, once it has been earned ----------------------------------------
@@ -791,10 +814,10 @@ await page.evaluate(() => document.getElementById("log")
   ?.scrollIntoView({ behavior: "smooth", block: "center" }));
 await sleep(700);
 beat("02 evidence: release");
-lower("The proof this deal was funded against. It reproduces.<i>Released to the seller.</i>", 5200);
+lower("The proof this deal was funded against. It reproduces.<i>Released to the seller.</i>", 5200, { near: "#log" });
 await press('button[data-act="settle"][data-deal="honest"]:not([data-proof])', "tx 0x", { hold: 5200 });
 beat("02 evidence: refund");
-lower("Now a delivery that did <b>not</b> reproduce.<i>The same machinery refunds the buyer.</i>", 6600);
+lower("Now a delivery that did <b>not</b> reproduce.<i>The same machinery refunds the buyer.</i>", 6600, { near: "#log" });
 await press('button[data-act="fund"][data-deal="decrease"]', "tx 0x", { hold: 1200 });
 await press('button[data-act="settle"][data-deal="decrease"]', "tx 0x", { hold: 5200 });
 
