@@ -171,7 +171,10 @@ virtual machine the work happened on.
 
 ![The Arc demo again: the Solana deal funded and settled with the Solana proof, the seller tile at 250.00 USDC.](dashboard/media/arc-demo-solana.jpg)
 
-**The same escrow source, unmodified, now settles on a second payment chain.** On **Tempo
+**The same escrow source, unmodified, now settles on a second payment chain** — and that
+is a statement about the *source*, checked by a gate (`zk-verdict/scripts/tempo-arc-parity.sh`),
+not a claim that the two chains adjudicate alike. They do not: the adjudicator is named per
+deal by the funder, and a TIP-20 can be paused or policy-gated where Arc's USDC cannot. On **Tempo
 testnet** (2026-09-08) the escrow held **PathUSD** — a real TIP-20, not a mock — and a proof
 about work performed on Solana released it to the seller, while a proof that the work did not
 reproduce refunded the buyer. Tempo has no gas token, so the fee that settled each of those

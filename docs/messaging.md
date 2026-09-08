@@ -126,6 +126,11 @@ things §3 required arrived. What may now be said:
 That last clause is the part no other chain gives, and it is what makes this a Tempo slice
 rather than a redeploy. It is read off the receipts' own `feeToken`, not asserted.
 
+**"The same escrow source, unmodified" is measured and gated** — `tempo-arc-parity.sh`. Say
+exactly that, and do not let it become **"the two chains adjudicate identically"**, which is
+false: the adjudicator is named per deal by the funder, the fee models differ, and a TIP-20
+can be paused or policy-gated. One source is the claim. One behaviour is not.
+
 **Still not claimable:** anything on Tempo *mainnet*; provenance; that bridges are
 unnecessary; and the thirty-day timeout, which is not demonstrated on any chain.
 
@@ -148,6 +153,7 @@ Nothing here is claimed on the strength of a file appearing.*
 | Measured gas on Arc: `solanaProofOnArc` 320,600 · `solanaFailureOnArc` 316,120 · `reproduced` 345,874 | `arc.json` |
 | **The USDC never leaves Arc.** No bridge and no light client on the adjudication path | `docs/cross-chain-settlement.md`, the boundary panel on the live page |
 | The escrow **names no chain and no token**: `grep -n 'Arc\|USDC' zk-verdict/contracts/src/*.sol` returns nothing | the grep itself |
+| **The same escrow source, unmodified, settles on two payment chains** — Arc and Tempo testnet | `bash zk-verdict/scripts/tempo-arc-parity.sh` (the Tempo owner's gate). This is a claim about the SOURCE, not about the two chains behaving alike |
 | The guest recomputes `bank_hash` from the committed prestate; a compact prestate binds transitively to a full snapshot, enforced **before** replay | `docs/svm-snapshot-authenticity.md`, `reexec-svm/src/authenticity.rs` |
 
 ## 2. What must never be said
@@ -161,6 +167,7 @@ Nothing here is claimed on the strength of a file appearing.*
 | "like a bank's daily netting" | do not use it. There is no netting and no clearing here |
 | A proof moves assets between chains | a proof **decides a local payment**. Nothing is transferred across a boundary |
 | "verifying a proof is expensive on that chain" — about Tempo or any chain, now or after any unlock | **false, and it will stay false.** BN254 arithmetic costs the same on Tempo as on Ethereum; what Tempo charges more for is STATE. A cost sentence must be about state or it is wrong |
+| "the two chains adjudicate identically", or any wording that slides from *one source* to *one behaviour* | **false.** What is measured and gated is that the **escrow source is unmodified across both**. The adjudicator is named per deal by the funder, the fee models differ, and a TIP-20 can be paused or policy-gated where Arc's USDC cannot be in the same way. "Same source, two chains" is the claim; "same adjudication" is not, and the gap between them is exactly where an over-claim would live |
 | any sentence that mixes the 30-day timeout with the demonstrated refund | **they are different refunds.** `refundAfterDeadline` waits thirty days, so on a public chain it can never be shown inside an event — on Arc it is *scheduled*, not demonstrated. **The refund on screen is always the proof-driven one** (`Failed` → buyer), which is immediate. Conflating them survives no scrutiny and must not be written even after §3 unlocks |
 
 ### Three qualifiers the tagline needs
