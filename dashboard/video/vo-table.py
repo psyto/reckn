@@ -14,7 +14,7 @@ WPM = 145
 here = pathlib.Path(__file__).resolve().parent
 beats = {}
 order = []
-for line in (here / "beats.tsv").read_text().splitlines():
+for line in (here / __import__("os").environ.get("BEATS", "beats-v3.tsv")).read_text().splitlines():
     t, label = line.split("\t")
     beats[label] = float(t)
     order.append(label)
@@ -25,42 +25,58 @@ END = beats["END"]
 # read from beats.tsv rather than assumed.
 def at(label): return beats[label]
 
-CLOSE = 7.0   # closingPlate(7000)
+CLOSE = 8.0   # closingPlate(8000)
 
 SCRIPT = [
-    (at("01 PNG: two agents disagree"), 8.5, 1,
-     "An agent paid another agent for work. They disagree about what was delivered. Who decides?"),
-    (at("03 evidence: opinion vs re-execution"), 7.0, 2,
-     "Two judges, one dispute. One reads the seller's claim and believes it."),
-    (at("03 evidence: opinion vs re-execution") + 7.5, 7.0, 3,
-     "The other replays the work. It produced six, not a thousand and twenty-four."),
-    (at("01 evidence: live page, bytecode check"), 9.5, 4,
-     "That page is not a screenshot. Your browser just read Arc and compared the contract holding the money against our source."),
-    (at("01 evidence: live page, bytecode check") + 10.0, 9.0, 5,
-     "Byte for byte. And it is a build condition — an owner, an admin, a pause, and the build fails."),
-    (at("02 evidence: fund"), 7.5, 6,
-     "A funded deal in USDC. Its release condition is not a signature."),
-    (at("02 evidence: BindingMismatch"), 10.0, 7,
-     "Now a real Groth16 proof goes in — valid, of a different execution. Binding mismatch. The money does not move."),
-    (at("02 evidence: BindingMismatch") + 10.5, 8.0, 8,
-     "The deal's own proof releases it. A proof of a decrease refunds the buyer. Nobody approved either."),
-    (at("03 evidence: what it replaces"), 10.0, 9,
-     "Normally a person approves a release. That person is a queue, and agents do not stop. Deciding these four cost under three cents."),
+    # The cold open. The picture is doing the arguing here, so the voice stays out of its
+    # way and says only what a viewer cannot read off the screen.
+    (at("00 cold open: fund"), 7.0, 1,
+     "This escrow holds two hundred and fifty dollars. Nobody has a key to it."),
+    (at("00 cold open: BindingMismatch"), 7.5, 2,
+     "That is a real Groth16 proof. It verifies. It is a proof of a different execution."),
+    (at("00 cold open: BindingMismatch") + 8.0, 7.0, 3,
+     "Binding mismatch. The money did not move. A valid proof was not enough."),
+    (at("TITLE Reckn"), 9.0, None,
+     "plate: **Reckn — Keep assets native. Settle on proof.** then the door question"),
+    (at("CARD 01 Nobody could have overridden that."), 9.0, 4,
+     "Nobody could have overridden it. This escrow has no owner, no admin and no resolver."),
+    (at("CARD 01 Nobody could have overridden that.") + 9.5, 7.5, 5,
+     "And that is a build condition — if one appeared, the build would fail."),
+    (at("02 evidence: release"), 7.0, 6,
+     "The proof this deal was funded against reproduces, and the seller is paid."),
+    (at("02 evidence: refund"), 8.5, 7,
+     "A delivery that did not reproduce refunds the buyer. Same machinery, both directions."),
+    (at("03 evidence: what it replaces"), 8.5, 8,
+     "What was removed is not a fee. It is the person who had to approve it."),
+    (at("17 SVG: out to Arc, scope held"), 8.5, 9,
+     "The work happened on Solana; a zkVM re-executed it. The proof crosses. The money does not."),
     (at("04 evidence: four settlements"), 10.0, 10,
      "Four settlements on Arc testnet, read out of the receipts by your browser. Two were decided by proofs about work performed on Solana."),
-    (at("17 SVG: out to Arc, scope held"), 8.5, 11,
-     "Nothing is bridged. The work happened on Solana; a zkVM re-executed it. The proof crosses — nothing else does."),
-    (at("06 evidence: the two rows"), 7.0, 12,
+    (at("06 evidence: the two rows"), 7.5, 11,
      "Arc never runs a Solana virtual machine, and that limit is on the page."),
-    (at("06 evidence: the two rows") + 7.5, 8.0, 13,
-     "It recomputes a bank hash over the set the deal named. Consistency, not provenance."),
-    (at("07 evidence: typing"), 6.5, 14,
+    (at("06 evidence: the two rows") + 8.0, 5.0, 12,
+     "Consistency, not provenance."),
+    (at("07 evidence: typing"), 6.5, 13,
      "The one thing an observer controls is the story. Watch what it moves."),
-    (at("07 evidence: typing") + 7.0, 6.5, 15,
+    (at("07 evidence: typing") + 7.0, 6.0, 14,
      "Every keystroke, a new hash. The binding and the verdict come from Arc, unmoved."),
     (END - CLOSE, CLOSE, None,
-     "plate: **Reckn makes payment conditional on reproducible work. / Reproduce, or refund.** — hold, then silence"),
+     "plate: **Keep assets native. Settle on proof.** then the door's last line"),
 ]
+
+# A line has to fit its SHOT, not just its own stated seconds. The old table only checked
+# words-per-minute against the duration written next to the line, so a line could be
+# comfortably paced and still run forty seconds past the picture it describes — which is
+# the mistake that produced a 2:48 table for a 2:08 cut. Anchor each line to the beat it
+# starts in and check it ends before that beat does.
+shots = [(beats[l], l) for l in order if l != "END"]
+shots.sort()
+def shot_of(t):
+    hit = None
+    for k, (s0, lab) in enumerate(shots):
+        if s0 <= t + 1e-9:
+            hit = (s0, lab, shots[k + 1][0] if k + 1 < len(shots) else END)
+    return hit
 
 # A line has to fit its SHOT, not just its own stated seconds. The old table only checked
 # words-per-minute against the duration written next to the line, so a line could be

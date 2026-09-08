@@ -19,8 +19,13 @@ const dir = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.join(dir, "..", "..");
 // v2 writes to its own names. The approved v1 stays on disk untouched until someone
 // deliberately promotes this one.
-const OUT_CARDED = path.join(repo, "dashboard", "media", "reckn-arc-demo-v2.mp4");
-const OUT_CLEAN  = path.join(repo, "dashboard", "media", "reckn-arc-demo-v2-clean.mp4");
+// RECKN_DOOR picks which door the film is entered through. docs/messaging.md says the two
+// events share one product and differ in the FIRST SENTENCE ONLY; this is that sentence,
+// made executable rather than aspirational. Everything between the plates is identical.
+const DOOR = process.env.RECKN_DOOR === "cwf" ? "cwf" : "ethonline";
+const SUF = DOOR === "cwf" ? "-cwf" : "";
+const OUT_CARDED = path.join(repo, "dashboard", "media", `reckn-demo-v3${SUF}.mp4`);
+const OUT_CLEAN  = path.join(repo, "dashboard", "media", `reckn-demo-v3${SUF}-clean.mp4`);
 // The recorder writes here, and only a FINISHED, faststart-encoded file ever lands at the
 // path above. Recording straight to the delivered path means anyone who opens it while a
 // take is running gets a file with no moov atom — which is not "still rendering", it is
@@ -397,8 +402,11 @@ async function crossingDiagram(ms = 7000) {
 
 /// The last thing on screen. Two lines on one plate, because two cards in a row reveal the
 /// page between them.
-async function closingPlate(ms = 7000) {
+async function closingPlate(ms = 8000) {
   if (!CARDS) { await sleep(ms); return; }
+  const LAST = DOOR === "cwf"
+    ? "Don't make a bridge decide<br>where money goes."
+    : "Reproduce, or refund.";
   beat("CARD close");
   await page.setContent(`<!doctype html><meta charset="utf-8"><style>
     body{margin:0;background:#17130f;color:#f2ede6;height:100vh;display:flex;
@@ -406,16 +414,16 @@ async function closingPlate(ms = 7000) {
          font:400 30px/1.5 ui-sans-serif,-apple-system,'SF Pro Display',Inter,sans-serif}
     .w{max-width:24em}
     .a{opacity:0;transition:opacity .7s ease;
-       font:400 40px/1.35 ui-sans-serif,-apple-system,Inter,sans-serif;color:#cbbfae}
+       font:700 56px/1.25 ui-sans-serif,-apple-system,Inter,sans-serif;
+       letter-spacing:-.02em;color:#f7f3ec}
     .r{width:72px;height:3px;background:#3fb950;margin:34px auto;opacity:0;
        transition:opacity .7s ease}
     .b{opacity:0;transition:opacity .7s ease;
-       font:700 58px/1.25 ui-sans-serif,-apple-system,Inter,sans-serif;
-       letter-spacing:-.02em;color:#f2ede6}
+       font:400 40px/1.35 ui-sans-serif,-apple-system,Inter,sans-serif;color:#cbbfae}
   </style><div class="w">
-    <div class="a" id="a">Reckn makes payment conditional<br>on reproducible work.</div>
+    <div class="a" id="a">Keep assets native.<br>Settle on proof.</div>
     <div class="r" id="r"></div>
-    <div class="b" id="b">Reproduce, or refund.</div>
+    <div class="b" id="b">${LAST}</div>
   </div>`);
   await sleep(500);
   for (const id of ["a", "r", "b"]) {
@@ -430,44 +438,57 @@ async function closingPlate(ms = 7000) {
 /// leave a gap where the page underneath shows through, measured at 0.6 s of flash between
 /// these two lines. The name and the one-liner land first, then the question that the rest
 /// of the film answers, then the whole thing lifts onto the money-shot.
-async function openingPlate(navigateTo, ms = 9500) {
+async function openingPlate(navigateTo, ms = 10000) {
   const go = async () => {
     await page.goto(navigateTo, { waitUntil: "domcontentloaded" });
     await page.waitForNetworkIdle({ idleTime: 400, timeout: 30000 }).catch(() => {});
     await cursor();
   };
-  if (!CARDS) { await sleep(2000); await go(); await sleep(ms - 2000); return; }
+  if (!CARDS) { await sleep(2000); await go(); await sleep(Math.max(0, ms - 2000)); return; }
+  // The artwork is the plate's BACKGROUND now, not three chapters of its own. Two standalone
+  // pans over it cost fourteen seconds of a three-minute film and were the only thing on
+  // screen a judge could not check. The identity is worth keeping; the running time is not.
+  const art = dataUri("proof-gated-escrow-storyboard-v1.png");
+  const DOORQ = DOOR === "cwf"
+    ? "The money is on one chain.<br>The work happened on another.<br>Why should a bridge decide if you get paid?"
+    : "An agent paid another agent.<br>They disagree. Who decides?";
   beat("TITLE Reckn");
   await page.setContent(`<!doctype html><meta charset="utf-8"><style>
-    body{margin:0;background:#17130f;color:#f2ede6;height:100vh;display:flex;
-         align-items:center;justify-content:center;text-align:center;
+    body{margin:0;background:#0d0b09;color:#f2ede6;height:100vh;overflow:hidden;
          font:400 30px/1.5 ui-sans-serif,-apple-system,'SF Pro Display',Inter,sans-serif}
-    .w{max-width:26em}
-    .n{font:700 92px/1 ui-sans-serif,-apple-system,'SF Pro Display',Inter,sans-serif;
+    #art{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;opacity:.30;
+         transform:scale(1.06);transition:transform 9s linear,opacity 1.2s ease}
+    #veil{position:fixed;inset:0;background:radial-gradient(60% 60% at 50% 45%,
+          rgba(13,11,9,.55) 0%, rgba(13,11,9,.93) 100%)}
+    .w{position:fixed;inset:0;display:flex;flex-direction:column;
+       align-items:center;justify-content:center;text-align:center;padding:0 10%}
+    .n{font:700 88px/1 ui-sans-serif,-apple-system,'SF Pro Display',Inter,sans-serif;
        letter-spacing:-.03em;opacity:0;transition:opacity .7s ease}
-    .r{width:72px;height:3px;background:#3fb950;margin:32px auto;opacity:0;
+    .t{margin-top:26px;opacity:0;transition:opacity .7s ease;
+       font:700 52px/1.25 ui-sans-serif,-apple-system,Inter,sans-serif;
+       letter-spacing:-.02em;color:#f7f3ec}
+    .r{width:72px;height:3px;background:#3fb950;margin:34px auto;opacity:0;
        transition:opacity .7s ease}
-    .o{font:400 34px/1.45 ui-sans-serif,-apple-system,Inter,sans-serif;color:#cbbfae;
-       opacity:0;transition:opacity .7s ease}
-    .q{margin-top:52px;padding-top:34px;border-top:1px solid #2b241d;opacity:0;
-       transition:opacity .7s ease;
-       font:600 44px/1.3 ui-sans-serif,-apple-system,Inter,sans-serif;color:#f2ede6}
-  </style><div class="w">
+    .q{opacity:0;transition:opacity .7s ease;max-width:22em;
+       font:400 36px/1.4 ui-sans-serif,-apple-system,Inter,sans-serif;color:#cbbfae}
+  </style>
+  <img id="art" src="${art}"><div id="veil"></div>
+  <div class="w">
     <div class="n" id="n">Reckn</div>
+    <div class="t" id="t">Keep assets native.<br>Settle on proof.</div>
     <div class="r" id="r"></div>
-    <div class="o" id="o">Agent-payment escrow where a disputed delivery is
-      re-executed, not judged. Reproduce, or refund.</div>
-    <div class="q" id="q">An agent paid another agent.<br>They disagree. Who decides?</div>
+    <div class="q" id="q">${DOORQ}</div>
   </div>`);
-  await sleep(400);
-  for (const id of ["n", "r", "o"]) {
+  await sleep(300);
+  await page.evaluate(() => { const a = document.getElementById("art"); if (a) a.style.transform = "scale(1.14)"; });
+  for (const id of ["n", "t", "r"]) {
     await page.evaluate((x) => { const e = document.getElementById(x); if (e) e.style.opacity = "1"; }, id);
-    await sleep(700);
+    await sleep(750);
   }
-  await sleep(2200);
+  await sleep(1800);
   await page.evaluate(() => { const e = document.getElementById("q"); if (e) e.style.opacity = "1"; });
-  beat("CARD who decides");
-  await sleep(2600);
+  beat("CARD the door");
+  await sleep(3200);
   await go();
   await sleep(900);
 }
@@ -501,6 +522,57 @@ function dataUri(file) {
 async function holdStill(file, at, ms, opts = {}) {
   await panStill(file, at, { s: at.s * 1.012, x: at.x, y: at.y }, ms, null, 900, opts);
 }
+
+// A lower third. The film had two registers — a full-screen card, or a bare screen — so a
+// sentence and the thing it describes could never be on screen at once. That is affordable
+// when the words are chapter titles; it is not affordable in a cold open, where the viewer
+// needs to be told what they are looking at WHILE they look at it.
+//
+// Fire-and-forget by design: it returns as soon as the band is on screen, so the caller can
+// go on driving the page underneath it. The body is guarded rather than `.catch()`-ed,
+// because puppeteer's send() throws SYNCHRONOUSLY when a session is gone and a bare catch
+// never sees it — that defect killed three takes before it was found.
+function lower(html, ms = 4200) {
+  const inject = () => {
+    try {
+      page.evaluate((h) => {
+        document.getElementById("__lower")?.remove();
+        const d = document.createElement("div");
+        d.id = "__lower";
+        d.innerHTML = `<div id="__lowerbg"></div><div id="__lowertx">${h}</div>`;
+        Object.assign(d.style, { position: "fixed", inset: "0", zIndex: "99998", pointerEvents: "none",
+                                 opacity: "0", transition: "opacity .55s ease" });
+        document.body.appendChild(d);
+        const bg = d.querySelector("#__lowerbg");
+        Object.assign(bg.style, { position: "fixed", left: "0", right: "0", bottom: "0", height: "34%",
+          background: "linear-gradient(to top, rgba(8,7,6,.94) 0%, rgba(8,7,6,.80) 42%, rgba(8,7,6,0) 100%)" });
+        const tx = d.querySelector("#__lowertx");
+        Object.assign(tx.style, { position: "fixed", left: "6%", right: "6%", bottom: "7.5%",
+          color: "#f2ede6", textWrap: "balance",
+          font: "600 40px/1.3 ui-sans-serif,-apple-system,'SF Pro Display',Inter,sans-serif",
+          letterSpacing: "-.015em", textShadow: "0 2px 18px rgba(0,0,0,.8)" });
+        for (const e of tx.querySelectorAll("i")) {
+          Object.assign(e.style, { display: "block", fontStyle: "normal", color: "#3fb950",
+                                   fontSize: "30px", fontWeight: "600", marginTop: "10px" });
+        }
+        requestAnimationFrame(() => { d.style.opacity = "1"; });
+      }, html).catch(() => {});
+    } catch {}
+  };
+  const drop = () => {
+    try {
+      page.evaluate(() => {
+        const d = document.getElementById("__lower");
+        if (!d) return;
+        d.style.opacity = "0";
+        setTimeout(() => d.remove(), 700);
+      }).catch(() => {});
+    } catch {}
+  };
+  inject();
+  setTimeout(drop, ms);
+}
+
 
 async function panStill(file, from, to, ms, caption = null, captionAt = 900, opts = {}) {
   // Matted by default: the picture sits in a smaller frame on a near-black surround and
@@ -610,44 +682,36 @@ t0 = Date.now();
 // for it — cards are under a fifth of the running time and every other frame is a real
 // page against a real chain. Nothing here is an animation of an idea.
 
-// ---- 00 · the setup ------------------------------------------------------------
-// Word for word the submission form's short description.
-// 1 · the two agents, and what they are arguing about. The title and the one-liner ride
-// on the picture rather than on a black card — one card fewer, and the viewer is looking
-// at the problem within a second.
-beat("01 PNG: two agents disagree");
-// Retuned for the mat. The frame is now about 2.25:1, so `cover` already crops the
-// 16:9 source top and bottom — scale 1.0 IS a close crop, and the old 2.35 cut the
-// upper agent off at the shoulders. Opening on the whole picture also earns the
-// one-liner its context: two agents, a sealed escrow, and two outcomes, in one frame.
-await panStill("proof-gated-escrow-storyboard-v1.png",
-  { s: 1.00, x: 0, y: 0 }, { s: 1.12, x: 4, y: 1 }, 9000,
-  "<b>Reckn</b>Agent-payment escrow where a disputed delivery is re-executed, not judged." +
-  "<i>Reproduce, or refund.</i>", 700);
-
-// 2 · pan onto the sealed escrow at the centre of the picture.
-beat("02 PNG: the sealed escrow");
-await panStill("proof-gated-escrow-storyboard-v1.png",
-  { s: 1.12, x: 4, y: 1 }, { s: 1.90, x: 2, y: 0 }, 5000,
-  "<b>Two agents disagree.</b>Who decides?", 500);
-
-// 3 · the real thing: the same dispute judged by an opinion and by re-execution.
-beat("03 evidence: opinion vs re-execution");
-await page.goto(BASE + "/index.html", { waitUntil: "domcontentloaded" });
-await cursor();
+// ---- COLD OPEN · the theft, before anything is explained -----------------------
+// The strongest thing this project does was at 1:10 of a 3:04 cut, behind twenty seconds
+// of a green checklist — and a judge decides whether to keep watching inside thirty. So
+// the film now opens on the attack and earns its title afterwards. Nothing is staged: the
+// chain is fresh, the proof is a real Groth16 proof of a real execution, and the only
+// reason the money stays put is the binding check.
+await page.goto(BASE + "/arc.html", { waitUntil: "domcontentloaded" });
 await page.waitForNetworkIdle({ idleTime: 400, timeout: 30000 }).catch(() => {});
-// The money-shot: the same dispute judged by an opinion and by re-execution, disagreeing
-// over who gets paid. No card over it — the picture is the explanation, and a caption
-// repeating it is the thing this film is trying not to be.
-await sleep(500);
-await page.evaluate(() => document.getElementById("btnFalse")?.click());
-await sleep(900);
-await page.evaluate(() => document.getElementById("btnReplay")?.click());
-await sleep(13000);
+await cursor();
+await page.evaluate(() => window.scrollTo(0, 0));
+await sleep(700);
 
-// ---- 01 ------------------------------------------------------------------------
-beat("01 evidence: live page, bytecode check");
-await card("No key can move the money.", 0, { navigate: LIVE + "/" });
+beat("00 cold open: fund");
+lower("This escrow holds 250.00 USDC on a chain running Arc's rules.<i>Nobody has a key to it. Watch me try to take it anyway.</i>", 6200);
+await press('button[data-act="fund"][data-deal="honest"]', "tx 0x", { hold: 5200 });
+
+await page.evaluate(() => document.getElementById("log")
+  ?.scrollIntoView({ behavior: "smooth", block: "center" }));
+await sleep(600);
+beat("00 cold open: BindingMismatch");
+lower("I am submitting a <b>real</b> Groth16 proof. It verifies.<i>It is a proof of a different execution.</i>", 7000);
+await press('button[data-act="settle"][data-proof="decrease"]', "BindingMismatch", { hold: 7200 });
+lower("<b>BindingMismatch.</b> The money did not move.<i>A valid proof was not enough. It had to be a proof about THIS deal.</i>", 6000);
+await sleep(6200);
+
+// ---- the title, once it has been earned ----------------------------------------
+await openingPlate(LIVE + "/");
+
+// ---- 01 · the answer to the cold open ------------------------------------------
+await card("Nobody could have\noverridden that.", 0, { navigate: LIVE + "/" });
 await page.waitForFunction(
   () => document.querySelector("#s-code")?.textContent === "\u2713",
   { timeout: 60000 },
@@ -657,7 +721,7 @@ await page.waitForFunction(
 // which is why that check never caught it. It measures pixels changing, not the argument
 // advancing, and those are different properties.
 await sleep(1200);
-await dwell("#d-code", 5000);
+await dwell("#d-code", 4000);
 
 // The build condition, in this run's own bytes. The first version of this shot was the
 // raw stdout — seventeen lines of monospace with no caption, which an engineer reads as
@@ -704,56 +768,51 @@ await dwell("#d-code", 5000);
   await sleep(1100);
   for (let k = 0; k < groups.length; k++) {
     await page.evaluate((id) => { const e = document.getElementById(id); if (e) e.style.opacity = "1"; }, `g${k}`);
-    await sleep(750);
+    await sleep(620);
   }
   await page.evaluate(() => { const e = document.getElementById("v"); if (e) e.style.opacity = "1"; });
   await sleep(2600);
 }
 
-// ---- 02 ------------------------------------------------------------------------
-// 7 · the picture's right-hand side: one stream shatters at the gate, one passes. Five
-// seconds, because the real screen behind it is what proves the claim.
-beat("07 PNG: the rejected stream");
-await panStill("proof-gated-escrow-storyboard-v1.png",
-  { s: 1.55, x: -18, y: 10 }, { s: 1.80, x: -25, y: 14 }, 5000,
-  "<b>One is refused at the gate.</b><i>Both are real proofs.</i>", 500);
-
-await card("A real proof can still be\nthe wrong proof.", 0, {
+// ---- 02 · both directions, from the same machinery -----------------------------
+await card("The deal's own proof\nreleases it.", 0, {
   navigate: BASE + "/arc.html",
   during: () => page.evaluate(() => window.scrollTo(0, 0)),
 });
 await sleep(900);
-// Stay at the TOP. The log and the balances live above the step cards, and scrolling to
-// the cards pushes the outcome off-screen — which is how the first take of this chapter
-// showed the buttons and never showed what pressing them did.
-await page.evaluate(() => window.scrollTo(0, 0));
-await sleep(1200);
-beat("02 evidence: fund");
-await press('button[data-act="fund"][data-deal="honest"]', "tx 0x", { hold: 5500 });
-// the beat the whole project turns on: a proof that VERIFIES, of another execution
 await page.evaluate(() => document.getElementById("log")
   ?.scrollIntoView({ behavior: "smooth", block: "center" }));
 await sleep(700);
-beat("02 evidence: BindingMismatch");
-await press('button[data-act="settle"][data-proof="decrease"]', "BindingMismatch", { hold: 6500 });
-await press('button[data-act="settle"][data-deal="honest"]:not([data-proof])', "tx 0x", { hold: 4500 });
+beat("02 evidence: release");
+lower("The proof this deal was funded against. It reproduces.<i>Released to the seller.</i>", 5200);
+await press('button[data-act="settle"][data-deal="honest"]:not([data-proof])', "tx 0x", { hold: 5200 });
+beat("02 evidence: refund");
+lower("Now a delivery that did <b>not</b> reproduce.<i>The same machinery refunds the buyer.</i>", 6600);
 await press('button[data-act="fund"][data-deal="decrease"]', "tx 0x", { hold: 1200 });
-await press('button[data-act="settle"][data-deal="decrease"]', "tx 0x", { hold: 4500 });
+await press('button[data-act="settle"][data-deal="decrease"]', "tx 0x", { hold: 5200 });
 
-// ---- 03 · what it is worth, and to whom -----------------------------------------
-// Six chapters of mechanism and none of consequence is how a technically strong demo
-// loses: the founder had to ask twice why a viewer should care. In a machine economy the
-// binding constraint is human attention, not price — so this chapter is the person being
-// removed, and the cost of doing it is computed live from the receipts.
-await card("Nobody approves it.", 0, {
+// ---- 03 · what was removed is not a fee ----------------------------------------
+await card("And nobody approved it.", 0, {
+  navigate: LIVE + "/",
   during: () => page.evaluate(() => document.querySelector("#t-cost")
     ?.scrollIntoView({ block: "center" })),
 });
 beat("03 evidence: what it replaces");
-await dwell("#t-cost", 11000, 260);
+await dwell("#t-cost", 9000, 260);
 
-// ---- 04 ------------------------------------------------------------------------
-await card("The money stays on Arc.", 0, { navigate: LIVE + "/" });
+// ---- 04 · THE THESIS, and it is not a negation ---------------------------------
+// This chapter used to be titled "This is not a bridge." A viewer cannot build a picture
+// out of what something is not, and it landed at 2:09 of a 3:04 film — after five chapters
+// of mechanism. It is the argument, so it is stated affirmatively and it comes early.
+await card("Only the proof crosses.", 0, { number: true });
+beat("17 SVG: out to Arc, scope held");
+await panStill("solana-proof-to-arc-settlement.svg",
+  { s: 1.06, x: 1, y: 1 }, { s: 1.0, x: 0, y: 0 }, 5000, null, 900, { mat: false });
+await holdStill("solana-proof-to-arc-settlement.svg", { s: 1.0, x: 0, y: 0 }, 3500, { mat: false });
+await sleep(500);
+
+// ---- 05 · and it is running --------------------------------------------------
+await card("The money never left Arc.", 0, { navigate: LIVE + "/" });
 {
   const rec_ = JSON.parse(fs.readFileSync(
     path.join(repo, "zk-verdict", "contracts", "arc.json"), "utf8"));
@@ -772,42 +831,16 @@ await card("The money stays on Arc.", 0, { navigate: LIVE + "/" });
   await dwell("#rows", 11000);
 }
 
-
-// ---- 05 ------------------------------------------------------------------------
-await card("This is not a bridge.", 0, { number: true });
-// The diagram is this chapter's evidence, not the page's own flow panel — they say the
-// same thing, and a plate that reveals a step at a time reads in order where a scrolled
-// panel does not. It replaces the document, so the next chapter navigates back.
-// 16–17 · the technical figure. Two moves: Solana side into the boundary, then out to
-// the whole diagram so the scope disclosure along the bottom is legible and held. That
-// line — "does not yet prove those inputs came from Solana mainnet" — is the honest half
-// and is never cropped out.
-// No overlay caption on either SVG shot. The diagram carries its own headline —
-// "The proof crosses. The USDC does not." — in larger type at the top of the same
-// frame, so an overlay repeated the sentence AND its scrim dimmed the scope
-// disclosure along the bottom edge, which is the one line that must stay bright.
-// The close-up on the diagram is gone. It spent seven seconds arriving at a frame the
-// next shot shows in full, and a diagram read half at a time is read twice — the whole
-// point of this asset is that both sides of the boundary are visible at once.
-// Out to the whole frame and held: at scale 1.0 the scope sentence is legible, and
-// this shot exists so a judge can read it, not so it can be technically present.
-beat("17 SVG: out to Arc, scope held");
-await panStill("solana-proof-to-arc-settlement.svg",
-  { s: 1.06, x: 1, y: 1 }, { s: 1.0, x: 0, y: 0 }, 5000, null, 900, { mat: false });
-await holdStill("solana-proof-to-arc-settlement.svg", { s: 1.0, x: 0, y: 0 }, 3500, { mat: false });
-await sleep(500);
-
-
-// ---- 06 ------------------------------------------------------------------------
+// ---- 06 · the half that is easy to leave out ----------------------------------
 await card("A proof of the payout.\nNot a proof of the state.", 0, {
   navigate: LIVE + "/",
   during: () => page.evaluate(() => document.querySelector("table.two")
     ?.scrollIntoView({ block: "center" })),
 });
 beat("06 evidence: the two rows");
-await dwell("table.two", 14000);
+await dwell("table.two", 11000);
 
-// ---- 07 ------------------------------------------------------------------------
+// ---- 07 · words do not move it -------------------------------------------------
 // No door here on purpose. Ten cards was one every eighteen seconds, and the founder read
 // that as choppy — correctly. The typing beat introduces itself, and the closing door is
 // only seventeen seconds away.
@@ -830,15 +863,11 @@ beat("07 evidence: typing");
   await dwell("#tally", 5500);
 }
 
-// Ending on the provenance caveat is honest and flat; the claim goes last. ONE plate, not
-// two: consecutive cards leave a gap where the page underneath shows through — measured at
-// 1.5 s of the live page between these two lines, which is the same defect as revealing
-// the previous scene after a card.
-await closingPlate(7000);
+await closingPlate(8000);
 
 beat("END");
 await rec.stop();
-fs.writeFileSync(path.join(repo, "dashboard", "video", CARDS ? "beats.tsv" : "beats-clean.tsv"),
+fs.writeFileSync(path.join(repo, "dashboard", "video", CARDS ? `beats-v3${SUF}.tsv` : `beats-v3${SUF}-clean.tsv`),
   beats.map(([t, l]) => `${t.toFixed(1)}\t${l}`).join("\n") + "\n");
 await browser.close();
 stopDemo();
