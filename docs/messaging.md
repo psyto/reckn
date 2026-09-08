@@ -113,21 +113,31 @@ Same product, same demo, same numbers, same limits. **Only the first sentence ch
 
 ### CWF — the only sentence allowed about Tempo
 
-> "Arc is the chain it settles on today. The escrow names its payment token per deal and
-> hardcodes no chain, so **Tempo is a candidate settlement chain we are evaluating for CWF** —
-> we have measured that the proof machinery it needs is present there. It is not deployed, and
-> nothing in this demo runs on it."
+> **"Tempo is the settlement chain Reckn is evaluating for its CWF implementation."**
+
+**Nothing beyond that sentence.** An earlier draft of this section added "we have measured
+that the proof machinery it needs is present there", which is true and is still not allowed
+here: a measurement offered as reassurance reads as progress, and progress reads as working.
+The interim CWF line that carries the idea without naming a chain is:
+
+> "Agents will work across chains. Reckn keeps assets native and settles only when the work
+> is proven."
 
 ---
 
 ## 1. What may be claimed, and where it is checkable
+
+*The right-hand column names where a claim is checked. Some of those files belong to other
+work; this document quotes their RESULTS as reported and does not read them to infer state.
+Nothing here is claimed on the strength of a file appearing.*
+
 
 | claim | where it is checked |
 |---|---|
 | The escrow's function surface is `fund` / `settleWithProof` / `refundAfterDeadline` — no owner, admin, resolver, pause or upgrade path, **as a build condition** | `scripts/no-keys.sh` (two files: `RecknZkEscrow.sol`, `RecknVerdictVerifier.sol`) |
 | Deployed on Arc testnet; **four settlements** moved real testnet USDC; **two were decided by proofs about work performed on Solana** | `zk-verdict/contracts/arc.json`, and the live page reads them from chain |
 | Both directions are real: `Reproduced` → seller, `Failed` → buyer | `RecknArcUsdcSettlement.t.sol`, `RecknCrossVmSettlement.t.sol` |
-| A **real** Groth16 proof of a *different* execution is refused (`BindingMismatch`) and the money does not move | `test_ARC03`, `test_TEMPO03` |
+| A **real** Groth16 proof of a *different* execution is refused (`BindingMismatch`) and the money does not move | `test_ARC03`, and the demo does it on camera |
 | `refundAfterDeadline` is permissionless, pays the caller nothing, and names no privileged address | `RecknTimeout.t.sol` |
 | Measured gas on Arc: `solanaProofOnArc` 320,600 · `solanaFailureOnArc` 316,120 · `reproduced` 345,874 | `arc.json` |
 | **The USDC never leaves Arc.** No bridge and no light client on the adjudication path | `docs/cross-chain-settlement.md`, the boundary panel on the live page |
@@ -158,8 +168,13 @@ Same product, same demo, same numbers, same limits. **Only the first sentence ch
 
 Circle's USDC on Arc carries a blacklist. A frozen recipient makes settlement revert and the
 deal stays `Funded`; one such deal holds 1.00 USDC and is refundable only by the keyless
-deadline. Measured, and recorded in `arc.json` rather than hidden. On Tempo the equivalent
-reaches further — a paused TIP-20 closes the timeout as well as the payout (`TEMPO07`).
+deadline. Measured, and recorded in `arc.json` rather than hidden.
+
+A token-level equivalent exists on any chain whose stablecoin can be paused or policy-gated,
+and it can reach further than Arc's blacklist does. That is a real limit and it belongs in
+the material — but stated generally, as here, and **not** attributed to a specific chain
+until that chain's owner reports it. Nothing in this file cites a test or a record it does
+not own.
 
 ### 日本語表現の落とし穴
 
@@ -172,9 +187,14 @@ reaches further — a paused TIP-20 closes the timeout as well as the payout (`T
 
 ## 3. What may be added once Tempo settles — and not before
 
-Completion means: a deal funded in PathUSD releases on a Solana `Reproduced` proof, refunds
-on a `Failed` one, and both receipts are recorded in `tempo.json`. Until then this paragraph
-is **not** to be used anywhere:
+**Ownership, since 2026-09-08.** The Tempo implementation is another window's work. This
+document does not read its files and does not infer its state from them. The trigger for
+everything below is a **report from the Tempo owner** carrying the evidence named in
+"What must arrive" — not a file appearing, and not a test passing.
+
+Completion means: a deal funded in a real TIP-20 releases on a Solana `Reproduced` proof and
+refunds on a `Failed` one, both on Tempo testnet, both with transaction hashes. Until that
+report arrives this paragraph is **not** to be used anywhere:
 
 > "The same escrow source, unmodified, settles on two payment chains. On Tempo the settlement
 > asset and the **fee that releases it are the same stablecoin** — there is no gas token — so
@@ -183,3 +203,17 @@ is **not** to be used anywhere:
 
 The first sentence is already *structurally* true — the contract names no chain — but it is
 not to be claimed until it has actually happened twice, in both directions.
+
+### What must arrive before any of §3 is used
+
+Five items, from the Tempo owner, in their words rather than inferred:
+
+1. the **escrow address** on Tempo testnet, and the chain id it is on;
+2. the **TIP-20** a deal was actually funded with — address, symbol, decimals;
+3. the **release** transaction hash, and that its proof was a Solana `Reproduced` proof;
+4. the **refund** transaction hash, from a `Failed` proof;
+5. each transaction's **`feeToken`**, from its receipt — the fee being a stablecoin is the
+   part that makes it a Tempo slice rather than a redeploy, and it is the one number a
+   viewer cannot infer from anything else on screen.
+
+Anything short of all five and the wording stays at the one sentence above.
