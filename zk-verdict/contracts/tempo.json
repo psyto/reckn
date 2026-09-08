@@ -150,7 +150,21 @@
       "amountPerCall": "1,000,000.000000 of each (6 decimals). Confirmed on chain: every mint-shaped Transfer log sampled carries value 0xe8d4a51000 = 1000000000000 raw units.",
       "existenceProbedNotAssumed": "calling it with bad params returns -32602 'Invalid params'; an invented method returns -32601 'method not allowed'. The method is present on the Moderato endpoint.",
       "source": "https://tempo.xyz/developers/docs/quickstart/faucet, read 2026-09-08, plus the on-chain log count.",
-      "consequence": "011 §9.1's budget of ~50 PathUSD is met about 20,000x over by ONE call. The faucet is not the constraint. The only remaining founder action is holding a key."
+      "consequence": "011 §9.1's budget of ~50 PathUSD is met about 20,000x over by ONE call. The faucet is not the constraint. The only remaining founder action is holding a key.",
+      "tokens": {
+        "pathUSD": "0x20C0000000000000000000000000000000000000",
+        "alphaUSD": "0x20C0000000000000000000000000000000000001",
+        "betaUSD": "0x20C0000000000000000000000000000000000002",
+        "thetaUSD": "0x20C0000000000000000000000000000000000003"
+      },
+      "verifiedEndToEnd": {
+        "_": "The method was not only probed for existence -- it was called, and the receipts read back. This is the first transaction this project has caused on Tempo. It is a FAUCET call, not a deployment: it deploys nothing, settles nothing, and does not touch deployedByReckn.",
+        "on": "2026-09-08",
+        "fundedAddress": "0x7DB0F4d9668f66f06B03d06B59F3445Ca82Df831",
+        "addressProvenance": "a fresh Foundry keystore created by the founder; nonce was 0, no code, zero balance before the call. The agent does not hold this key and never sees it -- tempo-testnet.sh takes the keystore's NAME, never a private key.",
+        "tx": "0xf5ebc8afe5edc69baea26ced8dc09cca2ddd157dff3a8f562a60ea78850cfe0c",
+        "result": "status 0x1 in block 0x20c1988; 1,000,000.000000 pathUSD minted, and one sibling transaction each for alphaUSD, betaUSD and thetaUSD. Only the pathUSD hash is recorded here because it is the only one anything downstream depends on -- recording four hashes to look thorough would put three values in the record that nothing checks."
+      }
     }
   },
   "fromDocs": {

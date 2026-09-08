@@ -35,7 +35,13 @@ chain=$(jq -r '.testnet.chainId' "$rec")
 rpc=$(jq -r '.testnet.rpc' "$rec")
 wrong=$(jq -r '.wrongEndpoint.url' "$rec")
 factory=$(jq -r '.measured.tip20Factory.address' "$rec")
-feetoken=$(jq -r '.measured.defaultFeeToken.address' "$rec")
+# The 0x20C0 prefix is a FAMILY, not one address: the faucet mints four stablecoins at
+# ...0000 through ...0003. The first version of this compared every 0x20C0-shaped literal
+# against the single fee token, so writing alphaUSD's real address into any file failed the
+# gate with "not the recorded fee token" -- a red gate for a correct value, which teaches
+# people to delete the gate. What the clause should say, and now says, is that such a literal
+# must be one of the addresses the record CARRIES.
+feetokens=$(jq -r '[.measured.defaultFeeToken.address, (.measured.faucet.tokens[]?)] | unique[]' "$rec")
 
 # Build output is excluded, and not only for tidiness: an unfiltered scan of this tree
 # took over two minutes, and a gate that slow gets commented out rather than fixed.
@@ -105,8 +111,12 @@ while IFS= read -r lit; do
     0x20Fc* | 0x20fc*)
       same "$lit" "$factory" || { echo "tempo-constants: $lit is not the recorded factory $factory"; bad=1; } ;;
     0x20C0* | 0x20c0*)
-      # PathUSD, measured 2026-09-08 as the token both sampled receipts paid their fee in.
-      same "$lit" "$feetoken" || { echo "tempo-constants: $lit is not the recorded fee token $feetoken"; bad=1; } ;;
+      # One of the recorded TIP-20s: pathUSD (the fee token both sampled receipts paid in) or
+      # one of its three faucet siblings. Measured 2026-09-08.
+      hit=0
+      while IFS= read -r ft; do same "$lit" "$ft" && hit=1; done <<<"$feetokens"
+      [[ $hit -eq 1 ]] || { echo "tempo-constants: $lit is not one of the recorded TIP-20s:"; \
+                            echo "$feetokens" | sed 's/^/    /'; bad=1; } ;;
   esac
 done <<<"$scan"
 

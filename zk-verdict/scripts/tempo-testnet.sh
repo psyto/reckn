@@ -43,11 +43,25 @@ FAILED=src/fixtures/svm-failed-fixture.json
 
 for t in forge cast jq curl; do command -v $t >/dev/null || { echo "tempo-testnet: $t is required"; exit 2; }; done
 
-: "${TEMPO_ACCOUNT:?tempo-testnet: set TEMPO_ACCOUNT to the name of a Foundry keystore account.
-  Create one, once, with:  cast wallet import <name> --interactive
-  Do NOT pass a private key to this script. It will not read one.}"
-ACCT=(--account "$TEMPO_ACCOUNT")
-[[ -n "${TEMPO_PASSWORD_FILE:-}" ]] && ACCT+=(--password-file "$TEMPO_PASSWORD_FILE")
+# --preflight runs every check that does not require a signature, then stops. It exists so
+# the checks can be run by somebody who does NOT hold the key -- the founder's one manual
+# step should not be the first place a wrong chain id, a short balance or a mismatched pair
+# of fixtures is discovered. It takes an ADDRESS (TEMPO_ADDRESS), not an account, precisely
+# because it must work without a keystore password.
+preflight=0
+[[ "${1:-}" == "--preflight" ]] && preflight=1
+
+if [[ $preflight -eq 1 ]]; then
+  : "${TEMPO_ADDRESS:?tempo-testnet --preflight: set TEMPO_ADDRESS to the address you will deploy from.}"
+  ACCT=()
+else
+  : "${TEMPO_ACCOUNT:?tempo-testnet: set TEMPO_ACCOUNT to the name of a Foundry keystore account.
+  Create one, once, with:  cast wallet new ~/.foundry/keystores <name>
+  Do NOT pass a private key to this script. It will not read one.
+  To check everything WITHOUT a password first:  TEMPO_ADDRESS=0x... bash $0 --preflight}"
+  ACCT=(--account "$TEMPO_ACCOUNT")
+  [[ -n "${TEMPO_PASSWORD_FILE:-}" ]] && ACCT+=(--password-file "$TEMPO_PASSWORD_FILE")
+fi
 
 # ---- preflight ------------------------------------------------------------------------
 # Every one of these is a way the run could have looked successful while being wrong.
@@ -61,13 +75,20 @@ fi
 [[ "$onchain_chain" == "$CHAIN" ]] || {
   echo "tempo-testnet: $RPC answered chain $onchain_chain, not $CHAIN. REFUSING."; exit 1; }
 
-BUYER=$(cast wallet address "${ACCT[@]}")
+if [[ $preflight -eq 1 ]]; then
+  BUYER=$(cast to-check-sum-address "$TEMPO_ADDRESS")
+else
+  BUYER=$(cast wallet address "${ACCT[@]}")
+fi
 SELLER=${TEMPO_SELLER:-0x5e11e40000000000000000000000000000000000}
 [[ "$(tr A-F a-f <<<"$SELLER")" != "$(tr A-F a-f <<<"$BUYER")" ]] || { echo "tempo-testnet: seller and buyer must differ, or no transfer is visible"; exit 1; }
 [[ "$(tr A-F a-f <<<"$SELLER")" != "$(tr A-F a-f <<<"$TOKEN")" ]] || { echo "tempo-testnet: seller must not be the TIP-20 itself (InvalidRecipient)"; exit 1; }
 
 bal() { cast call --rpc-url "$RPC" "$TOKEN" "balanceOf(address)(uint256)" "$1" | awk '{print $1}'; }
-fmt() { python3 -c "print(f'{int('$1')/10**$DECIMALS:.{$DECIMALS}f}')"; }
+fmt() { python3 -c 'import sys; v,d=int(sys.argv[1]),int(sys.argv[2]); print(f"{v/10**d:.{d}f}")' "$1" "$DECIMALS"; }
+# Prove the formatter works before any of its output is trusted. It silently printed nothing
+# once, next to a comparison that kept working, and "holds  needs about" read as fine.
+[[ "$(fmt 1000000)" == "1.000000" ]] || { echo "tempo-testnet: fmt() is broken -- refusing to print numbers nobody can check"; exit 2; }
 
 # balanceOf, NOT eth_getBalance: on Tempo the native balance is a constant (011 §2.2.3), so a
 # funding check that reads it passes with an empty account.
@@ -78,7 +99,7 @@ have=$(bal "$BUYER")
 price=$(cast gas-price --rpc-url "$RPC")
 # Fees are charged in the TIP-20 at gasUsed * effectiveGasPrice / 1e12 -- derived from two
 # real receipts on 2026-09-08, not from documentation.
-need_fee=$(python3 -c "print(40_000_000 * $price // 10**12)")
+need_fee=$(python3 -c 'import sys; print(40_000_000 * int(sys.argv[1]) // 10**12)' "$price")
 need=$((need_fee + AMOUNT * 3))
 echo "tempo-testnet: chain $CHAIN via $RPC"
 echo "  buyer   $BUYER"
@@ -98,10 +119,23 @@ if (( have < need )); then
   exit 1
 fi
 
+if [[ $preflight -eq 1 ]]; then
+  echo "  enough for the run"
+fi
 VKEY=$(jq -r .vkey "$REPRO")
 [[ "$VKEY" == "$(jq -r .vkey "$FAILED")" ]] || {
   echo "tempo-testnet: the two fixtures carry DIFFERENT vkeys, so one verifier cannot judge both."
   echo "  On Arc a second verifier was deployed before this was checked. Check first."; exit 1; }
+
+if [[ $preflight -eq 1 ]]; then
+  echo
+  echo "tempo-testnet --preflight: every check that does not need a signature passed."
+  echo "  chain id, buyer/seller/token distinctness, TIP-20 balance, and that both fixtures"
+  echo "  carry the same vkey so ONE verifier can judge both (on Arc a second verifier was"
+  echo "  deployed before that was checked)."
+  echo "  Nothing was sent. Run without --preflight, with TEMPO_ACCOUNT set, to deploy."
+  exit 0
+fi
 
 run="$root/zk-verdict/contracts/tempo-run.json"
 jq -n --arg rpc "$RPC" --arg chain "$CHAIN" --arg buyer "$BUYER" --arg seller "$SELLER" \
