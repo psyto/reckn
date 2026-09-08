@@ -44,7 +44,7 @@ classify() { # reads the record, prints "<kind>\t<value>" for every 32-byte stri
   jq -r 'paths(strings and test("^0x[0-9a-fA-F]{64}$")) as $p
          | (($p | map(select(type=="string")) | last)) as $k
          | (if ($k == "failedTx") then "failed-tx"
-            elif ($k == "tx" or ($k | startswith("exampleType"))) then "tx"
+            elif ($k == "tx" or $k == "settleTx" or ($k | startswith("exampleType"))) then "tx"
             elif ($k | test("[Cc]odehash|vkey|[Bb]inding|dealId|output|programVKey")) then "not-a-tx"
             else "UNCLASSIFIED:" + $k end) + "\t" + getpath($p)' "$1"
 }

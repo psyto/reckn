@@ -294,9 +294,22 @@ for n in SP1Verifier RecknVerdictVerifier RecknZkEscrow; do note "deploy $n" "$(
 # The codehash is what a seller reads before working, and what `fund` pins. Read it from the
 # CHAIN, not from the local artifact: they agree only if the deploy really landed as built.
 CODEHASH=$(cast keccak "$(cast code --rpc-url "$RPC" "$VERIF")")
-LOCAL_CODEHASH=$(cast keccak "$(forge inspect RecknVerdictVerifier deployedBytecode)")
-echo "  verifier codehash on-chain $CODEHASH"
-[[ "$CODEHASH" == "$LOCAL_CODEHASH" ]] || echo "  note: on-chain codehash differs from the local artifact's (immutables are baked in; expected)"
+# Read out/ rather than `forge inspect`: inspect recompiles on the fly and may pick a NEWER
+# solc than the one that built out/ and produced this deployment, so it reported "differs"
+# for a contract that is byte-identical. Measured 2026-09-08: on-chain was solc 0.8.20 and
+# forge inspect answered with 0.8.35.
+ESCROW_CODEHASH=$(cast keccak "$(cast code --rpc-url "$RPC" "$ESCROW")")
+ESCROW_ARTIFACT=$(cast keccak "$(jq -r '.deployedBytecode.object' out/RecknZkEscrow.sol/RecknZkEscrow.json)")
+echo "  verifier codehash on-chain $CODEHASH  (immutables are baked in, so this is not the artifact's)"
+if [[ "$ESCROW_CODEHASH" == "$ESCROW_ARTIFACT" ]]; then
+  echo "  escrow codehash  on-chain $ESCROW_CODEHASH"
+  echo "    == the compiled artifact, exactly. RecknZkEscrow has no constructor and no"
+  echo "    immutable, so identical source really is identical deployed code."
+else
+  echo "  WARNING: the deployed escrow is NOT the artifact this repository just built."
+  echo "    on-chain $ESCROW_CODEHASH"
+  echo "    artifact $ESCROW_ARTIFACT"
+fi
 
 # ---- 2..4. three deals ----------------------------------------------------------------
 deal() { # $1 label, $2 fixture, $3 binding-override(optional)
@@ -331,10 +344,11 @@ deal() { # $1 label, $2 fixture, $3 binding-override(optional)
     note "settle ($label)" "$(send "$ESCROW" "settleWithProof(bytes32,bytes,bytes)" "$id" "$pv" "$pr")" \
          "settled on a real Groth16 proof of a Solana execution"
   fi
-  jq --arg id "$id" --arg l "$label" --arg bs "$before_s" --arg bb "$before_b" \
-     --arg as "$(bal "$SELLER")" --arg ab "$(bal "$BUYER")" --arg ae "$(bal "$ESCROW")" \
+  jq --arg id "$id" --arg l "$label" --arg sBefore "$before_s" --arg bBefore "$before_b" \
+     --arg sAfter "$(bal "$SELLER")" --arg bAfter "$(bal "$BUYER")" --arg eAfter "$(bal "$ESCROW")" \
      '.steps += [{step:("balances after " + $l), dealId:$id,
-        sellerBefore:$bs, sellerAfter:$as, buyerBefore:$bb, buyerAfter:$ab, escrowAfter:$ae}]' \
+        sellerBefore:$sBefore, sellerAfter:$sAfter, buyerBefore:$bBefore,
+        buyerAfter:$bAfter, escrowAfter:$eAfter}]' \
      "$run" > "$run.tmp" && mv "$run.tmp" "$run"
   echo "  seller $(fmt "$before_s") -> $(fmt "$(bal "$SELLER")")   escrow now $(fmt "$(bal "$ESCROW")")"
 }

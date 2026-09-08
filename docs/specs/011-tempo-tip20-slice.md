@@ -352,3 +352,52 @@ So exactly **one** item now stands between this slice and its testnet half: **a 
 key *with PathUSD in it* — that phrasing was written before the faucet was found, and it made
 funding sound like a second obstacle. Filling the key is one RPC call that anybody can make
 for anybody's address. What cannot be delegated is holding the key, and the agent does not.
+
+---
+
+## 10. Result — the testnet half, 2026-09-08
+
+**Deployed and settled on Tempo Moderato (chain 42431).** Everything below is derived from
+receipts by `zk-verdict/scripts/tempo-verify.sh`, which reads the deployment back off the
+chain and does not trust the run that produced it — the deal ids in particular come out of
+each `Funded` event, not from a terminal.
+
+| | address |
+|---|---|
+| `RecknZkEscrow` | `0x7e953a6ac16744ef1a02e343277ec55d7410f439` |
+| `RecknVerdictVerifier` | `0x44e6bcae6a745ff2d75b7389421bee81143bea30` |
+| `SP1Verifier` | `0xe43f1247fb8618f44e4bdb700a3a671e51cd87a5` |
+| TIP-20 funded with | `0x20C0000000000000000000000000000000000000` — PathUSD, 6 decimals |
+
+**The deployed escrow is byte-identical to the compiled artifact**, codehash
+`0xff1bed25b0622d054ab09165d13f67b21ab2a2dfa608838d219fd96597f92568` — the same value
+`tempo-evm-probe.sh` reported from Tempo's EVM *before anything was deployed*, and the same
+value the local control produced. `RecknZkEscrow` has no constructor and no `immutable`, so
+identical source really is identical deployed code.
+
+| # | what | result |
+|---|---|---|
+| **T-1** | [`0xeb53bc37…`](https://explore.testnet.tempo.xyz/tx/0xeb53bc3793d97815f03c084694996fd8ea29cade4ef4f173f7b1cdc2e880b99f) | a real Groth16 proof of a **Solana** execution released **1.000000 PathUSD** to the seller. Outcome `REPRODUCED`, deal `Settled`, 310,242 gas |
+| **T-2** | [`0x97b65755…`](https://explore.testnet.tempo.xyz/tx/0x97b65755be98e87fd418e57951caf4378317f627b35333620392b9e2982cf157) | the `FAILED` proof refunded the **buyer** 1.000000 PathUSD; the seller's balance did not move. 303,162 gas |
+| **T-3** | *(no transaction)* | a real proof of **another execution** was rejected with `BindingMismatch()` (`0x438c4873`). It never reached a block, the deal is still `Funded`, and the escrow still holds 1.000000 |
+| **T-4** | both receipts | `feeToken` = `0x20C0…0000`, `feePayer` = the buyer. **The fee that released the escrow was paid in the same stablecoin the escrow held** — 0.155307 PathUSD to release 1.000000 |
+
+**T-4 is the sentence that makes this a Tempo slice rather than a redeploy**, and it is the
+one number a reader cannot infer from anything else: Tempo has no native gas token, so the
+payment and its own decision cost are denominated in the same money.
+
+### 10.1 What this result does **not** contain
+
+- **`refundAfterDeadline` is not demonstrated and will not be.** `REFUND_AFTER` is 30 days,
+  time cannot be warped on a public chain, and the CWF window is 28. The T-3 deal is `Funded`
+  until **2026-10-08** and returns to the buyer then — permissionlessly, to an address `fund`
+  fixed. The refund that *is* demonstrated is T-2's, which is **proof-driven** and immediate.
+  A sentence that lets a reader merge the two is wrong.
+- **No provenance claim.** The guest recomputed a `bank_hash` over the account set the deal
+  named. That is consistency, not provenance, and §1.2 does not move.
+- **One transaction failed before these succeeded** and is recorded in `tempo.json` under
+  `measured.foundryGasEstimation`, not hidden: `forge script` sizes transactions from its own
+  local simulation rather than the chain's `eth_estimateGas`, which under-sizes a deployment
+  ~5–6× on Tempo. It cost 1.714744 PathUSD and left no contract behind.
+
+Total spent: **14.164994 PathUSD** of fees plus 1.000000 still escrowed in the T-3 deal.

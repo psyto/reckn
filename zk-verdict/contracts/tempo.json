@@ -15,8 +15,8 @@
     "chainIdHex": "0xa5bf",
     "rpc": "https://rpc.moderato.tempo.xyz",
     "explorer": "https://explore.testnet.tempo.xyz",
-    "explorerVerified": false,
-    "explorerSource": "https://tempo.xyz/developers/docs/quickstart/connection-details, read 2026-09-08 — NOT measured"
+    "explorerVerified": true,
+    "explorerSource": "https://tempo.xyz/developers/docs/quickstart/connection-details, read 2026-09-08. VERIFIED the same day, not merely read: a settlement hash returns HTTP 200 with a server-rendered <title> naming that transaction, and an invented hash returns 404. A 200 alone would not have shown this -- a single-page app answers 200 for anything."
   },
   "wrongEndpoint": {
     "url": "https://rpc.tempo.xyz",
@@ -192,14 +192,351 @@
     "explorerVerified": "https://explore.testnet.tempo.xyz is from documentation and has not been fetched. No link in this repository points at it yet; tempo-receipts.sh checks that any that appear name a hash this record carries AND that the chain has a successful receipt for it."
   },
   "deployedByReckn": {
-    "_": "EMPTY BY DESIGN. Nothing is deployed. Filled only from real receipts after a founder-held key deploys — never transcribed from memory. Two Arc tx hashes were once written here from memory and two of them were wrong.",
-    "network": null,
-    "deployedAt": null,
-    "SP1Verifier": null,
-    "RecknVerdictVerifier": null,
-    "RecknZkEscrow": null,
-    "tip20Used": null,
-    "settlements": {},
-    "findings": []
+    "_": "Written by zk-verdict/scripts/tempo-testnet.sh from eth_getTransactionReceipt, in the same run that sent the transactions. Never transcribed. tempo-receipts.sh checks it in both directions.",
+    "network": "Tempo Moderato testnet (chainId 42431)",
+    "deployedAt": "2026-09-08",
+    "explorer": "https://explore.testnet.tempo.xyz",
+    "SP1Verifier": "0xe43f1247fb8618f44e4bdb700a3a671e51cd87a5",
+    "RecknVerdictVerifier": "0x44e6bcae6a745ff2d75b7389421bee81143bea30",
+    "RecknVerdictVerifierCodehash": "0x70538b70e18484263b2feb4ac02d366fe786fc47f8c9100e589191152b9bda66",
+    "RecknZkEscrow": "0x7e953a6ac16744ef1a02e343277ec55d7410f439",
+    "tip20Used": "0x20C0000000000000000000000000000000000000",
+    "run": {
+      "_": "Raw output of zk-verdict/scripts/tempo-testnet.sh. Every hash here came from eth_getTransactionReceipt in the same run that sent it. Nothing in this file was typed by a human.",
+      "rpc": "https://rpc.moderato.tempo.xyz",
+      "chainId": 42431,
+      "buyer": "0x7DB0F4d9668f66f06B03d06B59F3445Ca82Df831",
+      "seller": "0x5e11e40000000000000000000000000000000000",
+      "token": "0x20C0000000000000000000000000000000000000",
+      "vkey": "0x004ad9fc19b7c2694b20c68467be4a506445cab44263f0aa0bb0db2ebb6fe2ca",
+      "amountPerDeal": 1000000,
+      "steps": [
+        {
+          "step": "deploy SP1Verifier",
+          "note": "from DeployTempo.s.sol",
+          "tx": "0x4993d1a9fcb131dac856db49f2d1771920fab2607f8ca6d46c2ed661e4ec5920",
+          "block": 34351931,
+          "status": 1,
+          "gasUsed": 12682105,
+          "effectiveGasPrice": 500600000000,
+          "type": "0x76",
+          "feeToken": "0x20c0000000000000000000000000000000000000",
+          "feePayer": "0x7db0f4d9668f66f06b03d06b59f3445ca82df831",
+          "feePaidRaw": 6348661,
+          "contractAddress": "0xe43f1247fb8618f44e4bdb700a3a671e51cd87a5",
+          "transferLogs": [
+            {
+              "token": "0x20c0000000000000000000000000000000000000",
+              "from": "0x7db0f4d9668f66f06b03d06b59f3445ca82df831",
+              "to": "0xfeec000000000000000000000000000000000000",
+              "value": 6348662
+            }
+          ]
+        },
+        {
+          "step": "deploy RecknVerdictVerifier",
+          "note": "from DeployTempo.s.sol",
+          "tx": "0x38279f228f7288a6dd496a797bad99ee35ae20c47e2a699008e235120251d9a7",
+          "block": 34351937,
+          "status": 1,
+          "gasUsed": 2497723,
+          "effectiveGasPrice": 500600000000,
+          "type": "0x76",
+          "feeToken": "0x20c0000000000000000000000000000000000000",
+          "feePayer": "0x7db0f4d9668f66f06b03d06b59f3445ca82df831",
+          "feePaidRaw": 1250360,
+          "contractAddress": "0x44e6bcae6a745ff2d75b7389421bee81143bea30",
+          "transferLogs": [
+            {
+              "token": "0x20c0000000000000000000000000000000000000",
+              "from": "0x7db0f4d9668f66f06b03d06b59f3445ca82df831",
+              "to": "0xfeec000000000000000000000000000000000000",
+              "value": 1250361
+            }
+          ]
+        },
+        {
+          "step": "deploy RecknZkEscrow",
+          "note": "from DeployTempo.s.sol",
+          "tx": "0xa66464a728d2af7d42071b6437c454d9eb9f72aa499e12d60790d07152a1123c",
+          "block": 34351942,
+          "status": 1,
+          "gasUsed": 6176000,
+          "effectiveGasPrice": 500600000000,
+          "type": "0x76",
+          "feeToken": "0x20c0000000000000000000000000000000000000",
+          "feePayer": "0x7db0f4d9668f66f06b03d06b59f3445ca82df831",
+          "feePaidRaw": 3091705,
+          "contractAddress": "0x7e953a6ac16744ef1a02e343277ec55d7410f439",
+          "transferLogs": [
+            {
+              "token": "0x20c0000000000000000000000000000000000000",
+              "from": "0x7db0f4d9668f66f06b03d06b59f3445ca82df831",
+              "to": "0xfeec000000000000000000000000000000000000",
+              "value": 3091706
+            }
+          ]
+        },
+        {
+          "step": "approve (reproduced)",
+          "note": "buyer approves the escrow to pull",
+          "tx": "0xd4f5224f4aa09c997ae3c474a7dea5cc169c08b85572ffa78c0ffc2e16f3135e",
+          "block": 34351951,
+          "status": 1,
+          "gasUsed": 32870,
+          "effectiveGasPrice": 500600000000,
+          "type": "0x2",
+          "feeToken": "0x20c0000000000000000000000000000000000000",
+          "feePayer": "0x7db0f4d9668f66f06b03d06b59f3445ca82df831",
+          "feePaidRaw": 16454,
+          "contractAddress": null,
+          "transferLogs": [
+            {
+              "token": "0x20c0000000000000000000000000000000000000",
+              "from": "0x7db0f4d9668f66f06b03d06b59f3445ca82df831",
+              "to": "0xfeec000000000000000000000000000000000000",
+              "value": 16455
+            }
+          ]
+        },
+        {
+          "step": "fund (reproduced)",
+          "note": "escrow holds the TIP-20",
+          "tx": "0x4b01f41d65cf9e11d72e785b47d3e3a4e589c9e8ee077a85c15bc90a132948a1",
+          "block": 34351957,
+          "status": 1,
+          "gasUsed": 2076068,
+          "effectiveGasPrice": 500600000000,
+          "type": "0x2",
+          "feeToken": "0x20c0000000000000000000000000000000000000",
+          "feePayer": "0x7db0f4d9668f66f06b03d06b59f3445ca82df831",
+          "feePaidRaw": 1039279,
+          "contractAddress": null,
+          "transferLogs": [
+            {
+              "token": "0x20c0000000000000000000000000000000000000",
+              "from": "0x7db0f4d9668f66f06b03d06b59f3445ca82df831",
+              "to": "0x7e953a6ac16744ef1a02e343277ec55d7410f439",
+              "value": 1000000
+            },
+            {
+              "token": "0x20c0000000000000000000000000000000000000",
+              "from": "0x7db0f4d9668f66f06b03d06b59f3445ca82df831",
+              "to": "0xfeec000000000000000000000000000000000000",
+              "value": 1039280
+            }
+          ]
+        },
+        {
+          "step": "settle (reproduced)",
+          "note": "settled on a real Groth16 proof of a Solana execution",
+          "tx": "0xeb53bc3793d97815f03c084694996fd8ea29cade4ef4f173f7b1cdc2e880b99f",
+          "block": 34351966,
+          "status": 1,
+          "gasUsed": 310242,
+          "effectiveGasPrice": 500600000000,
+          "type": "0x2",
+          "feeToken": "0x20c0000000000000000000000000000000000000",
+          "feePayer": "0x7db0f4d9668f66f06b03d06b59f3445ca82df831",
+          "feePaidRaw": 155307,
+          "contractAddress": null,
+          "transferLogs": [
+            {
+              "token": "0x20c0000000000000000000000000000000000000",
+              "from": "0x7e953a6ac16744ef1a02e343277ec55d7410f439",
+              "to": "0x5e11e40000000000000000000000000000000000",
+              "value": 1000000
+            },
+            {
+              "token": "0x20c0000000000000000000000000000000000000",
+              "from": "0x7db0f4d9668f66f06b03d06b59f3445ca82df831",
+              "to": "0xfeec000000000000000000000000000000000000",
+              "value": 155308
+            }
+          ]
+        },
+        {
+          "step": "approve (failed)",
+          "note": "buyer approves the escrow to pull",
+          "tx": "0x8a98d70bed4a4679d1f2f99f07c4222afb94d65ae1713fe4d09c874eec6d67a9",
+          "block": 34351980,
+          "status": 1,
+          "gasUsed": 32870,
+          "effectiveGasPrice": 500600000000,
+          "type": "0x2",
+          "feeToken": "0x20c0000000000000000000000000000000000000",
+          "feePayer": "0x7db0f4d9668f66f06b03d06b59f3445ca82df831",
+          "feePaidRaw": 16454,
+          "contractAddress": null,
+          "transferLogs": [
+            {
+              "token": "0x20c0000000000000000000000000000000000000",
+              "from": "0x7db0f4d9668f66f06b03d06b59f3445ca82df831",
+              "to": "0xfeec000000000000000000000000000000000000",
+              "value": 16455
+            }
+          ]
+        },
+        {
+          "step": "fund (failed)",
+          "note": "escrow holds the TIP-20",
+          "tx": "0xc0a0cce8b43602f26b600e737af1481e001a95c9c4175ec3a5fb70afc7a36031",
+          "block": 34351986,
+          "status": 1,
+          "gasUsed": 2076068,
+          "effectiveGasPrice": 500600000000,
+          "type": "0x2",
+          "feeToken": "0x20c0000000000000000000000000000000000000",
+          "feePayer": "0x7db0f4d9668f66f06b03d06b59f3445ca82df831",
+          "feePaidRaw": 1039279,
+          "contractAddress": null,
+          "transferLogs": [
+            {
+              "token": "0x20c0000000000000000000000000000000000000",
+              "from": "0x7db0f4d9668f66f06b03d06b59f3445ca82df831",
+              "to": "0x7e953a6ac16744ef1a02e343277ec55d7410f439",
+              "value": 1000000
+            },
+            {
+              "token": "0x20c0000000000000000000000000000000000000",
+              "from": "0x7db0f4d9668f66f06b03d06b59f3445ca82df831",
+              "to": "0xfeec000000000000000000000000000000000000",
+              "value": 1039280
+            }
+          ]
+        },
+        {
+          "step": "settle (failed)",
+          "note": "settled on a real Groth16 proof of a Solana execution",
+          "tx": "0x97b65755be98e87fd418e57951caf4378317f627b35333620392b9e2982cf157",
+          "block": 34351993,
+          "status": 1,
+          "gasUsed": 303162,
+          "effectiveGasPrice": 500600000000,
+          "type": "0x2",
+          "feeToken": "0x20c0000000000000000000000000000000000000",
+          "feePayer": "0x7db0f4d9668f66f06b03d06b59f3445ca82df831",
+          "feePaidRaw": 151762,
+          "contractAddress": null,
+          "transferLogs": [
+            {
+              "token": "0x20c0000000000000000000000000000000000000",
+              "from": "0x7e953a6ac16744ef1a02e343277ec55d7410f439",
+              "to": "0x7db0f4d9668f66f06b03d06b59f3445ca82df831",
+              "value": 1000000
+            },
+            {
+              "token": "0x20c0000000000000000000000000000000000000",
+              "from": "0x7db0f4d9668f66f06b03d06b59f3445ca82df831",
+              "to": "0xfeec000000000000000000000000000000000000",
+              "value": 151763
+            }
+          ]
+        },
+        {
+          "step": "approve (mismatch)",
+          "note": "buyer approves the escrow to pull",
+          "tx": "0x3fd9e3b328157bf5988b370072b6432398097843d492682c7f699d3a7df80e9f",
+          "block": 34352006,
+          "status": 1,
+          "gasUsed": 32870,
+          "effectiveGasPrice": 500600000000,
+          "type": "0x2",
+          "feeToken": "0x20c0000000000000000000000000000000000000",
+          "feePayer": "0x7db0f4d9668f66f06b03d06b59f3445ca82df831",
+          "feePaidRaw": 16454,
+          "contractAddress": null,
+          "transferLogs": [
+            {
+              "token": "0x20c0000000000000000000000000000000000000",
+              "from": "0x7db0f4d9668f66f06b03d06b59f3445ca82df831",
+              "to": "0xfeec000000000000000000000000000000000000",
+              "value": 16455
+            }
+          ]
+        },
+        {
+          "step": "fund (mismatch)",
+          "note": "escrow holds the TIP-20",
+          "tx": "0x74ddbe1c81787082c4d3e62b79077636b455c8b3cc4118478364497d027f80e8",
+          "block": 34352010,
+          "status": 1,
+          "gasUsed": 2076068,
+          "effectiveGasPrice": 500600000000,
+          "type": "0x2",
+          "feeToken": "0x20c0000000000000000000000000000000000000",
+          "feePayer": "0x7db0f4d9668f66f06b03d06b59f3445ca82df831",
+          "feePaidRaw": 1039279,
+          "contractAddress": null,
+          "transferLogs": [
+            {
+              "token": "0x20c0000000000000000000000000000000000000",
+              "from": "0x7db0f4d9668f66f06b03d06b59f3445ca82df831",
+              "to": "0x7e953a6ac16744ef1a02e343277ec55d7410f439",
+              "value": 1000000
+            },
+            {
+              "token": "0x20c0000000000000000000000000000000000000",
+              "from": "0x7db0f4d9668f66f06b03d06b59f3445ca82df831",
+              "to": "0xfeec000000000000000000000000000000000000",
+              "value": 1039280
+            }
+          ]
+        },
+        {
+          "step": "settle (mismatch)",
+          "note": "a real proof of ANOTHER execution was rejected; no transaction exists because it never landed",
+          "dealId": "0x35eb5b4e79d4f3dcaee28aeb0cabc5c8e4ce6b3ee8be7e67f40e736ed227957d",
+          "stateAfter": "1",
+          "revert": "0x438c4873"
+        }
+      ]
+    },
+    "notDemonstrated": "refundAfterDeadline. REFUND_AFTER is 30 days, time cannot be warped on a public chain, and the mismatch deal above is therefore FUNDED until then. The refund shown here is the proof-driven one (a FAILED proof paying the buyer), which is immediate and is a different thing.",
+    "verified": {
+      "_": "Written by zk-verdict/scripts/tempo-verify.sh, which reads the deployment back off the chain and derives every value from receipts and from deals() on the escrow. It does not trust the run that produced them; in particular the deal ids come out of the Funded event, not from a terminal.",
+      "verifiedAt": "2026-09-08T03:06:15Z",
+      "deployedEscrowCodehash": "0xff1bed25b0622d054ab09165d13f67b21ab2a2dfa608838d219fd96597f92568",
+      "codehashMatchesCompiledArtifact": true,
+      "cases": [
+        {
+          "case": "reproduced",
+          "dealId": "0x26661540faebebbc7b47e86fc5925ea98ca7c7de8c3bb56e9771bc984f5a4480",
+          "settleTx": "0xeb53bc3793d97815f03c084694996fd8ea29cade4ef4f173f7b1cdc2e880b99f",
+          "outcome": 0,
+          "paidTo": "0x5e11e40000000000000000000000000000000000",
+          "tip20Moved": "1000000",
+          "state": 2,
+          "feeToken": "0x20c0000000000000000000000000000000000000",
+          "feePayer": "0x7db0f4d9668f66f06b03d06b59f3445ca82df831",
+          "gasUsed": 310242,
+          "feePaidRaw": 155307,
+          "settled": true
+        },
+        {
+          "case": "failed",
+          "dealId": "0xf4eef0a7c3bcb75061b2d08e2ab9604c82379f54d7adf8705eba56b6b35d123e",
+          "settleTx": "0x97b65755be98e87fd418e57951caf4378317f627b35333620392b9e2982cf157",
+          "outcome": 1,
+          "paidTo": "0x7db0f4d9668f66f06b03d06b59f3445ca82df831",
+          "tip20Moved": "1000000",
+          "state": 2,
+          "feeToken": "0x20c0000000000000000000000000000000000000",
+          "feePayer": "0x7db0f4d9668f66f06b03d06b59f3445ca82df831",
+          "gasUsed": 303162,
+          "feePaidRaw": 151762,
+          "settled": true
+        },
+        {
+          "case": "mismatch",
+          "dealId": "0x35eb5b4e79d4f3dcaee28aeb0cabc5c8e4ce6b3ee8be7e67f40e736ed227957d",
+          "state": 1,
+          "escrowStillHolds": "1000000",
+          "settled": false,
+          "note": "rejected before inclusion; there is no transaction to link"
+        }
+      ],
+      "notDemonstrated": "refundAfterDeadline. REFUND_AFTER is 30 days and time cannot be warped on a public chain, so the mismatch deal above stays Funded until then. The refund that IS demonstrated is the proof-driven one -- a FAILED proof paying the buyer -- which is immediate and is a different thing."
+    }
   }
 }
