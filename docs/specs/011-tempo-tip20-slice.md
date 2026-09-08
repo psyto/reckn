@@ -413,10 +413,18 @@ The agent does not generate, store or use a key, and does not deploy.
 3. ~~The testnet TIP-20 address and its decimals.~~ **Closed by measurement** (§2.2b):
    PathUSD at `0x20C0…0000`, six decimals, recorded in `tempo.json` with how it was read.
 
-So exactly **one** item now stands between this slice and its testnet half: **a key.** Not a
-key *with PathUSD in it* — that phrasing was written before the faucet was found, and it made
-funding sound like a second obstacle. Filling the key is one RPC call that anybody can make
-for anybody's address. What cannot be delegated is holding the key, and the agent does not.
+~~So exactly **one** item now stands between this slice and its testnet half: **a key.**~~
+**Nothing does, since 2026-09-08.** The founder created an encrypted keystore, the faucet
+funded it with one RPC call, and the testnet half ran: see §10. The sentence is struck rather
+than deleted so the sequence stays legible — it was true when written, and the thing it named
+is exactly what unblocked it.
+
+**What did not change, and must not be read as having changed:** the agent still does not
+generate, store or use a key, and did not deploy. `tempo-testnet.sh` takes the *name* of a
+keystore and refuses to read a private key from an argument or an environment variable; the
+founder ran it and typed the password. Every address, hash and receipt in §10 was written by
+that run from `eth_getTransactionReceipt` and re-derived afterwards by `tempo-verify.sh` from
+the chain — none was transcribed by a human or by an agent.
 
 ---
 
