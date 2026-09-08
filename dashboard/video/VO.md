@@ -64,20 +64,20 @@ and no line runs past its shot.
 |---|---|---|---|---|
 | — | 0:00 | 8.0 s | — | *(plate: **Reckn — Keep assets native. Settle on proof.** then the door question)* |
 | 1 | 0:09 | 6.5 s | 14 / 15 | "Nobody can move this money. Not the seller, not the buyer, and not us." |
-| 2 | 0:18 | 6.0 s | 14 / 14 | "That is easy to say, so don't take our word for it. Four checks." |
-| 3 | 0:27 | 6.5 s | 14 / 15 | "Here's a funded deal. Two hundred and fifty dollars, and no key to it." |
-| 4 | 0:34 | 8.0 s | 19 / 19 | "That's a real Groth16 proof. It verifies. It's just about a different job — so the money stays put." |
-| 5 | 0:48 | 6.0 s | 12 / 14 | "The proof this deal was funded against reproduces. The seller gets paid." |
-| 6 | 0:55 | 8.0 s | 13 / 19 | "And when the work doesn't reproduce, the same machinery sends the money back." |
-| 7 | 1:05 | 7.5 s | 16 / 18 | "Check two. Your browser reads the contract off the chain and compares it to our source." |
-| 8 | 1:15 | 9.0 s | 19 / 21 | "Byte for byte. And if an owner or an admin ever showed up in it, the build would fail." |
-| 9 | 1:27 | 7.0 s | 10 / 16 | "Check three. Four settlements, in real money, on Arc testnet." |
-| 10 | 1:36 | 9.0 s | 17 / 21 | "Two of them were decided by proofs about work done on Solana. One escrow, two virtual machines." |
-| 11 | 1:53 | 7.5 s | 12 / 18 | "The proof crosses. The money never does. There's no bridge in here." |
-| 12 | 2:02 | 9.0 s | 14 / 21 | "Check four is the one nobody else shows you: what this does not prove." |
-| 13 | 2:15 | 8.5 s | 15 / 20 | "It's consistency, not provenance. And it doesn't save you from holding funds where you pay." |
-| 14 | 2:26 | 8.0 s | 10 / 19 | "So go and check it. Nothing to install, no wallet." |
-| — | 2:35 | 6.0 s | — | *(plate: the door's last line)* |
+| 2 | 0:22 | 6.0 s | 14 / 14 | "That is easy to say, so don't take our word for it. Four checks." |
+| 3 | 0:32 | 6.5 s | 14 / 15 | "Here's a funded deal. Two hundred and fifty dollars, and no key to it." |
+| 4 | 0:40 | 8.0 s | 19 / 19 | "That's a real Groth16 proof. It verifies. It's just about a different job — so the money stays put." |
+| 5 | 0:54 | 6.0 s | 12 / 14 | "The proof this deal was funded against reproduces. The seller gets paid." |
+| 6 | 1:01 | 8.0 s | 13 / 19 | "And when the work doesn't reproduce, the same machinery sends the money back." |
+| 7 | 1:11 | 7.5 s | 16 / 18 | "Check two. Your browser reads the contract off the chain and compares it to our source." |
+| 8 | 1:22 | 9.0 s | 19 / 21 | "Byte for byte. And if an owner or an admin ever showed up in it, the build would fail." |
+| 9 | 1:34 | 7.0 s | 10 / 16 | "Check three. Four settlements, in real money, on Arc testnet." |
+| 10 | 1:47 | 9.0 s | 17 / 21 | "Two of them were decided by proofs about work done on Solana. One escrow, two virtual machines." |
+| 11 | 2:03 | 7.5 s | 12 / 18 | "The proof crosses. The money never does. There's no bridge in here." |
+| 12 | 2:12 | 9.0 s | 14 / 21 | "Check four is the one nobody else shows you: what this does not prove." |
+| 13 | 2:29 | 8.5 s | 15 / 20 | "It's consistency, not provenance. And it doesn't save you from holding funds where you pay." |
+| 14 | 2:40 | 8.0 s | 10 / 19 | "So go and check it. Nothing to install, no wallet." |
+| — | 2:48 | 6.0 s | — | *(plate: the door's last line)* |
 
 ## Recording it
 

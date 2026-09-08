@@ -410,13 +410,13 @@ async function closingPlate(ms = 8000) {
   beat("CARD close");
   await page.setContent(`<!doctype html><meta charset="utf-8"><style>
     body{margin:0;background:#17130f;color:#f2ede6;height:100vh;display:flex;
-         flex-direction:column;justify-content:center;padding:0 120px;
+         flex-direction:column;align-items:center;justify-content:center;text-align:center;
          font:400 30px/1.5 ui-sans-serif,-apple-system,'SF Pro Display',Inter,sans-serif}
-    .w{max-width:26em}
+    .w{width:950px;max-width:950px}
     .a{opacity:0;transition:opacity .7s ease;
        font:700 56px/1.25 ui-sans-serif,-apple-system,Inter,sans-serif;
        letter-spacing:-.02em;color:#f7f3ec}
-    .r{width:96px;height:4px;background:#3fb950;margin:34px 0;opacity:0;
+    .r{width:96px;height:4px;background:#3fb950;margin:34px auto;opacity:0;
        transition:opacity .7s ease}
     .b{opacity:0;transition:opacity .7s ease;
        font:400 40px/1.35 ui-sans-serif,-apple-system,Inter,sans-serif;color:#cbbfae}
@@ -461,14 +461,18 @@ async function openingPlate(navigateTo, ms = 10000) {
     #veil{position:fixed;inset:0;background:radial-gradient(60% 60% at 50% 45%,
           rgba(13,11,9,.55) 0%, rgba(13,11,9,.93) 100%)}
     /* Left, like every slide. The plates were the last centred thing in the film. */
+    /* The same 950px centre column the deck and the live UI use. These plates were the
+       last full-screen surfaces still reading from x=120, which is what kept the eye
+       travelling between a plate and everything after it. */
     .w{position:fixed;inset:0;display:flex;flex-direction:column;
-       justify-content:center;padding:0 120px}
+       align-items:center;justify-content:center;text-align:center}
+    .w > *{width:950px;max-width:950px}
     .n{font:700 88px/1 ui-sans-serif,-apple-system,'SF Pro Display',Inter,sans-serif;
        letter-spacing:-.03em;opacity:0;transition:opacity .7s ease}
     .t{margin-top:26px;opacity:0;transition:opacity .7s ease;
        font:700 52px/1.25 ui-sans-serif,-apple-system,Inter,sans-serif;
        letter-spacing:-.02em;color:#f7f3ec}
-    .r{width:96px;height:4px;background:#3fb950;margin:34px 0;opacity:0;
+    .r{width:96px;height:4px;background:#3fb950;margin:34px auto;opacity:0;
        transition:opacity .7s ease}
     .q{opacity:0;transition:opacity .7s ease;max-width:22em;
        font:400 36px/1.4 ui-sans-serif,-apple-system,Inter,sans-serif;color:#cbbfae}
@@ -536,47 +540,48 @@ async function holdStill(file, at, ms, opts = {}) {
 function lower(html, ms = 4200, { near = null } = {}) {
   const inject = () => {
     try {
-      page.evaluate((h, sel) => {
+      page.evaluate((h) => {
         document.getElementById("__lower")?.remove();
         const d = document.createElement("div");
         d.id = "__lower";
-        d.innerHTML = `<div id="__lowertx">${h}</div>`;
+        d.innerHTML = `<div id="__lowerbg"></div><div id="__lowertx">${h}</div>`;
         Object.assign(d.style, { position: "fixed", inset: "0", zIndex: "99998",
                                  pointerEvents: "none", opacity: "0",
-                                 transition: "opacity .6s ease" });
+                                 transition: "opacity .55s ease" });
         document.body.appendChild(d);
-        const tx = d.querySelector("#__lowertx");
-        // OUR VOICE, and it is not the chain's. The caption used to be centred with a green
-        // second line — the same green the live UI uses for its own output — so a viewer
-        // could not tell our commentary from the app's. Now: left, at the deck's own margin,
-        // cream and warm grey, and the only green anywhere in our furniture is the rule.
-        Object.assign(tx.style, {
-          position: "fixed", textAlign: "left", color: "#f2ede6",
-          background: "rgba(23,19,15,.96)", borderLeft: "4px solid #3fb950",
-          padding: "22px 30px", boxShadow: "0 18px 48px rgba(0,0,0,.6)",
-          font: "600 34px/1.32 ui-sans-serif,-apple-system,'SF Pro Display',Inter,sans-serif",
-          letterSpacing: "-.012em",
+
+        // A SUBTITLE, and deliberately not deck furniture. Two registers, each internally
+        // consistent and each conventional for its job:
+        //
+        //   the deck  = our ARGUMENT      left, at a fixed margin, read at your own pace
+        //   this      = our COMMENTARY    fixed lower centre, where a viewer's eye already
+        //                                 goes for text over moving footage
+        //
+        // The previous version anchored this under whichever element it described, which
+        // put it in a different place every shot — so the viewer had to FIND it each time.
+        // A findable fixed position beats a locally optimal moving one, and that was a
+        // defect I introduced while fixing a different one.
+        //
+        // The colour rule does not change: green is the chain speaking, cream and warm grey
+        // are us. Nothing here is green.
+        Object.assign(d.querySelector("#__lowerbg").style, {
+          position: "fixed", left: "0", right: "0", bottom: "0", height: "30%",
+          background: "linear-gradient(to top, rgba(23,19,15,.95) 0%, rgba(23,19,15,.82) 45%, rgba(23,19,15,0) 100%)",
         });
-        const el = sel && document.querySelector(sel);
-        if (el) {
-          const r = el.getBoundingClientRect();
-          tx.style.left = Math.round(Math.max(24, r.left)) + "px";
-          tx.style.width = Math.round(Math.max(560, Math.min(r.width, window.innerWidth * 0.72))) + "px";
-          tx.style.top = Math.round(r.bottom + 22) + "px";
-          if (r.bottom + 22 + 180 > window.innerHeight) {
-            tx.style.top = "";
-            tx.style.bottom = (window.innerHeight - r.top + 22) + "px";
-          }
-        } else {
-          tx.style.left = "120px"; tx.style.right = "120px"; tx.style.bottom = "80px";
-        }
+        const tx = d.querySelector("#__lowertx");
+        Object.assign(tx.style, {
+          position: "fixed", left: "12%", right: "12%", bottom: "8.5%",
+          textAlign: "center", textWrap: "balance", color: "#f7f3ec",
+          font: "600 40px/1.3 ui-sans-serif,-apple-system,'SF Pro Display',Inter,sans-serif",
+          letterSpacing: "-.015em", textShadow: "0 2px 20px rgba(0,0,0,.85)",
+        });
         for (const e of tx.querySelectorAll("i")) {
           Object.assign(e.style, { display: "block", fontStyle: "normal",
-                                   color: "#cbbfae", fontSize: "27px",
+                                   color: "#cbbfae", fontSize: "30px",
                                    fontWeight: "500", marginTop: "10px" });
         }
         requestAnimationFrame(() => { d.style.opacity = "1"; });
-      }, html, near).catch(() => {});
+      }, html).catch(() => {});
     } catch {}
   };
   const drop = () => {
@@ -585,7 +590,7 @@ function lower(html, ms = 4200, { near = null } = {}) {
         const d = document.getElementById("__lower");
         if (!d) return;
         d.style.opacity = "0";
-        setTimeout(() => d.remove(), 700);
+        setTimeout(() => d.remove(), 650);
       }).catch(() => {});
     } catch {}
   };
@@ -644,10 +649,10 @@ async function chrome(kicker, n = "") {
       position: "fixed", left: "0", right: "0", top: "0", height: "104px",
       background: "linear-gradient(to bottom, #17130f 62%, rgba(23,19,15,0))" });
     Object.assign(d.querySelector("#__ck").style, {
-      position: "fixed", left: "60px", top: "34px", font: F, letterSpacing: ".18em",
+      position: "fixed", left: "485px", top: "34px", font: F, letterSpacing: ".18em",
       textTransform: "uppercase", color: "#8a7f72", zIndex: "1" });
     Object.assign(d.querySelector("#__cn").style, {
-      position: "fixed", right: "60px", top: "34px", zIndex: "1",
+      position: "fixed", right: "485px", top: "34px", zIndex: "1",
       font: "600 26px/1 ui-monospace,SFMono-Regular,Menlo,monospace", color: "#8a7f72" });
     Object.assign(d.querySelector("#__cr").style, {
       position: "fixed", left: "0", right: "0", bottom: "0", height: "6px",
@@ -717,11 +722,30 @@ async function deckSlide(n, ms, { navigate = null, during = null, label = "" } =
 // Where to cut a slide into reveal bands. Measured from the built deck once, at build time,
 // rather than guessed per slide — see build-deck.mjs, which writes dashboard/media/deck/
 // steps.json alongside the PNGs.
-function slideSteps(n) {
+function slideMeta(n) {
   try {
     const j = JSON.parse(fs.readFileSync(path.join(deckDir, "steps.json"), "utf8"));
-    return j[String(n).padStart(2, "0")] || [];
-  } catch { return []; }
+    const k = String(n).padStart(2, "0");
+    return { bands: (j.bands || {})[k] || [], words: (j.words || {})[k] || 0 };
+  } catch { return { bands: [], words: 0 }; }
+}
+function slideSteps(n) { return slideMeta(n).bands; }
+
+// How long a slide stays up is DERIVED from how much it asks you to read, not typed in.
+// Measured on the first cut: slides demanded 255-349 words per minute, where comfortable
+// reading of display type on video is 150-180. The founder read that as "too fast for the
+// amount of text" before any of it was measured, and the measurement agreed.
+//
+// 150 wpm, a six-second floor so a two-word slide still lands, and a fade in and out on top.
+// 135, not 150, and the difference is calibration rather than taste. The value here sets
+// the HOLD, but what a viewer experiences is the beat window — hold plus fades plus the
+// navigation that follows — and measuring the recorded film showed the experienced rate
+// coming out about a tenth faster than the computed one. The constant is set so the
+// MEASURED number lands where it was meant to, because that is the one a person feels.
+const READ_WPM = 135;
+function slideMs(n, min = 6000) {
+  const { words } = slideMeta(n);
+  return Math.max(min, Math.round((words / READ_WPM) * 60000) + 1800);
 }
 
 
@@ -853,34 +877,34 @@ t0 = Date.now();
 await openingPlate(BASE + "/arc.html");
 
 // The offer. Everything after this is the viewer checking it.
-await deckSlide(2, 10000, { label: "the claim, and the offer" });
+await deckSlide(2, slideMs(2), { label: "the claim, and the offer" });
 
 // ---- check 1 · a real proof that cannot take the money ---------------------------
-await deckSlide(3, 9500, { label: "check 1", navigate: BASE + "/arc.html" });
+await deckSlide(3, slideMs(3), { label: "check 1", navigate: BASE + "/arc.html" });
 await chrome("Check 1 · try to steal it", "01");
 await page.evaluate(() => window.scrollTo(0, 0));
 await sleep(400);
 
 beat("01 fund");
-lower("A funded deal. 250.00 USDC.<i>Nobody has a key to it.</i>", 5200, { near: ".acct, #log" });
+lower("A funded deal. 250.00 USDC.<i>Nobody has a key to it.</i>", 5200);
 await press('button[data-act="fund"][data-deal="honest"]', "tx 0x", { hold: 4800 });
 await page.evaluate(() => document.getElementById("log")?.scrollIntoView({ behavior: "smooth", block: "center" }));
 await sleep(500);
 beat("01 BindingMismatch");
-lower("A <b>real</b> Groth16 proof. It verifies.<i>It is a proof of a different execution.</i>", 6400, { near: "#log" });
+lower("A <b>real</b> Groth16 proof. It verifies.<i>It is a proof of a different execution.</i>", 6400);
 await press('button[data-act="settle"][data-proof="decrease"]', "BindingMismatch", { hold: 6600 });
-lower("<b>The money did not move.</b><i>Valid was not enough. It had to be about THIS deal.</i>", 5200, { near: "#log" });
+lower("<b>The money did not move.</b><i>Valid was not enough. It had to be about THIS deal.</i>", 5200);
 await sleep(5400);
 beat("02 evidence: release");
-lower("The proof this deal was funded against. It reproduces.<i>Released to the seller.</i>", 5200, { near: "#log" });
+lower("The proof this deal was funded against. It reproduces.<i>Released to the seller.</i>", 5200);
 await press('button[data-act="settle"][data-deal="honest"]:not([data-proof])', "tx 0x", { hold: 5200 });
 beat("02 evidence: refund");
-lower("Now a delivery that did <b>not</b> reproduce.<i>The same machinery refunds the buyer.</i>", 6600, { near: "#log" });
+lower("Now a delivery that did <b>not</b> reproduce.<i>The same machinery refunds the buyer.</i>", 6600);
 await press('button[data-act="fund"][data-deal="decrease"]', "tx 0x", { hold: 1200 });
 await press('button[data-act="settle"][data-deal="decrease"]', "tx 0x", { hold: 5200 });
 
 // ---- check 2 · the code, verified in the viewer's own browser --------------------
-await deckSlide(4, 9500, { label: "check 2", navigate: LIVE + "/" });
+await deckSlide(4, slideMs(4), { label: "check 2", navigate: LIVE + "/" });
 await chrome("Check 2 · the code that holds it", "02");
 beat("02 evidence: bytecode + no-keys");
 await page.waitForFunction(
@@ -914,11 +938,15 @@ await dwell("#d-code", 4000);
     body{margin:0;background:#17130f;color:#f2ede6;height:100vh;display:flex;
          align-items:center;justify-content:center;
          font:400 26px/1.5 ui-sans-serif,-apple-system,'SF Pro Display',Inter,sans-serif}
-    .w{width:1500px}
-    .cap{color:#cbbfae;font-size:30px;line-height:1.4;margin-bottom:34px}
+    /* Into the same column as everything else. It was 1500px wide, so it spilled 275px
+       further left than the UI does and pulled the eye back out again. The command output
+       inside it stays left-aligned: that is a terminal, and centring a log is worse than
+       any gaze it would save. */
+    .w{width:950px}
+    .cap{color:#cbbfae;font-size:30px;line-height:1.4;margin-bottom:34px;text-align:center}
     .cap b{color:#f2ede6}
     .cmd{font:600 22px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:#8a7f72;
-         letter-spacing:.06em;margin-bottom:22px}
+         letter-spacing:.06em;margin-bottom:22px;text-align:center}
     .g{opacity:0;transition:opacity .35s ease;margin:14px 0}
     .g .h{font:600 27px/1.4 ui-sans-serif,-apple-system,Inter,sans-serif;color:#f2ede6}
     .g .i{font:400 19px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:#7e756a;
@@ -946,7 +974,7 @@ await dwell("#d-code", 4000);
 }
 
 // ---- check 3 · real settlements, two of them decided on Solana -------------------
-await deckSlide(5, 9500, { label: "check 3", navigate: LIVE + "/" });
+await deckSlide(5, slideMs(5), { label: "check 3", navigate: LIVE + "/" });
 await chrome("Check 3 · real money, another chain", "03");
 {
   const rec_ = JSON.parse(fs.readFileSync(
@@ -966,7 +994,7 @@ await chrome("Check 3 · real money, another chain", "03");
   await dwell("#rows", 11000);
 }
 
-await deckSlide(6, 8000, { label: "the boundary" });
+await deckSlide(6, slideMs(6), { label: "the boundary" });
 beat("17 SVG: out to Arc, scope held");
 await panStill("solana-proof-to-arc-settlement.svg",
   { s: 1.06, x: 1, y: 1 }, { s: 1.0, x: 0, y: 0 }, 5000, null, 900, { mat: false });
@@ -974,7 +1002,7 @@ await holdStill("solana-proof-to-arc-settlement.svg", { s: 1.0, x: 0, y: 0 }, 35
 await sleep(500);
 
 // ---- check 4 · the one nobody else shows you ------------------------------------
-await deckSlide(7, 11500, {
+await deckSlide(7, slideMs(7), {
   label: "check 4 - what it does not prove",
   navigate: LIVE + "/",
   during: () => page.evaluate(() => document.querySelector("table.two")
@@ -985,7 +1013,11 @@ beat("06 evidence: the two rows");
 await dwell("table.two", 11000);
 
 // ---- the URL, big, and nothing after it -----------------------------------------
-await deckSlide(8, 9500, { label: "check it yourself" });
+// The one slide whose hold is NOT a reading-speed problem. Ten words, so the formula gives
+// it the six-second floor — but the constraint on a closing call to action is whether a
+// viewer can read an address and remember it, not whether they can read it once. The VO
+// generator caught this: the closing line ran 2.4 s past the shot.
+await deckSlide(8, slideMs(8, 10000), { label: "check it yourself" });
 // The door's last line still has to land, and the closing plate that used to carry it is
 // gone — the URL slide ends the film now. One short plate, door-specific, after it.
 await closingPlate(6000);

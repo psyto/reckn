@@ -92,7 +92,20 @@ for (const [i, id] of ids.entries()) {
   const uniq = [...new Set(ys)].slice(0, 5);
   steps[String(i + 1).padStart(2, "0")] = uniq;
 }
-fs.writeFileSync(path.join(shotDir, "steps.json"), JSON.stringify(steps, null, 1));
+// And how many words each slide asks a viewer to read. A slide's on-screen time is derived
+// from this rather than typed into the recorder: the first cut demanded 255-349 wpm where
+// comfortable reading of display type is 150-180, and hardcoded seconds drift away from the
+// copy the moment anyone edits a line. Now they cannot.
+const wordsPerSlide = {};
+for (const [i, id] of ids.entries()) {
+  wordsPerSlide[String(i + 1).padStart(2, "0")] = await page.$eval(`#${id}`, (sec) => {
+    const c = sec.cloneNode(true);
+    c.querySelector(".foot")?.remove();          // the footer is fine print, not reading load
+    return (c.textContent || "").trim().split(/\s+/).filter(Boolean).length;
+  });
+}
+fs.writeFileSync(path.join(shotDir, "steps.json"),
+  JSON.stringify({ bands: steps, words: wordsPerSlide }, null, 1));
 
 const pdf = path.join(repo, "dashboard/media/reckn-deck.pdf");
 await page.pdf({ path: pdf, width: `${W}px`, height: `${H}px`, printBackground: true, pageRanges: `1-${ids.length}` });

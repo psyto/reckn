@@ -21,11 +21,25 @@
   body{background:#0a0908;font-family:var(--sans);color:var(--fg)}
 
   /* Every slide is exactly 1920x1080 so a screenshot IS the frame. */
+  /* THE GAZE STAYS IN ONE PLACE. The live UI is a centred column — measured at roughly
+     x 485..1435 of a 1920 frame — and the deck's text used to start at x 120, so every cut
+     between a claim and its proof dragged the eye about four hundred pixels sideways. Over
+     a three-minute film that is the restlessness left after the palette was fixed.
+     The deck now sits in the SAME column the UI occupies, and the whole film is read from
+     the middle third of the screen. */
   .slide{
     position:relative;width:1920px;height:1080px;background:var(--bg);
-    padding:96px 120px;display:flex;flex-direction:column;justify-content:center;
-    overflow:hidden;margin:0 auto 28px;
+    padding:96px 0;display:flex;flex-direction:column;justify-content:center;
+    align-items:center;overflow:hidden;margin:0 auto 28px;
   }
+  /* Absolutely-positioned furniture is exempt: the first version widened the corner
+     index to 950px too and dragged it into the middle of the slide. */
+  .slide > *:not(.n):not(.foot){width:950px;max-width:950px}
+  .slide h1,.slide h2,.slide .kicker,.slide .lede,.slide .quote{text-align:center}
+  .slide .rule{margin-left:auto;margin-right:auto}
+  /* Tabular and card content stays left inside its centred block: centring a data column
+     costs more in legibility than the gaze saves. */
+  .slide table,.slide .cols{text-align:left}
   .kicker{font:600 26px/1 var(--sans);letter-spacing:.18em;text-transform:uppercase;
           color:var(--faint);margin-bottom:30px}
   h1{font:700 108px/1.02 var(--sans);letter-spacing:-.035em}
@@ -36,7 +50,7 @@
   .step{opacity:1}
   body.reveal .step{opacity:0;transition:opacity .8s ease}
   body.reveal .step.on{opacity:1}
-  .foot{position:absolute;left:120px;right:120px;bottom:56px;
+  .foot{position:absolute;left:485px;right:485px;bottom:56px;text-align:center;justify-content:center;
         font:400 24px/1.4 var(--sans);color:var(--faint);
         border-top:1px solid var(--line);padding-top:20px;display:flex;gap:28px}
   .foot b{color:var(--dim);font-weight:600}
@@ -86,8 +100,7 @@
 <section class="slide" id="s02">
   <div class="kicker step">The claim</div>
   <h2 class="step">Nobody can move this money.<br>Including us.</h2>
-  <p class="lede step">No owner, no admin, no resolver, no upgrade path. That is a <b>build
-  condition</b>, not a promise — if one ever appears, the build fails.</p>
+  <p class="lede step">No owner. No admin. No resolver. A <b>build condition</b>, not a promise.</p>
   <div class="rule step"></div>
   <p class="quote step" style="font-size:44px;color:var(--dim)">Easy to say.<br>So don't take our word for it.</p>
   <div class="foot"><span><b>Four checks. Ninety seconds. Nothing installed, no wallet.</b></span></div>
@@ -98,9 +111,7 @@
   <div class="n">01</div>
   <div class="kicker step">Check one</div>
   <h2 class="step">A real proof that<br>cannot take the money.</h2>
-  <p class="lede step">Watch a <b>cryptographically valid</b> Groth16 proof — of a different
-  execution — submitted against a funded deal. Then watch the deal's own proof release it,
-  and a failed one refund the buyer.</p>
+  <p class="lede step">A valid Groth16 proof of a <b>different</b> execution, submitted against a funded deal.</p>
   <div class="foot"><span>Nobody approves any of the three.</span></div>
 </section>
 
@@ -109,9 +120,7 @@
   <div class="n">02</div>
   <div class="kicker step">Check two</div>
   <h2 class="step">The code holding it,<br>verified in your browser.</h2>
-  <p class="lede step">Your browser fetches the deployed bytecode from Arc and compares it against
-  this repository. Byte for byte. The escrow has no constructor, so the same source always
-  deploys the same contract.</p>
+  <p class="lede step">Your browser compares the deployed bytecode against this source. Byte for byte.</p>
   <div class="foot"><span><b>scripts/no-keys.sh</b> — the build condition, run on this take's own bytes</span></div>
 </section>
 
@@ -121,9 +130,9 @@
   <div class="kicker step">Check three</div>
   <h2 class="step">Real money — and work<br>proven on another chain.</h2>
   <div class="cols step" style="grid-template-columns:1fr 1fr 1fr">
-    <div class="card"><h3>Settlements</h3><div class="num">4</div><p>Real USDC on Arc testnet.</p></div>
-    <div class="card"><h3>Decided by Solana proofs</h3><div class="num">2</div><p>One escrow, two virtual machines.</p></div>
-    <div class="card"><h3>Cost to decide one</h3><div class="num">&lt;3¢</div><p>From the receipts, not quoted.</p></div>
+    <div class="card"><h3>Settlements</h3><div class="num">4</div><p>Real USDC, Arc testnet.</p></div>
+    <div class="card"><h3>By Solana proofs</h3><div class="num">2</div><p>One escrow, two VMs.</p></div>
+    <div class="card"><h3>To decide one</h3><div class="num">&lt;3¢</div><p>From the receipts.</p></div>
   </div>
   <div class="foot"><span>Read off the chain by your browser, not by us.</span></div>
 </section>
@@ -143,9 +152,9 @@
   <div class="kicker step">Check four — the one nobody else shows you</div>
   <h2 class="step">What it does <i style="font-style:normal;color:#f0837a">not</i> prove.</h2>
   <table class="step">
-    <tr><td class="k bad">Not</td><td>“Bridges are unnecessary.”</td><td class="d">It removes the bridge <b>as the decider</b>. Moving funds to where you pay remains your problem.</td></tr>
-    <tr><td class="k bad">Not</td><td>“Fragmented liquidity is solved.”</td><td class="d">You must already hold the settlement asset on the chain you pay from.</td></tr>
-    <tr><td class="k bad">Not</td><td>“We prove Solana mainnet state.”</td><td class="d">A bank hash recomputed over the account set <b>the deal named</b>. Consistency, not provenance.</td></tr>
+    <tr><td class="k bad">Not</td><td>“Bridges are unnecessary.”</td><td class="d">It removes the bridge <b>as the decider</b>.</td></tr>
+    <tr><td class="k bad">Not</td><td>“Liquidity is solved.”</td><td class="d">You still hold funds where you pay.</td></tr>
+    <tr><td class="k bad">Not</td><td>“We prove Solana mainnet.”</td><td class="d">Consistency, <b>not provenance</b>.</td></tr>
   </table>
   <div class="foot"><span>This is on the live page too. A judge who leaves without it cannot tell us from an oracle.</span></div>
 </section>
