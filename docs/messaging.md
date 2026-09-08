@@ -111,17 +111,23 @@ Same product, same demo, same numbers, same limits. **Only the first sentence ch
 >
 > **Don't make a bridge decide where money goes. Make proof decide.**"
 
-### CWF — the only sentence allowed about Tempo
+### CWF — Tempo, as of 2026-09-08
 
-> **"Tempo is the settlement chain Reckn is evaluating for its CWF implementation."**
+**Until this date the only permitted sentence was "Tempo is the settlement chain Reckn is
+evaluating for its CWF implementation."** It is no longer the ceiling, because the five
+things §3 required arrived. What may now be said:
 
-**Nothing beyond that sentence.** An earlier draft of this section added "we have measured
-that the proof machinery it needs is present there", which is true and is still not allowed
-here: a measurement offered as reassurance reads as progress, and progress reads as working.
-The interim CWF line that carries the idea without naming a chain is:
+> "The same escrow source, unmodified, settles on a second payment chain. On Tempo the
+> escrow held **PathUSD** — a real TIP-20, not a mock — and a proof about work performed on
+> Solana released it to the seller; a proof that the work did not reproduce refunded the
+> buyer. Tempo has no gas token, so the fee that settled each of those was paid in **the same
+> stablecoin the escrow was holding**."
 
-> "Agents will work across chains. Reckn keeps assets native and settles only when the work
-> is proven."
+That last clause is the part no other chain gives, and it is what makes this a Tempo slice
+rather than a redeploy. It is read off the receipts' own `feeToken`, not asserted.
+
+**Still not claimable:** anything on Tempo *mainnet*; provenance; that bridges are
+unnecessary; and the thirty-day timeout, which is not demonstrated on any chain.
 
 ---
 
@@ -206,22 +212,42 @@ report arrives this paragraph is **not** to be used anywhere:
 The first sentence is already *structurally* true — the contract names no chain — but it is
 not to be claimed until it has actually happened twice, in both directions.
 
-### Reported by the Tempo owner, 2026-09-08 — and what it does NOT unlock
+### UNLOCKED 2026-09-08 — all five arrived
 
-> **A real Groth16 proof was verified by Tempo's EVM, and it moved a mock token.**
+The five items §3 required were reported by the Tempo owner and are in the repository. The
+paragraph below this section is now **true and usable**.
 
-That is a genuine reduction in risk and it is **not** any of the five below. It says the
-proof machinery runs there; it does not say a deal exists, that a real TIP-20 was ever
-funded, or that anything settled. The distance between "the EVM verified a proof" and "an
-agent was paid" is the entire product.
+| # | required | delivered |
+|---|---|---|
+| 1 | escrow address + chain id | `0x7e953a6ac16744ef1a02e343277ec55d7410f439`, chain **42431** (Tempo Moderato testnet) |
+| 2 | the TIP-20 actually funded | `0x20C0…0000` — **PathUSD, 6 decimals, the real token**, not a mock |
+| 3 | release tx, from a Solana `Reproduced` proof | `0xeb53bc37…0b99f` — the same fixture `RecknSvmVerdict.t.sol` and Arc's `solanaProofOnArc` use |
+| 4 | refund tx, from a `Failed` proof | `0x97b65755…cf157` |
+| 5 | each receipt's `feeToken` | both `0x20c0…0000` — **the same token the escrow was holding**; `feePayer` is the buyer |
 
-It is recorded here as an **internal fact**, in the same category as the precompile
-measurements: true, useful for deciding what to build next, and **not an outward sentence**.
-Offered as reassurance it reads as progress, and progress reads as working.
+Recorded in `zk-verdict/contracts/tempo.json` under `deployedByReckn`, with a second script
+reading the deployment back off the chain rather than trusting the run that produced it.
+The explorer-linked table is `docs/specs/011-tempo-tip20-slice.md` §10 — **quote from there**;
+neither this file nor anything downstream retypes a hash.
 
-The machine-readable statement of where things actually stand is one line, and it is not ours
-to soften: `zk-verdict/contracts/tempo.json` → `deployedByReckn` has `network: null`,
-`RecknZkEscrow: null`, and `settlements: {}`. Zero contracts, zero transaction hashes.
+> **A note on how this was checked, because the check was wrong first.** Verifying the report
+> meant reading `deployedByReckn.settlements` — the key Arc's record uses — and it came back
+> empty, which looked like a contradiction. It was not: the Tempo record keeps its
+> transactions under `run.steps`. The instrument had assumed a schema. The data was there the
+> whole time and the reader was looking in the wrong place, which is worth writing down
+> because it is the shape of almost every wrong measurement in this project.
+
+**Two things did not unlock, and never will.** Both were written into §2 before this report
+arrived, which was the point of writing them early:
+
+- **`refundAfterDeadline` is not demonstrated and cannot be.** Thirty days exceeds the
+  judging window and time cannot be warped on a public chain. The mismatch deal on Tempo is
+  `Funded` until **2026-10-08**. The refund that is shown is always the **proof-driven** one.
+  The Tempo record encodes this itself, in a field named `notDemonstrated`.
+- **No provenance claim.** The guest recomputed a bank hash over the account set *the deal
+  named*. It did not establish that those inputs came from Solana mainnet. §1.2 does not move.
+
+### What was required before §3 unlocked (kept for the record)
 
 ### What must arrive before any of §3 is used
 
@@ -235,5 +261,5 @@ Five items, from the Tempo owner, in their words rather than inferred:
    part that makes it a Tempo slice rather than a redeploy, and it is the one number a
    viewer cannot infer from anything else on screen.
 
-Anything short of all five and the wording stays at the one sentence above. **As of
-2026-09-08 the count is zero of five.**
+All five arrived on **2026-09-08**. The list is kept rather than deleted so that the next
+time something is claimed, the standard it had to clear is visible.

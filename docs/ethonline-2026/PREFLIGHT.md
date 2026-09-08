@@ -60,11 +60,20 @@ The headline items, in the order a judge meets them:
 | 7 | **Acceptance gates and mutation tests**, parsing their criteria out of the specifications. | `zk-verdict/scripts/ac00*.sh` |
 | 8 | **The demo film**, two cuts from one recorder. | `dashboard/video/record.js` |
 
-**Tempo: local implementation and deploy preparation exist; nothing is proven on Tempo
-testnet.** No escrow is deployed there, no real TIP-20 has funded a deal, and no Groth16
-proof has released or refunded anything on it. Until the Tempo owner reports transaction
-hashes, the only permitted sentence anywhere is: *"Tempo is the settlement chain Reckn is
-evaluating for its CWF implementation."* It is **not** claimed as event work here.
+**Tempo — proven on testnet 2026-09-08, and deliberately NOT claimed here.** The escrow is
+deployed to Tempo Moderato testnet, a deal funded in real PathUSD released on a Solana
+`Reproduced` proof, and another refunded the buyer on a `Failed` one; both fees were paid in
+the same TIP-20 the escrow held. Hashes: `docs/specs/011-tempo-tip20-slice.md` §10.
+
+It is left out of this submission's event work **on purpose**, and that is a founder decision
+rather than a fact: `DISCLOSURE.md` §3 enumerated what would be built during the event and
+Tempo is not on that list. Adding it now would mean amending a disclosure **after
+submission** — a category §0 does not have. The safe reading is that this submission stands
+on Arc, which is what every other line of it claims, and Tempo belongs to CWF.
+
+**The thirty-day timeout is not demonstrated on any chain and cannot be** — it exceeds the
+judging window, and time does not move on a public chain. The refund shown anywhere is always
+the proof-driven one.
 
 ## 3. AI transparency ✅ DONE
 

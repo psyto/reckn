@@ -171,10 +171,16 @@ virtual machine the work happened on.
 
 ![The Arc demo again: the Solana deal funded and settled with the Solana proof, the seller tile at 250.00 USDC.](dashboard/media/arc-demo-solana.jpg)
 
-**Tempo is the settlement chain Reckn is evaluating for its CWF implementation.** Nothing in
-this README's evidence runs on it: every settlement shown here is on Arc testnet. That work
-is tracked separately, and this file will say more about it only when there are transaction
-hashes to point at.
+**The same escrow source, unmodified, now settles on a second payment chain.** On **Tempo
+testnet** (2026-09-08) the escrow held **PathUSD** — a real TIP-20, not a mock — and a proof
+about work performed on Solana released it to the seller, while a proof that the work did not
+reproduce refunded the buyer. Tempo has no gas token, so the fee that settled each of those
+was paid in **the same stablecoin the escrow was holding**, read off the receipts' own
+`feeToken`. Explorer-linked hashes:
+[`docs/specs/011-tempo-tip20-slice.md`](docs/specs/011-tempo-tip20-slice.md) §10.
+
+Everything else on this page is Arc. **This is not claimed as ETHOnline event work** — see
+[`docs/ethonline-2026/PREFLIGHT.md`](docs/ethonline-2026/PREFLIGHT.md) §2.
 
 **▶ Demo video (3:04, 1920×1080, re-recorded 2026-09-07 — it now ends on the *public* chain):**
 [`dashboard/media/reckn-arc-demo-v2.mp4`](dashboard/media/reckn-arc-demo-v2.mp4) — the hook,
