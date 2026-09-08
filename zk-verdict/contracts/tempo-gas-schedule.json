@@ -1,0 +1,80 @@
+{
+  "_": "Output of zk-verdict/scripts/tempo-gas-schedule.sh. Written by the script, never by hand. eth_call only: no key, no transaction, no fee, no state written.",
+  "rpc": "https://rpc.moderato.tempo.xyz",
+  "control": "local anvil",
+  "harnessBaselineGas": {
+    "tempo": 32,
+    "control": 32
+  },
+  "primitives": [
+    {
+      "primitive": "cold SSTORE 0->1",
+      "tempo": 254347,
+      "control": 22147,
+      "ratio": 11.484,
+      "ethereumSchedule": "22100"
+    },
+    {
+      "primitive": "warm SSTORE",
+      "tempo": 102,
+      "control": 102,
+      "ratio": 1.0,
+      "ethereumSchedule": "100"
+    },
+    {
+      "primitive": "cold SLOAD + no-op SSTORE",
+      "tempo": 4396,
+      "control": 4396,
+      "ratio": 1.0,
+      "ethereumSchedule": "2100 + 100"
+    },
+    {
+      "primitive": "keccak256 over 1 KiB",
+      "tempo": 349,
+      "control": 349,
+      "ratio": 1.0,
+      "ethereumSchedule": "30 + 6*32 = 222"
+    },
+    {
+      "primitive": "bn256Pairing, 2 pairs",
+      "tempo": 114291,
+      "control": 114291,
+      "ratio": 1.0,
+      "ethereumSchedule": "45000 + 2*34000 = 113000"
+    },
+    {
+      "primitive": "bn256Add",
+      "tempo": 819,
+      "control": 819,
+      "ratio": 1.0,
+      "ethereumSchedule": "150"
+    },
+    {
+      "primitive": "bn256ScalarMul",
+      "tempo": 6693,
+      "control": 6693,
+      "ratio": 1.0,
+      "ethereumSchedule": "6000"
+    },
+    {
+      "primitive": "CREATE (297-byte runtime)",
+      "tempo": 797503,
+      "control": 91903,
+      "ratio": 8.678,
+      "ethereumSchedule": "32000 + 200/byte"
+    },
+    {
+      "primitive": "cold EXTCODESIZE",
+      "tempo": 256,
+      "control": 256,
+      "ratio": 1.0,
+      "ethereumSchedule": "2600"
+    }
+  ],
+  "impliedCodeDepositGasPerByte": {
+    "tempo": 2577,
+    "control": 202,
+    "overRuntimeBytes": 297
+  },
+  "reading": "Compute is identical (pairing, ecAdd, ecMul, SLOAD, EXTCODESIZE all 1.00x). Tempo prices state growth ~11.5x and code deposit ~12.8x. For an escrow whose expensive operation is a Groth16 verification, that is the favourable direction; for its storage-writing fund() it is not."
+}

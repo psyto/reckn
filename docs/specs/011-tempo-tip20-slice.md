@@ -142,6 +142,69 @@ the fee model. The BN254 precompiles are measured present, which is necessary an
 sufficient. And a measurement of the chain's DEFAULT fee token is not a promise about the
 token our deal will name — `DeployTempo` therefore keeps `TIP20=0x…` overridable.
 
+### 2.2c Third pass, same day: Tempo's own EVM was made to run the whole path
+
+Sections 2.2 and 2.2b measured the chain *around* the escrow. Neither answered the question
+that could still have ended this direction: **does a real SP1 Groth16 proof actually verify
+on Tempo?** "`0x08` on empty input returns 1" does not imply it — a Groth16 verification is
+thousands of field operations and two real pairings.
+
+It can be answered without a key. `eth_call` with `to: null` makes the node execute a
+constructor; a constructor that ends in an assembly `return` hands back measurements instead
+of runtime code. So the node itself deploys `SP1Verifier`, `RecknVerdictVerifier`,
+`RecknZkEscrow` and a `MockTIP20`, funds a deal, settles it, and reports balances — inside
+**Tempo's EVM**, with no transaction, no fee and no state written. A local `anvil` runs the
+identical bytecode as a control; the three codehashes are compared, because if they differ
+the two sides were not running the same contract and no other row means anything.
+
+| case | Tempo | control |
+|---|---|---|
+| **REPRODUCED** — a real Groth16 proof of a real Solana execution | seller **+250.000000**, escrow emptied | identical |
+| **FAILED** — the same machinery, the other direction | buyer **+250.000000**, seller 0 | identical |
+| **mismatch** — a real proof of *another* execution | reverts `BindingMismatch()`, **nothing moves**, escrow still holds 250.000000 | identical |
+
+`bash zk-verdict/scripts/tempo-evm-probe.sh` reproduces it; output in `tempo-evm-probe.json`.
+
+**The gas differed by 2.6×–10.6×, so it was measured primitive by primitive**
+(`tempo-gas-schedule.sh`). The answer is clean and it is the favourable one:
+
+| | Tempo | control |
+|---|---|---|
+| `bn256Pairing`, two real pairs | **114,291** | **114,291** |
+| `bn256Add`, `bn256ScalarMul`, `keccak`, `SLOAD`, warm `SSTORE`, `EXTCODESIZE` | all **1.00×** | |
+| cold `SSTORE` 0→1 | 254,347 | 22,147 (**11.48×**) |
+| code deposit, per deployed byte | ~2,577 | ~202 (**12.8×**) |
+
+**Compute is identical; Tempo prices state.** `settleWithProof` is only 2.6× because it is
+mostly pairing. `fund` is 10.6× because it writes a `Deal`. For an escrow whose expensive
+operation is a proof verification, that is the direction you would choose.
+
+**The real TIP-20 was measured against the escrow's assumptions** (`tempo-tip20-probe.sh`),
+because `MockTIP20` was built from §2.3 — documentation — and a mock built from
+documentation tests the documentation. Two of those lines are load-bearing:
+
+- **PathUSD reverts; it never returns `false`** (`InsufficientBalance`,
+  `InsufficientAllowance`). `RecknZkEscrow` ignores the ERC-20 boolean — `forge` lints it —
+  so on a false-returning token `fund()` would record a funded deal holding nothing. This
+  was an assumption inherited from the mock until it was measured.
+- **The escrow is a valid recipient.** A transfer to an address carrying `RecknZkEscrow`'s
+  real runtime bytecode succeeds, so `InvalidRecipient` does not catch ordinary contracts.
+  A transfer to the token itself *does* revert `InvalidRecipient` — the documented rule,
+  measured, and the behaviour T-11 already models.
+- `currency()` is `USD` (fee-eligible) and `paused()` is `false` **today**. That is a reading
+  of one moment, not a property; §8 discloses the pause risk rather than mitigating it.
+
+**And the fee arithmetic is now derived rather than assumed.** From two real receipts:
+`feeTokenUnits = gasUsed × effectiveGasPrice / 1e12`, checked against both (off by one unit,
+rounding). The whole demo — deploy + fund + settle — is **≈31,000,000 gas ≈ 15.5 PathUSD**
+at the price seen on 2026-09-08.
+
+**What none of this establishes, and no README, page or submission may say it does.** An
+`eth_call` writes no state, pays no fee and mines no block. It is **not a deployment**, it
+does not satisfy **T-4**, and `tempo.json → deployedByReckn` stays empty until a real
+receipt exists. The word for what is proven is *"Tempo's EVM computes this path"*, not
+*"Reckn is deployed on Tempo"*.
+
 ### 2.3 Read from documentation, not measured **[doc]**
 
 - TIP-20 keeps ERC-20 `transfer` / `transferFrom` / `approve` / `allowance` / `balanceOf`.
@@ -221,6 +284,9 @@ T-1 … T-3 and T-6 … T-8 are local and run in Foundry. T-4 and T-5 need a dep
 | **T-3** | A **real Groth16 proof of a different execution** is rejected with `BindingMismatch` and **no token moves**. | local |
 | **T-4** | The settling transaction's **fee is paid in a TIP-20**, shown from its receipt's own `feeToken` / `feePayer` fields (§2.2b — the chain emits these for a standard type `0x2` transaction, so this needs no custom transaction type). | testnet |
 | **T-5** | Every constant in `tempo.json` is used somewhere, and every Tempo-shaped literal in the tree is the recorded one (`tempo-constants.sh`). | local |
+| **T-12** | All three of T-1/T-2/T-3 hold when **Tempo's own EVM** runs them, against a byte-identical local control (`tempo-evm-probe.sh`). **Not a deployment**: no transaction, no fee, no state. | remote read-only |
+| **T-13** | The **real** TIP-20 reverts rather than returning `false`, accepts the escrow as a recipient, and refuses itself (`tempo-tip20-probe.sh`). | remote read-only |
+| **T-14** | Every hash `tempo.json` records exists on chain with `status == 1`, every explorer link in the tree names a recorded hash, and every recorded settlement is linked (`tempo-receipts.sh`). **Reports the empty state as empty**, never as a pass. | testnet |
 | **T-6** | `bash scripts/no-keys.sh` passes **unchanged**. The central claim did not widen. | local |
 | **T-7** | With the token **paused**, `settleWithProof` reverts and the deal stays `Funded`. | local |
 | **T-8** | With a **TIP-403 policy refusing the seller**, `settleWithProof` reverts, the deal stays `Funded`, and `refundAfterDeadline` is the only exit — **and if the token is paused, that exit is closed too.** | local |
@@ -261,7 +327,18 @@ establish where the prestate came from.
 
 The agent does not generate, store or use a key, and does not deploy.
 
-1. **A testnet key and TIP-20 from the faucet** — required before T-4 and before any deploy.
+1. **A testnet key and PathUSD from the faucet** — required before T-4, T-14 and any deploy.
+   Now quantified rather than described. The founder needs, in one address:
+   - **≈16 PathUSD for fees** — deploy + fund + settle measures ≈31M gas
+     (§2.2c); `tempo-testnet.sh` budgets 40M and refuses to start below it.
+   - **3 PathUSD to escrow** — three deals at 1.000000, matching Arc so the two records read
+     alike.
+   - **ask for ~50 PathUSD**, which covers a re-run.
+   The key must be imported **once** as an encrypted Foundry keystore
+   (`cast wallet import <name> --interactive`) and passed to the script by **name**
+   (`TEMPO_ACCOUNT`). `tempo-testnet.sh` refuses to read a private key from an argument or an
+   environment variable, so no plaintext key exists in a shell history, a process list, a log
+   or this repository.
 2. ~~Whether upstream Foundry can send a fee-paying transaction.~~ **Closed by measurement**
    (§2.2b): it can, and the build path does not fork.
 3. ~~The testnet TIP-20 address and its decimals.~~ **Closed by measurement** (§2.2b):

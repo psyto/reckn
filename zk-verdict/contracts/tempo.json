@@ -1,11 +1,12 @@
 {
-  "_": "Task 011's record of Tempo. Same role as arc.json: this file is the source of truth, and every other file that restates a Tempo constant is checked against it by zk-verdict/scripts/tempo-constants.sh. That script checks INTERNAL AGREEMENT ONLY. It cannot tell you this record is right \u2014 which is why every entry carries how it was obtained.",
+  "_": "Task 011's record of Tempo. Same role as arc.json: this file is the source of truth, and every other file that restates a Tempo constant is checked against it by zk-verdict/scripts/tempo-constants.sh. That script checks INTERNAL AGREEMENT ONLY. It cannot tell you this record is right — which is why every entry carries how it was obtained.",
   "provenance": {
     "measuredBy": "unauthenticated JSON-RPC from this repository's operator",
     "measuredOn": "2026-09-08",
     "method": "eth_chainId, eth_call to precompiles and to the fee token, eth_getCode, eth_getBalance, eth_getBlockByNumber, eth_getTransactionReceipt",
     "note": "No key, no transaction, no funds. Nothing here is transcribed from a blog post or a search result; entries that could not be measured are under 'fromDocs' or 'unknown' and are marked as such.",
-    "secondPass": "2026-09-08, same day: 213 transactions over 60 blocks were surveyed to find out how fees are actually paid. That answered three open questions that documentation had not."
+    "secondPass": "2026-09-08, same day: 213 transactions over 60 blocks were surveyed to find out how fees are actually paid. That answered three open questions that documentation had not.",
+    "thirdPass": "2026-09-08, same day: the whole settlement path was executed inside Tempo's OWN EVM by eth_call with to:null (a constructor that returns measurements instead of code), against a local anvil control running byte-identical bytecode. That answered the last question the precompile spot-checks could not: whether a real SP1 Groth16 proof actually verifies here. Still no key, no transaction, no funds. Scripts: zk-verdict/scripts/tempo-evm-probe.sh, tempo-gas-schedule.sh, tempo-tip20-probe.sh."
   },
   "testnet": {
     "name": "Moderato",
@@ -14,7 +15,7 @@
     "rpc": "https://rpc.moderato.tempo.xyz",
     "explorer": "https://explore.testnet.tempo.xyz",
     "explorerVerified": false,
-    "explorerSource": "https://tempo.xyz/developers/docs/quickstart/connection-details, read 2026-09-08 \u2014 NOT measured"
+    "explorerSource": "https://tempo.xyz/developers/docs/quickstart/connection-details, read 2026-09-08 — NOT measured"
   },
   "wrongEndpoint": {
     "url": "https://rpc.tempo.xyz",
@@ -56,7 +57,7 @@
     "ethGetBalance": {
       "queried": "0x000000000000000000000000000000000000dEaD",
       "result": "0x9612084f0316e0ebd5182f398e5195a51b5ca47667d4c9b26c9b26c9b26c9b2",
-      "meaning": "a constant, not a balance. Tempo has no native gas token. Any test, script or page that shows funding by reading the native balance is showing a constant \u2014 use IERC20Min.balanceOf."
+      "meaning": "a constant, not a balance. Tempo has no native gas token. Any test, script or page that shows funding by reading the native balance is showing a constant — use IERC20Min.balanceOf."
     },
     "blockAtReadTime": {
       "number": "0x20bcbc0",
@@ -87,6 +88,57 @@
       "totalSupply": "18562932806709551615000",
       "how": "eth_call of name() / symbol() / decimals() / totalSupply(), 2026-09-08",
       "note": "This is the token both sampled receipts paid their fee in. It answers 011's open questions 'which TIP-20' and 'what decimals' without a faucet. Six decimals -- the same as USDC on Arc -- and RecknTempoTip20.t.sol already exercises 6 and 18."
+    },
+    "feeArithmetic": {
+      "_": "How a fee in gas becomes a fee in the TIP-20. DERIVED from two real receipts on 2026-09-08, not from documentation.",
+      "formula": "feeTokenUnits = gasUsed * effectiveGasPrice / 1e12",
+      "checkedAgainst": {
+        "0x6f6b5d06a1477704c5e538a200ca6b3b3f495836167fcac7932dfb4d14d2ace8": "gasUsed 22820 * 500600000000 / 1e12 = 11423; the receipt's own Transfer log to 0xfeec…0000 moved 11424",
+        "0xee3fe7b3aa6662b3d817a6b94f549f7c22d1bf0d0f7b57dfed3bcefb83674d16": "gasUsed 63812 * 525630000000 / 1e12 = 33541; the log moved 33542"
+      },
+      "note": "Off by one unit in both cases -- rounding, not a wrong model. The fee is collected by a Transfer to 0xfeec000000000000000000000000000000000000, which appears in the receipt's own logs."
+    },
+    "evmProbe": {
+      "_": "eth_call with to:null, so TEMPO'S OWN EVM ran the path. No key, no transaction, no fee, no state written. This is NOT a deployment and it does NOT satisfy 011 T-4. Full output in tempo-evm-probe.json.",
+      "measuredOn": "2026-09-08",
+      "blockNumber": 34342659,
+      "bytecodeIdentical": "the SP1Verifier, RecknVerdictVerifier and RecknZkEscrow codehashes were compared against the local anvil control and are equal. Without that, no other row means anything.",
+      "reproduced": "a real Groth16 proof of a real SOLANA execution released 250.000000 (6dp) to the seller and emptied the escrow -- identical to the control.",
+      "failed": "the same machinery refunded the buyer in full on the FAILED proof. This is the PROOF-driven refund, not refundAfterDeadline.",
+      "bindingMismatch": "a real proof of ANOTHER execution reverted with BindingMismatch() and moved nothing; the escrow still held 250.000000.",
+      "gasOnTempo": {
+        "deploySP1Verifier": 12986736,
+        "deployRecknVerdictVerifier": 2946667,
+        "deployRecknZkEscrow": 6575839,
+        "fund": 2547412,
+        "settleWithProof": 753797
+      },
+      "gasOnControl": {
+        "deploySP1Verifier": 2477136,
+        "deployRecknVerdictVerifier": 466267,
+        "deployRecknZkEscrow": 1192239,
+        "fund": 240412,
+        "settleWithProof": 293297
+      },
+      "costOfTheWholeDemo": "about 31,000,000 gas for deploy + fund + settle, which at the 500.6 gwei effectiveGasPrice seen on 2026-09-08 is about 15.5 PathUSD. tempo-testnet.sh budgets 40M."
+    },
+    "gasSchedule": {
+      "_": "Why the numbers above differ by 2.6x to 10.6x, measured one primitive at a time against the same control. Full output in tempo-gas-schedule.json.",
+      "computeIsIdentical": "bn256Pairing over two real pairs: 114,291 gas on Tempo and 114,291 on the control. bn256Add, bn256ScalarMul, keccak, SLOAD, warm SSTORE and EXTCODESIZE are all 1.00x.",
+      "stateIsNot": {
+        "coldSSTORE": "254,347 on Tempo vs 22,147 on the control (11.48x)",
+        "codeDeposit": "~2,577 gas per deployed byte vs ~202 (12.8x)"
+      },
+      "consequence": "Tempo prices state growth, not computation. For an escrow whose expensive operation is a Groth16 verification that is the favourable direction: settleWithProof is only 2.6x, because it is mostly pairing. fund() is 10.6x, because it writes a Deal struct."
+    },
+    "tip20Semantics": {
+      "_": "The REAL PathUSD, by eth_call, against the assumptions RecknZkEscrow makes about a token. MockTIP20 was built from documentation, so until this these were assumptions. Full output in tempo-tip20-probe.json; re-run with tempo-tip20-probe.sh.",
+      "measuredOn": "2026-09-08",
+      "revertsNeverReturnsFalse": "an underfunded transfer reverts with InsufficientBalance and a transferFrom without allowance reverts with InsufficientAllowance. This is load-bearing: RecknZkEscrow ignores the ERC-20 boolean (forge lints it), so on a false-returning token fund() would record a funded deal holding nothing.",
+      "escrowIsAValidRecipient": "a transfer to an address carrying RecknZkEscrow's real runtime bytecode succeeds. InvalidRecipient does not catch ordinary contracts, so the escrow can be funded.",
+      "refusesItself": "a transfer to 0x20C0…0000 reverts with InvalidRecipient -- the documented rule, measured. This is the behaviour RecknTempoTip20.t.sol's T-11 models.",
+      "currency": "USD, so it is fee-eligible.",
+      "pausedToday": false
     }
   },
   "fromDocs": {
@@ -99,13 +151,14 @@
     "fees": "transferFeePreTx / transferFeePostTx; only currency == USD tokens may pay fees"
   },
   "unknown": {
-    "_": "Still not established. Not assumed anywhere in the code.",
-    "faucet": "not found in the docs read 2026-09-08; obtaining PathUSD needs a key and a browser (011 \u00a79.1)",
-    "testnetTokenPolicy": "whether PathUSD carries a TIP-403 policy or is pausable in practice. The escrow is tested against both behaviours (T-7, T-8) rather than against an assumption.",
-    "realProofOnChain": "that an SP1 Groth16 proof VERIFIES on Tempo and fits the fee model. The BN254 precompiles are measured present; that is necessary, not sufficient."
+    "_": "Still not established. Not assumed anywhere in the code. Two entries moved out on 2026-09-08 and are rewritten rather than deleted, so what was and was not known when the tests were written stays legible.",
+    "faucet": "not found in the docs read 2026-09-08; obtaining PathUSD needs a key and a browser (011 §9.1). THIS IS THE ONLY THING BETWEEN THIS SLICE AND ITS TESTNET HALF.",
+    "testnetTokenPolicy": "PARTIALLY CLOSED. PathUSD answers paused() and returned false on 2026-09-08, and no TIP-403 policy refused any transfer probed. That is a reading of one moment: a token that is unpaused now can be paused later, which is the risk 011 §8 discloses rather than mitigates. The escrow is still tested against both behaviours (T-7, T-8) rather than against this reading.",
+    "realProofOnChain": "PARTIALLY CLOSED. A real SP1 Groth16 proof of a Solana execution DOES verify on Tempo and does move a token -- measured in Tempo's own EVM by eth_call (see measured.evmProbe). What remains open is the half that needs a key: that a TRANSACTION carrying it can be paid for, included and persisted, and that a real TIP-20 balance moves. An eth_call writes no state and pays no fee. Nothing may be described as 'deployed on Tempo' on the strength of it.",
+    "explorerVerified": "https://explore.testnet.tempo.xyz is from documentation and has not been fetched. No link in this repository points at it yet; tempo-receipts.sh checks that any that appear name a hash this record carries AND that the chain has a successful receipt for it."
   },
   "deployedByReckn": {
-    "_": "EMPTY BY DESIGN. Nothing is deployed. Filled only from real receipts after a founder-held key deploys \u2014 never transcribed from memory. Two Arc tx hashes were once written here from memory and two of them were wrong.",
+    "_": "EMPTY BY DESIGN. Nothing is deployed. Filled only from real receipts after a founder-held key deploys — never transcribed from memory. Two Arc tx hashes were once written here from memory and two of them were wrong.",
     "network": null,
     "deployedAt": null,
     "SP1Verifier": null,

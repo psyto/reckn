@@ -1,0 +1,55 @@
+{
+  "_": "Output of zk-verdict/scripts/tempo-tip20-probe.sh. Written by the script, never by hand. eth_call only: no key, no transaction, no fee, no state written. It is NOT 011 T-4.",
+  "rpc": "https://rpc.moderato.tempo.xyz",
+  "token": "0x20C0000000000000000000000000000000000000",
+  "metadata": {
+    "name()": "PathUSD",
+    "symbol()": "PathUSD",
+    "currency()": "USD",
+    "decimals()": 6,
+    "totalSupply()": 18562935218709551615000
+  },
+  "holderDiscoveredFromLogs": {
+    "address": "0x5bc1473610754a5ca10749552b119df90c1a1877",
+    "balanceRaw": 18447676688361609525,
+    "how": "most recent Transfer log in the last 800 blocks whose sender still holds > 2 PathUSD"
+  },
+  "checks": [
+    {
+      "check": "the token is not paused right now",
+      "why": "011 \u00a78: pause() can stop a proof-authorised payout AND the timeout. Disclosed, not mitigated -- this only says which state it is in today.",
+      "passed": true,
+      "observed": "paused=false"
+    },
+    {
+      "check": "a TIP-20 transfer INTO the escrow's own runtime code is allowed",
+      "why": "every fund() makes RecknZkEscrow the recipient. If InvalidRecipient caught ordinary contracts, the escrow could not be funded at all.",
+      "passed": true,
+      "observed": "returned 1"
+    },
+    {
+      "check": "approve(escrow) is allowed",
+      "why": "fund() pulls with transferFrom, so the buyer must approve first.",
+      "passed": true,
+      "observed": "returned 1"
+    },
+    {
+      "check": "a transfer to the token itself reverts with InvalidRecipient",
+      "why": "011 \u00a72.3 read this from documentation. Measured here. It is the behaviour RecknTempoTip20.t.sol's T-11 models: a deal whose seller is a TIP-20 can only time out.",
+      "passed": true,
+      "observed": "TIP20 token error: InvalidRecipient(InvalidRecipient)"
+    },
+    {
+      "check": "an underfunded transfer REVERTS, it does not return false",
+      "why": "RecknZkEscrow ignores the ERC-20 boolean (forge lints it). On a false-returning token fund() would record a funded deal holding nothing. This is the assumption that check exists for.",
+      "passed": true,
+      "observed": "TIP20 token error: InsufficientBalance(InsufficientBalance { available: 0, required: 1000000, token: 0x20c00000000000000"
+    },
+    {
+      "check": "transferFrom without allowance REVERTS, it does not return false",
+      "why": "same reason, on the pull side -- this is the call fund() actually makes.",
+      "passed": true,
+      "observed": "TIP20 token error: InsufficientAllowance(InsufficientAllowance)"
+    }
+  ]
+}
