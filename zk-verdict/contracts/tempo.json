@@ -495,7 +495,7 @@
     "notDemonstrated": "refundAfterDeadline. REFUND_AFTER is 30 days, time cannot be warped on a public chain, and the mismatch deal above is therefore FUNDED until then. The refund shown here is the proof-driven one (a FAILED proof paying the buyer), which is immediate and is a different thing.",
     "verified": {
       "_": "Written by zk-verdict/scripts/tempo-verify.sh, which reads the deployment back off the chain and derives every value from receipts and from deals() on the escrow. It does not trust the run that produced them; in particular the deal ids come out of the Funded event, not from a terminal.",
-      "verifiedAt": "2026-09-08T03:06:15Z",
+      "verifiedAt": "2026-09-08T05:03:33Z",
       "deployedEscrowCodehash": "0xff1bed25b0622d054ab09165d13f67b21ab2a2dfa608838d219fd96597f92568",
       "codehashMatchesCompiledArtifact": true,
       "cases": [
@@ -537,6 +537,21 @@
         }
       ],
       "notDemonstrated": "refundAfterDeadline. REFUND_AFTER is 30 days and time cannot be warped on a public chain, so the mismatch deal above stays Funded until then. The refund that IS demonstrated is the proof-driven one -- a FAILED proof paying the buyer -- which is immediate and is a different thing."
+    },
+    "sameCodeAsArc": {
+      "_": "Checked by zk-verdict/scripts/tempo-arc-parity.sh, which reads eth_getCode off BOTH chains and compares byte for byte. Recorded here rather than in arc.json so that 005 owns one record and 011 owns the other.",
+      "checkedOn": "2026-09-08",
+      "codehash": "0xff1bed25b0622d054ab09165d13f67b21ab2a2dfa608838d219fd96597f92568",
+      "arc": {
+        "chainId": 5042002,
+        "escrow": "0x580f2c3268b0a13bf46c6d381bf807cbf1595669"
+      },
+      "tempo": {
+        "chainId": 42431,
+        "escrow": "0x7e953a6ac16744ef1a02e343277ec55d7410f439"
+      },
+      "whyItMeansSomething": "RecknZkEscrow has no constructor and no immutable, so its deployed bytecode is a pure function of its source. Equal codehashes on two chains therefore mean the same source, not merely the same configuration. The verifier is deliberately NOT compared: it takes a vkey and an address at construction, so its code legitimately differs per deployment.",
+      "whatItDoesNotClaim": "That the two chains adjudicate identically. They do not: the deals name different verifiers and different tokens. What is shared is the source, and the payout logic it fixes."
     }
   }
 }

@@ -52,11 +52,12 @@
 page loads. Nothing here is a screenshot and nothing is typed into the page by hand.</p>
 
 <div class="scope">
-  <b>What is not here yet, said first.</b> The escrow is <b>not deployed</b> to Tempo. That
-  needs a funded key, and no key is used to build this page. Section&nbsp;5 is therefore
-  empty, and says so rather than showing something else. What sections&nbsp;1–4 establish is
-  that the chain <em>can</em> hold it: the proof machinery works here, and the fee model is
-  what makes this a Tempo slice rather than the same Solidity on another RPC.
+  <b>What is not here, said first.</b> The 30-day <code>refundAfterDeadline</code> is
+  <b>not demonstrated</b> and will not be: time cannot be warped on a public chain, and the
+  judging window is shorter than the deadline. The refund you can see in section&nbsp;5 is a
+  different thing — it is <b>driven by a proof</b> and is immediate. And the proof establishes
+  that the <em>declared</em> prestate and execution produced the committed result; it does not
+  establish that those inputs came from Solana mainnet.
 </div>
 
 <h2>1. Which chain this is — and the URL that is not it</h2>
@@ -118,17 +119,35 @@ page loads. Nothing here is a screenshot and nothing is typed into the page by h
   transaction type to produce.</p>
 </div>
 
-<h2>5. The settlements — empty, and honestly empty</h2>
-<div class="card pending">
+<h2>5. The settlements — read from the chain, in your browser</h2>
+<div class="card">
+  <table class="two"><tbody>
+    <tr><td>Escrow</td><td class="val" id="a-escrow">…</td></tr>
+    <tr><td>Verifier</td><td class="val" id="a-verifier">…</td></tr>
+    <tr><td>SP1 Groth16</td><td class="val" id="a-sp1">…</td></tr>
+    <tr><td>Escrow codehash</td><td class="val" id="a-codehash">…</td></tr>
+  </tbody></table>
+  <p class="note" id="d-code"></p>
+</div>
+
+<div class="card">
+  <p><span class="st pend" id="s-settle">…</span> <span class="big" id="t-settle">reading the deals…</span></p>
+  <div class="wrap"><table><thead><tr>
+    <th>deal</th><th>the proof said</th><th>the TIP-20 went</th><th>fee paid in</th><th>state</th>
+  </tr></thead><tbody id="rows-settle"></tbody></table></div>
+  <p class="note" id="d-settle"></p>
+  <p class="note">Nothing in this table was passed to the page. The generator hands over deal
+  ids and transaction hashes; your browser calls <code>deals()</code> on the escrow and reads
+  the settlement receipts, and works out the rest. The third row has <em>no transaction</em>
+  because a real proof of a different execution was rejected before it reached a block — so
+  the money is still in the escrow, where you can see it.</p>
+</div>
+
+<div class="card pending" id="card-empty" style="display:none">
   <p><span class="st warn">◻</span> <span class="big">Nothing is deployed to Tempo.</span></p>
-  <p class="note">When the escrow is deployed and a deal settles, this section will read the
-  receipts the way <a href="index.html">the Arc page</a> already does — the verdict, where the
-  money went, and the <code>feeToken</code> that paid for the decision. Until then it stays
-  empty. A page that filled this in from a local run would be showing you a different chain.</p>
-  <p class="note">What is already true, and testable without this chain: the escrow settles a
-  TIP-20 in both directions on the same Solana proofs the Arc tests use, a real proof of a
-  different execution moves nothing, and a paused token blocks the payout <em>and</em> the
-  timeout. Those run in <code>forge test --match-contract RecknTempoTip20Test</code>.</p>
+  <p class="note">The record this page is generated from carries no deployment, so this
+  section stays empty rather than showing something else. A page that filled it in from a
+  local run would be showing you a different chain.</p>
 </div>
 
 <h2>6. What crosses, and what does not</h2>
@@ -309,6 +328,95 @@ async function fees() {
   } catch (e) { set("s-fee", "bad", "✗"); put("t-fee", "could not scan: " + e.message); }
 }
 
+// Section 5. Selectors and topics are keccak prefixes of the signatures written beside
+// them, so a wrong one fails loudly rather than displaying a wrong number:
+//   deals(bytes32) -> 0x81cd872a          balanceOf(address) -> 0x70a08231
+//   SettledByProof(bytes32,address,uint8,bytes32)   Transfer(address,address,uint256)
+const SEL_DEALS = "0x81cd872a";
+const TOPIC_SETTLED = "0xdcf16e3e3b55a0dfd0998a3810c6ff839158e0eba2f52b57c9112fd59fc36fe6";
+const TOPIC_TRANSFER = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+const STATE = { 0: "None", 1: "Funded", 2: "Settled" };
+
+const word = (h, n) => h.slice(2 + n * 64, 2 + (n + 1) * 64);
+// slice(-40), not slice(24): `word()` returns 64 bare hex chars but a log TOPIC is 66 chars
+// WITH the 0x, and the same helper is used for both. Taking a fixed offset from the front
+// silently produced a 42-character non-address for every topic, so the escrow's own Transfer
+// log never matched and two settlements that plainly moved money rendered as "nothing moved".
+// Counting from the end is right for both shapes.
+const addrOf = (w) => "0x" + w.slice(-40);
+const same = (a, b) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
+const amt = (raw) => (Number(BigInt(raw)) / 10 ** CFG.feeTokenDecimals).toFixed(CFG.feeTokenDecimals);
+const short = (h) => h.slice(0, 10) + "…";
+const txLink = (h) => CFG.explorer ? `<a href="${CFG.explorer}/tx/${h}">${short(h)}</a>` : short(h);
+
+async function settlements() {
+  const D = CFG.deployment;
+  if (!D) {
+    const c = $("card-empty"); if (c) c.style.display = "";
+    set("s-settle", "warn", "◻");
+    put("t-settle", "Nothing is deployed to Tempo.");
+    return;
+  }
+  put("a-escrow", D.escrow); put("a-verifier", D.verifier); put("a-sp1", D.sp1);
+  put("a-codehash", D.escrowCodehash || "—");
+  put("d-code", `Deployed ${D.deployedAt}. RecknZkEscrow has no constructor and no immutable, `
+              + `so the same source really is the same deployed code — the identical codehash `
+              + `is live on Arc as well.`);
+
+  const tb = $("rows-settle");
+  let good = 0, expected = 0;
+  try {
+    for (const c of D.cases) {
+      expected++;
+      const raw = await call(D.escrow, SEL_DEALS + c.dealId.slice(2));
+      const state = Number(BigInt("0x" + word(raw, 8)));
+      const amount = "0x" + word(raw, 3);
+
+      let said = "—", went = "—", fee = "—", ok = false;
+      if (c.settleTx) {
+        const r = await rpc(CFG.rpc, "eth_getTransactionReceipt", [c.settleTx]);
+        const ev = (r.logs || []).find((l) => l.topics[0] === TOPIC_SETTLED);
+        const tr = (r.logs || []).find((l) => l.topics[0] === TOPIC_TRANSFER
+                    && same(l.address, CFG.feeToken) && same(addrOf(l.topics[1]), D.escrow));
+        const outcome = ev ? Number(BigInt("0x" + ev.data.slice(2, 66))) : null;
+        const to = ev ? addrOf(ev.topics[2]) : null;
+        said = outcome === 0 ? "REPRODUCED" : outcome === 1 ? "FAILED" : "?";
+        const who = same(to, D.seller) ? "the seller" : same(to, D.buyer) ? "the buyer" : to;
+        went = tr ? `${amt(tr.data)} → ${who}` : "nothing moved";
+        fee = same(r.feeToken, CFG.feeToken) ? `${CFG.feeToken.slice(0, 10)}… ✓` : (r.feeToken || "—");
+        // The claim, checked here rather than asserted: a REPRODUCED proof pays the seller,
+        // a FAILED one pays the buyer, and either way the deal ends Settled.
+        ok = state === 2 && same(r.feeToken, CFG.feeToken) && !!tr
+             && BigInt(tr.data) === BigInt(amount)
+             && ((outcome === 0 && same(to, D.seller)) || (outcome === 1 && same(to, D.buyer)));
+      } else {
+        const held = await call(CFG.feeToken, "0x70a08231" + "0".repeat(24) + D.escrow.slice(2));
+        said = "rejected: BindingMismatch";
+        went = `nowhere — the escrow still holds ${amt(held)}`;
+        fee = "no transaction exists";
+        ok = state === 1 && BigInt(held) >= BigInt(amount);
+      }
+      if (ok) good++;
+      const tr2 = document.createElement("tr");
+      tr2.innerHTML = `<td class="m">${c.name}<br><span class="note">${c.settleTx ? txLink(c.settleTx) : "no tx"}</span></td>`
+                    + `<td class="m">${said}</td><td>${went}</td><td class="m">${fee}</td>`
+                    + `<td class="m"><span class="${ok ? "ok" : "bad"}">${ok ? "✓" : "✗"}</span> ${STATE[state] || state}</td>`;
+      tb.appendChild(tr2);
+    }
+    const allOk = good === expected && expected > 0;
+    set("s-settle", allOk ? "ok" : "bad", allOk ? "✓" : "✗");
+    put("t-settle", allOk
+      ? "A Solana proof released a stablecoin, and the fee that released it was the same stablecoin."
+      : `${good} of ${expected} deals matched what this page claims — read the table.`);
+    put("d-settle", "Tempo has no native gas token. The fee column is the whole reason this is a "
+                  + "Tempo slice rather than the same Solidity on another RPC: the payment and the "
+                  + "cost of deciding it are denominated in the same money.");
+  } catch (e) {
+    set("s-settle", "bad", "✗");
+    put("t-settle", "could not read the settlements: " + e.message);
+  }
+}
+
 put("commit", CFG.commit);
 put("curl",
 `# the chain you are on
@@ -326,7 +434,7 @@ curl -s ${CFG.rpc} -H 'content-type: application/json' \\
 # and the tests that need no chain at all
 forge test --match-contract RecknTempoTip20Test`);
 
-chains(); precompiles(); balances(); feeToken(); fees();
+chains(); precompiles(); balances(); feeToken(); fees(); settlements();
 </script>
 </body>
 </html>
