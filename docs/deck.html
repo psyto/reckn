@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Reckn — Keep assets native. Settle on proof.</title>
+<style>
+  /* One source, three outputs: a page you can open, a PDF you can send, and 1920x1080
+     stills the film cuts to. The deck and the film cannot say different things because
+     there is only one file saying them. */
+  :root{
+    --bg:#17130f; --fg:#f2ede6; --dim:#cbbfae; --faint:#8a7f72;
+    --line:#2b241d; --green:#3fb950; --amber:#e0b341;
+    --sans:ui-sans-serif,-apple-system,BlinkMacSystemFont,"SF Pro Display",Inter,"Segoe UI",sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0a0908;font-family:var(--sans);color:var(--fg)}
+
+  /* Every slide is exactly 1920x1080 so a screenshot IS the frame. */
+  .slide{
+    position:relative;width:1920px;height:1080px;background:var(--bg);
+    padding:96px 120px;display:flex;flex-direction:column;justify-content:center;
+    overflow:hidden;margin:0 auto 28px;
+  }
+  .kicker{font:600 26px/1 var(--sans);letter-spacing:.18em;text-transform:uppercase;
+          color:var(--faint);margin-bottom:30px}
+  h1{font:700 108px/1.02 var(--sans);letter-spacing:-.035em}
+  h2{font:700 76px/1.1 var(--sans);letter-spacing:-.03em}
+  .lede{font:400 40px/1.45 var(--sans);color:var(--dim);max-width:26em;margin-top:34px}
+  .rule{width:96px;height:4px;background:var(--green);margin:38px 0}
+  .foot{position:absolute;left:120px;right:120px;bottom:56px;
+        font:400 24px/1.4 var(--sans);color:var(--faint);
+        border-top:1px solid var(--line);padding-top:20px;display:flex;gap:28px}
+  .foot b{color:var(--dim);font-weight:600}
+  .n{position:absolute;right:120px;top:96px;font:600 24px/1 var(--mono);color:var(--faint)}
+
+  table{border-collapse:collapse;width:100%;margin-top:44px}
+  td,th{text-align:left;padding:22px 28px 22px 0;border-bottom:1px solid var(--line);
+        vertical-align:top;font-size:32px;line-height:1.35}
+  th{font:600 22px/1 var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+  td.k{font-weight:700;white-space:nowrap;width:1%;padding-right:56px}
+  td.d{color:var(--dim)}
+  td.bad, .bad{color:#f0837a} td.ok, .ok{color:var(--green)}
+  code{font-family:var(--mono);font-size:.9em;color:var(--dim)}
+
+  .big{font:700 64px/1.2 var(--sans);letter-spacing:-.02em;margin-top:10px}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:64px;margin-top:48px}
+  .card{border:1px solid var(--line);border-radius:16px;padding:34px 38px;background:#1c1712}
+  .card h3{font:600 24px/1 var(--sans);letter-spacing:.12em;text-transform:uppercase;
+           color:var(--faint);margin-bottom:20px}
+  .card p{font:400 32px/1.4 var(--sans);color:var(--dim)}
+  .card .num{font:700 72px/1 var(--sans);color:var(--fg);letter-spacing:-.03em}
+  .quote{font:700 60px/1.28 var(--sans);letter-spacing:-.02em;max-width:22em}
+  .src{font:400 24px/1.4 var(--mono);color:var(--faint);margin-top:26px}
+  figure{margin-top:30px;display:flex;justify-content:center}
+  figure img{width:100%;max-height:660px;object-fit:contain}
+
+  @media print{
+    body{background:none}
+    .slide{margin:0;page-break-after:always;break-after:page}
+  }
+  @page{size:1920px 1080px;margin:0}
+</style>
+</head>
+<body>
+
+<!-- 01 ---------------------------------------------------------------------->
+<section class="slide" id="s01">
+  <div class="kicker">Reckn</div>
+  <h1>Keep assets native.<br>Settle on proof.</h1>
+  <div class="rule"></div>
+  <p class="lede">An escrow that releases only when the work it was funded against can be
+  re-executed and reproduced — and refunds the buyer when it cannot.</p>
+  <div class="foot"><span><b>Live on Arc testnet.</b> psyto.github.io/reckn</span></div>
+</section>
+
+<!-- 02 ---------------------------------------------------------------------->
+<section class="slide" id="s02">
+  <div class="n">01</div>
+  <div class="kicker">The problem</div>
+  <h2>Two parties decide whether you get paid.<br>Neither can see the work.</h2>
+  <table>
+    <tr><th>in the way</th><th>what it is asked to decide</th><th>what it can actually see</th></tr>
+    <tr><td class="k">A human approver,<br>a TEE, a resolver</td><td>Was the work done?</td><td class="d">A claim somebody wrote</td></tr>
+    <tr><td class="k">A bridge</td><td>Does the asset arrive?</td><td class="d bad">Nothing about the work at all</td></tr>
+  </table>
+  <div class="foot"><span>One was told about it. The other was never asked.</span>
+    <span><b>docs/why.md §0–0.1</b></span></div>
+</section>
+
+<!-- 03 ---------------------------------------------------------------------->
+<section class="slide" id="s03">
+  <div class="n">02</div>
+  <div class="kicker">The inversion</div>
+  <p class="quote">Don't move the asset to reach the work.<br>
+    <span style="color:var(--green)">Move a proof of the work to reach the asset.</span></p>
+  <div class="rule"></div>
+  <p class="lede">The buyer escrows the stablecoin on the chain it already lives on. The
+  seller works wherever the work belongs. The disputed execution is replayed — release if it
+  reproduces, refund if it does not.</p>
+  <div class="foot"><span><b>Don't make a bridge decide where money goes. Make proof decide.</b></span></div>
+</section>
+
+<!-- 04 ---------------------------------------------------------------------->
+<section class="slide" id="s04">
+  <div class="n">03</div>
+  <div class="kicker">What crosses the boundary</div>
+  <figure><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiIHJvbGU9ImltZyIgYXJpYS1sYWJlbGxlZGJ5PSJ0aXRsZSBkZXNjIj4KICA8dGl0bGUgaWQ9InRpdGxlIj5Tb2xhbmEgd29yaywgcHJvb2Ytb25seSB0cmFuc2ZlciwgYW5kIEFyYyBzZXR0bGVtZW50PC90aXRsZT4KICA8ZGVzYyBpZD0iZGVzYyI+QSBwcmVjaXNlIGV4cGxhbmF0aW9uIGRpYWdyYW0uIFdvcmsgaXMgcmUtZXhlY3V0ZWQgaW5zaWRlIGEgemtWTSB1c2luZyBhIGNvbW1pdHRlZCBTb2xhbmEgcHJlc3RhdGUuIE9ubHkgYSBHcm90aDE2IHByb29mIGNyb3NzZXMgdG8gQXJjLiBVU0RDIHN0YXlzIGluIHRoZSBBcmMgZXNjcm93IGFuZCBpcyByZWxlYXNlZCBvciByZWZ1bmRlZCBhZnRlciB2ZXJpZmljYXRpb24uIFRoZSBkaWFncmFtIGRpc2Nsb3NlcyB0aGF0IHRoaXMgcHJvdmVzIGNvbnNpc3RlbmN5LCBub3QgU29sYW5hIG1haW5uZXQgcHJvdmVuYW5jZS48L2Rlc2M+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iIzE3MTMwZiIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwZTExMTAiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9InByb29mIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMCI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iIzc5ZDhhMSIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMzZmI5NTAiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8ZmlsdGVyIGlkPSJnbG93IiB4PSItMzAlIiB5PSItNjAlIiB3aWR0aD0iMTYwJSIgaGVpZ2h0PSIyMjAlIj4KICAgICAgPGZlR2F1c3NpYW5CbHVyIHN0ZERldmlhdGlvbj0iOSIgcmVzdWx0PSJibHVyIi8+CiAgICAgIDxmZU1lcmdlPjxmZU1lcmdlTm9kZSBpbj0iYmx1ciIvPjxmZU1lcmdlTm9kZSBpbj0iU291cmNlR3JhcGhpYyIvPjwvZmVNZXJnZT4KICAgIDwvZmlsdGVyPgogICAgPG1hcmtlciBpZD0iYXJyb3dNaW50IiB2aWV3Qm94PSIwIDAgMTAgMTAiIHJlZlg9IjguNSIgcmVmWT0iNSIgbWFya2VyV2lkdGg9IjgiIG1hcmtlckhlaWdodD0iOCIgb3JpZW50PSJhdXRvLXN0YXJ0LXJldmVyc2UiPgogICAgICA8cGF0aCBkPSJNIDAgMCBMIDEwIDUgTCAwIDEwIHoiIGZpbGw9IiM3OWQ4YTEiLz4KICAgIDwvbWFya2VyPgogICAgPG1hcmtlciBpZD0iYXJyb3dHcmF5IiB2aWV3Qm94PSIwIDAgMTAgMTAiIHJlZlg9IjguNSIgcmVmWT0iNSIgbWFya2VyV2lkdGg9IjgiIG1hcmtlckhlaWdodD0iOCIgb3JpZW50PSJhdXRvLXN0YXJ0LXJldmVyc2UiPgogICAgICA8cGF0aCBkPSJNIDAgMCBMIDEwIDUgTCAwIDEwIHoiIGZpbGw9IiM4YTdmNzIiLz4KICAgIDwvbWFya2VyPgogICAgPHN0eWxlPgogICAgICAua2lja2VyIHsgZm9udDogNjAwIDIycHggdWktbW9ub3NwYWNlLCBTRk1vbm8tUmVndWxhciwgTWVubG8sIG1vbm9zcGFjZTsgbGV0dGVyLXNwYWNpbmc6IC4yMmVtOyBmaWxsOiAjOGE3ZjcyOyB9CiAgICAgIC50aXRsZSB7IGZvbnQ6IDcwMCA1OHB4IEludGVyLCB1aS1zYW5zLXNlcmlmLCBzeXN0ZW0tdWksIHNhbnMtc2VyaWY7IGxldHRlci1zcGFjaW5nOiAtLjAzNWVtOyBmaWxsOiAjZjJlZGU2OyB9CiAgICAgIC56b25lIHsgZm9udDogNzAwIDIycHggdWktbW9ub3NwYWNlLCBTRk1vbm8tUmVndWxhciwgTWVubG8sIG1vbm9zcGFjZTsgbGV0dGVyLXNwYWNpbmc6IC4xNGVtOyBmaWxsOiAjYzljMWI4OyB9CiAgICAgIC5jYXJkdGl0bGUgeyBmb250OiA3MDAgMzBweCBJbnRlciwgdWktc2Fucy1zZXJpZiwgc3lzdGVtLXVpLCBzYW5zLXNlcmlmOyBmaWxsOiAjZjJlZGU2OyBsZXR0ZXItc3BhY2luZzogLS4wMmVtOyB9CiAgICAgIC5ib2R5IHsgZm9udDogNDAwIDIycHggSW50ZXIsIHVpLXNhbnMtc2VyaWYsIHN5c3RlbS11aSwgc2Fucy1zZXJpZjsgZmlsbDogI2M5YzFiODsgfQogICAgICAubW9ubyB7IGZvbnQ6IDUwMCAxOHB4IHVpLW1vbm9zcGFjZSwgU0ZNb25vLVJlZ3VsYXIsIE1lbmxvLCBtb25vc3BhY2U7IGZpbGw6ICNhNjljOTE7IH0KICAgICAgLm1pbnQgeyBmaWxsOiAjNzlkOGExOyB9CiAgICAgIC53YXJuIHsgZmlsbDogI2YwYjZhODsgfQogICAgICAuc21hbGwgeyBmb250OiA0MDAgMThweCBJbnRlciwgdWktc2Fucy1zZXJpZiwgc3lzdGVtLXVpLCBzYW5zLXNlcmlmOyBmaWxsOiAjYTY5YzkxOyB9CiAgICAgIC5mb290ZXIgeyBmb250OiA1MDAgMTlweCBJbnRlciwgdWktc2Fucy1zZXJpZiwgc3lzdGVtLXVpLCBzYW5zLXNlcmlmOyBmaWxsOiAjZDdiMGE2OyB9CiAgICA8L3N0eWxlPgogIDwvZGVmcz4KCiAgPHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCNiZykiLz4KICA8cmVjdCB4PSI1NCIgeT0iNTAiIHdpZHRoPSIxODEyIiBoZWlnaHQ9Ijk4MCIgcng9IjI4IiBmaWxsPSJub25lIiBzdHJva2U9IiMzMzJkMjciIHN0cm9rZS13aWR0aD0iMiIvPgoKICA8dGV4dCB4PSIxMDgiIHk9IjEzMCIgY2xhc3M9ImtpY2tlciI+UkVDS04gLyBDUk9TUy1WTSBTRVRUTEVNRU5UPC90ZXh0PgogIDx0ZXh0IHg9IjEwOCIgeT0iMjA1IiBjbGFzcz0idGl0bGUiPlRoZSBwcm9vZiBjcm9zc2VzLiBUaGUgVVNEQyBkb2VzIG5vdC48L3RleHQ+CiAgPHRleHQgeD0iMTA4IiB5PSIyNDYiIGNsYXNzPSJib2R5Ij5BIFNvbGFuYSBjb21wdXRhdGlvbiBpcyByZS1leGVjdXRlZCBpbiBhIHprVk07IEFyYyBzZXR0bGVzIG9ubHkgZnJvbSB0aGUgdmVyaWZpZWQgcmVzdWx0LjwvdGV4dD4KCiAgPHJlY3QgeD0iMTA4IiB5PSIzMDYiIHdpZHRoPSI3MDUiIGhlaWdodD0iNTUyIiByeD0iMjIiIGZpbGw9IiMxZDIxMWQiIHN0cm9rZT0iIzNkNGI0MSIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgPHRleHQgeD0iMTU0IiB5PSIzNjUiIGNsYXNzPSJ6b25lIj5TT0xBTkEgV09SSyBDT05URVhUPC90ZXh0PgogIDxsaW5lIHgxPSIxNTQiIHkxPSIzOTAiIHgyPSI3NjciIHkyPSIzOTAiIHN0cm9rZT0iIzNkNGI0MSIgc3Ryb2tlLXdpZHRoPSIyIi8+CgogIDxyZWN0IHg9IjE1NCIgeT0iNDM1IiB3aWR0aD0iMjg2IiBoZWlnaHQ9IjE5NiIgcng9IjE2IiBmaWxsPSIjMTcxYTE4IiBzdHJva2U9IiM0NTUyNDciIHN0cm9rZS13aWR0aD0iMiIvPgogIDx0ZXh0IHg9IjE4NCIgeT0iNDkwIiBjbGFzcz0iY2FyZHRpdGxlIj5EZXRlcm1pbmlzdGljIHdvcms8L3RleHQ+CiAgPHRleHQgeD0iMTg0IiB5PSI1MzAiIGNsYXNzPSJib2R5Ij5lLmcuIGEgU29sYW5hPC90ZXh0PgogIDx0ZXh0IHg9IjE4NCIgeT0iNTYwIiBjbGFzcz0iYm9keSI+U3lzdGVtIHRyYW5zZmVyPC90ZXh0PgogIDx0ZXh0IHg9IjE4NCIgeT0iNjA0IiBjbGFzcz0ibW9ubyI+Y29tbWl0dGVkIHByZXN0YXRlPC90ZXh0PgoKICA8cGF0aCBkPSJNIDQ1OCA1MzIgQyA0OTIgNTMyLCA1MDYgNTMyLCA1MzYgNTMyIiBmaWxsPSJub25lIiBzdHJva2U9IiM4YTdmNzIiIHN0cm9rZS13aWR0aD0iNCIgbWFya2VyLWVuZD0idXJsKCNhcnJvd0dyYXkpIi8+CgogIDxyZWN0IHg9IjU1NCIgeT0iNDM1IiB3aWR0aD0iMjEzIiBoZWlnaHQ9IjE5NiIgcng9IjE2IiBmaWxsPSIjMTcxYTE4IiBzdHJva2U9IiM3OWQ4YTEiIHN0cm9rZS13aWR0aD0iMiIvPgogIDx0ZXh0IHg9IjU4NCIgeT0iNDkwIiBjbGFzcz0iY2FyZHRpdGxlIj56a1ZNPC90ZXh0PgogIDx0ZXh0IHg9IjU4NCIgeT0iNTMwIiBjbGFzcz0iYm9keSI+cmUtZXhlY3V0ZXM8L3RleHQ+CiAgPHRleHQgeD0iNTg0IiB5PSI1NjAiIGNsYXNzPSJib2R5Ij50aGUgcHJlZGljYXRlPC90ZXh0PgogIDx0ZXh0IHg9IjU4NCIgeT0iNjA0IiBjbGFzcz0ibW9ubyBtaW50Ij5yZXByb2R1Y2VkIC8gZmFpbGVkPC90ZXh0PgoKICA8cGF0aCBkPSJNIDY2MCA2NTIgQyA2NjAgNjk2LCA2NjAgNzE5LCA2NjAgNzQ5IiBmaWxsPSJub25lIiBzdHJva2U9IiM3OWQ4YTEiIHN0cm9rZS13aWR0aD0iNCIgbWFya2VyLWVuZD0idXJsKCNhcnJvd01pbnQpIi8+CiAgPHRleHQgeD0iNDc3IiB5PSI3OTAiIGNsYXNzPSJtb25vIj5Hcm90aDE2IHByb29mIG9mIHRoZSByZXN1bHQ8L3RleHQ+CgogIDxsaW5lIHgxPSI5NjAiIHkxPSIzMDAiIHgyPSI5NjAiIHkyPSI4NzUiIHN0cm9rZT0iIzVlNTY0ZCIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtZGFzaGFycmF5PSIxMSAxMyIvPgogIDx0ZXh0IHg9Ijk2MCIgeT0iMzUyIiBjbGFzcz0iem9uZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Vk0gQk9VTkRBUlk8L3RleHQ+CiAgPHRleHQgeD0iOTYwIiB5PSIzODciIGNsYXNzPSJzbWFsbCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+bm8gYnJpZGdlIMK3IG5vIGxpZ2h0IGNsaWVudDwvdGV4dD4KCiAgPHBhdGggZD0iTSA3MDAgNzY2IEMgNzkwIDc2NiwgODI5IDc2NiwgOTI4IDc2NiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ1cmwoI3Byb29mKSIgc3Ryb2tlLXdpZHRoPSI4IiBmaWx0ZXI9InVybCgjZ2xvdykiIG1hcmtlci1lbmQ9InVybCgjYXJyb3dNaW50KSIvPgogIDxwYXRoIGQ9Ik0gOTkyIDc2NiBDIDEwOTIgNzY2LCAxMTMwIDc2NiwgMTIyNCA3NjYiIGZpbGw9Im5vbmUiIHN0cm9rZT0idXJsKCNwcm9vZikiIHN0cm9rZS13aWR0aD0iOCIgZmlsdGVyPSJ1cmwoI2dsb3cpIiBtYXJrZXItZW5kPSJ1cmwoI2Fycm93TWludCkiLz4KICA8cmVjdCB4PSI4MTciIHk9IjcxNiIgd2lkdGg9IjI4NiIgaGVpZ2h0PSI1NiIgcng9IjI4IiBmaWxsPSIjMjAyZDI0IiBzdHJva2U9IiM3OWQ4YTEiIHN0cm9rZS13aWR0aD0iMiIvPgogIDx0ZXh0IHg9Ijk2MCIgeT0iNzUyIiBjbGFzcz0ibW9ubyBtaW50IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5PTkxZIFRIRSBQUk9PRiBDUk9TU0VTPC90ZXh0PgoKICA8cmVjdCB4PSIxMTA3IiB5PSIzMDYiIHdpZHRoPSI3MDUiIGhlaWdodD0iNTUyIiByeD0iMjIiIGZpbGw9IiMxYjFhMTgiIHN0cm9rZT0iIzRhNDUzZSIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgPHRleHQgeD0iMTE1MyIgeT0iMzY1IiBjbGFzcz0iem9uZSI+QVJDIFNFVFRMRU1FTlQgQ09OVEVYVDwvdGV4dD4KICA8bGluZSB4MT0iMTE1MyIgeTE9IjM5MCIgeDI9IjE3NjYiIHkyPSIzOTAiIHN0cm9rZT0iIzRhNDUzZSIgc3Ryb2tlLXdpZHRoPSIyIi8+CgogIDxyZWN0IHg9IjExNTMiIHk9IjQzNSIgd2lkdGg9IjIzMCIgaGVpZ2h0PSIxOTYiIHJ4PSIxNiIgZmlsbD0iIzE3MTYxMyIgc3Ryb2tlPSIjNzlkOGExIiBzdHJva2Utd2lkdGg9IjIiLz4KICA8dGV4dCB4PSIxMTgzIiB5PSI0OTAiIGNsYXNzPSJjYXJkdGl0bGUiPkFyYyB2ZXJpZmllcjwvdGV4dD4KICA8dGV4dCB4PSIxMTgzIiB5PSI1MzAiIGNsYXNzPSJib2R5Ij5jaGVja3Mgb25lPC90ZXh0PgogIDx0ZXh0IHg9IjExODMiIHk9IjU2MCIgY2xhc3M9ImJvZHkiPmdlbmVyaWMgcHJvb2Y8L3RleHQ+CiAgPHRleHQgeD0iMTE4MyIgeT0iNjA0IiBjbGFzcz0ibW9ubyBtaW50Ij5vbi1jaGFpbjwvdGV4dD4KCiAgPHBhdGggZD0iTSAxNDAyIDUzMiBDIDE0MzcgNTMyLCAxNDUyIDUzMiwgMTQ4MSA1MzIiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzc5ZDhhMSIgc3Ryb2tlLXdpZHRoPSI0IiBtYXJrZXItZW5kPSJ1cmwoI2Fycm93TWludCkiLz4KCiAgPHJlY3QgeD0iMTQ5OCIgeT0iNDM1IiB3aWR0aD0iMjY4IiBoZWlnaHQ9IjE5NiIgcng9IjE2IiBmaWxsPSIjMjQyMDE5IiBzdHJva2U9IiNjOWE2NWYiIHN0cm9rZS13aWR0aD0iMiIvPgogIDx0ZXh0IHg9IjE1MjgiIHk9IjQ5MCIgY2xhc3M9ImNhcmR0aXRsZSI+UmVja24gZXNjcm93PC90ZXh0PgogIDx0ZXh0IHg9IjE1MjgiIHk9IjUzMCIgY2xhc3M9ImJvZHkiPlVTREMgc3RheXM8L3RleHQ+CiAgPHRleHQgeD0iMTUyOCIgeT0iNTYwIiBjbGFzcz0iYm9keSI+b24gQXJjPC90ZXh0PgogIDx0ZXh0IHg9IjE1MjgiIHk9IjYwNCIgY2xhc3M9Im1vbm8iIGZpbGw9IiNlMWM1ODIiPmhlbGQg4oaSIHNldHRsZWQ8L3RleHQ+CgogIDxwYXRoIGQ9Ik0gMTYzMiA2NTEgQyAxNjMyIDY5NywgMTU1NiA3MTQsIDE1MTUgNzQxIiBmaWxsPSJub25lIiBzdHJva2U9IiM3OWQ4YTEiIHN0cm9rZS13aWR0aD0iNCIgbWFya2VyLWVuZD0idXJsKCNhcnJvd01pbnQpIi8+CiAgPHBhdGggZD0iTSAxNjMyIDY1MSBDIDE2MzIgNjk3LCAxNzA2IDcxNCwgMTc0NiA3NDEiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2Q3YjBhNiIgc3Ryb2tlLXdpZHRoPSI0IiBtYXJrZXItZW5kPSJ1cmwoI2Fycm93R3JheSkiLz4KICA8IS0tIENlbnRyZWQgdW5kZXIgdGhlaXIgb3duIGFycm93aGVhZHMgKDE1MTUgYW5kIDE3NDYpLiBMZWZ0LWFuY2hvcmVkIHRoZXkgY29sbGlkZWQ6CiAgICAgICBhdCBtb25vIDE4cHggIlJFUFJPRFVDRUQg4oaSIHJlbGVhc2UiIHJ1bnMgdG8geD0xNjcyIGFuZCB0aGUgc2Vjb25kIGxhYmVsIHN0YXJ0ZWQKICAgICAgIGF0IDE2NDcsIHNvIHRoZSBmcmFtZSByZWFkICJyZWxlYVNGQUlMRUQiLiBIZWxkIGZvciB0ZW4gc2Vjb25kcyBpdCBpcyB1bm1pc3NhYmxlLiAtLT4KICA8dGV4dCB4PSIxNTE1IiB5PSI3OTAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGNsYXNzPSJtb25vIG1pbnQiPlJFUFJPRFVDRUQg4oaSIHJlbGVhc2U8L3RleHQ+CiAgPHRleHQgeD0iMTc0NiIgeT0iNzkwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBjbGFzcz0ibW9ubyB3YXJuIj5GQUlMRUQg4oaSIHJlZnVuZDwvdGV4dD4KCiAgPHJlY3QgeD0iMTA4IiB5PSI5MDYiIHdpZHRoPSIxNzA0IiBoZWlnaHQ9IjcyIiByeD0iMTYiIGZpbGw9IiMyNzFkMWEiIHN0cm9rZT0iIzY5NDYzZCIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgPHRleHQgeD0iMTQ1IiB5PSI5NTEiIGNsYXNzPSJmb290ZXIiPlNjb3BlOiB0aGlzIHByb3ZlcyB0aGUgcmUtZXhlY3V0ZWQgcmVzdWx0IG1hdGNoZXMgdGhlIGNvbW1pdHRlZCBpbnB1dHMuIEl0IGRvZXMgbm90IHlldCBwcm92ZSB0aG9zZSBpbnB1dHMgY2FtZSBmcm9tIFNvbGFuYSBtYWlubmV0LjwvdGV4dD4KPC9zdmc+Cg==" alt="Solana work re-executed in a zkVM; only a Groth16 proof crosses to Arc, where USDC stays in the escrow."></figure>
+  <div class="foot"><span>The proof crosses. <b>The asset never does.</b></span>
+    <span>No bridge. No light client. No resolver on the path that chooses the payout.</span></div>
+</section>
+
+<!-- 05 ---------------------------------------------------------------------->
+<section class="slide" id="s05">
+  <div class="n">04</div>
+  <div class="kicker">Nobody decides — as a build condition</div>
+  <h2>No owner. No admin.<br>No resolver. No upgrade path.</h2>
+  <p class="lede">Not a promise. If one ever appears, <b style="color:var(--fg)">the build
+  fails</b> — and the surface it guards is exactly three functions.</p>
+  <div class="cols">
+    <div class="card"><h3>The whole surface</h3>
+      <p><code>fund</code> · <code>settleWithProof</code> · <code>refundAfterDeadline</code></p></div>
+    <div class="card"><h3>The timeout</h3>
+      <p>Permissionless, and it pays the caller <b style="color:var(--fg)">nothing</b>.</p></div>
+  </div>
+  <div class="foot"><span><b>scripts/no-keys.sh</b> — run it yourself</span></div>
+</section>
+
+<!-- 06 ---------------------------------------------------------------------->
+<section class="slide" id="s06">
+  <div class="n">05</div>
+  <div class="kicker">It is running</div>
+  <h2>Four settlements on Arc testnet.</h2>
+  <div class="cols" style="grid-template-columns:1fr 1fr 1fr">
+    <div class="card"><h3>Settlements</h3><div class="num">4</div>
+      <p>Real testnet USDC, both directions.</p></div>
+    <div class="card"><h3>Decided by Solana proofs</h3><div class="num">2</div>
+      <p>One escrow, two virtual machines.</p></div>
+    <div class="card"><h3>Cost to decide one</h3><div class="num">&lt;3¢</div>
+      <p>Computed from the receipts, not quoted.</p></div>
+  </div>
+  <div class="foot"><span>Your browser reads them off the chain — nothing installed, no wallet.</span>
+    <span><b>psyto.github.io/reckn</b></span></div>
+</section>
+
+<!-- 07 ---------------------------------------------------------------------->
+<section class="slide" id="s07">
+  <div class="n">06</div>
+  <div class="kicker">What this does not claim</div>
+  <h2>The half that is easy to leave out.</h2>
+  <table>
+    <tr><td class="k bad">Not</td><td>“Bridges are unnecessary.”</td>
+        <td class="d">It removes the bridge <b>as the decider</b>. Moving funds to where you pay is a different problem.</td></tr>
+    <tr><td class="k bad">Not</td><td>“Fragmented liquidity is solved.”</td>
+        <td class="d">You must already hold the settlement asset on the chain you pay from.</td></tr>
+    <tr><td class="k bad">Not</td><td>“We prove Solana mainnet state.”</td>
+        <td class="d">The guest recomputes a bank hash over the account set <b>the deal named</b>. Consistency, not provenance.</td></tr>
+  </table>
+  <div class="foot"><span>Stated on the live page, in the film, and in a test — not in a footnote.</span></div>
+</section>
+
+<!-- 08 ---------------------------------------------------------------------->
+<section class="slide" id="s08">
+  <div class="kicker">Reckn</div>
+  <h1>Keep assets native.<br>Settle on proof.</h1>
+  <div class="rule"></div>
+  <p class="quote" style="font-size:52px;color:var(--dim)">Reproduce, or refund.</p>
+  <div class="foot"><span><b>psyto.github.io/reckn</b></span><span>github.com/psyto/reckn</span></div>
+</section>
+
+</body>
+</html>

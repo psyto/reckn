@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Reckn — Keep assets native. Settle on proof.</title>
+<style>
+  /* One source, three outputs: a page you can open, a PDF you can send, and 1920x1080
+     stills the film cuts to. The deck and the film cannot say different things because
+     there is only one file saying them. */
+  :root{
+    --bg:#17130f; --fg:#f2ede6; --dim:#cbbfae; --faint:#8a7f72;
+    --line:#2b241d; --green:#3fb950; --amber:#e0b341;
+    --sans:ui-sans-serif,-apple-system,BlinkMacSystemFont,"SF Pro Display",Inter,"Segoe UI",sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0a0908;font-family:var(--sans);color:var(--fg)}
+
+  /* Every slide is exactly 1920x1080 so a screenshot IS the frame. */
+  .slide{
+    position:relative;width:1920px;height:1080px;background:var(--bg);
+    padding:96px 120px;display:flex;flex-direction:column;justify-content:center;
+    overflow:hidden;margin:0 auto 28px;
+  }
+  .kicker{font:600 26px/1 var(--sans);letter-spacing:.18em;text-transform:uppercase;
+          color:var(--faint);margin-bottom:30px}
+  h1{font:700 108px/1.02 var(--sans);letter-spacing:-.035em}
+  h2{font:700 76px/1.1 var(--sans);letter-spacing:-.03em}
+  .lede{font:400 40px/1.45 var(--sans);color:var(--dim);max-width:26em;margin-top:34px}
+  .rule{width:96px;height:4px;background:var(--green);margin:38px 0}
+  .foot{position:absolute;left:120px;right:120px;bottom:56px;
+        font:400 24px/1.4 var(--sans);color:var(--faint);
+        border-top:1px solid var(--line);padding-top:20px;display:flex;gap:28px}
+  .foot b{color:var(--dim);font-weight:600}
+  .n{position:absolute;right:120px;top:96px;font:600 24px/1 var(--mono);color:var(--faint)}
+
+  table{border-collapse:collapse;width:100%;margin-top:44px}
+  td,th{text-align:left;padding:22px 28px 22px 0;border-bottom:1px solid var(--line);
+        vertical-align:top;font-size:32px;line-height:1.35}
+  th{font:600 22px/1 var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+  td.k{font-weight:700;white-space:nowrap;width:1%;padding-right:56px}
+  td.d{color:var(--dim)}
+  td.bad, .bad{color:#f0837a} td.ok, .ok{color:var(--green)}
+  code{font-family:var(--mono);font-size:.9em;color:var(--dim)}
+
+  .big{font:700 64px/1.2 var(--sans);letter-spacing:-.02em;margin-top:10px}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:64px;margin-top:48px}
+  .card{border:1px solid var(--line);border-radius:16px;padding:34px 38px;background:#1c1712}
+  .card h3{font:600 24px/1 var(--sans);letter-spacing:.12em;text-transform:uppercase;
+           color:var(--faint);margin-bottom:20px}
+  .card p{font:400 32px/1.4 var(--sans);color:var(--dim)}
+  .card .num{font:700 72px/1 var(--sans);color:var(--fg);letter-spacing:-.03em}
+  .quote{font:700 60px/1.28 var(--sans);letter-spacing:-.02em;max-width:22em}
+  .src{font:400 24px/1.4 var(--mono);color:var(--faint);margin-top:26px}
+  figure{margin-top:30px;display:flex;justify-content:center}
+  figure img{width:100%;max-height:660px;object-fit:contain}
+
+  @media print{
+    body{background:none}
+    .slide{margin:0;page-break-after:always;break-after:page}
+  }
+  @page{size:1920px 1080px;margin:0}
+</style>
+</head>
+<body>
+
+<!-- 01 ---------------------------------------------------------------------->
+<section class="slide" id="s01">
+  <div class="kicker">Reckn</div>
+  <h1>Keep assets native.<br>Settle on proof.</h1>
+  <div class="rule"></div>
+  <p class="lede">An escrow that releases only when the work it was funded against can be
+  re-executed and reproduced — and refunds the buyer when it cannot.</p>
+  <div class="foot"><span><b>Live on Arc testnet.</b> psyto.github.io/reckn</span></div>
+</section>
+
+<!-- 02 ---------------------------------------------------------------------->
+<section class="slide" id="s02">
+  <div class="n">01</div>
+  <div class="kicker">The problem</div>
+  <h2>Two parties decide whether you get paid.<br>Neither can see the work.</h2>
+  <table>
+    <tr><th>in the way</th><th>what it is asked to decide</th><th>what it can actually see</th></tr>
+    <tr><td class="k">A human approver,<br>a TEE, a resolver</td><td>Was the work done?</td><td class="d">A claim somebody wrote</td></tr>
+    <tr><td class="k">A bridge</td><td>Does the asset arrive?</td><td class="d bad">Nothing about the work at all</td></tr>
+  </table>
+  <div class="foot"><span>One was told about it. The other was never asked.</span>
+    <span><b>docs/why.md §0–0.1</b></span></div>
+</section>
+
+<!-- 03 ---------------------------------------------------------------------->
+<section class="slide" id="s03">
+  <div class="n">02</div>
+  <div class="kicker">The inversion</div>
+  <p class="quote">Don't move the asset to reach the work.<br>
+    <span style="color:var(--green)">Move a proof of the work to reach the asset.</span></p>
+  <div class="rule"></div>
+  <p class="lede">The buyer escrows the stablecoin on the chain it already lives on. The
+  seller works wherever the work belongs. The disputed execution is replayed — release if it
+  reproduces, refund if it does not.</p>
+  <div class="foot"><span><b>Don't make a bridge decide where money goes. Make proof decide.</b></span></div>
+</section>
+
+<!-- 04 ---------------------------------------------------------------------->
+<section class="slide" id="s04">
+  <div class="n">03</div>
+  <div class="kicker">What crosses the boundary</div>
+  <figure><img src="/*__SVG__*/" alt="Solana work re-executed in a zkVM; only a Groth16 proof crosses to Arc, where USDC stays in the escrow."></figure>
+  <div class="foot"><span>The proof crosses. <b>The asset never does.</b></span>
+    <span>No bridge. No light client. No resolver on the path that chooses the payout.</span></div>
+</section>
+
+<!-- 05 ---------------------------------------------------------------------->
+<section class="slide" id="s05">
+  <div class="n">04</div>
+  <div class="kicker">Nobody decides — as a build condition</div>
+  <h2>No owner. No admin.<br>No resolver. No upgrade path.</h2>
+  <p class="lede">Not a promise. If one ever appears, <b style="color:var(--fg)">the build
+  fails</b> — and the surface it guards is exactly three functions.</p>
+  <div class="cols">
+    <div class="card"><h3>The whole surface</h3>
+      <p><code>fund</code> · <code>settleWithProof</code> · <code>refundAfterDeadline</code></p></div>
+    <div class="card"><h3>The timeout</h3>
+      <p>Permissionless, and it pays the caller <b style="color:var(--fg)">nothing</b>.</p></div>
+  </div>
+  <div class="foot"><span><b>scripts/no-keys.sh</b> — run it yourself</span></div>
+</section>
+
+<!-- 06 ---------------------------------------------------------------------->
+<section class="slide" id="s06">
+  <div class="n">05</div>
+  <div class="kicker">It is running</div>
+  <h2>Four settlements on Arc testnet.</h2>
+  <div class="cols" style="grid-template-columns:1fr 1fr 1fr">
+    <div class="card"><h3>Settlements</h3><div class="num">4</div>
+      <p>Real testnet USDC, both directions.</p></div>
+    <div class="card"><h3>Decided by Solana proofs</h3><div class="num">2</div>
+      <p>One escrow, two virtual machines.</p></div>
+    <div class="card"><h3>Cost to decide one</h3><div class="num">&lt;3¢</div>
+      <p>Computed from the receipts, not quoted.</p></div>
+  </div>
+  <div class="foot"><span>Your browser reads them off the chain — nothing installed, no wallet.</span>
+    <span><b>psyto.github.io/reckn</b></span></div>
+</section>
+
+<!-- 07 ---------------------------------------------------------------------->
+<section class="slide" id="s07">
+  <div class="n">06</div>
+  <div class="kicker">What this does not claim</div>
+  <h2>The half that is easy to leave out.</h2>
+  <table>
+    <tr><td class="k bad">Not</td><td>“Bridges are unnecessary.”</td>
+        <td class="d">It removes the bridge <b>as the decider</b>. Moving funds to where you pay is a different problem.</td></tr>
+    <tr><td class="k bad">Not</td><td>“Fragmented liquidity is solved.”</td>
+        <td class="d">You must already hold the settlement asset on the chain you pay from.</td></tr>
+    <tr><td class="k bad">Not</td><td>“We prove Solana mainnet state.”</td>
+        <td class="d">The guest recomputes a bank hash over the account set <b>the deal named</b>. Consistency, not provenance.</td></tr>
+  </table>
+  <div class="foot"><span>Stated on the live page, in the film, and in a test — not in a footnote.</span></div>
+</section>
+
+<!-- 08 ---------------------------------------------------------------------->
+<section class="slide" id="s08">
+  <div class="kicker">Reckn</div>
+  <h1>Keep assets native.<br>Settle on proof.</h1>
+  <div class="rule"></div>
+  <p class="quote" style="font-size:52px;color:var(--dim)">Reproduce, or refund.</p>
+  <div class="foot"><span><b>psyto.github.io/reckn</b></span><span>github.com/psyto/reckn</span></div>
+</section>
+
+</body>
+</html>
