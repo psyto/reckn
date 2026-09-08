@@ -2,6 +2,9 @@
 
 **Every disputed agent payment is re-reckoned on-chain by replaying it. Reproduce, or refund.**
 
+**Keep assets native. Settle on proof.** The money stays on the chain it was funded on —
+a proof crosses, the asset does not. ([messaging](docs/messaging.md))
+
 An escrow whose release condition is a **proof**, not a person. No owner, no
 resolver, no admin, no upgrade path — and that is a **build condition**, not a
 promise: `scripts/no-keys.sh` fails the build if one appears.

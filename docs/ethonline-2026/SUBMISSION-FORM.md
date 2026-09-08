@@ -98,6 +98,23 @@ Agent-payment escrow where a disputed delivery is re-executed, not judged. Repro
 > corrections recorded in `DISCLOSURE.md` §0 has been lost. Edit the narrative in
 > `description-intro.txt` and re-run the script; do not edit the block by hand.
 
+> **This field is SUBMITTED and is deliberately left unchanged (2026-09-08.)** The shared
+> ETHOnline/CWF positioning in [`docs/messaging.md`](../messaging.md) was written after the
+> form went in. Editing `description-intro.txt` now would regenerate this block and make the
+> repository disagree with what ETHGlobal actually holds — which is the exact divergence this
+> file exists to prevent, and the reason the disclosure is generated rather than retyped.
+>
+> If the field is reopened, the one paragraph worth adding is below. It adds no claim: both
+> halves are already in §12's measurements and in the boundary panel of the live page.
+>
+> > *The asset never leaves the chain it was funded on. Only the proof crosses. Two of the
+> > four settlements were decided by proofs about work performed on Solana, with no bridge
+> > and no light client on the path that chose the payout.*
+>
+> Adding it means editing `description-intro.txt`, re-running `build-form.py`, and recording
+> it under §0 AMENDMENTS as an amendment made **after** submission — a category that section
+> does not yet have, and which must not be silently folded in with the two made before it.
+
 <!--DISCLOSURE:BEGIN-->
 ```
 When one AI agent pays another, the hard question is not which chain to deploy on. It is: when the payment is disputed, who decides — and does that decider belong to a chain? Every answer on offer is a party with a key: an operator inside a TEE, a bonded resolver, a quorum of voters. Each of those is per-chain — you redeploy the judge and re-earn the reputation on every chain your agent touches.
