@@ -60,7 +60,33 @@ else
   Do NOT pass a private key to this script. It will not read one.
   To check everything WITHOUT a password first:  TEMPO_ADDRESS=0x... bash $0 --preflight}"
   ACCT=(--account "$TEMPO_ACCOUNT")
-  [[ -n "${TEMPO_PASSWORD_FILE:-}" ]] && ACCT+=(--password-file "$TEMPO_PASSWORD_FILE")
+  if [[ -n "${TEMPO_PASSWORD_FILE:-}" ]]; then
+    ACCT+=(--password-file "$TEMPO_PASSWORD_FILE")
+  else
+    # This run sends about eleven transactions, and `cast send --account` prompts for the
+    # keystore password on EVERY one of them. Eleven prompts in the middle of a sequence that
+    # is half-committed to the chain is not a safety feature; it is where somebody pastes the
+    # password into the wrong window, or gives up and puts it in the command line where `ps`
+    # can read it. So: asked ONCE, with echo off, and held in a 0600 file inside a private
+    # directory that a trap removes on any exit, including a failure or a ^C.
+    #
+    # This is a deliberate trade, and it is the better half of it: the alternative that avoids
+    # disk entirely is --password <value>, which puts the secret in the process list where
+    # every other user on the machine can read it. Nothing is echoed, nothing reaches the
+    # shell history, and nothing is written inside the repository.
+    pwdir=$(mktemp -d "${TMPDIR:-/tmp}/tempo-testnet.XXXXXX")
+    chmod 700 "$pwdir"
+    trap 'rm -rf "$pwdir"' EXIT INT TERM
+    printf 'keystore password for account "%s" (not echoed): ' "$TEMPO_ACCOUNT" >&2
+    IFS= read -rs pw; echo >&2
+    umask 177
+    printf '%s' "$pw" > "$pwdir/p"
+    unset pw
+    ACCT+=(--password-file "$pwdir/p")
+    # Fail here, not eleven transactions in, if the password is wrong.
+    cast wallet address "${ACCT[@]}" >/dev/null 2>&1 || {
+      echo "tempo-testnet: that password does not open keystore \"$TEMPO_ACCOUNT\". Nothing was sent."; exit 1; }
+  fi
 fi
 
 # ---- preflight ------------------------------------------------------------------------
