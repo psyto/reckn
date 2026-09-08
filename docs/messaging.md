@@ -154,6 +154,8 @@ Nothing here is claimed on the strength of a file appearing.*
 | The Arc × Solana demonstration also runs on Tempo | **Tempo is not deployed.** Only local tests and unauthenticated measurements exist |
 | "like a bank's daily netting" | do not use it. There is no netting and no clearing here |
 | A proof moves assets between chains | a proof **decides a local payment**. Nothing is transferred across a boundary |
+| "verifying a proof is expensive on that chain" — about Tempo or any chain, now or after any unlock | **false, and it will stay false.** BN254 arithmetic costs the same on Tempo as on Ethereum; what Tempo charges more for is STATE. A cost sentence must be about state or it is wrong |
+| any sentence that mixes the 30-day timeout with the demonstrated refund | **they are different refunds.** `refundAfterDeadline` waits thirty days, so on a public chain it can never be shown inside an event — on Arc it is *scheduled*, not demonstrated. **The refund on screen is always the proof-driven one** (`Failed` → buyer), which is immediate. Conflating them survives no scrutiny and must not be written even after §3 unlocks |
 
 ### Three qualifiers the tagline needs
 
@@ -204,6 +206,23 @@ report arrives this paragraph is **not** to be used anywhere:
 The first sentence is already *structurally* true — the contract names no chain — but it is
 not to be claimed until it has actually happened twice, in both directions.
 
+### Reported by the Tempo owner, 2026-09-08 — and what it does NOT unlock
+
+> **A real Groth16 proof was verified by Tempo's EVM, and it moved a mock token.**
+
+That is a genuine reduction in risk and it is **not** any of the five below. It says the
+proof machinery runs there; it does not say a deal exists, that a real TIP-20 was ever
+funded, or that anything settled. The distance between "the EVM verified a proof" and "an
+agent was paid" is the entire product.
+
+It is recorded here as an **internal fact**, in the same category as the precompile
+measurements: true, useful for deciding what to build next, and **not an outward sentence**.
+Offered as reassurance it reads as progress, and progress reads as working.
+
+The machine-readable statement of where things actually stand is one line, and it is not ours
+to soften: `zk-verdict/contracts/tempo.json` → `deployedByReckn` has `network: null`,
+`RecknZkEscrow: null`, and `settlements: {}`. Zero contracts, zero transaction hashes.
+
 ### What must arrive before any of §3 is used
 
 Five items, from the Tempo owner, in their words rather than inferred:
@@ -216,4 +235,5 @@ Five items, from the Tempo owner, in their words rather than inferred:
    part that makes it a Tempo slice rather than a redeploy, and it is the one number a
    viewer cannot infer from anything else on screen.
 
-Anything short of all five and the wording stays at the one sentence above.
+Anything short of all five and the wording stays at the one sentence above. **As of
+2026-09-08 the count is zero of five.**
