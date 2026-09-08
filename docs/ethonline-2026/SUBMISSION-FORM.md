@@ -367,7 +367,7 @@ only projects that pass it present live.
 |---|---|
 | **Video presentation and quality** | **Still the weakest, and still the only one not finished — but the footage now meets every rule except one.** `dashboard/media/reckn-demo-v3.mp4` is **2:41**, 1920×1080 16:9, faststart, and opens on the theft rather than on a title. What is missing is **audio**: the rule requires it, and it must be a **human** English voice — no TTS. The timed script is `dashboard/video/VO.md`. (Superseded numbers: this row once read "1:41 and silent", which was a cut ago.) |
 | **Project live demo quality** | Strong. <https://psyto.github.io/reckn/> needs no install, no wallet and no clone: the visitor's own browser compares the deployed bytecode against the source and reads four settlements off Arc testnet. |
-| **Proper use of git commit history** | Strong, and measured rather than asserted — **129 commits inside the event window, spread across every day of it** (34 / 37 / 18 / 30 / 10 on 09-04 → 09-08), no squash, no `wip:` subjects, the largest touching 22 files. This is the same evidence the Continuity boundary rests on, so it was going to be true anyway. **Ask git the way `PREFLIGHT.md` §1 does**: `--since=2026-09-04` answers 117, because it resolves the date in another timezone and drops twelve commits from the morning of 09-04 JST. |
+| **Proper use of git commit history** | Strong, and measured rather than asserted — **152 commits inside the event window as of 2026-09-08, spread across every day of it** (34 / 37 / 18 / 30 / 33 on 09-04 → 09-08, still rising), no squash, no `wip:` subjects, the largest touching 22 files. **Regenerate this line at freeze with `bash scripts/submission-stats.sh` — it said 129 until this morning, and a number that invites the reader to check it is the worst possible place to be stale.** This is the same evidence the Continuity boundary rests on, so it was going to be true anyway. **Ask git the way `PREFLIGHT.md` §1 does**: `--since=2026-09-04` answers 117, because it resolves the date in another timezone and drops twelve commits from the morning of 09-04 JST. |
 
 The one thing to protect between now and then is the video's **audio**, because it is the
 only place where the artefact still does not meet a stated rule. The full pre-submission
@@ -482,15 +482,24 @@ being *attacked*, and a judge scrolling a gallery gives the first image the most
 
 ## 12. Video page — **the cut on disk does not yet satisfy the requirements**
 
+**Measured 2026-09-08 by `bash dashboard/video/check.sh dashboard/media/reckn-demo-v3.mp4`,
+not typed. The rows moved since they were last written by hand — 3:04 became 2:55, 15.6 MB
+became 11.0 MB — and one row did not move at all.**
+
 | requirement | as it stands |
 |---|---|
-| 2–4 minutes | **3:04** ✅ |
+| 2–4 minutes | **2:55** ✅ |
 | ≥ 720p | **1920 × 1080** ✅ |
 | 16:9 | **1.7778** ✅ |
 | opens at all | **faststart** ✅ — `moov` at the front |
-| moves at all | **8/8** distinct frames per 4 s ✅ |
-| size | **15.6 MB** |
-| audio, no music | **no audio track** — the one thing outstanding, and it is the founder's |
+| moves at all | **7/8** distinct frames per 4 s at the least lively point ✅ |
+| size | **11.0 MB** |
+| **audio** | **STILL NO TRACK ✗** — the event requires audio. This has been the one outstanding row since it was first written, the cut has been re-recorded several times since, and it is **still the only thing standing between this video and the requirements**. `VO.md` holds the script; nobody has recorded it |
+
+> **This is the last hard blocker on the submission that is not a button press.** The form
+> can be sent, but a video that fails a stated requirement is a round-one loss on a criterion
+> nobody argues about. The checker's own closing line applies: *"whether the audio is speech,
+> is clear, and carries no music is NOT checked here. Listen to it."*
 
 `bash dashboard/video/check.sh <file>` measures all of these. Two of the rows exist because
 the video failed them silently: the first cut had **two distinct frames inside a nine-second

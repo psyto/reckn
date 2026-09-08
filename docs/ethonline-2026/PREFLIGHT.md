@@ -35,8 +35,8 @@ event work.
 
 ## 2. New work during the event ✅ DONE
 
-**2026-09-04 → 2026-09-08: 129 commits**, every day of the window, no squash, largest commit
-22 files:
+**2026-09-04 onward: 152 commits** as of 2026-09-08, every day of the window, no squash,
+largest commit 22 files:
 
 ```sh
 git log --format='%cd' --date=short | awk '$1>="2026-09-04"' | sort | uniq -c
@@ -44,8 +44,14 @@ git log --format='%cd' --date=short | awk '$1>="2026-09-04"' | sort | uniq -c
 #   37  2026-09-05
 #   18  2026-09-06
 #   30  2026-09-07
-#   10  2026-09-08
+#   33  2026-09-08   <- still moving; the window runs to the freeze
 ```
+
+> **This figure decays, and it decayed once already.** It read *129, five days, 10 on 09-08*
+> until 2026-09-08, which was true when it was typed and false a few hours later. Days
+> 09-09 through the freeze are not in the table above yet and the sentence has no slot for
+> them. **Regenerate it at freeze time — do not edit it by hand:**
+> `bash scripts/submission-stats.sh`
 
 The headline items, in the order a judge meets them:
 
@@ -90,7 +96,7 @@ the longer form it summarises.
 Round 1 scores "proper use of git commit history" and this is the strongest of the three
 criteria:
 
-- **129 commits across all five days**, no squash, no `wip:` subjects (`git log --format='%s' | grep -ci 'squash\|wip'` → 0)
+- **152 commits and counting, every day of the window** (2026-09-08), no squash, no `wip:` subjects (`git log --format='%s' | grep -ci 'squash\|wip'` → 0) — regenerate with `bash scripts/submission-stats.sh`
 - **Every failed specification review is committed** — 16 verdicts, 15 of them `CHANGES`
 - Commit messages carry the *reasoning and the defects found*, not just what changed
 - The Continuity boundary rests on this same history, so it had to be true anyway
