@@ -53,7 +53,7 @@ scripts/no-keys.sh	the body of `contract RecknZkEscrow` only
 LITERALS
 
 # ---------------------------------------------------------------- (ii) present -
-present_want=11
+present_want=12
 present_ok=0
 while IFS=$'\t' read -r f marker; do
   [[ -n "$f" ]] || continue
@@ -62,13 +62,25 @@ while IFS=$'\t' read -r f marker; do
   else
     note "MISSING        $f: $marker"; fail=1
   fi
+# The precompile-parity disclosure moved from README.md to docs/status.md on 2026-09-09
+# when the README was shortened and its gaps section was extracted. The sentence itself is
+# unchanged and was never softened, but this check went red pointing at the old address --
+# a stale checker reporting a real-looking regression, which cost a reader an investigation.
+#
+# It is repointed rather than deleted, and it is repointed WITH A SECOND MARKER, because
+# moving a limitation into another file only stays honest while the document a reader
+# actually arrives at still sends them there. `Known gaps (not closed)` in README.md is that
+# second half: repoint one without the other and the disclosure can become unreachable from
+# the front page while this check stays green (R-10 -- a chain of checks must not end
+# inside the tree without naming where it gets on a human).
 done <<'MARKERS'
 zk-verdict/README.md	at the committed hardfork and block environment
 zk-verdict/README.md	Verdict values are `uint256`.
 zk-verdict/README.md	Engine identity is checked, not assumed.
 AGENTS.md	旧 `u64` マップは制限ではなく健全性バグだった
 AGENTS.md	precompile は in-guest でも
-README.md	In-guest precompiles run on different backends, and parity is unverified
+docs/status.md	In-guest precompiles run on different backends, and parity is unverified
+README.md	Known gaps (not closed)
 zk-verdict/README.md	a missing fixture is a hard failure
 zk-verdict/README.md	a floor of zero is satisfied by doing nothing
 zk-verdict/README.md	the gnark wrap alone

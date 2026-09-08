@@ -1276,7 +1276,7 @@ AC-10   forge   -                   _AC10_                                      
 AC-11   script  -                   bash zk-verdict/scripts/no-skip.sh               -   no-skip: 0 early-return fixture gates, {P}/{P} forge tests ran, 0 skipped; witness={witness}
 AC-12   cargo   zk-verdict/lib      _AC12_                                           3   -
 AC-13   script  -                   bash zk-verdict/scripts/ac008-selftest.sh        -   ac008-selftest: 21/21 mutants detected; witness={witness}
-AC-14   script  -                   bash zk-verdict/scripts/docs-check.sh            -   docs: 9/9 stale claims absent, 11/11 replacements present, 0 tilde cycle literals, 1/1 qualified ~34 s site, cycles.json matches 3/3 guests; witness={witness}
+AC-14   script  -                   bash zk-verdict/scripts/docs-check.sh            -   docs: 9/9 stale claims absent, 12/12 replacements present, 0 tilde cycle literals, 1/1 qualified ~34 s site, cycles.json matches 3/3 guests; witness={witness}
 AC-15   cargo   reexec-evm          -                                               16   -
 AC-16   script  -                   bash zk-verdict/scripts/consumers-check.sh       -   consumers: binder, keeper, reckn-evm-content check --tests clean (3/3); witness={witness}
 ```
@@ -3114,7 +3114,7 @@ round 4 relied on without asking anyone to do it (r4 finding 3).
 
 ```sh
 bash zk-verdict/scripts/docs-check.sh
-# docs: 9/9 stale claims absent, 11/11 replacements present, 0 tilde cycle literals, 1/1 qualified ~34 s site, cycles.json matches 3/3 guests; witness=<16 hex>
+# docs: 9/9 stale claims absent, 12/12 replacements present, 0 tilde cycle literals, 1/1 qualified ~34 s site, cycles.json matches 3/3 guests; witness=<16 hex>
 ```
 
 **Digests are gone** (§0). **Five** checks, all over content.
