@@ -87,7 +87,7 @@ token mock, a test, a constants record, and a demo surface.
 | what | value | how |
 |---|---|---|
 | **testnet RPC** | `https://rpc.moderato.tempo.xyz` | `eth_chainId` → `0xa5bf` = **42431** |
-| a second URL seen in search results | `https://rpc.tempo.xyz` → `0x1079` = **4217** | **a different chain.** Not the testnet |
+| a second URL seen in search results | `https://rpc.tempo.xyz` → `0x1079` = **4217** | **Tempo MAINNET** (confirmed against the connection-details page, 2026-09-08). Not the testnet, and deploying to it is forbidden outright by `AGENTS.md` §8 |
 | `0x08` bn256Pairing, empty input | `0x…0001` | as on Ethereum |
 | `0x06` bn256Add, zero input | 64 zero bytes | as on Ethereum |
 | `0x07` bn256ScalarMul, zero input | 64 zero bytes | as on Ethereum |
@@ -327,22 +327,28 @@ establish where the prestate came from.
 
 The agent does not generate, store or use a key, and does not deploy.
 
-1. **A testnet key and PathUSD from the faucet** — required before T-4, T-14 and any deploy.
-   Now quantified rather than described. The founder needs, in one address:
-   - **≈16 PathUSD for fees** — deploy + fund + settle measures ≈31M gas
-     (§2.2c); `tempo-testnet.sh` budgets 40M and refuses to start below it.
-   - **3 PathUSD to escrow** — three deals at 1.000000, matching Arc so the two records read
-     alike.
-   - **ask for ~50 PathUSD**, which covers a re-run.
-   The key must be imported **once** as an encrypted Foundry keystore
-   (`cast wallet import <name> --interactive`) and passed to the script by **name**
-   (`TEMPO_ACCOUNT`). `tempo-testnet.sh` refuses to read a private key from an argument or an
-   environment variable, so no plaintext key exists in a shell history, a process list, a log
-   or this repository.
+1. ~~**PathUSD from the faucet.**~~ **Closed by measurement, 2026-09-08.** The faucet is an
+   **RPC method, not a browser**: `cast rpc tempo_fundAddress <ADDRESS> --rpc-url
+   https://rpc.moderato.tempo.xyz`. It needs no wallet connection and **no key** — the caller
+   does not have to be the address being funded — and one call mints **1,000,000** of each of
+   pathUSD, AlphaUSD, BetaUSD and ThetaUSD. Against the measured need (≈16 PathUSD of fees for
+   ≈31M gas, plus 3 escrowed), that is about **20,000× over**, so the amount is not a
+   constraint and no budgeting is required. Its existence was **probed, not assumed**: bad
+   params return `-32602`, where an invented method returns `-32601`; and 1,408 mint-shaped
+   `Transfer` logs were counted over 3,000 blocks, each for exactly 1,000,000.000000.
+
+1b. **A key — and this is now the ONLY founder action.** Imported **once** as an encrypted
+   Foundry keystore (`cast wallet import <name> --interactive`) and passed to
+   `tempo-testnet.sh` by **name** (`TEMPO_ACCOUNT`). The script refuses to read a private key
+   from an argument or an environment variable, so no plaintext key exists in a shell history,
+   a process list, a log or this repository.
+
 2. ~~Whether upstream Foundry can send a fee-paying transaction.~~ **Closed by measurement**
    (§2.2b): it can, and the build path does not fork.
 3. ~~The testnet TIP-20 address and its decimals.~~ **Closed by measurement** (§2.2b):
    PathUSD at `0x20C0…0000`, six decimals, recorded in `tempo.json` with how it was read.
 
-So exactly **one** item now stands between this slice and its testnet half: a key with
-PathUSD in it.
+So exactly **one** item now stands between this slice and its testnet half: **a key.** Not a
+key *with PathUSD in it* — that phrasing was written before the faucet was found, and it made
+funding sound like a second obstacle. Filling the key is one RPC call that anybody can make
+for anybody's address. What cannot be delegated is holding the key, and the agent does not.

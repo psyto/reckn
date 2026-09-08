@@ -6,7 +6,8 @@
     "method": "eth_chainId, eth_call to precompiles and to the fee token, eth_getCode, eth_getBalance, eth_getBlockByNumber, eth_getTransactionReceipt",
     "note": "No key, no transaction, no funds. Nothing here is transcribed from a blog post or a search result; entries that could not be measured are under 'fromDocs' or 'unknown' and are marked as such.",
     "secondPass": "2026-09-08, same day: 213 transactions over 60 blocks were surveyed to find out how fees are actually paid. That answered three open questions that documentation had not.",
-    "thirdPass": "2026-09-08, same day: the whole settlement path was executed inside Tempo's OWN EVM by eth_call with to:null (a constructor that returns measurements instead of code), against a local anvil control running byte-identical bytecode. That answered the last question the precompile spot-checks could not: whether a real SP1 Groth16 proof actually verifies here. Still no key, no transaction, no funds. Scripts: zk-verdict/scripts/tempo-evm-probe.sh, tempo-gas-schedule.sh, tempo-tip20-probe.sh."
+    "thirdPass": "2026-09-08, same day: the whole settlement path was executed inside Tempo's OWN EVM by eth_call with to:null (a constructor that returns measurements instead of code), against a local anvil control running byte-identical bytecode. That answered the last question the precompile spot-checks could not: whether a real SP1 Groth16 proof actually verifies here. Still no key, no transaction, no funds. Scripts: zk-verdict/scripts/tempo-evm-probe.sh, tempo-gas-schedule.sh, tempo-tip20-probe.sh.",
+    "fourthPass": "2026-09-08, same day: the faucet was found, and it is an RPC method rather than a browser. tempo_fundAddress was probed for existence WITHOUT minting -- it answers -32602 Invalid params, where a method that does not exist answers -32601 method not allowed. Separately, 1,408 mint-shaped Transfer logs (from == 0x0) were counted over 3,000 blocks, each for exactly 1,000,000.000000 PathUSD. The faucet is open and it works."
   },
   "testnet": {
     "name": "Moderato",
@@ -21,7 +22,8 @@
     "url": "https://rpc.tempo.xyz",
     "chainId": 4217,
     "chainIdHex": "0x1079",
-    "why": "This URL appeared in search results as the Tempo RPC. It answers on a DIFFERENT CHAIN. Using it would have deployed to the wrong network while every constant still looked plausible. tempo-constants.sh fails if this hostname appears anywhere in the tree as an endpoint."
+    "whatItActuallyIs": "TEMPO MAINNET. Confirmed 2026-09-08 against https://tempo.xyz/developers/docs/quickstart/connection-details, which names 4217 as Tempo Mainnet with explorer https://explore.tempo.xyz and says to use it for 'production assets such as pathUSD, and live payment flows'.",
+    "why": "This URL appeared in search results as the Tempo RPC. The earlier wording here called it 'a DIFFERENT CHAIN', which was true and badly understated: deploying to it would have been a MAINNET deployment with real assets, which AGENTS.md §8 forbids outright. tempo-constants.sh fails if this hostname appears anywhere in the tree as an endpoint, and tempo-testnet.sh refuses to run against chain 4217 by name. Those are not tidiness checks; they are the mainnet guard."
   },
   "measured": {
     "precompiles": {
@@ -139,6 +141,16 @@
       "refusesItself": "a transfer to 0x20C0…0000 reverts with InvalidRecipient -- the documented rule, measured. This is the behaviour RecknTempoTip20.t.sol's T-11 models.",
       "currency": "USD, so it is fee-eligible.",
       "pausedToday": false
+    },
+    "faucet": {
+      "_": "How PathUSD is obtained. No browser, no wallet connection, and NO KEY -- the address being funded does not have to be the caller's.",
+      "method": "tempo_fundAddress",
+      "command": "cast rpc tempo_fundAddress <ADDRESS> --rpc-url https://rpc.moderato.tempo.xyz",
+      "mints": "pathUSD, AlphaUSD, BetaUSD, ThetaUSD",
+      "amountPerCall": "1,000,000.000000 of each (6 decimals). Confirmed on chain: every mint-shaped Transfer log sampled carries value 0xe8d4a51000 = 1000000000000 raw units.",
+      "existenceProbedNotAssumed": "calling it with bad params returns -32602 'Invalid params'; an invented method returns -32601 'method not allowed'. The method is present on the Moderato endpoint.",
+      "source": "https://tempo.xyz/developers/docs/quickstart/faucet, read 2026-09-08, plus the on-chain log count.",
+      "consequence": "011 §9.1's budget of ~50 PathUSD is met about 20,000x over by ONE call. The faucet is not the constraint. The only remaining founder action is holding a key."
     }
   },
   "fromDocs": {
@@ -151,8 +163,7 @@
     "fees": "transferFeePreTx / transferFeePostTx; only currency == USD tokens may pay fees"
   },
   "unknown": {
-    "_": "Still not established. Not assumed anywhere in the code. Two entries moved out on 2026-09-08 and are rewritten rather than deleted, so what was and was not known when the tests were written stays legible.",
-    "faucet": "not found in the docs read 2026-09-08; obtaining PathUSD needs a key and a browser (011 §9.1). THIS IS THE ONLY THING BETWEEN THIS SLICE AND ITS TESTNET HALF.",
+    "_": "Still not established. Not assumed anywhere in the code. Entries that were closed are rewritten in place rather than deleted, so what was and was not known when the tests were written stays legible. The faucet moved out on 2026-09-08 -- see measured.faucet.",
     "testnetTokenPolicy": "PARTIALLY CLOSED. PathUSD answers paused() and returned false on 2026-09-08, and no TIP-403 policy refused any transfer probed. That is a reading of one moment: a token that is unpaused now can be paused later, which is the risk 011 §8 discloses rather than mitigates. The escrow is still tested against both behaviours (T-7, T-8) rather than against this reading.",
     "realProofOnChain": "PARTIALLY CLOSED. A real SP1 Groth16 proof of a Solana execution DOES verify on Tempo and does move a token -- measured in Tempo's own EVM by eth_call (see measured.evmProbe). What remains open is the half that needs a key: that a TRANSACTION carrying it can be paid for, included and persisted, and that a real TIP-20 balance moves. An eth_call writes no state and pays no fee. Nothing may be described as 'deployed on Tempo' on the strength of it.",
     "explorerVerified": "https://explore.testnet.tempo.xyz is from documentation and has not been fetched. No link in this repository points at it yet; tempo-receipts.sh checks that any that appear name a hash this record carries AND that the chain has a successful receipt for it."

@@ -5,7 +5,12 @@
 # On 2026-09-08 two published URLs both claimed to be "the Tempo RPC". Measured:
 #
 #   https://rpc.moderato.tempo.xyz  ->  eth_chainId 0xa5bf = 42431   (Moderato testnet)
-#   https://rpc.tempo.xyz           ->  eth_chainId 0x1079 =  4217   (a DIFFERENT chain)
+#   https://rpc.tempo.xyz           ->  eth_chainId 0x1079 =  4217   (TEMPO MAINNET)
+#
+# The second line said "a DIFFERENT chain" until 2026-09-08, when the connection-details page
+# was actually read: 4217 is MAINNET, for "production assets such as pathUSD, and live payment
+# flows". So this is not a tidiness check about a stale URL. It is the mainnet guard, and
+# AGENTS.md §8 forbids what the wrong endpoint would have done outright.
 #
 # Every constant around the wrong one still looks plausible: right scheme, right domain,
 # right shape. That is exactly the failure mode arc-constants.sh was written for after a
@@ -59,7 +64,7 @@ hits=$(grep -rn --fixed-strings "$wrong_host" "${files[@]}" "$root" 2>/dev/null 
 if [[ -n "$hits" ]]; then
   echo "tempo-constants: the WRONG endpoint $wrong is used without saying so at:"
   echo "$hits" | sed 's/^/  /' | cut -c1-160
-  echo "  it answers chain $wrong_chain, not the testnet's $chain. Use $rpc."
+  echo "  that is Tempo MAINNET (chain $wrong_chain), not the testnet's $chain. Use $rpc."
   exit 1
 fi
 

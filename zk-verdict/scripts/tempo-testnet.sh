@@ -52,9 +52,14 @@ ACCT=(--account "$TEMPO_ACCOUNT")
 # ---- preflight ------------------------------------------------------------------------
 # Every one of these is a way the run could have looked successful while being wrong.
 onchain_chain=$(cast chain-id --rpc-url "$RPC")
+if [[ "$onchain_chain" == "4217" ]]; then
+  # Named separately from the generic mismatch below, because this one is not a typo, it is a
+  # prohibited action: 4217 is TEMPO MAINNET, with production assets. AGENTS.md §8.
+  echo "tempo-testnet: that endpoint is TEMPO MAINNET (chain 4217). REFUSING -- mainnet"
+  echo "  deployment and real funds are forbidden (AGENTS.md §8). Use $RPC."; exit 1
+fi
 [[ "$onchain_chain" == "$CHAIN" ]] || {
-  echo "tempo-testnet: $RPC answered chain $onchain_chain, not $CHAIN. REFUSING."
-  echo "  (https://rpc.tempo.xyz answers 4217 -- a different chain. See tempo.json.)"; exit 1; }
+  echo "tempo-testnet: $RPC answered chain $onchain_chain, not $CHAIN. REFUSING."; exit 1; }
 
 BUYER=$(cast wallet address "${ACCT[@]}")
 SELLER=${TEMPO_SELLER:-0x5e11e40000000000000000000000000000000000}
@@ -82,8 +87,14 @@ echo "  token   $TOKEN ($DECIMALS decimals)"
 echo "  holds   $(fmt "$have")   needs about $(fmt "$need")  (fees ~$(fmt "$need_fee") + 3 x $(fmt "$AMOUNT") escrowed)"
 if (( have < need )); then
   echo
-  echo "tempo-testnet: NOT ENOUGH. Fund $BUYER with the faucet and re-run."
-  echo "  Tempo has no native gas token: this same TIP-20 pays the fee AND fills the escrow."
+  echo "tempo-testnet: NOT ENOUGH. Fund this address and re-run:"
+  echo
+  echo "    cast rpc tempo_fundAddress $BUYER --rpc-url $RPC"
+  echo
+  echo "  That is the whole faucet -- an RPC method, no browser and no wallet connection, and"
+  echo "  the caller does not have to be the address being funded. One call mints 1,000,000"
+  echo "  of pathUSD, AlphaUSD, BetaUSD and ThetaUSD, which is about 20,000x what this run"
+  echo "  needs. Tempo has no native gas token: the same TIP-20 pays the fee AND fills the escrow."
   exit 1
 fi
 
