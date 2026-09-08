@@ -674,6 +674,16 @@ async function press(selector, expect, { hold = 1600, nth = 0, timeout = 40000 }
 
 fs.mkdirSync(path.dirname(out), { recursive: true });
 await page.goto(BASE + "/index.html", { waitUntil: "networkidle2" });
+// The page is loaded BEFORE the camera rolls. A cold open that begins on a blank tab and
+// then settles is not a cold open; it is a page load a viewer has to sit through. Measured
+// on the first take: 1.5 s of a frozen frame, then a caption, then two more seconds of
+// stillness before the first click. Frame zero now shows the escrow already on screen.
+await page.goto(BASE + "/arc.html", { waitUntil: "domcontentloaded" });
+await page.waitForNetworkIdle({ idleTime: 400, timeout: 30000 }).catch(() => {});
+await page.evaluate(() => window.scrollTo(0, 0));
+await cursor();
+await sleep(600);
+
 await rec.start(RAW(out));
 t0 = Date.now();
 
@@ -688,14 +698,11 @@ t0 = Date.now();
 // the film now opens on the attack and earns its title afterwards. Nothing is staged: the
 // chain is fresh, the proof is a real Groth16 proof of a real execution, and the only
 // reason the money stays put is the binding check.
-await page.goto(BASE + "/arc.html", { waitUntil: "domcontentloaded" });
-await page.waitForNetworkIdle({ idleTime: 400, timeout: 30000 }).catch(() => {});
-await cursor();
-await page.evaluate(() => window.scrollTo(0, 0));
-await sleep(700);
-
+// Motion from the first frame: the caption fades in at ~0.2 s and the cursor is already
+// travelling to the button while it is read. Nothing waits for anything here.
 beat("00 cold open: fund");
 lower("This escrow holds 250.00 USDC on a chain running Arc's rules.<i>Nobody has a key to it. Watch me try to take it anyway.</i>", 6200);
+await sleep(250);
 await press('button[data-act="fund"][data-deal="honest"]', "tx 0x", { hold: 5200 });
 
 await page.evaluate(() => document.getElementById("log")
