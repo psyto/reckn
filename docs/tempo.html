@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reckn on Tempo — check it yourself</title>
+<style>
+  :root{--bg:#f7f8fa;--fg:#12161c;--dim:#5b6572;--line:#dfe3e9;--card:#fff;
+        --ok:#137333;--bad:#b3261e;--acc:#0b57d0;--warn:#8a5a00;
+        --mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+  @media (prefers-color-scheme:dark){:root{--bg:#0b0e13;--fg:#e6ebf2;--dim:#94a0b0;--line:#212936;
+        --card:#121722;--ok:#4ade80;--bad:#f87171;--acc:#7aa2f7;--warn:#e0b341}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+       font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  main{max-width:820px;margin:0 auto;padding:40px 20px 80px}
+  h1{font-size:1.9rem;line-height:1.25;margin:0 0 .4rem;letter-spacing:-.02em}
+  h2{font-size:1.15rem;margin:2.4rem 0 .6rem;letter-spacing:-.01em}
+  p{margin:.7rem 0}
+  .lede{font-size:1.06rem;color:var(--dim)}
+  code,.m{font-family:var(--mono);font-size:.88em}
+  a{color:var(--acc)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;
+        padding:16px 18px;margin:14px 0}
+  .card.pending{border-style:dashed}
+  .st{display:inline-block;min-width:1.4em;font-weight:700}
+  .ok{color:var(--ok)} .bad{color:var(--bad)} .pend{color:var(--dim)} .warn{color:var(--warn)}
+  .k{color:var(--dim);font-size:.85em;text-transform:uppercase;letter-spacing:.05em}
+  table{border-collapse:collapse;width:100%;font-size:.93rem}
+  th,td{text-align:left;padding:.42rem .7rem .42rem 0;vertical-align:top;
+        border-bottom:1px solid var(--line)}
+  th{color:var(--dim);font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+  .wrap{overflow-x:auto}
+  .note{color:var(--dim);font-size:.9rem}
+  .big{font-size:1.05rem;font-weight:600}
+  pre{background:var(--card);border:1px solid var(--line);border-radius:8px;
+      padding:12px 14px;overflow-x:auto;font-size:.84rem;margin:.6rem 0}
+  .two{border-collapse:collapse;width:100%;margin-top:10px;font-size:.93rem}
+  .two td{vertical-align:top;padding:.5rem .8rem .5rem 0;border-bottom:1px solid var(--line)}
+  .two td:first-child{white-space:nowrap;font-weight:600;width:1%}
+  .val{font-family:var(--mono);font-size:.82rem;word-break:break-all}
+  .foot{margin-top:3rem;padding-top:1.2rem;border-top:1px solid var(--line);color:var(--dim);font-size:.9rem}
+  .scope{border:1px solid var(--warn);border-radius:8px;padding:12px 14px;margin:16px 0;
+         background:color-mix(in srgb, var(--warn) 8%, transparent)}
+</style>
+</head>
+<body>
+<main>
+
+<h1>A Tempo payment that settles only when a Solana action can be reproducibly proven.</h1>
+<p class="lede">Every number below is read by <em>your browser</em>, from Tempo, when this
+page loads. Nothing here is a screenshot and nothing is typed into the page by hand.</p>
+
+<div class="scope">
+  <b>What is not here yet, said first.</b> The escrow is <b>not deployed</b> to Tempo. That
+  needs a funded key, and no key is used to build this page. Section&nbsp;5 is therefore
+  empty, and says so rather than showing something else. What sections&nbsp;1–4 establish is
+  that the chain <em>can</em> hold it: the proof machinery works here, and the fee model is
+  what makes this a Tempo slice rather than the same Solidity on another RPC.
+</div>
+
+<h2>1. Which chain this is — and the URL that is not it</h2>
+<div class="card">
+  <p><span class="st pend" id="s-chain">…</span> <span class="big" id="t-chain">asking both endpoints…</span></p>
+  <table class="two"><tbody>
+    <tr><td id="n-right">the testnet</td><td class="val" id="v-right">…</td></tr>
+    <tr><td id="n-wrong">also published</td><td class="val" id="v-wrong">…</td></tr>
+  </tbody></table>
+  <p class="note">Two URLs are published as “the Tempo RPC”. They answer on different
+  chains. Every constant around the wrong one still looks right — right scheme, right
+  domain, right shape — which is how a deployment lands on the wrong network with nothing
+  visibly out of place. Your browser just asked both.</p>
+</div>
+
+<h2>2. Groth16 is possible here</h2>
+<div class="card">
+  <p><span class="st pend" id="s-pre">…</span> <span class="big" id="t-pre">calling the pairing precompiles…</span></p>
+  <div class="wrap"><table><thead><tr><th>precompile</th><th>input</th><th>returned</th><th></th></tr></thead>
+    <tbody id="rows-pre"></tbody></table></div>
+  <p class="note" id="d-pre">Reckn's verdict verifier is an SP1 Groth16 verifier, and Groth16
+  on an EVM chain is BN254 arithmetic in precompiles <code>0x06</code>, <code>0x07</code> and
+  <code>0x08</code>. If they were missing or repriced, this direction would not exist. This
+  is the single question that could have ended it, and it is answered by
+  <code>eth_call</code> — no key, no gas, no deployment.</p>
+  <p class="note"><b>What this does not show:</b> that a real proof verifies here, or that it
+  fits the fee model. Present precompiles are necessary, not sufficient.</p>
+</div>
+
+<h2>3. There is no gas token — the fee is a stablecoin</h2>
+<div class="card">
+  <p><span class="st pend" id="s-bal">…</span> <span class="big" id="t-bal">reading two balances…</span></p>
+  <table class="two"><tbody>
+    <tr><td>an address</td><td class="val" id="v-b1">…</td></tr>
+    <tr><td>another</td><td class="val" id="v-b2">…</td></tr>
+  </tbody></table>
+  <p class="note"><code>eth_getBalance</code> returns the same enormous constant for any
+  address, because there is no native balance to report. Anything that shows funding by
+  reading a native balance on Tempo is showing a constant.</p>
+</div>
+<div class="card">
+  <p><span class="st pend" id="s-tok">…</span> <span class="big" id="t-tok">reading the fee token…</span></p>
+  <table class="two"><tbody>
+    <tr><td>address</td><td class="val" id="v-tok">…</td></tr>
+    <tr><td>name / symbol</td><td class="val" id="v-tokname">…</td></tr>
+    <tr><td>decimals</td><td class="val" id="v-tokdec">…</td></tr>
+  </tbody></table>
+</div>
+
+<h2>4. Read out of real receipts: what actually paid</h2>
+<div class="card">
+  <p><span class="st pend" id="s-fee">…</span> <span class="big" id="t-fee">scanning recent blocks…</span></p>
+  <div class="wrap"><table><thead><tr><th>transaction</th><th>type</th><th>fee token</th><th>gas used</th></tr></thead>
+    <tbody id="rows-fee"></tbody></table></div>
+  <p class="note" id="d-fee"></p>
+  <p class="note">Every receipt carries <code>feeToken</code> and <code>feePayer</code> —
+  including for a plain type <code>0x2</code> transaction. So the evidence that a settlement
+  was paid for in a stablecoin is emitted by the chain itself, and needs no custom
+  transaction type to produce.</p>
+</div>
+
+<h2>5. The settlements — empty, and honestly empty</h2>
+<div class="card pending">
+  <p><span class="st warn">◻</span> <span class="big">Nothing is deployed to Tempo.</span></p>
+  <p class="note">When the escrow is deployed and a deal settles, this section will read the
+  receipts the way <a href="index.html">the Arc page</a> already does — the verdict, where the
+  money went, and the <code>feeToken</code> that paid for the decision. Until then it stays
+  empty. A page that filled this in from a local run would be showing you a different chain.</p>
+  <p class="note">What is already true, and testable without this chain: the escrow settles a
+  TIP-20 in both directions on the same Solana proofs the Arc tests use, a real proof of a
+  different execution moves nothing, and a paused token blocks the payout <em>and</em> the
+  timeout. Those run in <code>forge test --match-contract RecknTempoTip20Test</code>.</p>
+</div>
+
+<h2>6. What crosses, and what does not</h2>
+<div class="card">
+  <table class="two"><tbody>
+    <tr><td>Crosses</td><td>A Groth16 proof of a re-executed Solana computation.</td></tr>
+    <tr><td>Does not cross</td><td>The stablecoin. It is on Tempo before and after.</td></tr>
+    <tr><td>Never happens</td><td>Tempo running a Solana VM. There is no bridge and no light client here.</td></tr>
+  </tbody></table>
+</div>
+<div class="scope">
+  <b>Scope.</b> The proof establishes that the <b>declared</b> prestate, predicate and
+  execution produced the committed result. The guest recomputes a bank hash over the account
+  set <em>the deal named</em>. That is <b>consistency, not provenance</b>: it does not
+  establish that those inputs came from Solana mainnet. No claim is made that a proof makes
+  a bridge trustless — there is no bridge to make trustless.
+</div>
+
+<h2>7. The limit this chain adds</h2>
+<div class="card">
+  <p>The escrow names no privileged address. On Tempo, <b>the token does.</b></p>
+  <p class="note">A TIP-20 issuer can pause the token, and a TIP-403 policy can refuse a
+  recipient. A pause stops a payout a valid proof authorised — and it stops the 30-day
+  refund too, so there is a state in which both exits are closed by a third party. That is
+  strictly further than Arc's blacklist reaches, where the timeout stayed open. It is
+  disclosed, tested (<code>TEMPO07</code>, <code>TEMPO08</code>), and not mitigated.</p>
+</div>
+
+<h2>Check it without this page</h2>
+<pre id="curl">…</pre>
+
+<p class="foot">Generated from <code>zk-verdict/contracts/tempo.json</code> at commit
+<span class="m" id="commit">…</span>. No constant on this page was typed into it: the
+generator reads the record, and the record says how each value was obtained.</p>
+
+</main>
+<script>
+const CFG = {
+  "rpc": "https://rpc.moderato.tempo.xyz",
+  "chainId": 42431,
+  "explorer": "",
+  "wrongRpc_4217": "https://rpc.tempo.xyz",
+  "feeToken": "0x20C0000000000000000000000000000000000000",
+  "feeTokenDecimals": 6,
+  "scanBlocks": 12,
+  "commit": "148ed6c"
+};
+
+const $ = (id) => document.getElementById(id);
+const set = (id, cls, text) => { const e = $(id); if (!e) return; e.className = "st " + cls; e.textContent = text; };
+const put = (id, text) => { const e = $(id); if (e) e.textContent = text; };
+
+async function rpc(url, method, params) {
+  const r = await fetch(url, {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+  });
+  const j = await r.json();
+  if (j.error) throw new Error(j.error.message || "rpc error");
+  return j.result;
+}
+const call = (to, data) => rpc(CFG.rpc, "eth_call", [{ to, data }, "latest"]);
+const hex = (h) => BigInt(h);
+
+// A returned ABI string: offset, length, bytes.
+function abiString(h) {
+  const b = h.slice(2);
+  if (b.length < 128) return "(unreadable)";
+  const n = parseInt(b.slice(64, 128), 16);
+  let s = "";
+  for (let i = 0; i < n; i++) s += String.fromCharCode(parseInt(b.slice(128 + i * 2, 130 + i * 2), 16));
+  return s;
+}
+
+// ---- 1 · which chain -------------------------------------------------------------
+async function chains() {
+  try {
+    const [right, wrong] = await Promise.all([
+      rpc(CFG.rpc, "eth_chainId", []),
+      rpc(CFG.wrongRpc_4217, "eth_chainId", []).catch(() => null),
+    ]);
+    const rn = Number(hex(right));
+    put("n-right", CFG.rpc);
+    put("v-right", `chain ${rn}` + (rn === CFG.chainId ? "  ✓ the recorded testnet" : "  ✗ NOT the recorded testnet"));
+    put("n-wrong", CFG.wrongRpc_4217);
+    put("v-wrong", wrong === null ? "(did not answer)" : `chain ${Number(hex(wrong))}  ✗ a different chain`);
+    const good = rn === CFG.chainId && (wrong === null || Number(hex(wrong)) !== rn);
+    set("s-chain", good ? "ok" : "bad", good ? "✓" : "✗");
+    put("t-chain", good ? `You are reading chain ${rn}. The other URL is not this chain.`
+                        : "The endpoints do not match the record — do not deploy from this page's values.");
+  } catch (e) {
+    set("s-chain", "bad", "✗"); put("t-chain", "could not reach the endpoint: " + e.message);
+  }
+}
+
+// ---- 2 · the precompiles ---------------------------------------------------------
+const PRE = [
+  { at: "0x0000000000000000000000000000000000000006", name: "0x06 bn256Add",
+    data: "0x" + "0".repeat(256), want: "0x" + "0".repeat(128), say: "64 zero bytes" },
+  { at: "0x0000000000000000000000000000000000000007", name: "0x07 bn256ScalarMul",
+    data: "0x" + "0".repeat(192), want: "0x" + "0".repeat(128), say: "64 zero bytes" },
+  { at: "0x0000000000000000000000000000000000000008", name: "0x08 bn256Pairing",
+    data: "0x", want: "0x" + "0".repeat(63) + "1", say: "0x…0001 (an empty pairing check is true)" },
+];
+async function precompiles() {
+  const tb = $("rows-pre");
+  let allOk = true;
+  for (const p of PRE) {
+    let got, ok = false;
+    try { got = await call(p.at, p.data); ok = got.toLowerCase() === p.want; } catch (e) { got = "error: " + e.message; }
+    allOk = allOk && ok;
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td class="m">${p.name}</td><td class="note">${p.data === "0x" ? "empty" : (p.data.length - 2) / 2 + " zero bytes"}</td>` +
+                   `<td class="val">${p.say}</td><td class="${ok ? "ok" : "bad"}">${ok ? "✓" : "✗"}</td>`;
+    tb.appendChild(tr);
+  }
+  set("s-pre", allOk ? "ok" : "bad", allOk ? "✓" : "✗");
+  put("t-pre", allOk ? "BN254 is here, with the same semantics as on Ethereum."
+                     : "A pairing precompile did not answer as expected.");
+}
+
+// ---- 3 · no gas token, and the token that pays -----------------------------------
+async function balances() {
+  try {
+    const [a, b] = await Promise.all([
+      rpc(CFG.rpc, "eth_getBalance", ["0x000000000000000000000000000000000000dEaD", "latest"]),
+      rpc(CFG.rpc, "eth_getBalance", [CFG.feeToken, "latest"]),
+    ]);
+    put("v-b1", a); put("v-b2", b);
+    const same = a === b;
+    set("s-bal", same ? "ok" : "warn", same ? "✓" : "!");
+    put("t-bal", same ? "Two unrelated addresses, the same number. It is not a balance."
+                      : "The two differ — read them yourself before trusting either.");
+  } catch (e) { set("s-bal", "bad", "✗"); put("t-bal", "could not read: " + e.message); }
+}
+
+async function feeToken() {
+  try {
+    const [nm, sy, dc] = await Promise.all([
+      call(CFG.feeToken, "0x06fdde03"), call(CFG.feeToken, "0x95d89b41"), call(CFG.feeToken, "0x313ce567"),
+    ]);
+    put("v-tok", CFG.feeToken);
+    put("v-tokname", abiString(nm) + " / " + abiString(sy));
+    const d = Number(hex(dc));
+    put("v-tokdec", String(d));
+    const ok = d === CFG.feeTokenDecimals;
+    set("s-tok", ok ? "ok" : "bad", ok ? "✓" : "✗");
+    put("t-tok", ok ? `${abiString(sy)}, ${d} decimals — read from the token, not from this page.`
+                    : `the token reports ${d} decimals; the record says ${CFG.feeTokenDecimals}`);
+  } catch (e) { set("s-tok", "bad", "✗"); put("t-tok", "could not read the token: " + e.message); }
+}
+
+// ---- 4 · receipts ----------------------------------------------------------------
+async function fees() {
+  try {
+    const head = Number(hex(await rpc(CFG.rpc, "eth_blockNumber", [])));
+    const types = {}; const shown = [];
+    for (let i = 0; i < CFG.scanBlocks && shown.length < 4; i++) {
+      const b = await rpc(CFG.rpc, "eth_getBlockByNumber", ["0x" + (head - i).toString(16), true]);
+      if (!b) continue;
+      for (const t of b.transactions) {
+        types[t.type] = (types[t.type] || 0) + 1;
+        if (shown.length < 4 && !shown.some((s) => s.type === t.type)) shown.push(t);
+      }
+    }
+    const tb = $("rows-fee");
+    let paidInFeeToken = 0;
+    for (const t of shown) {
+      const r = await rpc(CFG.rpc, "eth_getTransactionReceipt", [t.hash]);
+      const ft = r && r.feeToken ? r.feeToken : null;
+      if (ft && ft.toLowerCase() === CFG.feeToken.toLowerCase()) paidInFeeToken++;
+      const tr = document.createElement("tr");
+      const link = CFG.explorer ? `<a href="${CFG.explorer}/tx/${t.hash}">${t.hash.slice(0, 14)}…</a>` : t.hash.slice(0, 14) + "…";
+      tr.innerHTML = `<td class="m">${link}</td><td class="m">${t.type}</td>` +
+                     `<td class="val">${ft ? (ft.toLowerCase() === CFG.feeToken.toLowerCase() ? ft + " ✓" : ft) : "<i>no feeToken field</i>"}</td>` +
+                     `<td class="m">${r ? Number(hex(r.gasUsed)).toLocaleString() : "—"}</td>`;
+      tb.appendChild(tr);
+    }
+    const tally = Object.entries(types).map(([k, v]) => `${k}: ${v}`).join(", ");
+    put("d-fee", `Transaction types seen in the last ${CFG.scanBlocks} blocks — ${tally}. ` +
+                 `Type 0x76 is Tempo's own and is the only one that can NAME a fee token; the standard ` +
+                 `types are in active use, which is why ordinary tooling can send one.`);
+    const ok = paidInFeeToken > 0;
+    set("s-fee", ok ? "ok" : "warn", ok ? "✓" : "!");
+    put("t-fee", ok ? `Every receipt names what paid for it.`
+                    : `No sampled receipt paid in the recorded token — read the table before concluding anything.`);
+  } catch (e) { set("s-fee", "bad", "✗"); put("t-fee", "could not scan: " + e.message); }
+}
+
+put("commit", CFG.commit);
+put("curl",
+`# the chain you are on
+curl -s ${CFG.rpc} -H 'content-type: application/json' \\
+  -d '{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}'
+
+# the pairing precompile Groth16 needs (empty input verifies to true)
+curl -s ${CFG.rpc} -H 'content-type: application/json' \\
+  -d '{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"to":"0x0000000000000000000000000000000000000008","data":"0x"},"latest"]}'
+
+# what paid for a transaction
+curl -s ${CFG.rpc} -H 'content-type: application/json' \\
+  -d '{"jsonrpc":"2.0","id":1,"method":"eth_getTransactionReceipt","params":["0x..."]}' | grep feeToken
+
+# and the tests that need no chain at all
+forge test --match-contract RecknTempoTip20Test`);
+
+chains(); precompiles(); balances(); feeToken(); fees();
+</script>
+</body>
+</html>

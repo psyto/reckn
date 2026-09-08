@@ -121,6 +121,13 @@ virtual machine the work happened on.
 
 ![The Arc demo again: the Solana deal funded and settled with the Solana proof, the seller tile at 250.00 USDC.](dashboard/media/arc-demo-solana.jpg)
 
+**▶ Live page — Tempo (CWF, task 011):** [`psyto.github.io/reckn/tempo.html`](https://psyto.github.io/reckn/tempo.html)
+— your browser reads Tempo directly: the chain id (and the other published RPC URL that
+answers on a *different* chain), the BN254 precompiles a Groth16 verdict needs, the absent
+native balance, and the `feeToken` on real receipts. The escrow is **not deployed** there
+yet and the page says so rather than showing something else. The settlement itself is
+covered by `forge test --match-contract RecknTempoTip20Test`.
+
 **▶ Demo video (3:04, 1920×1080, re-recorded 2026-09-07 — it now ends on the *public* chain):**
 [`dashboard/media/reckn-arc-demo-v2.mp4`](dashboard/media/reckn-arc-demo-v2.mp4) — the hook,
 then the five presses above driven live, ending on this run's own `no-keys.sh` output.
