@@ -110,7 +110,7 @@ Current state, measured:
 
 | requirement | `reckn-demo-v3.mp4` |
 |---|---|
-| 2–4 minutes | **3:15** ✅ |
+| 2–4 minutes | **3:29** ✅ |
 | ≥ 720p | **1920 × 1080** ✅ |
 | 16:9 | 1.7778 ✅ |
 | opens at all (faststart) | ✅ |
@@ -135,6 +135,24 @@ bad one, so silence there is the script, not a gap in it.
 The pitch deck itself — [`../../dashboard/media/reckn-deck.pdf`](../../dashboard/media/reckn-deck.pdf),
 also served at `docs/deck.html` — is built from the same file the film's slides come from, so
 the two cannot disagree.
+
+### CWF wants TWO videos, and they come from the same recorder
+
+Crypto World's Fair asks for a **2–3 minute presentation** ("one of the first resources
+judges review") and a **product demo of no more than three minutes**. ETHOnline asks for one.
+`RECKN_CUT` selects which beats are in the timeline, so all three come from one script and
+one script cannot contradict itself:
+
+| cut | file | measured | limit |
+|---|---|---|---|
+| `RECKN_CUT=full` (default) | `reckn-demo-v3.mp4` | **3:29** | ETHOnline, 2–4 min ✅ |
+| `RECKN_DOOR=cwf RECKN_CUT=presentation` | `reckn-cwf-presentation.mp4` | **2:15** | CWF, 2–3 min ✅ |
+| `RECKN_DOOR=cwf RECKN_CUT=demo` | `reckn-cwf-demo.mp4` | **2:54** | CWF, ≤3 min ✅ |
+
+The presentation carries the argument plus **one** live proof — the theft — so it is not a
+slide deck, and not a second demo. The demo carries the mechanism and drops the pitch slide,
+because the pitch is the other video's job. Every cut opens on the same plate: the thesis and
+the door's question.
 
 ### Verification procedure for the final file
 

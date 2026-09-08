@@ -24,8 +24,17 @@ const repo = path.join(dir, "..", "..");
 // made executable rather than aspirational. Everything between the plates is identical.
 const DOOR = process.env.RECKN_DOOR === "cwf" ? "cwf" : "ethonline";
 const SUF = DOOR === "cwf" ? "-cwf" : "";
-const OUT_CARDED = path.join(repo, "dashboard", "media", `reckn-demo-v3${SUF}.mp4`);
-const OUT_CLEAN  = path.join(repo, "dashboard", "media", `reckn-demo-v3${SUF}-clean.mp4`);
+// CWF asks for TWO videos: a 2-3 minute PRESENTATION that judges review first, and a
+// product DEMO of at most three minutes showing how the thing works. ETHOnline asks for one.
+// The material is the same; what differs is which beats are in the timeline.
+//
+//   full          (default)  the combined cut — ETHOnline's single video
+//   presentation             the argument, with one live proof so it is not a slide deck
+//   demo                     the product working, with slides only as chapter markers
+const CUT = ["presentation", "demo"].includes(process.env.RECKN_CUT || "") ? process.env.RECKN_CUT : "full";
+const NAME = CUT === "full" ? `reckn-demo-v3${SUF}` : `reckn-cwf-${CUT}`;
+const OUT_CARDED = path.join(repo, "dashboard", "media", `${NAME}.mp4`);
+const OUT_CLEAN  = path.join(repo, "dashboard", "media", `${NAME}-clean.mp4`);
 // The recorder writes here, and only a FINISHED, faststart-encoded file ever lands at the
 // path above. Recording straight to the delivered path means anyone who opens it while a
 // take is running gets a file with no moov atom — which is not "still rendering", it is
@@ -54,9 +63,20 @@ const reap = () => {
     if (!m) continue;
     const [, pid, cmd] = m;
     if (Number(pid) === process.pid) continue;
-    const mine = cmd.includes(repo + "/scripts/arc-demo.sh")
-              || cmd.includes(repo + "/dashboard/arc-demo.py")
-              || cmd.includes("anvil --chain-id 5042002");
+    // Match the EXECUTABLE, not the whole command line. Matching anywhere in `cmd` killed the
+    // shell that was running this very take, because that shell's argv held a heredoc which
+    // merely CONTAINED the pattern as text. A rule that kills anything mentioning a string
+    // kills the things talking ABOUT it, and the first casualty was the caller.
+    const argv0 = cmd.trim().split(/\s+/)[0] || "";
+    // Leftover puppeteer Chromes were NOT being reaped, and they accumulate: every take that
+    // dies with "Session closed" leaves renderers behind, and by the fourth crash there were
+    // four of them still resident. Scoped to the puppeteer cache path so it can only ever
+    // match browsers this tool downloaded — never the operator's own Chrome, which is in
+    // /Applications and does not contain that string.
+    const mine = argv0.includes(".cache/puppeteer/chrome")
+              || (argv0.endsWith("/anvil") && cmd.includes("--chain-id 5042002"))
+              || (argv0.endsWith("/bash") && cmd.includes(repo + "/scripts/arc-demo.sh"))
+              || (argv0.endsWith("python3") && cmd.includes(repo + "/dashboard/arc-demo.py"));
     if (!mine) continue;
     console.error("• reaping a leftover from an earlier take: " + pid + "  " + cmd.slice(0, 60));
     try { process.kill(Number(pid), "SIGKILL"); } catch {}
@@ -881,10 +901,44 @@ t0 = Date.now();
 // caveat at the end, because "here is what we do not prove" is the rarest thing in a
 // hackathon video and burying it wastes the only claim nobody else is making.
 
-await openingPlate(BASE + "/arc.html");
+// ---- the door's own evidence ----------------------------------------------------
+// The plate carries the thesis and the door's question, so it belongs to EVERY cut. It was
+// briefly inside the gate below, which left the PRESENTATION — the video a judge opens first
+// — starting on a content slide with no title and no claim on it.
+await openingPlate(BASE + "/index.html");
 
-// The offer. Everything after this is the viewer checking it.
-await deckSlide(2, slideMs(2), { label: "the claim, and the offer" });
+// Presentation skips this: it is a live sequence, and the presentation carries exactly one
+// of those (the theft) so it stays an argument rather than becoming a second demo.
+if (CUT !== "presentation") {
+// The door says "no bridge and no JUDGE decides the payout". The film demonstrated the
+// bridge half — the boundary diagram — and never showed a judge at all, so half of the
+// opening sentence stood unsupported. This is that half: one dispute, put to an opinion
+// and to a replay, disagreeing about who gets paid. It is also the only beat in the film
+// that shows the ALTERNATIVE rather than the product.
+//
+// It plays before the four checks rather than as one of them, because it is the evidence
+// for the premise, not a step in verifying the build.
+await chrome("Who decides", "00");
+beat("00 opinion vs re-execution");
+lower("The same dispute, put to two judges.<i>An opinion — and a replay of the work itself.</i>", 6200);
+await sleep(900);
+await page.evaluate(() => document.getElementById("btnFalse")?.click());
+await sleep(1200);
+await page.evaluate(() => document.getElementById("btnReplay")?.click());
+await sleep(6000);
+lower("They disagree about who gets paid.<i>Only one of them is something you can redo yourself.</i>", 6800);
+await dwell(".judges", 9000);
+
+}
+
+// The offer. Not in the demo: CWF caps that video at three minutes, this slide is the PITCH,
+// and the pitch is the presentation's job.
+if (CUT !== "demo") {
+  await deckSlide(2, slideMs(2), { label: "the claim, and the offer" });
+}
+await page.goto(BASE + "/arc.html", { waitUntil: "domcontentloaded" });
+await page.waitForNetworkIdle({ idleTime: 400, timeout: 30000 }).catch(() => {});
+await cursor();
 
 // ---- check 1 · a real proof that cannot take the money ---------------------------
 await deckSlide(3, slideMs(3), { label: "check 1", navigate: BASE + "/arc.html" });
@@ -911,6 +965,7 @@ await press('button[data-act="fund"][data-deal="decrease"]', "tx 0x", { hold: 12
 await press('button[data-act="settle"][data-deal="decrease"]', "tx 0x", { hold: 5200 });
 
 // ---- check 2 · the code, verified in the viewer's own browser --------------------
+if (CUT !== "presentation") {
 await deckSlide(4, slideMs(4), { label: "check 2", navigate: LIVE + "/" });
 await chrome("Check 2 · the code that holds it", "02");
 beat("02 evidence: bytecode + no-keys");
@@ -980,9 +1035,12 @@ await dwell("#d-code", 4000);
   await sleep(2600);
 }
 
+}
+
 // ---- check 3 · real settlements, two of them decided on Solana -------------------
 await deckSlide(5, slideMs(5), { label: "check 3", navigate: LIVE + "/" });
 await chrome("Check 3 · real money, another chain", "03");
+if (CUT !== "presentation") {
 {
   const rec_ = JSON.parse(fs.readFileSync(
     path.join(repo, "zk-verdict", "contracts", "arc.json"), "utf8"));
@@ -1001,7 +1059,11 @@ await chrome("Check 3 · real money, another chain", "03");
   await dwell("#rows", 11000);
 }
 
-await deckSlide(6, slideMs(6), { label: "the boundary" });
+}
+
+// A chapter marker for a diagram that already carries its own headline — the same redundancy
+// removed once before. Kept where there is room; dropped from the demo, which has a ceiling.
+if (CUT !== "demo") await deckSlide(6, slideMs(6), { label: "the boundary" });
 beat("17 SVG: out to Arc, scope held");
 await panStill("solana-proof-to-arc-settlement.svg",
   { s: 1.06, x: 1, y: 1 }, { s: 1.0, x: 0, y: 0 }, 5000, null, 900, { mat: false });
@@ -1016,8 +1078,11 @@ await deckSlide(7, slideMs(7), {
     ?.scrollIntoView({ block: "center" })),
 });
 await chrome("Check 4 · what it does not prove", "04");
+if (CUT !== "presentation") {
 beat("06 evidence: the two rows");
 await dwell("table.two", 11000);
+
+}
 
 // ---- the URL, big, and nothing after it -----------------------------------------
 // The one slide whose hold is NOT a reading-speed problem. Ten words, so the formula gives
@@ -1031,7 +1096,7 @@ await closingPlate(6000);
 
 beat("END");
 await rec.stop();
-fs.writeFileSync(path.join(repo, "dashboard", "video", CARDS ? `beats-v3${SUF}.tsv` : `beats-v3${SUF}-clean.tsv`),
+fs.writeFileSync(path.join(repo, "dashboard", "video", CARDS ? `beats-${NAME}.tsv` : `beats-${NAME}-clean.tsv`),
   beats.map(([t, l]) => `${t.toFixed(1)}\t${l}`).join("\n") + "\n");
 await browser.close();
 stopDemo();

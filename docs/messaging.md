@@ -196,6 +196,20 @@ Nothing here is claimed on the strength of a file appearing.*
 | "the two chains adjudicate identically", or any wording that slides from *one source* to *one behaviour* | **false.** What is measured and gated is that the **escrow source is unmodified across both**. The adjudicator is named per deal by the funder, the fee models differ, and a TIP-20 can be paused or policy-gated where Arc's USDC cannot be in the same way. "Same source, two chains" is the claim; "same adjudication" is not, and the gap between them is exactly where an over-claim would live |
 | any sentence that mixes the 30-day timeout with the demonstrated refund | **they are different refunds.** `refundAfterDeadline` waits thirty days, so on a public chain it can never be shown inside an event — on Arc it is *scheduled*, not demonstrated. **The refund on screen is always the proof-driven one** (`Failed` → buyer), which is immediate. Conflating them survives no scrutiny and must not be written even after §3 unlocks |
 
+### Design non-claims vs status limits — do not put them in the same list
+
+Three of Reckn's limits are **design**: it does not remove bridges, it does not fix
+fragmented liquidity, and it does not prove Solana mainnet provenance. **None of them becomes
+true later.** They are boundaries of the thing itself.
+
+Two others are **status**: this is Arc testnet rather than production, and the thirty-day
+timeout refund is undemonstrated because a public chain cannot be fast-forwarded. **Both stop
+being true the moment a mainnet address exists or thirty days pass.**
+
+They were briefly listed together on one slide, and the founder caught it: mixing them makes
+the permanent boundaries read as temporary inconveniences, which quietly overstates the
+product. State both — never in the same column, and label which is which.
+
 ### Three qualifiers the tagline needs
 
 1. **"Keep assets native" is not "you never move assets."** What is removed is movement *for
