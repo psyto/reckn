@@ -26,10 +26,12 @@ very large type, and the only pause this film has.
 **Read at ~145 words per minute, conversational, no music.** The lines are written to be
 spoken on a first take: contractions, one idea per breath, no stacked noun phrases. If a
 line makes you stumble, change it and re-run `vo-table.py` — it will tell you whether the
-new wording still fits its shot. Each line's word budget is the
-cell beside it: going over means the voice runs past its shot. Lines are written to say what
-the picture does *not* — the on-screen chapter cards are already saying the claim, so the
-voice supplies the evidence, never the caption.
+new wording still fits its shot. Each line's word budget is the cell beside it.
+
+**Rebuilding this table used to be able to blank it.** The generator raised a bare `KeyError`
+when a beat was renamed, and a caller piping its stdout wrote the empty result straight into
+this file. It now names the missing label and lists the beats the cut actually has, and the
+rebuild refuses to write a table with fewer than fourteen rows.
 
 **This table is generated** by `python3 dashboard/video/vo-table.py`, from the `beats.tsv`
 the recorder writes on every run — not from arithmetic. The first draft of this table was arithmetic and its last line landed at
@@ -55,20 +57,20 @@ and no line runs past its shot.
 | 2 | 0:08 | 7.5 s | 16 / 18 | "Now watch. That's a real proof, and it verifies — it's just about a different job." |
 | 3 | 0:16 | 7.0 s | 10 / 16 | "Binding mismatch. The money didn't move. Being valid wasn't enough." |
 | — | 0:23 | 9.0 s | — | *(plate: **Reckn — Keep assets native. Settle on proof.** then the door question)* |
-| 4 | 0:33 | 6.0 s | 10 / 14 | "Both are guessing. One from a claim, one from nothing." |
-| 5 | 0:41 | 9.0 s | 15 / 21 | "Nobody could have stepped in and overridden that. There's no owner, no admin, no resolver." |
+| 4 | 0:34 | 6.0 s | 10 / 14 | "Both are guessing. One from a claim, one from nothing." |
+| 5 | 0:42 | 9.0 s | 15 / 21 | "Nobody could have stepped in and overridden that. There's no owner, no admin, no resolver." |
 | 6 | 0:51 | 7.5 s | 13 / 18 | "And it isn't a promise. If one ever appeared, the build would fail." |
-| 7 | 1:05 | 7.0 s | 15 / 16 | "Here's the proof this deal was funded against. It reproduces, so the seller gets paid." |
+| 7 | 1:04 | 7.0 s | 15 / 16 | "Here's the proof this deal was funded against. It reproduces, so the seller gets paid." |
 | 10 | 1:12 | 8.5 s | 13 / 20 | "And when the work doesn't reproduce, the same machinery sends the money back." |
-| 8 | 1:27 | 8.5 s | 15 / 20 | "What we took out isn't a fee. It's the person who used to approve this." |
-| 9 | 1:43 | 8.5 s | 19 / 20 | "The work happened on Solana. We re-ran it inside a zkVM. The proof crosses — the money never does." |
-| 11 | 1:58 | 10.0 s | 23 / 24 | "Four settlements on Arc testnet, read straight off the chain by your browser. Two were decided by proofs about work done on Solana." |
-| 12 | 2:09 | 5.5 s | 9 / 13 | "We would rather you heard this part from us." |
-| 13 | 2:19 | 7.5 s | 16 / 18 | "Arc never runs a Solana virtual machine — and we put that limit on the page." |
-| 14 | 2:27 | 5.0 s | 5 / 12 | "It's consistency. It isn't provenance." |
-| 15 | 2:32 | 6.5 s | 15 / 15 | "The one thing an observer controls is the story. So watch what the story moves." |
-| 16 | 2:39 | 6.0 s | 14 / 14 | "Every keystroke, a new hash. The verdict comes from the chain. It doesn't budge." |
-| — | 2:47 | 8.0 s | — | *(plate: **Keep assets native. Settle on proof.** then the door's last line)* |
+| 8 | 1:24 | 8.5 s | 15 / 20 | "What we took out isn't a fee. It's the person who used to approve this." |
+| 9 | 1:40 | 8.5 s | 19 / 20 | "The work happened on Solana. We re-ran it inside a zkVM. The proof crosses — the money never does." |
+| 11 | 1:50 | 10.0 s | 23 / 24 | "Four settlements on Arc testnet, read straight off the chain by your browser. Two were decided by proofs about work done on Solana." |
+| 12 | 2:01 | 5.5 s | 9 / 13 | "We would rather you heard this part from us." |
+| 13 | 2:11 | 7.5 s | 16 / 18 | "Arc never runs a Solana virtual machine — and we put that limit on the page." |
+| 14 | 2:19 | 5.0 s | 5 / 12 | "It's consistency. It isn't provenance." |
+| 15 | 2:25 | 6.5 s | 15 / 15 | "The one thing an observer controls is the story. So watch what the story moves." |
+| 16 | 2:32 | 6.0 s | 14 / 14 | "Every keystroke, a new hash. The verdict comes from the chain. It doesn't budge." |
+| — | 2:39 | 8.0 s | — | *(plate: **Keep assets native. Settle on proof.** then the door's last line)* |
 
 ## Recording it
 

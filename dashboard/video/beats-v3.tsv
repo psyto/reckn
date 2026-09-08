@@ -1,20 +1,17 @@
 0.0	00 cold open: fund
-8.2	00 cold open: BindingMismatch
-23.8	TITLE Reckn
-28.4	CARD the door
-33.8	SLIDE 02 the problem
-41.8	CARD 01 Nobody could have overridden that.
-58.9	CARD 02 The deal's own proof releases it.
-65.1	02 evidence: release
-72.5	02 evidence: refund
-82.4	CARD 03 And nobody approved it.
-87.8	03 evidence: what it replaces
-96.8	SLIDE 03 the inversion
-103.8	17 SVG: out to Arc, scope held
-113.0	CARD 04 The money never left Arc.
-118.0	04 evidence: four settlements
-129.1	SLIDE 07 what this does not claim
-139.3	06 evidence: the two rows
-152.9	07 evidence: typing
-167.0	CARD close
-175.0	END
+8.3	00 cold open: BindingMismatch
+23.9	TITLE Reckn
+28.5	CARD the door
+34.0	SLIDE 02 the problem
+42.0	SLIDE 05 nobody could have overridden that
+64.6	02 evidence: release
+72.4	02 evidence: refund
+84.3	03 evidence: what it replaces
+93.4	SLIDE 03 the inversion
+100.3	17 SVG: out to Arc, scope held
+110.6	04 evidence: four settlements
+121.6	SLIDE 07 what this does not claim
+131.7	06 evidence: the two rows
+145.3	07 evidence: typing
+159.4	CARD close
+167.4	END

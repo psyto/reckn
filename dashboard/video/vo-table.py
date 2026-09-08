@@ -23,7 +23,15 @@ END = beats["END"]
 # Card lengths are derived by holdFor() in record.js; the two composite plates (opening
 # and closing) run on their own timers. Only the gaps matter here, and every one of them is
 # read from beats.tsv rather than assumed.
-def at(label): return beats[label]
+def at(label):
+    # A missing label used to surface as a bare KeyError from inside the SCRIPT literal, and
+    # a caller that piped stdout got an EMPTY table with no obvious cause — which is how a
+    # regenerated VO.md briefly ended up with zero lines in it. Say which label, and say
+    # which ones exist.
+    if label not in beats:
+        raise SystemExit(
+            f"vo-table: no beat named {label!r}.\nThe cut has:\n  " + "\n  ".join(order))
+    return beats[label]
 
 CLOSE = 8.0   # closingPlate(8000)
 
@@ -45,9 +53,9 @@ SCRIPT = [
     # names the insight, then silence while it is read.
     (at("SLIDE 02 the problem"), 6.0, 4,
      "Both are guessing. One from a claim, one from nothing."),
-    (at("CARD 01 Nobody could have overridden that."), 9.0, 5,
+    (at("SLIDE 05 nobody could have overridden that"), 9.0, 5,
      "Nobody could have stepped in and overridden that. There's no owner, no admin, no resolver."),
-    (at("CARD 01 Nobody could have overridden that.") + 9.5, 7.5, 6,
+    (at("SLIDE 05 nobody could have overridden that") + 9.5, 7.5, 6,
      "And it isn't a promise. If one ever appeared, the build would fail."),
     (at("02 evidence: release"), 7.0, 7,
      "Here's the proof this deal was funded against. It reproduces, so the seller gets paid."),

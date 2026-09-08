@@ -619,6 +619,49 @@ function slideUri(n) {
   return u;
 }
 
+// Deck chrome, drawn ON TOP of the live page. The film used to run three visual registers —
+// screen recording, deck slide, and a black card with green type — and the last two were
+// close enough in palette to the first that a viewer could not tell a CLAIM from EVIDENCE by
+// looking. The black cards are gone entirely; what is left is the deck, and the live page
+// wearing the deck's frame. Same typography, same rule, same margins, so a cut between them
+// is a change of content rather than a change of world.
+//
+// It is an overlay, not an iframe. Driving the demo through a frame would mean rewriting
+// every selector in this file, and a rewrite of working interaction code to gain a border is
+// a bad trade.
+async function chrome(kicker, n = "") {
+  if (!CARDS) return;
+  await page.evaluate((k, num) => {
+    document.getElementById("__chrome")?.remove();
+    const d = document.createElement("div");
+    d.id = "__chrome";
+    d.innerHTML = `<div id="__ck"></div><div id="__cn"></div><div id="__cr"></div><div id="__cb"></div>`;
+    Object.assign(d.style, { position: "fixed", inset: "0", zIndex: "99990",
+                             pointerEvents: "none", opacity: "0",
+                             transition: "opacity .5s ease" });
+    document.body.appendChild(d);
+    const F = "600 26px/1 ui-sans-serif,-apple-system,'SF Pro Display',Inter,sans-serif";
+    // A band at the very top and the very bottom, in the deck's ink, so the browser page
+    // sits INSIDE a frame instead of being the whole frame.
+    Object.assign(d.querySelector("#__cb").style, {
+      position: "fixed", left: "0", right: "0", top: "0", height: "104px",
+      background: "linear-gradient(to bottom, #17130f 62%, rgba(23,19,15,0))" });
+    Object.assign(d.querySelector("#__ck").style, {
+      position: "fixed", left: "60px", top: "34px", font: F, letterSpacing: ".18em",
+      textTransform: "uppercase", color: "#8a7f72", zIndex: "1" });
+    Object.assign(d.querySelector("#__cn").style, {
+      position: "fixed", right: "60px", top: "34px", zIndex: "1",
+      font: "600 26px/1 ui-monospace,SFMono-Regular,Menlo,monospace", color: "#8a7f72" });
+    Object.assign(d.querySelector("#__cr").style, {
+      position: "fixed", left: "0", right: "0", bottom: "0", height: "6px",
+      background: "#17130f", borderTop: "2px solid #3fb950" });
+    d.querySelector("#__ck").textContent = k;
+    d.querySelector("#__cn").textContent = num;
+    requestAnimationFrame(() => { d.style.opacity = "1"; });
+  }, kicker, n).catch(() => {});
+}
+
+
 async function deckSlide(n, ms, { navigate = null, during = null, label = "" } = {}) {
   if (!CARDS) {
     await sleep(ms);
@@ -759,6 +802,7 @@ await page.goto(BASE + "/arc.html", { waitUntil: "domcontentloaded" });
 await page.waitForNetworkIdle({ idleTime: 400, timeout: 30000 }).catch(() => {});
 await page.evaluate(() => window.scrollTo(0, 0));
 await cursor();
+await chrome("Try to steal it", "00");
 await sleep(600);
 
 await rec.start(RAW(out));
@@ -802,7 +846,10 @@ await openingPlate(LIVE + "/");
 await deckSlide(2, 8000, { label: "the problem" });
 
 // ---- 01 · the answer to the cold open ------------------------------------------
-await card("Nobody could have\noverridden that.", 0, { navigate: LIVE + "/" });
+// The claim this beat used to make on a black card is exactly what deck slide 05 says, in
+// better type. One register, and one fewer place for the words to drift.
+await deckSlide(5, 7000, { label: "nobody could have overridden that", navigate: LIVE + "/" });
+await chrome("The build condition", "01");
 await page.waitForFunction(
   () => document.querySelector("#s-code")?.textContent === "\u2713",
   { timeout: 60000 },
@@ -866,10 +913,14 @@ await dwell("#d-code", 4000);
 }
 
 // ---- 02 · both directions, from the same machinery -----------------------------
-await card("The deal's own proof\nreleases it.", 0, {
-  navigate: BASE + "/arc.html",
-  during: () => page.evaluate(() => window.scrollTo(0, 0)),
-});
+// A narrative beat, not an argument — so it belongs ON the evidence rather than in front of
+// it. Three full-screen interruptions became three lower thirds, and the film stopped
+// cutting to black to say things the picture was about to show anyway.
+await page.goto(BASE + "/arc.html", { waitUntil: "domcontentloaded" });
+await page.waitForNetworkIdle({ idleTime: 400, timeout: 30000 }).catch(() => {});
+await cursor();
+await chrome("Both directions", "02");
+await page.evaluate(() => window.scrollTo(0, 0));
 await sleep(900);
 await page.evaluate(() => document.getElementById("log")
   ?.scrollIntoView({ behavior: "smooth", block: "center" }));
@@ -883,11 +934,13 @@ await press('button[data-act="fund"][data-deal="decrease"]', "tx 0x", { hold: 12
 await press('button[data-act="settle"][data-deal="decrease"]', "tx 0x", { hold: 5200 });
 
 // ---- 03 · what was removed is not a fee ----------------------------------------
-await card("And nobody approved it.", 0, {
-  navigate: LIVE + "/",
-  during: () => page.evaluate(() => document.querySelector("#t-cost")
-    ?.scrollIntoView({ block: "center" })),
-});
+await page.goto(LIVE + "/", { waitUntil: "domcontentloaded" });
+await page.waitForNetworkIdle({ idleTime: 400, timeout: 30000 }).catch(() => {});
+await cursor();
+await chrome("What it removes", "03");
+await page.evaluate(() => document.querySelector("#t-cost")?.scrollIntoView({ block: "center" }));
+await sleep(700);
+lower("And nobody approved either one.<i>What was removed is not a fee. It is the person.</i>", 5600, { near: "#t-cost" });
 beat("03 evidence: what it replaces");
 await dwell("#t-cost", 9000, 260);
 
@@ -905,7 +958,10 @@ await holdStill("solana-proof-to-arc-settlement.svg", { s: 1.0, x: 0, y: 0 }, 35
 await sleep(500);
 
 // ---- 05 · and it is running --------------------------------------------------
-await card("The money never left Arc.", 0, { navigate: LIVE + "/" });
+await page.goto(LIVE + "/", { waitUntil: "domcontentloaded" });
+await page.waitForNetworkIdle({ idleTime: 400, timeout: 30000 }).catch(() => {});
+await cursor();
+await chrome("It is running", "04");
 {
   const rec_ = JSON.parse(fs.readFileSync(
     path.join(repo, "zk-verdict", "contracts", "arc.json"), "utf8"));
@@ -934,6 +990,7 @@ await deckSlide(7, 9000, {
   during: () => page.evaluate(() => document.querySelector("table.two")
     ?.scrollIntoView({ block: "center" })),
 });
+await chrome("What it does not prove", "05");
 beat("06 evidence: the two rows");
 await dwell("table.two", 11000);
 
