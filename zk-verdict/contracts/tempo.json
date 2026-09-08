@@ -165,6 +165,15 @@
         "tx": "0xf5ebc8afe5edc69baea26ced8dc09cca2ddd157dff3a8f562a60ea78850cfe0c",
         "result": "status 0x1 in block 0x20c1988; 1,000,000.000000 pathUSD minted, and one sibling transaction each for alphaUSD, betaUSD and thetaUSD. Only the pathUSD hash is recorded here because it is the only one anything downstream depends on -- recording four hashes to look thorough would put three values in the record that nothing checks."
       }
+    },
+    "foundryGasEstimation": {
+      "_": "Measured the hard way, by a transaction that failed. Recorded rather than quietly fixed, because anyone deploying a contract to Tempo with Foundry will hit it.",
+      "finding": "`forge script` sizes each broadcast transaction from ITS OWN LOCAL SIMULATION times --gas-estimate-multiplier (default 130), NOT from the chain's eth_estimateGas. On a chain with Ethereum's gas schedule that is fine. Here it is not: Tempo's code deposit is ~2,577 gas/byte against Ethereum's ~202 (see measured.gasSchedule), so a contract creation simulates 5-6x cheaper locally than it costs, is handed a limit that short, and burns all of it.",
+      "theNodeIsRight": "eth_estimateGas on Tempo returned 12,783,924 for the SP1Verifier creation, against 12,986,736 measured in Tempo's own EVM. The chain knows. Foundry does not ask it.",
+      "failedTx": "0xac96f0accbdca0e4cf6be6d66b31020a916191ccccff9ae7e0b4bda40096e1f3",
+      "failedTxDetail": "SP1Verifier creation, 2026-09-08. Limit 3,425,376; gasUsed 3,425,376; status 0x0. Cost 1.714744 PathUSD for nothing. No contract exists at the address it would have taken.",
+      "fix": "tempo-testnet.sh passes -g 1000 (10x) and refuses to start if the chain's own estimate for any creation is within 15% of the limit forge would offer. The measured ratios are 5.24x / 6.32x / 5.52x, so 10x is 1.6-1.9x of headroom. Over-sizing a gas LIMIT is free -- a transaction pays for gas used, not gas offered -- so headroom costs nothing and a short limit costs a whole deployment.",
+      "notAffected": "`cast send` estimates against the node and is correct, so fund/settle were never at risk. Only the forge script deploy needed this."
     }
   },
   "fromDocs": {

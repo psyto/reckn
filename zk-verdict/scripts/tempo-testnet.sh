@@ -160,12 +160,66 @@ fi
 if [[ $preflight -eq 1 ]]; then
   echo "  enough for the run"
 fi
+# ---- gas: forge does not ask the chain what a deployment costs ------------------------
+# Measured the hard way, by a transaction that failed. `forge script` sizes each broadcast
+# transaction from ITS OWN LOCAL SIMULATION times --gas-estimate-multiplier (default 130),
+# NOT from the chain's eth_estimateGas. That is fine on a chain with Ethereum's gas schedule
+# and wrong here: tempo-gas-schedule.sh measured Tempo's code deposit at ~2,577 gas/byte
+# against Ethereum's ~202, so a contract creation simulates ~5-6x cheaper locally than it
+# actually costs. The SP1Verifier deployment was handed a 3,425,376 limit, burned all of it,
+# and reverted -- while the node's own eth_estimateGas said 12,783,924, correctly, and was
+# never consulted.
+#
+# `cast send` is NOT affected: it estimates against the node, which is right. Only the
+# `forge script` deploy needs this.
+#
+# 1000 = 10x. The measured ratios are 5.24x / 6.32x / 5.52x, so this is 1.6-1.9x of headroom.
+# Over-sizing a gas LIMIT is free -- a transaction is charged for gas used, not gas offered --
+# so headroom here costs nothing and a short limit costs a whole deployment.
+GAS_MULT=${TEMPO_GAS_MULT:-1000}
+
+node_estimate() { # $1 creation bytecode -> decimal gas, per the CHAIN
+  local e
+  e=$(curl -s --max-time 60 -X POST -H 'content-type: application/json' \
+      -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"eth_estimateGas\",\"params\":[{\"from\":\"$BUYER\",\"data\":\"$1\"}]}" \
+      "$RPC" | jq -r '.result // empty')
+  [[ -n "$e" ]] || { echo 0; return; }
+  printf '%d' "$e"
+}
+
 VKEY=$(jq -r .vkey "$REPRO")
 [[ "$VKEY" == "$(jq -r .vkey "$FAILED")" ]] || {
   echo "tempo-testnet: the two fixtures carry DIFFERENT vkeys, so one verifier cannot judge both."
   echo "  On Arc a second verifier was deployed before this was checked. Check first."; exit 1; }
 
 if [[ $preflight -eq 1 ]]; then
+  echo
+  echo "  gas: what the CHAIN says each creation costs, vs the limit forge will offer"
+  echo "       (forge sizes from its own local EVM x $GAS_MULT%; the chain is never asked)"
+  gasbad=0
+  # The recorded control figures are what forge's local EVM will compute, within the
+  # intrinsic-gas difference between an in-contract CREATE and a top-level creation
+  # transaction -- which is why the comparison below carries 15% of slack rather than none.
+  while IFS=$'\t' read -r name bc rec_tempo rec_ctl; do
+    est=$(node_estimate "$bc")
+    offer=$(( rec_ctl * GAS_MULT / 100 ))
+    printf '       %-22s chain %10d   forge will offer ~%10d' "$name" "$est" "$offer"
+    if [[ $est -eq 0 ]]; then echo "   CHAIN DID NOT ESTIMATE"; gasbad=1
+    elif [[ $(( est * 115 / 100 )) -ge $offer ]]; then echo "   TOO LOW"; gasbad=1
+    elif [[ $(( est * 100 / rec_tempo )) -gt 130 || $(( est * 100 / rec_tempo )) -lt 70 ]]; then
+      echo "   ok, but $((est * 100 / rec_tempo))% of the recorded $rec_tempo -- the chain repriced"
+    else echo "   ok"; fi
+  done <<EOF
+SP1Verifier	$(forge inspect SP1Verifier bytecode)	12986736	2477136
+RecknVerdictVerifier	$(forge inspect RecknVerdictVerifier bytecode)$(cast abi-encode "c(address,bytes32)" 0x000000000000000000000000000000000000dEaD "$VKEY" | sed 's/^0x//')	2946667	466267
+RecknZkEscrow	$(forge inspect RecknZkEscrow bytecode)	6575839	1192239
+EOF
+  if [[ $gasbad -ne 0 ]]; then
+    echo
+    echo "  A deployment would be handed less gas than it needs and would burn the whole limit."
+    echo "  That is exactly how the first attempt failed. Raise TEMPO_GAS_MULT and re-run."
+    exit 1
+  fi
   echo
   echo "  simulating the deploy (no --broadcast, no key, nothing sent)"
   if VKEY="$VKEY" TIP20="$TOKEN" forge script script/DeployTempo.s.sol:DeployTempo \
@@ -228,7 +282,7 @@ send() { # echoes the tx hash only
 # ---- 1. deploy ------------------------------------------------------------------------
 echo; echo "1/5 deploying (DeployTempo.s.sol, unmodified -- the escrow source is identical to Arc's)"
 VKEY="$VKEY" TIP20="$TOKEN" forge script script/DeployTempo.s.sol:DeployTempo \
-  --rpc-url "$RPC" "${ACCT[@]}" --broadcast --slow >/dev/null
+  --rpc-url "$RPC" "${ACCT[@]}" --broadcast --slow -g "$GAS_MULT" >/dev/null
 bc="broadcast/DeployTempo.s.sol/$CHAIN/run-latest.json"
 [[ -f "$bc" ]] || { echo "tempo-testnet: no broadcast record at $bc -- the deploy did not land"; exit 1; }
 addr_of() { jq -r --arg n "$1" '.transactions[] | select(.contractName==$n) | .contractAddress' "$bc" | tail -1; }

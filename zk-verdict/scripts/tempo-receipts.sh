@@ -43,7 +43,8 @@ offline=0; [[ "${1:-}" == "--offline" ]] && offline=1
 classify() { # reads the record, prints "<kind>\t<value>" for every 32-byte string in it
   jq -r 'paths(strings and test("^0x[0-9a-fA-F]{64}$")) as $p
          | (($p | map(select(type=="string")) | last)) as $k
-         | (if ($k == "tx" or ($k | startswith("exampleType"))) then "tx"
+         | (if ($k == "failedTx") then "failed-tx"
+            elif ($k == "tx" or ($k | startswith("exampleType"))) then "tx"
             elif ($k | test("[Cc]odehash|vkey|[Bb]inding|dealId|output|programVKey")) then "not-a-tx"
             else "UNCLASSIFIED:" + $k end) + "\t" + getpath($p)' "$1"
 }
@@ -59,6 +60,12 @@ fi
 
 known_list=$(classify "$rec" | sed -n 's/^tx\t//p' | LC_ALL=C sort -u)
 known_n=$(printf '%s' "$known_list" | grep -c . || true)
+# A transaction that FAILED is evidence too -- of what went wrong -- and hiding it would be
+# the opposite of what this record is for. But it is a different claim, so it is checked
+# against a different expectation: it must exist and it must have status 0. A hash filed as
+# a failure that actually succeeded is as wrong as the reverse.
+failed_list=$(classify "$rec" | sed -n 's/^failed-tx\t//p' | LC_ALL=C sort -u)
+failed_n=$(printf '%s' "$failed_list" | grep -c . || true)
 
 deployed=$(jq -r '.deployedByReckn.RecknZkEscrow // "null"' "$rec")
 if [[ "$deployed" == "null" ]]; then
@@ -113,6 +120,17 @@ if [[ $offline -eq 0 ]] && command -v curl >/dev/null; then
       *)       echo "tempo-receipts: $k exists but status=$st -- a failed transaction is not evidence"; bad=1 ;;
     esac
   done <<< "$known_list"
+  while IFS= read -r k; do
+    [[ -n "$k" ]] || continue
+    st=$(curl -s --max-time 30 -X POST -H 'content-type: application/json' \
+          -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"eth_getTransactionReceipt\",\"params\":[\"$k\"]}" \
+          "$RPC" | jq -r '.result.status // "missing"')
+    case "$st" in
+      0x0) ;;
+      missing) echo "tempo-receipts: $k is recorded as a FAILURE but the chain has no receipt for it"; bad=1 ;;
+      *)       echo "tempo-receipts: $k is recorded as a FAILURE but its status is $st -- it succeeded"; bad=1 ;;
+    esac
+  done <<< "$failed_list"
 else
   echo "tempo-receipts: --offline; skipped the on-chain existence check. The record was compared"
   echo "  only against itself, which is exactly what let a dead hash through on Arc."
@@ -121,4 +139,4 @@ fi
 [[ $bad -eq 0 ]] || exit 1
 w=$(printf '%s' "$known_list" | shasum -a 256 | cut -c1-16)
 echo "tempo-receipts: $n linked tx hash(es) all recorded; $settlements_n settlement(s) linked;" \
-     "$known_n recorded hash(es)$([[ $offline -eq 0 ]] && echo ' all exist on chain with status 1'); witness=$w"
+     "$known_n succeeded + $failed_n failed recorded hash(es)$([[ $offline -eq 0 ]] && echo ' all confirmed on chain'); witness=$w"
