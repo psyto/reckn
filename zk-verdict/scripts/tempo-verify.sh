@@ -127,6 +127,9 @@ for name in reproduced failed mismatch; do
 done
 
 echo
+if [[ -n "${RECKN_NO_WRITE:-}" ]]; then
+  echo "tempo-verify: RECKN_NO_WRITE set -- checked everything above, wrote nothing."
+else
 jq --argjson v "$results" --arg when "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg ch "$onchain" '
   .deployedByReckn.verified = {
     _: "Written by zk-verdict/scripts/tempo-verify.sh, which reads the deployment back off the chain and derives every value from receipts and from deals() on the escrow. It does not trust the run that produced them; in particular the deal ids come out of the Funded event, not from a terminal.",
@@ -136,6 +139,7 @@ jq --argjson v "$results" --arg when "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg ch "
     cases: $v,
     notDemonstrated: "refundAfterDeadline. REFUND_AFTER is 30 days and time cannot be warped on a public chain, so the mismatch deal above stays Funded until then. The refund that IS demonstrated is the proof-driven one -- a FAILED proof paying the buyer -- which is immediate and is a different thing."
   }' "$rec" > "$rec.tmp" && mv "$rec.tmp" "$rec"
+fi
 
 if [[ $fail -ne 0 ]]; then echo "tempo-verify: FAILED -- the chain does not say what the record claims."; exit 1; fi
 # The witness is over what was READ BACK FROM THE CHAIN -- the deal ids taken out of the

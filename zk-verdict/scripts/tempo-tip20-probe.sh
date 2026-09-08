@@ -148,14 +148,15 @@ ok, d = reverts_with(POOR, calldata("transferFrom(address,address,uint256)", hol
 record("transferFrom without allowance REVERTS, it does not return false",
        "same reason, on the pull side -- this is the call fund() actually makes.", ok, d)
 
-json.dump({
+if not os.environ.get("RECKN_NO_WRITE"):
+  json.dump({
   "_": "Output of zk-verdict/scripts/tempo-tip20-probe.sh. Written by the script, never by hand. eth_call only: no key, no transaction, no fee, no state written. It is NOT 011 T-4.",
   "rpc": RPC, "token": TOKEN, "metadata": meta,
   "holderDiscoveredFromLogs": {"address": holder, "balanceRaw": holder_bal,
     "how": "most recent Transfer log in the last 800 blocks whose sender still holds > 2 PathUSD"},
   "checks": checks,
-}, open(OUT, "w"), indent=2)
-print(f"\nwritten: {OUT}")
+  }, open(OUT, "w"), indent=2)
+  print(f"\nwritten: {OUT}")
 if fail:
     print(f"tempo-tip20-probe: {fail} check(s) FAILED -- an assumption RecknZkEscrow makes about "
           f"the token does not hold on the real one. That is a finding, not a thing to work around.")

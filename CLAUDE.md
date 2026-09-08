@@ -160,6 +160,33 @@ optimistic 系=bonded resolver / feedback 系=投票者）。**アーキテク�
   ローカルでない時だけ悪さをする実装は全テストを緑にする）。**除外で範囲を述べた検査は穴が空いている。
   左辺だけの pin は pin ではない。**
 
+## 変異走行中は、zk-verdict の検査を信じない（2026-09-08 に実害が出た）
+
+`ac008.sh --all` と `ac009.sh --all`（後者は `both-green` 経由で前者を呼ぶ）は、**21個の
+mutation patch を作業ツリーのソースに当てては戻す**。対象は
+`zk-verdict/program-revm/src/main.rs` / `lib/src/lib.rs` / `script/src/lib.rs` /
+`reexec-evm/src/lib.rs` / `contracts/src/*` など。**約75分かかる。**
+
+**その間、そこを読むあらゆる検査が「もっともらしい嘘」を返す。** 2026-09-08、担当外の窓が
+走行中に `docs-check.sh` を実行し、**`cycles.json matches 2/3 guests`（従来 3/3）と2分の
+タイムアウト**を得た。`cycles.json` は正しく、guest ELF が変異ソースからビルドされていた
+だけ。**症状が「エラー」でなく「本物の回帰に見える数字」だったので、調査に時間が溶けた。**
+
+- **走行を始めるときは、他の窓に告げる。** 書き込みが衝突しなくても、**読み取りが汚染される**。
+  走行前に「編集しているファイル」だけを照合して安全と判断したのが、この失敗の直接の原因。
+- **走行中は `zk-verdict/` 配下の検査結果を採用しない**（`docs-check.sh` / `surfaces.sh` /
+  `fixtures-check.sh` / `ac0*.sh`）。`dashboard/` と `docs/` は影響を受けない。
+- 静止しているかは副作用なしで判る:
+  `git diff --quiet -- zk-verdict/program-revm/src/main.rs zk-verdict/lib/src/lib.rs zk-verdict/script/src/lib.rs reexec-evm/src/lib.rs`
+- **`ac009` は自分でツリーの移動を検出し、"a red row here may be drift, not a defect.
+  Re-run on a still tree before believing any failure." と言う。その行を信じる。**
+  実際 2026-09-08 の走行はこれで AC-12 を赤にしたが、静止ツリーで個別に再実行すると
+  `ac011` 8/8・`ac004` 4/4・`ac005` 4/4 で全部通った。
+- **ゲートは自分が裁くツリーを汚してはいけない。** `ac011` は `tempo-verify.sh` と
+  `tempo-tip20-probe.sh` を呼ぶが、両者は毎回レコードを書き換えていた（タイムスタンプと
+  発見したホルダー）。**それ自体が親のドリフト検出を壊す。** いまは `RECKN_NO_WRITE=1` で
+  読み取り専用に走らせる。ツールとしての書き込み経路はそのまま残っている。
+
 ## 環境
 
 - **`codex` は PATH に無い。** 実体は `/Applications/ChatGPT.app/Contents/Resources/codex`

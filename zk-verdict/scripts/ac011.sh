@@ -189,7 +189,12 @@ run_script() {
   local ac=$1 cmd=$2 out rc
   out=$(mktemp "${TMPDIR:-/tmp}/ac011-script.XXXXXX")
   set +e
-  (cd "$root" && eval "$cmd") > "$out" 2>&1
+  # RECKN_NO_WRITE: a gate must not dirty the tree it is judging. tempo-verify.sh and
+  # tempo-tip20-probe.sh rewrite their records on every run, which is right for a tool and
+  # wrong for a row -- ac009's AC-12 watches the working tree for movement during a run, so
+  # a sibling that moves it makes the parent unable to tell drift from defect. Observed
+  # 2026-09-08: AC-12 went red and ac009 correctly refused to say whether that was real.
+  (cd "$root" && RECKN_NO_WRITE=1 eval "$cmd") > "$out" 2>&1
   rc=$?
   set -e
   if [[ $rc -ne 0 ]]; then
