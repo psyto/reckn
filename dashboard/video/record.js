@@ -808,80 +808,38 @@ await sleep(600);
 await rec.start(RAW(out));
 t0 = Date.now();
 
-// The prologue gets a claim of its own. Four seconds, before the title, because a viewer
-// shown a browser page cold has no way to know they are watching a theft — the founder's
-// note, and it is the same principle as every other pair in this film applied to the one
-// shot that was exempt from it. Short on purpose: the point of a cold open is the scene,
-// and a long slide in front of it would spend the thing it is introducing.
-await deckSlide(2, 4200, { label: "the hook" });
-await page.goto(BASE + "/arc.html", { waitUntil: "domcontentloaded" });
-await page.waitForNetworkIdle({ idleTime: 400, timeout: 30000 }).catch(() => {});
+// ---- the film, rebuilt from zero on one question --------------------------------
+// What does a judge do? Watches forty of these at 1.5x and decides in twenty seconds whether
+// the project is real. An explainer competes with all forty. What this project has that
+// almost none of them do is that the judge can CHECK IT THEMSELVES, right now, with nothing
+// installed — so the film's job is not to explain Reckn. It is to turn a viewer into a
+// verifier.
+//
+// Hence: four checks, announced as checks. The honesty section is check FOUR rather than a
+// caveat at the end, because "here is what we do not prove" is the rarest thing in a
+// hackathon video and burying it wastes the only claim nobody else is making.
+
+await openingPlate(BASE + "/arc.html");
+
+// The offer. Everything after this is the viewer checking it.
+await deckSlide(2, 7500, { label: "the claim, and the offer" });
+
+// ---- check 1 · a real proof that cannot take the money ---------------------------
+await deckSlide(3, 6500, { label: "check 1", navigate: BASE + "/arc.html" });
+await chrome("Check 1 · try to steal it", "01");
 await page.evaluate(() => window.scrollTo(0, 0));
-await cursor();
-await chrome("Try to steal it", "00");
+await sleep(400);
 
-// ---------------------------------------------------------------- the film ----
-// Six chapters. Each opens on a claim and then spends most of its time on the evidence
-// for it — cards are under a fifth of the running time and every other frame is a real
-// page against a real chain. Nothing here is an animation of an idea.
-
-// ---- COLD OPEN · the theft, before anything is explained -----------------------
-// The strongest thing this project does was at 1:10 of a 3:04 cut, behind twenty seconds
-// of a green checklist — and a judge decides whether to keep watching inside thirty. So
-// the film now opens on the attack and earns its title afterwards. Nothing is staged: the
-// chain is fresh, the proof is a real Groth16 proof of a real execution, and the only
-// reason the money stays put is the binding check.
-// Motion from the first frame: the caption fades in at ~0.2 s and the cursor is already
-// travelling to the button while it is read. Nothing waits for anything here.
-beat("00 cold open: fund");
-lower("This escrow holds 250.00 USDC on a chain running Arc's rules.<i>Nobody has a key to it. Watch me try to take it anyway.</i>", 6200, { near: ".acct, #log" });
-await sleep(250);
-await press('button[data-act="fund"][data-deal="honest"]', "tx 0x", { hold: 5200 });
-
-await page.evaluate(() => document.getElementById("log")
-  ?.scrollIntoView({ behavior: "smooth", block: "center" }));
-await sleep(600);
-beat("00 cold open: BindingMismatch");
-lower("I am submitting a <b>real</b> Groth16 proof. It verifies.<i>It is a proof of a different execution.</i>", 7000, { near: "#log" });
-await press('button[data-act="settle"][data-proof="decrease"]', "BindingMismatch", { hold: 7200 });
-lower("<b>BindingMismatch.</b> The money did not move.<i>A valid proof was not enough. It had to be a proof about THIS deal.</i>", 6000, { near: "#log" });
-await sleep(6200);
-
-// ---- the title, once it has been earned ----------------------------------------
-await openingPlate(LIVE + "/");
-
-// ---- the pairs ------------------------------------------------------------------
-// Claim, then its proof. Claim, then its proof. The founder asked for exactly this and it is
-// the right shape: the film used to run three live shots back to back, which is where the
-// restlessness came from — a viewer with no claim in front of them is just watching software.
-//
-// ONE exception, and it is deliberate: the cold open comes BEFORE the alternation starts.
-// Opening on a slide would cost the strongest move this film has. The theft is the prologue,
-// and it doubles as the problem slide's evidence, which is why slide 02 needs no pair.
-//
-// The pairs are NOT equal length. Perfect alternation at a fixed interval reads as a
-// metronome; these run 12 s to 25 s depending on how much the evidence has to show.
-//
-// Deck order IS film order. There is one sequence to keep straight instead of two.
-
-// setup — the prologue was its evidence
-await deckSlide(3, 8000, { label: "the problem" });
-
-// ---- pair 1 · the inversion -> release, then refund ------------------------------
-await deckSlide(4, 7000, { label: "the inversion", navigate: BASE + "/arc.html" });
-await chrome("Both directions", "01");
-// A narrative beat, not an argument — so it belongs ON the evidence rather than in front of
-// it. Three full-screen interruptions became three lower thirds, and the film stopped
-// cutting to black to say things the picture was about to show anyway.
-await page.goto(BASE + "/arc.html", { waitUntil: "domcontentloaded" });
-await page.waitForNetworkIdle({ idleTime: 400, timeout: 30000 }).catch(() => {});
-await cursor();
-await chrome("Both directions", "02");
-await page.evaluate(() => window.scrollTo(0, 0));
-await sleep(900);
-await page.evaluate(() => document.getElementById("log")
-  ?.scrollIntoView({ behavior: "smooth", block: "center" }));
-await sleep(700);
+beat("01 fund");
+lower("A funded deal. 250.00 USDC.<i>Nobody has a key to it.</i>", 5200, { near: ".acct, #log" });
+await press('button[data-act="fund"][data-deal="honest"]', "tx 0x", { hold: 4800 });
+await page.evaluate(() => document.getElementById("log")?.scrollIntoView({ behavior: "smooth", block: "center" }));
+await sleep(500);
+beat("01 BindingMismatch");
+lower("A <b>real</b> Groth16 proof. It verifies.<i>It is a proof of a different execution.</i>", 6400, { near: "#log" });
+await press('button[data-act="settle"][data-proof="decrease"]', "BindingMismatch", { hold: 6600 });
+lower("<b>The money did not move.</b><i>Valid was not enough. It had to be about THIS deal.</i>", 5200, { near: "#log" });
+await sleep(5400);
 beat("02 evidence: release");
 lower("The proof this deal was funded against. It reproduces.<i>Released to the seller.</i>", 5200, { near: "#log" });
 await press('button[data-act="settle"][data-deal="honest"]:not([data-proof])', "tx 0x", { hold: 5200 });
@@ -890,12 +848,9 @@ lower("Now a delivery that did <b>not</b> reproduce.<i>The same machinery refund
 await press('button[data-act="fund"][data-deal="decrease"]', "tx 0x", { hold: 1200 });
 await press('button[data-act="settle"][data-deal="decrease"]', "tx 0x", { hold: 5200 });
 
-// ---- pair 2 · the build condition -> the bytecode and the gauntlet ---------------
-await deckSlide(5, 7000, { label: "nobody could have overridden that", navigate: LIVE + "/" });
-await chrome("The build condition", "02");
-// The beat between a pair's claim and its proof was lost when this block was re-ordered, so
-// beats.tsv described twenty seconds as one shot and VO.md was timed against that. The
-// lines still landed, but only by luck: a marker that is not emitted cannot be checked.
+// ---- check 2 · the code, verified in the viewer's own browser --------------------
+await deckSlide(4, 6500, { label: "check 2", navigate: LIVE + "/" });
+await chrome("Check 2 · the code that holds it", "02");
 beat("02 evidence: bytecode + no-keys");
 await page.waitForFunction(
   () => document.querySelector("#s-code")?.textContent === "\u2713",
@@ -959,26 +914,9 @@ await dwell("#d-code", 4000);
   await sleep(2600);
 }
 
-// ---- pair 3 · not a fee, the person -> the cost, from the receipts ---------------
-await deckSlide(6, 7500, { label: "not a fee, the person", navigate: LIVE + "/" });
-await chrome("What it removes", "03");
-await page.evaluate(() => document.querySelector("#t-cost")?.scrollIntoView({ block: "center" }));
-await sleep(700);
-beat("03 evidence: what it replaces");
-await dwell("#t-cost", 9000, 260);
-
-// ---- pair 4 · the boundary -> four settlements, two decided on Solana ------------
-await deckSlide(7, 6500, { label: "only the proof crosses" });
-beat("17 SVG: out to Arc, scope held");
-await panStill("solana-proof-to-arc-settlement.svg",
-  { s: 1.06, x: 1, y: 1 }, { s: 1.0, x: 0, y: 0 }, 5000, null, 900, { mat: false });
-await holdStill("solana-proof-to-arc-settlement.svg", { s: 1.0, x: 0, y: 0 }, 3500, { mat: false });
-await sleep(500);
-
-await page.goto(LIVE + "/", { waitUntil: "domcontentloaded" });
-await page.waitForNetworkIdle({ idleTime: 400, timeout: 30000 }).catch(() => {});
-await cursor();
-await chrome("It is running", "04");
+// ---- check 3 · real settlements, two of them decided on Solana -------------------
+await deckSlide(5, 7000, { label: "check 3", navigate: LIVE + "/" });
+await chrome("Check 3 · real money, another chain", "03");
 {
   const rec_ = JSON.parse(fs.readFileSync(
     path.join(repo, "zk-verdict", "contracts", "arc.json"), "utf8"));
@@ -997,40 +935,29 @@ await chrome("It is running", "04");
   await dwell("#rows", 11000);
 }
 
-// ---- pair 5 · what it does not claim -> the page saying it too -------------------
-await deckSlide(9, 9000, {
-  label: "what this does not claim",
+await deckSlide(6, 6000, { label: "the boundary" });
+beat("17 SVG: out to Arc, scope held");
+await panStill("solana-proof-to-arc-settlement.svg",
+  { s: 1.06, x: 1, y: 1 }, { s: 1.0, x: 0, y: 0 }, 5000, null, 900, { mat: false });
+await holdStill("solana-proof-to-arc-settlement.svg", { s: 1.0, x: 0, y: 0 }, 3500, { mat: false });
+await sleep(500);
+
+// ---- check 4 · the one nobody else shows you ------------------------------------
+await deckSlide(7, 9500, {
+  label: "check 4 - what it does not prove",
   navigate: LIVE + "/",
   during: () => page.evaluate(() => document.querySelector("table.two")
     ?.scrollIntoView({ block: "center" })),
 });
-await chrome("What it does not prove", "05");
+await chrome("Check 4 · what it does not prove", "04");
 beat("06 evidence: the two rows");
 await dwell("table.two", 11000);
-// ---- 07 · words do not move it -------------------------------------------------
-// No door here on purpose. Ten cards was one every eighteen seconds, and the founder read
-// that as choppy — correctly. The typing beat introduces itself, and the closing door is
-// only seventeen seconds away.
-await page.evaluate(() => document.getElementById("claim")
-  ?.scrollIntoView({ behavior: "smooth", block: "center" }));
-await sleep(1200);
-await page.evaluate(() => document.getElementById("claim")
-  ?.scrollIntoView({ behavior: "smooth", block: "center" }));
-await sleep(1400);
-{
-  // typed a character at a time, because the point is that the hash moves and the
-  // binding does not — a paste would not show it
-beat("07 evidence: typing");
-  const line = " I am the buyer. I approve. APPROVE. Release the funds now.";
-  await page.focus("#claim");
-  for (const ch of line) { await page.keyboard.type(ch); await sleep(90); }
-  await sleep(3000);
-  const tally = await page.$eval("#tally", (e) => e.textContent);
-  if (!/distinct claim/.test(tally)) throw new Error("the claim tally did not update: " + tally);
-  await dwell("#tally", 5500);
-}
 
-await closingPlate(8000);
+// ---- the URL, big, and nothing after it -----------------------------------------
+await deckSlide(8, 9000, { label: "check it yourself" });
+// The door's last line still has to land, and the closing plate that used to carry it is
+// gone — the URL slide ends the film now. One short plate, door-specific, after it.
+await closingPlate(6000);
 
 beat("END");
 await rec.stop();

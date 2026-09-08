@@ -76,120 +76,78 @@
 
 <!-- 02 ---------------------------------------------------------------------->
 <section class="slide" id="s02">
-  <div class="kicker">Before anything is explained</div>
-  <h1 style="font-size:84px">A funded escrow.<br>A real proof.<br><span style="color:#3fb950">Watch it fail to take the money.</span></h1>
-  <div class="foot"><span>Everything on the next screen is a real transaction on a live chain.</span></div>
+  <div class="kicker">The claim</div>
+  <h2>Nobody can move this money.<br>Including us.</h2>
+  <p class="lede">No owner, no admin, no resolver, no upgrade path. That is a <b>build
+  condition</b>, not a promise — if one ever appears, the build fails.</p>
+  <div class="rule"></div>
+  <p class="quote" style="font-size:44px;color:#3fb950">Easy to say. So don't take our word for it.</p>
+  <div class="foot"><span><b>Four checks. Ninety seconds. Nothing installed, no wallet.</b></span></div>
 </section>
 
 <!-- 03 ---------------------------------------------------------------------->
 <section class="slide" id="s03">
   <div class="n">01</div>
-  <div class="kicker">The problem</div>
-  <h2>Two parties decide whether you get paid.<br>Neither can see the work.</h2>
-  <table>
-    <tr><th>in the way</th><th>what it is asked to decide</th><th>what it can actually see</th></tr>
-    <tr><td class="k">A human approver,<br>a TEE, a resolver</td><td>Was the work done?</td><td class="d">A claim somebody wrote</td></tr>
-    <tr><td class="k">A bridge</td><td>Does the asset arrive?</td><td class="d bad">Nothing about the work at all</td></tr>
-  </table>
-  <div class="foot"><span>One was told about it. The other was never asked.</span>
-    <span><b>docs/why.md §0–0.1</b></span></div>
+  <div class="kicker">Check one</div>
+  <h2>A real proof that<br>cannot take the money.</h2>
+  <p class="lede">Watch a <b>cryptographically valid</b> Groth16 proof — of a different
+  execution — submitted against a funded deal. Then watch the deal's own proof release it,
+  and a failed one refund the buyer.</p>
+  <div class="foot"><span>Nobody approves any of the three.</span></div>
 </section>
 
 <!-- 04 ---------------------------------------------------------------------->
 <section class="slide" id="s04">
   <div class="n">02</div>
-  <div class="kicker">The inversion</div>
-  <p class="quote">Don't move the asset to reach the work.<br>
-    <span style="color:var(--green)">Move a proof of the work to reach the asset.</span></p>
-  <div class="rule"></div>
-  <p class="lede">The buyer escrows the stablecoin on the chain it already lives on. The
-  seller works wherever the work belongs. The disputed execution is replayed — release if it
-  reproduces, refund if it does not.</p>
-  <div class="foot"><span><b>Don't make a bridge decide where money goes. Make proof decide.</b></span></div>
+  <div class="kicker">Check two</div>
+  <h2>The code holding it,<br>verified in your browser.</h2>
+  <p class="lede">Your browser fetches the deployed bytecode from Arc and compares it against
+  this repository. Byte for byte. The escrow has no constructor, so the same source always
+  deploys the same contract.</p>
+  <div class="foot"><span><b>scripts/no-keys.sh</b> — the build condition, run on this take's own bytes</span></div>
 </section>
 
 <!-- 05 ---------------------------------------------------------------------->
 <section class="slide" id="s05">
   <div class="n">03</div>
-  <div class="kicker">Nobody decides — as a build condition</div>
-  <h2>No owner. No admin.<br>No resolver. No upgrade path.</h2>
-  <p class="lede">Not a promise. If one ever appears, <b style="color:var(--fg)">the build
-  fails</b> — and the surface it guards is exactly three functions.</p>
-  <div class="cols">
-    <div class="card"><h3>The whole surface</h3>
-      <p><code>fund</code> · <code>settleWithProof</code> · <code>refundAfterDeadline</code></p></div>
-    <div class="card"><h3>The timeout</h3>
-      <p>Permissionless, and it pays the caller <b style="color:var(--fg)">nothing</b>.</p></div>
+  <div class="kicker">Check three</div>
+  <h2>Real money — and work<br>proven on another chain.</h2>
+  <div class="cols" style="grid-template-columns:1fr 1fr 1fr">
+    <div class="card"><h3>Settlements</h3><div class="num">4</div><p>Real USDC on Arc testnet.</p></div>
+    <div class="card"><h3>Decided by Solana proofs</h3><div class="num">2</div><p>One escrow, two virtual machines.</p></div>
+    <div class="card"><h3>Cost to decide one</h3><div class="num">&lt;3¢</div><p>From the receipts, not quoted.</p></div>
   </div>
-  <div class="foot"><span><b>scripts/no-keys.sh</b> — run it yourself</span></div>
+  <div class="foot"><span>Read off the chain by your browser, not by us.</span></div>
 </section>
 
 <!-- 06 ---------------------------------------------------------------------->
 <section class="slide" id="s06">
   <div class="n">04</div>
-  <div class="kicker">What it removes</div>
-  <h2>Not a fee. The person.</h2>
-  <p class="lede">An escrow a human approves is a serialisation point. Agents run in
-  parallel, at machine speed, and every release queues behind somebody reading something.</p>
-  <div class="cols">
-    <div class="card"><h3>The platform's cut</h3><div class="num">10–20%</div>
-      <p>A symptom of that person existing.</p></div>
-    <div class="card"><h3>Deciding one of ours</h3><div class="num">&lt;3¢</div>
-      <p>Computed from the receipts on the next screen.</p></div>
-  </div>
-  <div class="foot"><span>The ceiling is not price. It is human attention.</span>
-    <span><b>docs/why.md §0</b></span></div>
-</section>
-
-<!-- 07 ---------------------------------------------------------------------->
-<section class="slide" id="s07">
-  <div class="n">05</div>
   <div class="kicker">What crosses the boundary</div>
   <figure><img src="/*__SVG__*/" alt="Solana work re-executed in a zkVM; only a Groth16 proof crosses to Arc, where USDC stays in the escrow."></figure>
   <div class="foot"><span>The proof crosses. <b>The asset never does.</b></span>
     <span>No bridge. No light client. No resolver on the path that chooses the payout.</span></div>
 </section>
 
+<!-- 07 ---------------------------------------------------------------------->
+<section class="slide" id="s07">
+  <div class="n">05</div>
+  <div class="kicker">Check four — the one nobody else shows you</div>
+  <h2>What it does <i style="font-style:normal;color:#f0837a">not</i> prove.</h2>
+  <table>
+    <tr><td class="k bad">Not</td><td>“Bridges are unnecessary.”</td><td class="d">It removes the bridge <b>as the decider</b>. Moving funds to where you pay remains your problem.</td></tr>
+    <tr><td class="k bad">Not</td><td>“Fragmented liquidity is solved.”</td><td class="d">You must already hold the settlement asset on the chain you pay from.</td></tr>
+    <tr><td class="k bad">Not</td><td>“We prove Solana mainnet state.”</td><td class="d">A bank hash recomputed over the account set <b>the deal named</b>. Consistency, not provenance.</td></tr>
+  </table>
+  <div class="foot"><span>This is on the live page too. A judge who leaves without it cannot tell us from an oracle.</span></div>
+</section>
+
 <!-- 08 ---------------------------------------------------------------------->
 <section class="slide" id="s08">
-  <div class="n">06</div>
-  <div class="kicker">It is running</div>
-  <h2>Four settlements on Arc testnet.</h2>
-  <div class="cols" style="grid-template-columns:1fr 1fr 1fr">
-    <div class="card"><h3>Settlements</h3><div class="num">4</div>
-      <p>Real testnet USDC, both directions.</p></div>
-    <div class="card"><h3>Decided by Solana proofs</h3><div class="num">2</div>
-      <p>One escrow, two virtual machines.</p></div>
-    <div class="card"><h3>Cost to decide one</h3><div class="num">&lt;3¢</div>
-      <p>Computed from the receipts, not quoted.</p></div>
-  </div>
-  <div class="foot"><span>Your browser reads them off the chain — nothing installed, no wallet.</span>
-    <span><b>psyto.github.io/reckn</b></span></div>
-</section>
-
-<!-- 09 ---------------------------------------------------------------------->
-<section class="slide" id="s09">
-  <div class="n">07</div>
-  <div class="kicker">What this does not claim</div>
-  <h2>The half that is easy to leave out.</h2>
-  <table>
-    <tr><td class="k bad">Not</td><td>“Bridges are unnecessary.”</td>
-        <td class="d">It removes the bridge <b>as the decider</b>. Moving funds to where you pay is a different problem.</td></tr>
-    <tr><td class="k bad">Not</td><td>“Fragmented liquidity is solved.”</td>
-        <td class="d">You must already hold the settlement asset on the chain you pay from.</td></tr>
-    <tr><td class="k bad">Not</td><td>“We prove Solana mainnet state.”</td>
-        <td class="d">The guest recomputes a bank hash over the account set <b>the deal named</b>. Consistency, not provenance.</td></tr>
-  </table>
-  <div class="foot"><span>Stated on the live page, in the film, and in a test — not in a footnote.</span></div>
-</section>
-
-<!-- 10 ---------------------------------------------------------------------->
-<section class="slide" id="s10">
-  <div class="kicker">Reckn</div>
-  <h1>Keep assets native.<br>Settle on proof.</h1>
+  <div class="kicker">Check it yourself</div>
+  <h1 style="font-size:96px">psyto.github.io<br>/reckn</h1>
   <div class="rule"></div>
-  <p class="quote" style="font-size:52px;color:var(--dim)">Reproduce, or refund.</p>
-  <div class="foot"><span><b>psyto.github.io/reckn</b></span><span>github.com/psyto/reckn</span></div>
+  <p class="quote" style="font-size:46px;color:#cbbfae">Nothing installed. No wallet.<br>Reproduce, or refund.</p>
 </section>
 
 </body>

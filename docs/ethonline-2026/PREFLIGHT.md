@@ -104,7 +104,7 @@ Current state, measured:
 
 | requirement | `reckn-demo-v3.mp4` |
 |---|---|
-| 2–4 minutes | **3:09** ✅ |
+| 2–4 minutes | **2:35** ✅ |
 | ≥ 720p | **1920 × 1080** ✅ |
 | 16:9 | 1.7778 ✅ |
 | opens at all (faststart) | ✅ |
@@ -115,10 +115,12 @@ Current state, measured:
 [`../../dashboard/video/VO.md`](../../dashboard/video/VO.md) — timecoded from the recorder's
 own beats, every line inside its word budget *and* inside the shot it describes.
 
-**The film is deck-led.** After a four-second claim and the cold open it introduces, every
-live shot has a slide in front of it stating what the shot is about to prove — claim, proof,
-claim, proof. Several of those slides are deliberately under-narrated: the voice names what a
-slide does not say and then stops, and the inversion slide is silent end to end.
+**The film is a verification checklist, not an explainer.** It states one claim — nobody can
+move this money, including us — says that is easy to say, and then spends its whole running
+time on four checks a judge can repeat: a real proof that cannot take the money; the deployed
+bytecode compared against source in their own browser; four settlements in real USDC, two
+decided by proofs about Solana work; and **what it does not prove**. It ends on the URL,
+because the film's job is to get the page opened, not to be believed.
 A narrator reciting text already on screen is the fastest way to make a good demo feel like a
 bad one, so silence there is the script, not a gap in it.
 

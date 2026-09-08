@@ -33,58 +33,56 @@ def at(label):
             f"vo-table: no beat named {label!r}.\nThe cut has:\n  " + "\n  ".join(order))
     return beats[label]
 
-CLOSE = 8.0   # closingPlate(8000)
+CLOSE = 6.0   # closingPlate(6000)
 
 SCRIPT = [
-    # Written to be SPOKEN by a person, not read off a page. Contractions, one idea per
-    # breath, and no stacked noun phrases — an unrehearsed narrator trips on "a re-executable
-    # deterministic settlement predicate" and does not trip on "we replay the work".
-    # The event forbids a synthetic voice, so this has to survive a human first take.
-    (at("00 cold open: fund"), 7.0, 1,
-     "This escrow is holding two hundred and fifty dollars. Nobody has a key to it."),
-    (at("00 cold open: BindingMismatch"), 7.5, 2,
-     "Now watch. That's a real proof, and it verifies — it's just about a different job."),
-    (at("00 cold open: BindingMismatch") + 8.0, 7.0, 3,
-     "Binding mismatch. The money didn't move. Being valid wasn't enough."),
-    (at("TITLE Reckn"), 9.0, None,
+    # Written for a HUMAN first take: contractions, one idea per breath, no stacked noun
+    # phrases. And written for a film whose job is not to explain but to get the viewer to
+    # open the page — so the voice never recites a slide, it says the thing the slide leaves
+    # out and then gets out of the way.
+    (at("TITLE Reckn"), 8.0, None,
      "plate: **Reckn — Keep assets native. Settle on proof.** then the door question"),
-    # Over the problem slide. It does NOT read the table out — a narrator reciting what is
-    # already on screen is the fastest way to make a good demo feel like a bad one. One line
-    # names the insight, then silence while it is read.
-    (at("SLIDE 03 the problem"), 6.0, 4,
-     "Both are guessing. One from a claim, one from nothing."),
-    (at("SLIDE 05 nobody could have overridden that"), 9.0, 5,
-     "Nobody could have stepped in and overridden that. There's no owner, no admin, no resolver."),
-    (at("SLIDE 05 nobody could have overridden that") + 9.5, 7.5, 6,
-     "And it isn't a promise. If one ever appeared, the build would fail."),
-    (at("02 evidence: release"), 7.0, 7,
-     "Here's the proof this deal was funded against. It reproduces, so the seller gets paid."),
-    (at("02 evidence: refund"), 8.5, 10,
+    (at("SLIDE 02 the claim, and the offer"), 6.5, 1,
+     "Nobody can move this money. Not the seller, not the buyer, and not us."),
+    (at("SLIDE 03 check 1"), 6.0, 2,
+     "That is easy to say, so don't take our word for it. Four checks."),
+    (at("01 fund"), 6.5, 3,
+     "Here's a funded deal. Two hundred and fifty dollars, and no key to it."),
+    (at("01 BindingMismatch"), 8.0, 4,
+     "That's a real Groth16 proof. It verifies. It's just about a different job — so the money stays put."),
+    (at("02 evidence: release"), 6.0, 5,
+     "The proof this deal was funded against reproduces. The seller gets paid."),
+    (at("02 evidence: refund"), 8.0, 6,
      "And when the work doesn't reproduce, the same machinery sends the money back."),
-    (at("03 evidence: what it replaces"), 8.5, 8,
-     "What we took out isn't a fee. It's the person who used to approve this."),
-    # SLIDE 03, the inversion, is DELIBERATELY silent. It carries one sentence in very large
-    # type; a voice over it either repeats it or competes with it, and seven seconds of
-    # quiet before the diagram is the only pause this film has.
-    (at("17 SVG: out to Arc, scope held"), 8.5, 9,
-     "The work happened on Solana. We re-ran it inside a zkVM. The proof crosses — the money never does."),
-    (at("04 evidence: four settlements"), 10.0, 11,
-     "Four settlements on Arc testnet, read straight off the chain by your browser. Two were decided by proofs about work done on Solana."),
-    # Over "what this does not claim". Three refusals are on the slide; the voice adds the
-    # reason they are there at all, and then gets out of the way.
-    (at("SLIDE 09 what this does not claim"), 5.5, 12,
-     "We would rather you heard this part from us."),
-    (at("06 evidence: the two rows"), 7.5, 13,
-     "Arc never runs a Solana virtual machine — and we put that limit on the page."),
-    (at("06 evidence: the two rows") + 8.0, 5.0, 14,
-     "It's consistency. It isn't provenance."),
-    (at("07 evidence: typing"), 6.5, 15,
-     "The one thing an observer controls is the story. So watch what the story moves."),
-    (at("07 evidence: typing") + 7.0, 6.0, 16,
-     "Every keystroke, a new hash. The verdict comes from the chain. It doesn't budge."),
+    (at("SLIDE 04 check 2"), 7.5, 7,
+     "Check two. Your browser reads the contract off the chain and compares it to our source."),
+    (at("02 evidence: bytecode + no-keys"), 9.0, 8,
+     "Byte for byte. And if an owner or an admin ever showed up in it, the build would fail."),
+    (at("SLIDE 05 check 3"), 7.0, 9,
+     "Check three. Four settlements, in real money, on Arc testnet."),
+    (at("04 evidence: four settlements"), 9.0, 10,
+     "Two of them were decided by proofs about work done on Solana. One escrow, two virtual machines."),
+    (at("17 SVG: out to Arc, scope held"), 7.5, 11,
+     "The proof crosses. The money never does. There's no bridge in here."),
+    (at("SLIDE 07 check 4 - what it does not prove"), 9.0, 12,
+     "Check four is the one nobody else shows you: what this does not prove."),
+    (at("06 evidence: the two rows"), 8.5, 13,
+     "It's consistency, not provenance. And it doesn't save you from holding funds where you pay."),
+    (at("SLIDE 08 check it yourself"), 8.0, 14,
+     "So go and check it. Nothing to install, no wallet."),
     (END - CLOSE, CLOSE, None,
-     "plate: **Keep assets native. Settle on proof.** then the door's last line"),
+     "plate: the door's last line"),
 ]
+
+# A line has to fit its SHOT, not just its own stated seconds.
+shots = [(beats[l], l) for l in order if l != "END"]
+shots.sort()
+def shot_of(t):
+    hit = None
+    for k, (s0, lab) in enumerate(shots):
+        if s0 <= t + 1e-9:
+            hit = (s0, lab, shots[k + 1][0] if k + 1 < len(shots) else END)
+    return hit
 
 # A line has to fit its SHOT, not just its own stated seconds. The old table only checked
 # words-per-minute against the duration written next to the line, so a line could be

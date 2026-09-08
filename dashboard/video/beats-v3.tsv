@@ -1,21 +1,19 @@
-0.0	SLIDE 02 the hook
-4.8	00 cold open: fund
-13.0	00 cold open: BindingMismatch
-28.6	TITLE Reckn
-33.2	CARD the door
-38.9	SLIDE 03 the problem
-46.9	SLIDE 04 the inversion
-56.6	02 evidence: release
-64.4	02 evidence: refund
-74.4	SLIDE 05 nobody could have overridden that
-83.3	02 evidence: bytecode + no-keys
-95.4	SLIDE 06 not a fee, the person
-105.9	03 evidence: what it replaces
-114.9	SLIDE 07 only the proof crosses
-121.4	17 SVG: out to Arc, scope held
-131.8	04 evidence: four settlements
-142.8	SLIDE 09 what this does not claim
-153.1	06 evidence: the two rows
-166.7	07 evidence: typing
-180.7	CARD close
-188.8	END
+0.0	TITLE Reckn
+4.6	CARD the door
+9.3	SLIDE 02 the claim, and the offer
+16.8	SLIDE 03 check 1
+24.2	01 fund
+31.7	01 BindingMismatch
+45.9	02 evidence: release
+52.9	02 evidence: refund
+62.8	SLIDE 04 check 2
+71.7	02 evidence: bytecode + no-keys
+83.7	SLIDE 05 check 3
+91.8	04 evidence: four settlements
+102.8	SLIDE 06 the boundary
+108.8	17 SVG: out to Arc, scope held
+118.0	SLIDE 07 check 4 - what it does not prove
+128.9	06 evidence: the two rows
+139.9	SLIDE 08 check it yourself
+148.9	CARD close
+154.9	END
