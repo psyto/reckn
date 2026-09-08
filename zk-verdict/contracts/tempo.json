@@ -1,13 +1,12 @@
 {
-  "_": "Task 011's record of Tempo. Same role as arc.json: this file is the source of truth, and every other file that restates a Tempo constant is checked against it by zk-verdict/scripts/tempo-constants.sh. That script checks INTERNAL AGREEMENT ONLY. It cannot tell you this record is right — which is why every entry carries how it was obtained.",
-
+  "_": "Task 011's record of Tempo. Same role as arc.json: this file is the source of truth, and every other file that restates a Tempo constant is checked against it by zk-verdict/scripts/tempo-constants.sh. That script checks INTERNAL AGREEMENT ONLY. It cannot tell you this record is right \u2014 which is why every entry carries how it was obtained.",
   "provenance": {
     "measuredBy": "unauthenticated JSON-RPC from this repository's operator",
     "measuredOn": "2026-09-08",
-    "method": "eth_chainId, eth_call to precompiles, eth_getCode, eth_getBalance, eth_getBlockByNumber",
-    "note": "No key, no transaction, no funds. Nothing here is transcribed from a blog post or a search result; entries that could not be measured are under 'fromDocs' or 'unknown' and are marked as such."
+    "method": "eth_chainId, eth_call to precompiles and to the fee token, eth_getCode, eth_getBalance, eth_getBlockByNumber, eth_getTransactionReceipt",
+    "note": "No key, no transaction, no funds. Nothing here is transcribed from a blog post or a search result; entries that could not be measured are under 'fromDocs' or 'unknown' and are marked as such.",
+    "secondPass": "2026-09-08, same day: 213 transactions over 60 blocks were surveyed to find out how fees are actually paid. That answered three open questions that documentation had not."
   },
-
   "testnet": {
     "name": "Moderato",
     "chainId": 42431,
@@ -15,16 +14,14 @@
     "rpc": "https://rpc.moderato.tempo.xyz",
     "explorer": "https://explore.testnet.tempo.xyz",
     "explorerVerified": false,
-    "explorerSource": "https://tempo.xyz/developers/docs/quickstart/connection-details, read 2026-09-08 — NOT measured"
+    "explorerSource": "https://tempo.xyz/developers/docs/quickstart/connection-details, read 2026-09-08 \u2014 NOT measured"
   },
-
   "wrongEndpoint": {
     "url": "https://rpc.tempo.xyz",
     "chainId": 4217,
     "chainIdHex": "0x1079",
     "why": "This URL appeared in search results as the Tempo RPC. It answers on a DIFFERENT CHAIN. Using it would have deployed to the wrong network while every constant still looked plausible. tempo-constants.sh fails if this hostname appears anywhere in the tree as an endpoint."
   },
-
   "measured": {
     "precompiles": {
       "0x0000000000000000000000000000000000000006": {
@@ -59,7 +56,7 @@
     "ethGetBalance": {
       "queried": "0x000000000000000000000000000000000000dEaD",
       "result": "0x9612084f0316e0ebd5182f398e5195a51b5ca47667d4c9b26c9b26c9b26c9b2",
-      "meaning": "a constant, not a balance. Tempo has no native gas token. Any test, script or page that shows funding by reading the native balance is showing a constant — use IERC20Min.balanceOf."
+      "meaning": "a constant, not a balance. Tempo has no native gas token. Any test, script or page that shows funding by reading the native balance is showing a constant \u2014 use IERC20Min.balanceOf."
     },
     "blockAtReadTime": {
       "number": "0x20bcbc0",
@@ -67,9 +64,31 @@
       "gasLimit": 500000000,
       "baseFeePerGas": 600000000,
       "note": "gasLimit is ~1500x the 320,600 gas a Solana-proof settlement used on Arc. Groth16 verification is not gas-constrained here."
+    },
+    "transactionTypes": {
+      "_": "213 transactions over 60 blocks ending at 0x20be4a1, read 2026-09-08.",
+      "0x0": 101,
+      "0x2": 66,
+      "0x76": 46,
+      "meaning": "Standard legacy and EIP-1559 transactions are in active use, so upstream Foundry can send one. 0x76 is Tempo's native type and is the ONLY one that can carry an explicit feeToken; its other fields are account abstraction and multicall (calls, nonceKey, feePayerSignature, validAfter, validBefore, keyAuthorization, aaAuthorizationList). Choosing a non-default fee token needs 0x76 and therefore tempo-foundry; paying a fee does not."
+    },
+    "receiptsNameTheFeeToken": {
+      "_": "Every receipt carries feeToken and feePayer -- INCLUDING for a plain type 0x2 transaction.",
+      "exampleType0x2": "0x6f6b5d06a1477704c5e538a200ca6b3b3f495836167fcac7932dfb4d14d2ace8",
+      "exampleType0x76": "0xee3fe7b3aa6662b3d817a6b94f549f7c22d1bf0d0f7b57dfed3bcefb83674d16",
+      "bothPaidIn": "0x20C0000000000000000000000000000000000000",
+      "meaning": "011's T-4 is satisfiable with a standard transaction. The evidence is in the receipt."
+    },
+    "defaultFeeToken": {
+      "address": "0x20C0000000000000000000000000000000000000",
+      "name": "PathUSD",
+      "symbol": "PathUSD",
+      "decimals": 6,
+      "totalSupply": "18562932806709551615000",
+      "how": "eth_call of name() / symbol() / decimals() / totalSupply(), 2026-09-08",
+      "note": "This is the token both sampled receipts paid their fee in. It answers 011's open questions 'which TIP-20' and 'what decimals' without a faucet. Six decimals -- the same as USDC on Arc -- and RecknTempoTip20.t.sol already exercises 6 and 18."
     }
   },
-
   "fromDocs": {
     "_": "Read 2026-09-08 from https://tempo.xyz/developers/docs/protocol/tip20/spec. NOT measured. Nothing in the code depends on any of these without a test that models it.",
     "erc20Semantics": "TIP-20 keeps transfer / transferFrom / approve / allowance / balanceOf",
@@ -79,18 +98,14 @@
     "memo": "transferWithMemo attaches a 32-byte memo",
     "fees": "transferFeePreTx / transferFeePostTx; only currency == USD tokens may pay fees"
   },
-
   "unknown": {
-    "_": "Not established. Not assumed anywhere in the code. Each one is a founder-action item in 011 §9.",
-    "tip20TestnetAddress": "the TIP-20 the demo will use",
-    "tip20Decimals": "unknown — RecknTempoTip20.t.sol therefore runs at BOTH 6 and 18",
-    "faucet": "not found in the docs read on 2026-09-08",
-    "sendPath": "whether upstream Foundry can send a fee-paying transaction, or tempoxyz/tempo-foundry with --tempo.fee-token is required. eth_call costs nothing and proves nothing about this.",
-    "testnetTokenPolicy": "whether the faucet TIP-20 carries a TIP-403 policy restricting ordinary transfers"
+    "_": "Still not established. Not assumed anywhere in the code.",
+    "faucet": "not found in the docs read 2026-09-08; obtaining PathUSD needs a key and a browser (011 \u00a79.1)",
+    "testnetTokenPolicy": "whether PathUSD carries a TIP-403 policy or is pausable in practice. The escrow is tested against both behaviours (T-7, T-8) rather than against an assumption.",
+    "realProofOnChain": "that an SP1 Groth16 proof VERIFIES on Tempo and fits the fee model. The BN254 precompiles are measured present; that is necessary, not sufficient."
   },
-
   "deployedByReckn": {
-    "_": "EMPTY BY DESIGN. Nothing is deployed. Filled only from real receipts after a founder-held key deploys — never transcribed from memory. Two Arc tx hashes were once written here from memory and two of them were wrong.",
+    "_": "EMPTY BY DESIGN. Nothing is deployed. Filled only from real receipts after a founder-held key deploys \u2014 never transcribed from memory. Two Arc tx hashes were once written here from memory and two of them were wrong.",
     "network": null,
     "deployedAt": null,
     "SP1Verifier": null,

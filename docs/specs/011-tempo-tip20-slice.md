@@ -113,6 +113,35 @@ token mock, a test, a constants record, and a demo surface.
    Tempo it must be `IERC20Min.balanceOf`. The Arc demo page reads both faces; the Tempo
    surface cannot copy that half.
 
+### 2.2b Second pass, same day: how fees are actually paid
+
+Documentation could not answer whether upstream Foundry can send a fee-paying transaction.
+**213 transactions over 60 blocks** could.
+
+| what | measured |
+|---|---|
+| transaction types in use | `0x0` **101**, `0x2` **66**, `0x76` **46** |
+| fields only `0x76` carries | `feeToken`, `feePayerSignature`, `calls`, `nonceKey`, `validAfter`, `validBefore`, `keyAuthorization`, `aaAuthorizationList` |
+| **every receipt** | carries **`feeToken`** and **`feePayer`** — *including for a plain type `0x2`* |
+| the token both sampled receipts paid in | `0x20C0000000000000000000000000000000000000` |
+| that token's `name()` / `symbol()` / `decimals()` | **PathUSD / PathUSD / 6** |
+
+**This closes two of the three open items in §9 and changes one acceptance criterion's cost.**
+
+1. **The build path does not fork.** Standard legacy and EIP-1559 transactions are in active
+   use, so upstream Foundry can send one. `tempo-foundry` and `--tempo.fee-token` are needed
+   only to **choose** a non-default fee token, which requires type `0x76`. Paying a fee does
+   not.
+2. **T-4 is satisfiable with a standard transaction**, because the receipt names the fee
+   token itself. The criterion asked for evidence; the chain already emits it.
+3. **The TIP-20 and its decimals are known without a faucet.** PathUSD, six decimals — the
+   same as USDC on Arc, and `RecknTempoTip20.t.sol` already runs at 6 and 18.
+
+What this still does **not** establish: that an SP1 Groth16 proof verifies on Tempo and fits
+the fee model. The BN254 precompiles are measured present, which is necessary and not
+sufficient. And a measurement of the chain's DEFAULT fee token is not a promise about the
+token our deal will name — `DeployTempo` therefore keeps `TIP20=0x…` overridable.
+
 ### 2.3 Read from documentation, not measured **[doc]**
 
 - TIP-20 keeps ERC-20 `transfer` / `transferFrom` / `approve` / `allowance` / `balanceOf`.
@@ -126,13 +155,17 @@ token mock, a test, a constants record, and a demo surface.
 
 ### 2.4 Not established **[unknown]** — and therefore not assumed anywhere below
 
-- The **decimals** of the testnet TIP-20 we will use. `MockTIP20` is written with decimals as
-  a constructor argument for this reason, and the tests run it at 6 **and** 18.
-- Whether a fee-paying transaction can be sent with **upstream** Foundry, or requires
-  `tempoxyz/tempo-foundry` and its `--tempo.fee-token` flag. `eth_call` costs nothing and
-  proves nothing about this.
-- The testnet TIP-20 addresses and the faucet.
-- Whether the testnet TIP-20 carries a TIP-403 policy that restricts ordinary transfers.
+**Two of these were closed the same day by §2.2b and are struck here rather than deleted, so
+the sequence stays legible: they were unknown when the tests were written, and that is why
+the tests do not assume either.**
+
+- ~~The **decimals** of the testnet TIP-20.~~ **PathUSD, 6** (§2.2b). `MockTIP20` still takes
+  decimals as a constructor argument and the tests still run 6 **and** 18 — a measurement of
+  the default is not a promise about the token our deal names.
+- ~~Whether upstream Foundry can send a fee-paying transaction.~~ **It can** (§2.2b).
+- The **faucet**. Obtaining PathUSD needs a key and a browser — still §9.1.
+- Whether the testnet TIP-20 carries a **TIP-403 policy** or is pausable in practice. The
+  escrow is tested against both behaviours (T-7, T-8) rather than against an assumption.
 
 ---
 
@@ -186,7 +219,7 @@ T-1 … T-3 and T-6 … T-8 are local and run in Foundry. T-4 and T-5 need a dep
 | **T-1** | A deal funded in TIP-20 **releases to the seller** on the `REPRODUCED` SVM proof. | local |
 | **T-2** | The same shape of deal **refunds the buyer** on the `FAILED` SVM proof. | local |
 | **T-3** | A **real Groth16 proof of a different execution** is rejected with `BindingMismatch` and **no token moves**. | local |
-| **T-4** | The settling transaction's **fee is paid in a TIP-20**, shown from its receipt. | testnet |
+| **T-4** | The settling transaction's **fee is paid in a TIP-20**, shown from its receipt's own `feeToken` / `feePayer` fields (§2.2b — the chain emits these for a standard type `0x2` transaction, so this needs no custom transaction type). | testnet |
 | **T-5** | Every constant in `tempo.json` is used somewhere, and every Tempo-shaped literal in the tree is the recorded one (`tempo-constants.sh`). | local |
 | **T-6** | `bash scripts/no-keys.sh` passes **unchanged**. The central claim did not widen. | local |
 | **T-7** | With the token **paused**, `settleWithProof` reverts and the deal stays `Funded`. | local |
@@ -229,7 +262,10 @@ establish where the prestate came from.
 The agent does not generate, store or use a key, and does not deploy.
 
 1. **A testnet key and TIP-20 from the faucet** — required before T-4 and before any deploy.
-2. **Whether upstream Foundry can send a fee-paying transaction**, or `tempo-foundry` is
-   required (§2.4). This decides whether the build path forks.
-3. **The testnet TIP-20 address and its decimals**, to be recorded in `tempo.json` with its
-   source and read date before anything depends on it.
+2. ~~Whether upstream Foundry can send a fee-paying transaction.~~ **Closed by measurement**
+   (§2.2b): it can, and the build path does not fork.
+3. ~~The testnet TIP-20 address and its decimals.~~ **Closed by measurement** (§2.2b):
+   PathUSD at `0x20C0…0000`, six decimals, recorded in `tempo.json` with how it was read.
+
+So exactly **one** item now stands between this slice and its testnet half: a key with
+PathUSD in it.

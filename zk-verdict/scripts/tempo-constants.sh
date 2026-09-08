@@ -30,6 +30,7 @@ chain=$(jq -r '.testnet.chainId' "$rec")
 rpc=$(jq -r '.testnet.rpc' "$rec")
 wrong=$(jq -r '.wrongEndpoint.url' "$rec")
 factory=$(jq -r '.measured.tip20Factory.address' "$rec")
+feetoken=$(jq -r '.measured.defaultFeeToken.address' "$rec")
 
 # Build output is excluded, and not only for tidiness: an unfiltered scan of this tree
 # took over two minutes, and a gate that slow gets commented out rather than fixed.
@@ -77,8 +78,16 @@ fi
 #
 # The typo is described here rather than written out, because writing it out is what the
 # clause below is for and this file is not exempt from its own rule.
-scan=$(grep -rhoE 'https://[a-z.]*moderato\.tempo\.xyz[a-z.]*|0x20Fc[0-9a-fA-F]{36}' \
+scan=$(grep -rhoE 'https://[a-z.]*moderato\.tempo\.xyz[a-z.]*|0x20[Ff]c[0-9a-fA-F]{36}|0x20[Cc]0[0-9a-fA-F]{36}' \
         "${files[@]}" "$root" 2>/dev/null | LC_ALL=C sort -u || true)
+
+# Addresses are HEX: case carries no meaning, and EIP-55 checksumming deliberately varies
+# it. Solidity requires the checksummed form, so a source file and a JSON record will
+# legitimately disagree in case for the same address — and a case-sensitive comparison
+# reported exactly that as a mismatch the first time this gate met a real one. Compare the
+# digits, not the shift key. (The RPC hostname above is NOT compared this way: DNS is
+# case-insensitive too, but a hostname is not hex and a stray capital there is worth seeing.)
+same() { [[ "$(printf '%s' "$1" | tr 'A-F' 'a-f')" == "$(printf '%s' "$2" | tr 'A-F' 'a-f')" ]]; }
 
 bad=0; n=0
 while IFS= read -r lit; do
@@ -88,8 +97,11 @@ while IFS= read -r lit; do
     https://*)
       # explore.testnet.tempo.xyz is not a moderato host, so only the RPC lands here.
       [[ "$lit" == "$rpc" ]] || { echo "tempo-constants: $lit is not the recorded rpc $rpc"; bad=1; } ;;
-    0x20Fc*)
-      [[ "$lit" == "$factory" ]] || { echo "tempo-constants: $lit is not the recorded factory $factory"; bad=1; } ;;
+    0x20Fc* | 0x20fc*)
+      same "$lit" "$factory" || { echo "tempo-constants: $lit is not the recorded factory $factory"; bad=1; } ;;
+    0x20C0* | 0x20c0*)
+      # PathUSD, measured 2026-09-08 as the token both sampled receipts paid their fee in.
+      same "$lit" "$feetoken" || { echo "tempo-constants: $lit is not the recorded fee token $feetoken"; bad=1; } ;;
   esac
 done <<<"$scan"
 
