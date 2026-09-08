@@ -20,21 +20,10 @@ page rather than a broken one.
 
   python3 dashboard/live/generate-tempo.py       # writes docs/tempo.html
 """
-import json, pathlib, subprocess
+import hashlib, json, pathlib
 
 root = pathlib.Path(__file__).resolve().parents[2]
 rec = json.loads((root / "zk-verdict/contracts/tempo.json").read_text())
-# The commit of the page's OWN INPUTS, not HEAD. Embedding HEAD made the generated page
-# stale the instant anything else in the repository was committed, so `tempo-page-check.sh`
-# -- which regenerates and requires no diff -- went red after every unrelated commit. A gate
-# that is red for reasons unconnected to the thing it guards gets switched off.
-# It is also the truer number: the footer says "generated from tempo.json at commit X", and
-# X should be the commit of the record and the template, not of whatever landed last.
-INPUTS = ["zk-verdict/contracts/tempo.json",
-          "dashboard/live/tempo-template.html",
-          "dashboard/live/generate-tempo.py"]
-commit = subprocess.run(["git", "-C", str(root), "log", "-1", "--format=%h", "--"] + INPUTS,
-                        capture_output=True, text=True).stdout.strip()
 
 tok = rec["measured"]["defaultFeeToken"]
 
@@ -56,6 +45,23 @@ if dep.get("RecknZkEscrow"):
             for c in ver.get("cases", [])
         ],
     }
+
+# A digest of WHAT THIS PAGE EMBEDS -- the resolved config, plus the template and the
+# generator that shaped it. Three earlier attempts were each circular or brittle, and the
+# sequence is worth keeping because each failure looked fine until it ran:
+#
+#   HEAD             stale the instant anything unrelated was committed, so the check went
+#                    red after every commit in the repository.
+#   commit of the    still circular: committing tempo.json CHANGES the commit the page must
+#   inputs           embed, so the page committed beside it is one behind, every time.
+#   digest of the    no loop, but too wide: tempo-verify.sh rewrites `verifiedAt` in
+#   input FILES      tempo.json on every run, which moved the digest and made AC-6 fail
+#                    right after AC-4 in the same gate. Two of our own checks fighting.
+#
+# The config is the right width. Every value the page shows is in it, so a changed constant
+# moves the digest; nothing the page does not show is, so provenance churn in the record
+# does not. It is also the stronger claim -- a commit says when, this says exactly which
+# bytes the page was generated from.
 CFG = {
     "rpc": rec["testnet"]["rpc"],
     "chainId": rec["testnet"]["chainId"],
@@ -67,7 +73,7 @@ CFG = {
     "feeToken": tok["address"],
     "feeTokenDecimals": tok["decimals"],
     "scanBlocks": 12,
-    "commit": commit,
+    "commit": "",  # filled below, over everything above it
     # Identifiers only. Not one OUTCOME is passed to the page: the page re-reads `deals()`
     # and the settlement receipts and works them out. Passing "the seller was paid" would
     # make section 5 a screenshot in HTML, which is what the rest of this file exists to
@@ -76,7 +82,15 @@ CFG = {
     "deployment": deployment,
 }
 
-tpl = (root / "dashboard/live/tempo-template.html").read_text()
+gen = pathlib.Path(__file__).read_bytes()
+tpl_bytes = (root / "dashboard/live/tempo-template.html").read_bytes()
+h = hashlib.sha256()
+h.update(json.dumps({k: v for k, v in CFG.items() if k != "commit"}, sort_keys=True).encode())
+h.update(tpl_bytes)
+h.update(gen)
+CFG["commit"] = h.hexdigest()[:12]
+
+tpl = tpl_bytes.decode()
 out = root / "docs/tempo.html"
 out.write_text(tpl.replace("/*__CONFIG__*/", json.dumps(CFG, indent=2)))
 print(f"docs/tempo.html  {out.stat().st_size:,} bytes  "

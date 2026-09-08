@@ -495,7 +495,7 @@
     "notDemonstrated": "refundAfterDeadline. REFUND_AFTER is 30 days, time cannot be warped on a public chain, and the mismatch deal above is therefore FUNDED until then. The refund shown here is the proof-driven one (a FAILED proof paying the buyer), which is immediate and is a different thing.",
     "verified": {
       "_": "Written by zk-verdict/scripts/tempo-verify.sh, which reads the deployment back off the chain and derives every value from receipts and from deals() on the escrow. It does not trust the run that produced them; in particular the deal ids come out of the Funded event, not from a terminal.",
-      "verifiedAt": "2026-09-08T05:28:14Z",
+      "verifiedAt": "2026-09-08T05:44:51Z",
       "deployedEscrowCodehash": "0xff1bed25b0622d054ab09165d13f67b21ab2a2dfa608838d219fd96597f92568",
       "codehashMatchesCompiledArtifact": true,
       "cases": [

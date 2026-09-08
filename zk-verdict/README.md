@@ -259,7 +259,15 @@ execution cannot settle this deal.
 **One escrow, two virtual machines.** The adjudicator is a property of the deal, not
 of the deployment: the escrow has **no constructor and no `immutable`**, so two
 deployments of this source are the same contract, and one instance settles an EVM
-proof and a Solana proof side by side. The funder chooses the program; the proof,
+proof and a Solana proof side by side. That sentence stopped being an argument on
+2026-09-08: `RecknZkEscrow` is deployed on **Arc testnet** (`0x580f2c32…`) and on
+**Tempo Moderato** (`0x7e953a6a…`), and `eth_getCode` on both chains returns the same
+bytes — codehash `0xff1bed25b0…`, equal to what this repository compiles.
+[`scripts/tempo-arc-parity.sh`](scripts/tempo-arc-parity.sh) fetches both and fails if
+they ever differ, or if the escrow acquires a constructor or an `immutable` — at which
+point codehash equality would stop meaning *same source* and the check would stop being
+evidence. It is **not** a claim that the two chains adjudicate alike: they do not, and
+cannot, because the adjudicator is named per deal. The funder chooses the program; the proof,
 checked by that program, chooses the payout. The dispatch into funder-named code is
 `view`-typed — a `STATICCALL` — so the callee cannot write state.
 

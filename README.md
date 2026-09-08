@@ -182,6 +182,24 @@ was paid in **the same stablecoin the escrow was holding**, read off the receipt
 `feeToken`. Explorer-linked hashes:
 [`docs/specs/011-tempo-tip20-slice.md`](docs/specs/011-tempo-tip20-slice.md) §10.
 
+**→ [psyto.github.io/reckn/tempo.html](https://psyto.github.io/reckn/tempo.html)** — the
+same idea as the Arc page, for the second chain: *your* browser calls Tempo's public RPC and
+checks it in front of you. Nothing on it is passed in but addresses and transaction hashes —
+the page calls `deals()` on the escrow, reads the settlement receipts, and works out the
+verdict, the recipient and the fee token itself. It also shows the deal that a real proof of
+a *different* execution failed to settle: still funded, money still in the escrow, no
+transaction to link because it never reached a block.
+
+Four of the checks behind that page read the live chain rather than this repository:
+`tempo-verify.sh` re-derives every outcome from receipts instead of trusting the run that
+produced them (the deal ids come out of the `Funded` events, not from a terminal),
+`tempo-receipts.sh` requires every recorded hash to exist on chain with the status the
+record claims — **including the one that failed**, which is recorded rather than hidden —
+`tempo-arc-parity.sh` is the gate behind the sentence above, and `tempo-page-check.sh` runs
+that page's own JavaScript against Tempo and fails if what it renders is not true. The page
+said *"Nothing is deployed to Tempo"* for several hours after the escrow was deployed and had
+settled twice; that check exists so it cannot happen twice.
+
 Everything else on this page is Arc. **This is not claimed as ETHOnline event work** — see
 [`docs/ethonline-2026/PREFLIGHT.md`](docs/ethonline-2026/PREFLIGHT.md) §2.
 
@@ -573,11 +591,30 @@ zk-verdict/                 # the keyless path — independent SP1 workspace
   scripts/ac005.sh          #   the 005 acceptance gate: 4 rows, USDC units and semantics
   scripts/ac008.sh          #   the 008 acceptance gate: one runner, 18 manifest rows
   scripts/ac009.sh          #   the 009 acceptance gate: 13 rows, cross-VM settlement
+  scripts/ac011.sh          #   the 011 acceptance gate: 8 rows, the Tempo slice — half
+                            #   of them read the live chain, so a network failure is a
+                            #   FAILURE and not a skip
   scripts/both-green.sh     #   runs every SIBLING gate it discovers by pattern — the
                             #   only row that tests "green at the same time"
   scripts/arc-receipts.sh   #   every arcscan link names a settlement arc.json records,
                             #   and every settlement it records is linked somewhere
   scripts/arc-constants.sh  #   chain id, Arc URLs and the USDC predeploy match the record
+  scripts/tempo-verify.sh   #   reads the Tempo deployment back off the chain and
+                            #   re-derives every outcome from receipts — deal ids out of
+                            #   the Funded events, never from a terminal
+  scripts/tempo-arc-parity.sh #  the same escrow bytecode on Arc AND on Tempo, fetched
+                            #   from both chains; fails if the escrow ever gains a
+                            #   constructor, which is what makes the equality mean
+                            #   "same source" rather than "same configuration"
+  scripts/tempo-receipts.sh #   every recorded hash exists on chain with the status the
+                            #   record claims — including the one that FAILED
+  scripts/tempo-constants.sh #  Tempo's constants match the record, and the endpoint that
+                            #   answers 4217 — Tempo MAINNET — appears nowhere as an endpoint
+  scripts/tempo-page-check.sh #  runs docs/tempo.html's own JavaScript against Tempo and
+                            #   fails if what it renders is not true
+  contracts/script/DeployTempo.s.sol # the same keyless path to Tempo, escrow unchanged
+  contracts/test/RecknTempoTip20.t.sol # TIP-20 settlement, pause and policy failure paths
+  contracts/tempo.json      #   Tempo's constants and receipts, each with how it was read
   scripts/escrow-shape.sh   #   the escrow's shape, closed by ten properties
   scripts/both-green.sh     #   sibling gates, discovered by closure and actually run
   scripts/mutants/          #   36 mutation patches: 21 for 008, 15 for 009
@@ -1175,6 +1212,11 @@ bash zk-verdict/scripts/ac009.sh --check    # 13 rows + the naming gate
 bash zk-verdict/scripts/ac009.sh AC-1       # one escrow, two VMs, both settled
 bash zk-verdict/scripts/ac005.sh --all      # 4 rows: USDC units, and the two
                                             # transcription gates over the live receipts
+bash zk-verdict/scripts/ac011.sh --all      # 8 rows: the Tempo slice. Four of them read
+                                            # the live chain — a settlement, a refund, and
+                                            # the deal a mismatched proof could not move
+bash zk-verdict/scripts/tempo-arc-parity.sh # one escrow source, two payment chains,
+                                            # byte-identical, fetched from both
 bash zk-verdict/scripts/ac009.sh --all      # everything, plus every sibling gate,
                                             # in one run — an overnight job, not a minute
 bash scripts/no-keys.sh                     # the build condition, five checks
