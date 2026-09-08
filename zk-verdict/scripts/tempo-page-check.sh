@@ -90,6 +90,7 @@ setTimeout(() => {
   else if (dep.RecknZkEscrow) ok(`${settled.length} deal rows rendered, one per recorded case`);
   settled.forEach((r) => console.log("         " + r.html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()));
   if (bad) { console.log("tempo-page-check: the page does not render the truth."); process.exit(1); }
-  console.log("tempo-page-check: docs/tempo.html renders correctly against the live chain.");
+  console.log(`tempo-page-check: ${settled.length} deal row(s) rendered from the live chain, `
+            + `all section statuses green.`);
 }, 30000);
 JS

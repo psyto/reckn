@@ -138,4 +138,10 @@ jq --argjson v "$results" --arg when "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg ch "
   }' "$rec" > "$rec.tmp" && mv "$rec.tmp" "$rec"
 
 if [[ $fail -ne 0 ]]; then echo "tempo-verify: FAILED -- the chain does not say what the record claims."; exit 1; fi
-echo "tempo-verify: every claim checks out against the chain. Written to tempo.json -> deployedByReckn.verified"
+# The witness is over what was READ BACK FROM THE CHAIN -- the deal ids taken out of the
+# Funded events and the settlement hashes -- not over the record. A stub that printed this
+# line would have to know a digest of values it never fetched, and the digest moves the
+# moment the deployment does.
+settled_n=$(jq -r '[.[] | select(.settled)] | length' <<<"$results")
+w=$(jq -r '.[] | "\(.dealId) \(.settleTx // "-")"' <<<"$results" | LC_ALL=C sort | shasum -a 256 | cut -c1-16)
+echo "tempo-verify: $(jq 'length' <<<"$results") deal(s) re-derived from the chain, $settled_n settled; witness=$w"

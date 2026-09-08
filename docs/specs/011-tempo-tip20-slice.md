@@ -297,7 +297,72 @@ T-7 and T-8 are the failure directions. They are written first, not last, becaus
 identical hole — USDC's blacklist — was found by a test rather than by review, and it is what
 `refundAfterDeadline` exists for.
 
-### 7.1 The 30-day sentence that must not be blurred
+---
+
+## 7.1 The acceptance manifest
+
+`zk-verdict/scripts/ac011.sh` parses the two blocks below, so this document and the gate
+cannot drift apart. `--all` is the entry point `both-green.sh` calls on a sibling; 009's
+AC-12 discovers `ac011.sh` by pattern, so adding it moved 009's evidence line with no edit
+to 009 — `{G}` and its witness are computed live there, and the recorded `siblingGates` is
+an *inclusion* requirement, so a new gate is discovered rather than rejected.
+
+**Every token is measured by `ac011.sh` itself**, from the same sources the row's command
+reads and never by invoking that command. That is the point: two implementations of one
+question, and no way to satisfy both by editing one.
+
+```ac011-manifest
+AC-0    script  -       bash scripts/no-keys.sh                              -   ✓ the claim holds: no key can move a funded escrow.
+AC-1    forge   _TEMPO  -                                                    8   forge _TEMPO_ — {N} tests, all Success
+AC-2    script  -       bash zk-verdict/scripts/tempo-constants.sh           -   tempo-constants: {C} Tempo-shaped literal(s) all match the record; chain {CHAIN} and {RPC} are both in use; the 4217 endpoint appears nowhere
+AC-3    script  -       bash zk-verdict/scripts/tempo-receipts.sh            -   tempo-receipts: {L} linked tx hash(es) all recorded; {S} settlement(s) linked; {K} succeeded + {F} failed recorded hash(es) all confirmed on chain; witness={witness}
+AC-4    script  -       bash zk-verdict/scripts/tempo-verify.sh              -   tempo-verify: {D} deal(s) re-derived from the chain, {V} settled; witness={witness}
+AC-5    script  -       bash zk-verdict/scripts/tempo-arc-parity.sh          -   tempo-arc-parity: one escrow source on chains {ARC} and {CHAIN}, codehash {H}
+AC-6    script  -       bash zk-verdict/scripts/tempo-page-check.sh          -   tempo-page-check: {D} deal row(s) rendered from the live chain, all section statuses green.
+AC-7    script  -       bash zk-verdict/scripts/tempo-tip20-probe.sh         -   tempo-tip20-probe: {A} assumption(s) the escrow makes about a token checked against the real TIP-20, {A} hold: it reverts rather than returning false, accepts the escrow as a recipient, and refuses itself.
+```
+
+```ac011-assumptions
+the token is not paused right now
+a TIP-20 transfer INTO the escrow's own runtime code is allowed
+approve(escrow) is allowed
+a transfer to the token itself reverts with InvalidRecipient
+an underfunded transfer REVERTS, it does not return false
+transferFrom without allowance REVERTS, it does not return false
+```
+
+```ac011-tests
+test_TEMPO01_tip20_deal_releases_to_seller_on_a_reproduced_solana_proof
+test_TEMPO02_tip20_deal_refunds_the_buyer_on_a_failed_solana_proof
+test_TEMPO03_a_real_proof_of_another_execution_moves_no_tip20
+test_TEMPO07_a_paused_token_blocks_a_proof_authorised_release
+test_TEMPO08_a_transfer_policy_refusing_the_seller_leaves_the_refund_open
+test_TEMPO09_the_escrow_settles_identically_at_18_decimals
+test_TEMPO10_a_token_memo_changes_no_settlement_outcome
+test_TEMPO11_a_deal_whose_seller_is_a_tip20_can_only_ever_time_out
+```
+
+### 7.1.1 What each token is, and why it cannot be echoed
+
+| token | measured by `ac011.sh` as |
+|---|---|
+| `{N}` | the number of ids in the `ac011-tests` block. AC-1 checks the **set**, not the count: deleting one required test and adding an unrelated one keeps the total at 8 and must still fail |
+| `{C}` | its own scan of the tree for Tempo-shaped literals — the same question `tempo-constants.sh` answers, asked again by different code |
+| `{CHAIN}` `{RPC}` | `tempo.json` |
+| `{L}` | its own scan for explorer `/tx/` links |
+| `{S}` `{K}` `{F}` | its own classification of the 32-byte values in `tempo.json` into settlements, succeeded and failed transaction hashes |
+| `{D}` `{V}` | the recorded deals and how many of them settled |
+| `{ARC}` | `arc.json`'s chain id — so AC-5 cannot pass by comparing Tempo against Tempo |
+| `{H}` | `keccak(out/RecknZkEscrow.sol → deployedBytecode)`, computed **without touching either chain**. Agreeing with it requires having actually fetched code that hashes to it |
+| `{A}` | the number of names in the `ac011-assumptions` block **of this document**, and AC-7 additionally requires every one of those names to be exercised by a `record(` call in the probe — a **set**, so swapping one assumption for another keeps the total and still fails. The first version counted `record(` calls in the probe itself, which is the same measurement taken twice rather than two implementations of one question: deleting a check moved the probe's number and the gate's number together and the row stayed green. It was written that way, provoked, and found green. The authority for *what must be checked* has to be the specification, because the specification is the thing the checker can be wrong about |
+| `{witness}` | AC-3: a digest of the recorded transaction hashes. AC-4: a digest of `dealId settleTx` pairs **read out of the record**, against a line whose script derives the same digest **from the chain** — they agree only if the record still matches the chain |
+
+**The limit, stated rather than left to be discovered.** These rows check that each checker's
+output tracks its inputs. They do not prove a checker's internals are sound: a script
+rewritten to compute the right numbers by a wrong method would pass. 008 and 009 close that
+with mutation self-tests; 011 does not have one, and that is a gap, not an oversight.
+
+### 7.2 The 30-day sentence that must not be blurred
 
 `REFUND_AFTER = 30 days` and is deliberately not a parameter. **The CWF judging window is 28
 days (09-14 → 10-12), so a deadline refund cannot be demonstrated on a public chain inside

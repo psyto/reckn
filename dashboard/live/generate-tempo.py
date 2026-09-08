@@ -24,7 +24,16 @@ import json, pathlib, subprocess
 
 root = pathlib.Path(__file__).resolve().parents[2]
 rec = json.loads((root / "zk-verdict/contracts/tempo.json").read_text())
-commit = subprocess.run(["git", "-C", str(root), "rev-parse", "--short", "HEAD"],
+# The commit of the page's OWN INPUTS, not HEAD. Embedding HEAD made the generated page
+# stale the instant anything else in the repository was committed, so `tempo-page-check.sh`
+# -- which regenerates and requires no diff -- went red after every unrelated commit. A gate
+# that is red for reasons unconnected to the thing it guards gets switched off.
+# It is also the truer number: the footer says "generated from tempo.json at commit X", and
+# X should be the commit of the record and the template, not of whatever landed last.
+INPUTS = ["zk-verdict/contracts/tempo.json",
+          "dashboard/live/tempo-template.html",
+          "dashboard/live/generate-tempo.py"]
+commit = subprocess.run(["git", "-C", str(root), "log", "-1", "--format=%h", "--"] + INPUTS,
                         capture_output=True, text=True).stdout.strip()
 
 tok = rec["measured"]["defaultFeeToken"]

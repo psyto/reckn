@@ -114,5 +114,8 @@ jq --arg ah "$(h "$ARC_CODE")" --arg arc "$ARC_ESC" --arg aid "$arc_id" \
   }' "$tempo" > "$tempo.tmp" && mv "$tempo.tmp" "$tempo"
 
 echo
-echo "tempo-arc-parity: one escrow source, two payment chains, byte-identical on both."
 echo "  Recorded in tempo.json -> deployedByReckn.sameCodeAsArc"
+# The codehash IS the witness here, and it is the strongest kind: ac011 recomputes it from
+# the compiled artifact without touching either chain, so agreeing with it requires having
+# actually fetched code that hashes to it.
+echo "tempo-arc-parity: one escrow source on chains $arc_id and $t_id, codehash $(h "$ARC_CODE")"

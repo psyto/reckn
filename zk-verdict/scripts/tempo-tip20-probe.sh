@@ -160,6 +160,7 @@ if fail:
     print(f"tempo-tip20-probe: {fail} check(s) FAILED -- an assumption RecknZkEscrow makes about "
           f"the token does not hold on the real one. That is a finding, not a thing to work around.")
     sys.exit(1)
-print("tempo-tip20-probe: the real TIP-20 reverts rather than returning false, accepts the escrow "
-      "as a recipient, and refuses itself. Every assumption the escrow makes about a token holds.")
+print(f"tempo-tip20-probe: {len(checks)} assumption(s) the escrow makes about a token checked against "
+      f"the real TIP-20, {len(checks)} hold: it reverts rather than returning false, accepts the escrow "
+      f"as a recipient, and refuses itself.")
 PY

@@ -137,6 +137,13 @@ else
 fi
 
 [[ $bad -eq 0 ]] || exit 1
-w=$(printf '%s' "$known_list" | shasum -a 256 | cut -c1-16)
+# Digest the STREAM, not the shell variable. `printf '%s' "$list"` drops the trailing
+# newline that the same list has when it flows through a pipe, so this script and ac011.sh
+# -- which ask the same question by different code -- produced different digests over an
+# identical set. That disagreement is exactly what a second implementation is for, and the
+# fix is to say which bytes are canonical: the sorted unique hashes, one per line, each
+# newline-terminated. Deriving it from classify() again also means the witness cannot drift
+# from the set the checks above actually used.
+w=$(classify "$rec" | sed -n 's/^tx\t//p' | LC_ALL=C sort -u | shasum -a 256 | cut -c1-16)
 echo "tempo-receipts: $n linked tx hash(es) all recorded; $settlements_n settlement(s) linked;" \
      "$known_n succeeded + $failed_n failed recorded hash(es)$([[ $offline -eq 0 ]] && echo ' all confirmed on chain'); witness=$w"
