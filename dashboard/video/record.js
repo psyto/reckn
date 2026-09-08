@@ -410,13 +410,13 @@ async function closingPlate(ms = 8000) {
   beat("CARD close");
   await page.setContent(`<!doctype html><meta charset="utf-8"><style>
     body{margin:0;background:#17130f;color:#f2ede6;height:100vh;display:flex;
-         align-items:center;justify-content:center;text-align:center;
+         flex-direction:column;justify-content:center;padding:0 120px;
          font:400 30px/1.5 ui-sans-serif,-apple-system,'SF Pro Display',Inter,sans-serif}
-    .w{max-width:24em}
+    .w{max-width:26em}
     .a{opacity:0;transition:opacity .7s ease;
        font:700 56px/1.25 ui-sans-serif,-apple-system,Inter,sans-serif;
        letter-spacing:-.02em;color:#f7f3ec}
-    .r{width:72px;height:3px;background:#3fb950;margin:34px auto;opacity:0;
+    .r{width:96px;height:4px;background:#3fb950;margin:34px 0;opacity:0;
        transition:opacity .7s ease}
     .b{opacity:0;transition:opacity .7s ease;
        font:400 40px/1.35 ui-sans-serif,-apple-system,Inter,sans-serif;color:#cbbfae}
@@ -460,14 +460,15 @@ async function openingPlate(navigateTo, ms = 10000) {
          transform:scale(1.06);transition:transform 9s linear,opacity 1.2s ease}
     #veil{position:fixed;inset:0;background:radial-gradient(60% 60% at 50% 45%,
           rgba(13,11,9,.55) 0%, rgba(13,11,9,.93) 100%)}
+    /* Left, like every slide. The plates were the last centred thing in the film. */
     .w{position:fixed;inset:0;display:flex;flex-direction:column;
-       align-items:center;justify-content:center;text-align:center;padding:0 10%}
+       justify-content:center;padding:0 120px}
     .n{font:700 88px/1 ui-sans-serif,-apple-system,'SF Pro Display',Inter,sans-serif;
        letter-spacing:-.03em;opacity:0;transition:opacity .7s ease}
     .t{margin-top:26px;opacity:0;transition:opacity .7s ease;
        font:700 52px/1.25 ui-sans-serif,-apple-system,Inter,sans-serif;
        letter-spacing:-.02em;color:#f7f3ec}
-    .r{width:72px;height:3px;background:#3fb950;margin:34px auto;opacity:0;
+    .r{width:96px;height:4px;background:#3fb950;margin:34px 0;opacity:0;
        transition:opacity .7s ease}
     .q{opacity:0;transition:opacity .7s ease;max-width:22em;
        font:400 36px/1.4 ui-sans-serif,-apple-system,Inter,sans-serif;color:#cbbfae}
@@ -542,41 +543,37 @@ function lower(html, ms = 4200, { near = null } = {}) {
         d.innerHTML = `<div id="__lowertx">${h}</div>`;
         Object.assign(d.style, { position: "fixed", inset: "0", zIndex: "99998",
                                  pointerEvents: "none", opacity: "0",
-                                 transition: "opacity .5s ease" });
+                                 transition: "opacity .6s ease" });
         document.body.appendChild(d);
         const tx = d.querySelector("#__lowertx");
+        // OUR VOICE, and it is not the chain's. The caption used to be centred with a green
+        // second line — the same green the live UI uses for its own output — so a viewer
+        // could not tell our commentary from the app's. Now: left, at the deck's own margin,
+        // cream and warm grey, and the only green anywhere in our furniture is the rule.
         Object.assign(tx.style, {
-          position: "fixed", color: "#f2ede6", textWrap: "balance",
-          background: "rgba(10,9,8,.94)", borderRadius: "12px",
-          borderLeft: "4px solid #3fb950", padding: "20px 26px",
-          boxShadow: "0 18px 48px rgba(0,0,0,.55)",
+          position: "fixed", textAlign: "left", color: "#f2ede6",
+          background: "rgba(23,19,15,.96)", borderLeft: "4px solid #3fb950",
+          padding: "22px 30px", boxShadow: "0 18px 48px rgba(0,0,0,.6)",
           font: "600 34px/1.32 ui-sans-serif,-apple-system,'SF Pro Display',Inter,sans-serif",
           letterSpacing: "-.012em",
         });
-        // Anchored UNDER the thing it describes. Fixed at the page's bottom-left, the caption
-        // sat 450-530 px below the line that was changing — on a 1080 frame that is beyond
-        // what one pair of eyes can hold at once, so a viewer read the words OR watched the
-        // log and missed whichever they were not looking at. In a cold open that is the
-        // whole shot. Now it shares the x-range of its subject and sits just beneath it.
         const el = sel && document.querySelector(sel);
         if (el) {
           const r = el.getBoundingClientRect();
-          const width = Math.max(560, Math.min(r.width, window.innerWidth * 0.72));
           tx.style.left = Math.round(Math.max(24, r.left)) + "px";
-          tx.style.width = Math.round(width) + "px";
+          tx.style.width = Math.round(Math.max(560, Math.min(r.width, window.innerWidth * 0.72))) + "px";
           tx.style.top = Math.round(r.bottom + 22) + "px";
-          // If the anchor sits low enough that the card would fall off the frame, put it
-          // ABOVE instead. Off-screen is worse than unconventional.
           if (r.bottom + 22 + 180 > window.innerHeight) {
             tx.style.top = "";
             tx.style.bottom = (window.innerHeight - r.top + 22) + "px";
           }
         } else {
-          tx.style.left = "6%"; tx.style.right = "6%"; tx.style.bottom = "7.5%";
+          tx.style.left = "120px"; tx.style.right = "120px"; tx.style.bottom = "80px";
         }
         for (const e of tx.querySelectorAll("i")) {
-          Object.assign(e.style, { display: "block", fontStyle: "normal", color: "#3fb950",
-                                   fontSize: "27px", fontWeight: "600", marginTop: "9px" });
+          Object.assign(e.style, { display: "block", fontStyle: "normal",
+                                   color: "#cbbfae", fontSize: "27px",
+                                   fontWeight: "500", marginTop: "10px" });
         }
         requestAnimationFrame(() => { d.style.opacity = "1"; });
       }, html, near).catch(() => {});
@@ -588,7 +585,7 @@ function lower(html, ms = 4200, { near = null } = {}) {
         const d = document.getElementById("__lower");
         if (!d) return;
         d.style.opacity = "0";
-        setTimeout(() => d.remove(), 600);
+        setTimeout(() => d.remove(), 700);
       }).catch(() => {});
     } catch {}
   };
@@ -671,18 +668,42 @@ async function deckSlide(n, ms, { navigate = null, during = null, label = "" } =
   }
   const uri = slideUri(n);
   beat(`SLIDE ${String(n).padStart(2, "0")}${label ? " " + label : ""}`);
+  // A slide is READ, not flashed. The founder asked for room: the deck's own reveal steps are
+  // played back one at a time so the eye is led down the slide, and only then does the
+  // evidence arrive. A static hold of the same length reads as a pause; this reads as a
+  // sentence being spoken.
+  const steps = slideSteps(n);
   await page.setContent(`<!doctype html><meta charset="utf-8"><style>
     html,body{margin:0;height:100%;background:#17130f;overflow:hidden}
-    img{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;
-        transform:scale(1);transition:transform ${ms}ms linear;
-        opacity:0;transition:transform ${ms}ms linear, opacity .55s ease}
-  </style><img id="s" src="${uri}">`);
+    #f{position:fixed;inset:0;overflow:hidden}
+    img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+        transform:scale(1);transition:transform ${ms}ms linear;opacity:0}
+    /* Each reveal is a band of the slide uncovered from the top down. The slide art is one
+       PNG, so the reveal is a mask over it rather than a re-render — same pixels, same
+       typography, no second source of truth. */
+    .mask{position:fixed;left:0;right:0;background:#17130f;transition:opacity .75s ease}
+  </style><div id="f"><img id="s" src="${uri}">${
+    steps.map((y, i) => `<div class="mask" id="m${i}" style="top:${y}px;bottom:0"></div>`).join("")
+  }</div>`);
   await sleep(120);
   await page.evaluate(() => {
     const e = document.getElementById("s");
-    if (e) { e.style.opacity = "1"; e.style.transform = "scale(1.015)"; }
+    if (e) { e.style.opacity = "1"; e.style.transform = "scale(1.012)"; }
   });
-  await sleep(Math.max(600, ms - 600));
+  // ASCENDING. The masks each cover from their own y to the bottom and therefore overlap,
+  // so the shallowest one is the only thing standing between the viewer and the next band.
+  // Removing the deepest first — which is what this did — reveals nothing at all until the
+  // very last step, and the slide sits black for most of its hold. It read as a dead frame
+  // and `motion` dropped from 8/8 to 5/8, which is the check catching a defect I introduced.
+  const hold = Math.max(900, ms - 700);
+  const per = steps.length ? Math.floor(hold / (steps.length + 1)) : hold;
+  for (let i = 0; i < steps.length; i++) {
+    await sleep(i === 0 ? Math.min(600, per) : per);
+    await page.evaluate((id) => {
+      const m = document.getElementById(id); if (m) m.style.opacity = "0";
+    }, `m${i}`);
+  }
+  await sleep(Math.max(700, ms - per * steps.length - 700));
   await page.evaluate(() => { const e = document.getElementById("s"); if (e) e.style.opacity = "0"; });
   await sleep(450);
   if (navigate) {
@@ -691,6 +712,16 @@ async function deckSlide(n, ms, { navigate = null, during = null, label = "" } =
     await cursor();
   }
   if (during) await during();
+}
+
+// Where to cut a slide into reveal bands. Measured from the built deck once, at build time,
+// rather than guessed per slide — see build-deck.mjs, which writes dashboard/media/deck/
+// steps.json alongside the PNGs.
+function slideSteps(n) {
+  try {
+    const j = JSON.parse(fs.readFileSync(path.join(deckDir, "steps.json"), "utf8"));
+    return j[String(n).padStart(2, "0")] || [];
+  } catch { return []; }
 }
 
 
@@ -822,10 +853,10 @@ t0 = Date.now();
 await openingPlate(BASE + "/arc.html");
 
 // The offer. Everything after this is the viewer checking it.
-await deckSlide(2, 7500, { label: "the claim, and the offer" });
+await deckSlide(2, 10000, { label: "the claim, and the offer" });
 
 // ---- check 1 · a real proof that cannot take the money ---------------------------
-await deckSlide(3, 6500, { label: "check 1", navigate: BASE + "/arc.html" });
+await deckSlide(3, 9500, { label: "check 1", navigate: BASE + "/arc.html" });
 await chrome("Check 1 · try to steal it", "01");
 await page.evaluate(() => window.scrollTo(0, 0));
 await sleep(400);
@@ -849,7 +880,7 @@ await press('button[data-act="fund"][data-deal="decrease"]', "tx 0x", { hold: 12
 await press('button[data-act="settle"][data-deal="decrease"]', "tx 0x", { hold: 5200 });
 
 // ---- check 2 · the code, verified in the viewer's own browser --------------------
-await deckSlide(4, 6500, { label: "check 2", navigate: LIVE + "/" });
+await deckSlide(4, 9500, { label: "check 2", navigate: LIVE + "/" });
 await chrome("Check 2 · the code that holds it", "02");
 beat("02 evidence: bytecode + no-keys");
 await page.waitForFunction(
@@ -915,7 +946,7 @@ await dwell("#d-code", 4000);
 }
 
 // ---- check 3 · real settlements, two of them decided on Solana -------------------
-await deckSlide(5, 7000, { label: "check 3", navigate: LIVE + "/" });
+await deckSlide(5, 9500, { label: "check 3", navigate: LIVE + "/" });
 await chrome("Check 3 · real money, another chain", "03");
 {
   const rec_ = JSON.parse(fs.readFileSync(
@@ -935,7 +966,7 @@ await chrome("Check 3 · real money, another chain", "03");
   await dwell("#rows", 11000);
 }
 
-await deckSlide(6, 6000, { label: "the boundary" });
+await deckSlide(6, 8000, { label: "the boundary" });
 beat("17 SVG: out to Arc, scope held");
 await panStill("solana-proof-to-arc-settlement.svg",
   { s: 1.06, x: 1, y: 1 }, { s: 1.0, x: 0, y: 0 }, 5000, null, 900, { mat: false });
@@ -943,7 +974,7 @@ await holdStill("solana-proof-to-arc-settlement.svg", { s: 1.0, x: 0, y: 0 }, 35
 await sleep(500);
 
 // ---- check 4 · the one nobody else shows you ------------------------------------
-await deckSlide(7, 9500, {
+await deckSlide(7, 11500, {
   label: "check 4 - what it does not prove",
   navigate: LIVE + "/",
   during: () => page.evaluate(() => document.querySelector("table.two")
@@ -954,7 +985,7 @@ beat("06 evidence: the two rows");
 await dwell("table.two", 11000);
 
 // ---- the URL, big, and nothing after it -----------------------------------------
-await deckSlide(8, 9000, { label: "check it yourself" });
+await deckSlide(8, 9500, { label: "check it yourself" });
 // The door's last line still has to land, and the closing plate that used to carry it is
 // gone — the URL slide ends the film now. One short plate, door-specific, after it.
 await closingPlate(6000);

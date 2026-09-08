@@ -73,6 +73,27 @@ for (const [i, id] of ids.entries()) {
   await el.screenshot({ path: out });
 }
 
+// Where each slide's reveal bands start, measured from the rendered page rather than
+// guessed. The film uncovers a slide from the top down at these y positions, so the reader
+// is led through the same order the layout already implies.
+const steps = {};
+for (const [i, id] of ids.entries()) {
+  // Relative to the SECTION, not the viewport. Measured viewport-relative first, and every
+  // slide but one came back empty: el.screenshot() scrolls each section into view, so by the
+  // time this loop ran the page sat at the last slide and every other rect was negative.
+  const ys = await page.$eval(`#${id}`, (sec) => {
+    const top = sec.getBoundingClientRect().top;
+    return [...sec.querySelectorAll(".step")]
+      .map((e) => Math.round(e.getBoundingClientRect().top - top))
+      .filter((y) => y > 40 && y < 1040)
+      .sort((a, b) => a - b);
+  });
+  // The first band starts at the FIRST element, so the slide opens blank and fills in.
+  const uniq = [...new Set(ys)].slice(0, 5);
+  steps[String(i + 1).padStart(2, "0")] = uniq;
+}
+fs.writeFileSync(path.join(shotDir, "steps.json"), JSON.stringify(steps, null, 1));
+
 const pdf = path.join(repo, "dashboard/media/reckn-deck.pdf");
 await page.pdf({ path: pdf, width: `${W}px`, height: `${H}px`, printBackground: true, pageRanges: `1-${ids.length}` });
 await browser.close();
@@ -84,3 +105,4 @@ console.log(`✓ ${ids.length} slides, all 1920x1080, none overflowing`);
 console.log(`  docs/deck.html                    ${kb(outHtml)} KB`);
 console.log(`  dashboard/media/reckn-deck.pdf    ${kb(pdf)} KB`);
 console.log(`  dashboard/media/deck/slide-NN.png ${ids.length} files`);
+console.log(`  dashboard/media/deck/steps.json     ${Object.values(steps).reduce((a, b) => a + b.length, 0)} reveal bands`);

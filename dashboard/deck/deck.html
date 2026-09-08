@@ -10,6 +10,10 @@
   :root{
     --bg:#17130f; --fg:#f2ede6; --dim:#cbbfae; --faint:#8a7f72;
     --line:#2b241d; --green:#3fb950; --amber:#e0b341;
+    /* GREEN IS THE CHAIN'S VOICE. It appears in the live UI, and in exactly one
+       piece of our own furniture — the rule under a title. Never in our words.
+       Our voice is cream and warm grey; the chain's is green. A viewer who has
+       seen five minutes of this can tell who is talking without reading. */
     --sans:ui-sans-serif,-apple-system,BlinkMacSystemFont,"SF Pro Display",Inter,"Segoe UI",sans-serif;
     --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
   }
@@ -28,6 +32,10 @@
   h2{font:700 76px/1.1 var(--sans);letter-spacing:-.03em}
   .lede{font:400 40px/1.45 var(--sans);color:var(--dim);max-width:26em;margin-top:34px}
   .rule{width:96px;height:4px;background:var(--green);margin:38px 0}
+  /* The film reveals these in order; a static page shows them all. */
+  .step{opacity:1}
+  body.reveal .step{opacity:0;transition:opacity .8s ease}
+  body.reveal .step.on{opacity:1}
   .foot{position:absolute;left:120px;right:120px;bottom:56px;
         font:400 24px/1.4 var(--sans);color:var(--faint);
         border-top:1px solid var(--line);padding-top:20px;display:flex;gap:28px}
@@ -66,31 +74,31 @@
 
 <!-- 01 ---------------------------------------------------------------------->
 <section class="slide" id="s01">
-  <div class="kicker">Reckn</div>
-  <h1>Keep assets native.<br>Settle on proof.</h1>
-  <div class="rule"></div>
-  <p class="lede">An escrow that releases only when the work it was funded against can be
+  <div class="kicker step">Reckn</div>
+  <h1 class="step">Keep assets native.<br>Settle on proof.</h1>
+  <div class="rule step"></div>
+  <p class="lede step">An escrow that releases only when the work it was funded against can be
   re-executed and reproduced — and refunds the buyer when it cannot.</p>
   <div class="foot"><span><b>Live on Arc testnet.</b> psyto.github.io/reckn</span></div>
 </section>
 
 <!-- 02 ---------------------------------------------------------------------->
 <section class="slide" id="s02">
-  <div class="kicker">The claim</div>
-  <h2>Nobody can move this money.<br>Including us.</h2>
-  <p class="lede">No owner, no admin, no resolver, no upgrade path. That is a <b>build
+  <div class="kicker step">The claim</div>
+  <h2 class="step">Nobody can move this money.<br>Including us.</h2>
+  <p class="lede step">No owner, no admin, no resolver, no upgrade path. That is a <b>build
   condition</b>, not a promise — if one ever appears, the build fails.</p>
-  <div class="rule"></div>
-  <p class="quote" style="font-size:44px;color:#3fb950">Easy to say. So don't take our word for it.</p>
+  <div class="rule step"></div>
+  <p class="quote step" style="font-size:44px;color:var(--dim)">Easy to say.<br>So don't take our word for it.</p>
   <div class="foot"><span><b>Four checks. Ninety seconds. Nothing installed, no wallet.</b></span></div>
 </section>
 
 <!-- 03 ---------------------------------------------------------------------->
 <section class="slide" id="s03">
   <div class="n">01</div>
-  <div class="kicker">Check one</div>
-  <h2>A real proof that<br>cannot take the money.</h2>
-  <p class="lede">Watch a <b>cryptographically valid</b> Groth16 proof — of a different
+  <div class="kicker step">Check one</div>
+  <h2 class="step">A real proof that<br>cannot take the money.</h2>
+  <p class="lede step">Watch a <b>cryptographically valid</b> Groth16 proof — of a different
   execution — submitted against a funded deal. Then watch the deal's own proof release it,
   and a failed one refund the buyer.</p>
   <div class="foot"><span>Nobody approves any of the three.</span></div>
@@ -99,9 +107,9 @@
 <!-- 04 ---------------------------------------------------------------------->
 <section class="slide" id="s04">
   <div class="n">02</div>
-  <div class="kicker">Check two</div>
-  <h2>The code holding it,<br>verified in your browser.</h2>
-  <p class="lede">Your browser fetches the deployed bytecode from Arc and compares it against
+  <div class="kicker step">Check two</div>
+  <h2 class="step">The code holding it,<br>verified in your browser.</h2>
+  <p class="lede step">Your browser fetches the deployed bytecode from Arc and compares it against
   this repository. Byte for byte. The escrow has no constructor, so the same source always
   deploys the same contract.</p>
   <div class="foot"><span><b>scripts/no-keys.sh</b> — the build condition, run on this take's own bytes</span></div>
@@ -110,9 +118,9 @@
 <!-- 05 ---------------------------------------------------------------------->
 <section class="slide" id="s05">
   <div class="n">03</div>
-  <div class="kicker">Check three</div>
-  <h2>Real money — and work<br>proven on another chain.</h2>
-  <div class="cols" style="grid-template-columns:1fr 1fr 1fr">
+  <div class="kicker step">Check three</div>
+  <h2 class="step">Real money — and work<br>proven on another chain.</h2>
+  <div class="cols step" style="grid-template-columns:1fr 1fr 1fr">
     <div class="card"><h3>Settlements</h3><div class="num">4</div><p>Real USDC on Arc testnet.</p></div>
     <div class="card"><h3>Decided by Solana proofs</h3><div class="num">2</div><p>One escrow, two virtual machines.</p></div>
     <div class="card"><h3>Cost to decide one</h3><div class="num">&lt;3¢</div><p>From the receipts, not quoted.</p></div>
@@ -123,8 +131,8 @@
 <!-- 06 ---------------------------------------------------------------------->
 <section class="slide" id="s06">
   <div class="n">04</div>
-  <div class="kicker">What crosses the boundary</div>
-  <figure><img src="/*__SVG__*/" alt="Solana work re-executed in a zkVM; only a Groth16 proof crosses to Arc, where USDC stays in the escrow."></figure>
+  <div class="kicker step">What crosses the boundary</div>
+  <figure class="step"><img src="/*__SVG__*/" alt="Solana work re-executed in a zkVM; only a Groth16 proof crosses to Arc, where USDC stays in the escrow."></figure>
   <div class="foot"><span>The proof crosses. <b>The asset never does.</b></span>
     <span>No bridge. No light client. No resolver on the path that chooses the payout.</span></div>
 </section>
@@ -132,9 +140,9 @@
 <!-- 07 ---------------------------------------------------------------------->
 <section class="slide" id="s07">
   <div class="n">05</div>
-  <div class="kicker">Check four — the one nobody else shows you</div>
-  <h2>What it does <i style="font-style:normal;color:#f0837a">not</i> prove.</h2>
-  <table>
+  <div class="kicker step">Check four — the one nobody else shows you</div>
+  <h2 class="step">What it does <i style="font-style:normal;color:#f0837a">not</i> prove.</h2>
+  <table class="step">
     <tr><td class="k bad">Not</td><td>“Bridges are unnecessary.”</td><td class="d">It removes the bridge <b>as the decider</b>. Moving funds to where you pay remains your problem.</td></tr>
     <tr><td class="k bad">Not</td><td>“Fragmented liquidity is solved.”</td><td class="d">You must already hold the settlement asset on the chain you pay from.</td></tr>
     <tr><td class="k bad">Not</td><td>“We prove Solana mainnet state.”</td><td class="d">A bank hash recomputed over the account set <b>the deal named</b>. Consistency, not provenance.</td></tr>
@@ -144,10 +152,10 @@
 
 <!-- 08 ---------------------------------------------------------------------->
 <section class="slide" id="s08">
-  <div class="kicker">Check it yourself</div>
-  <h1 style="font-size:96px">psyto.github.io<br>/reckn</h1>
-  <div class="rule"></div>
-  <p class="quote" style="font-size:46px;color:#cbbfae">Nothing installed. No wallet.<br>Reproduce, or refund.</p>
+  <div class="kicker step">Check it yourself</div>
+  <h1 class="step" style="font-size:96px">psyto.github.io<br>/reckn</h1>
+  <div class="rule step"></div>
+  <p class="quote step" style="font-size:46px;color:#cbbfae">Nothing installed. No wallet.<br>Reproduce, or refund.</p>
 </section>
 
 </body>
