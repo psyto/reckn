@@ -808,6 +808,18 @@ await sleep(600);
 await rec.start(RAW(out));
 t0 = Date.now();
 
+// The prologue gets a claim of its own. Four seconds, before the title, because a viewer
+// shown a browser page cold has no way to know they are watching a theft — the founder's
+// note, and it is the same principle as every other pair in this film applied to the one
+// shot that was exempt from it. Short on purpose: the point of a cold open is the scene,
+// and a long slide in front of it would spend the thing it is introducing.
+await deckSlide(2, 4200, { label: "the hook" });
+await page.goto(BASE + "/arc.html", { waitUntil: "domcontentloaded" });
+await page.waitForNetworkIdle({ idleTime: 400, timeout: 30000 }).catch(() => {});
+await page.evaluate(() => window.scrollTo(0, 0));
+await cursor();
+await chrome("Try to steal it", "00");
+
 // ---------------------------------------------------------------- the film ----
 // Six chapters. Each opens on a claim and then spends most of its time on the evidence
 // for it — cards are under a fifth of the running time and every other frame is a real
@@ -838,18 +850,53 @@ await sleep(6200);
 // ---- the title, once it has been earned ----------------------------------------
 await openingPlate(LIVE + "/");
 
-// ---- the argument, before any more mechanism ------------------------------------
-// The founder's note was that the artefacts explained HOW and never WHY. This is the why,
-// and it is a deck slide rather than a title card because a card is a sentence on black and
-// this is a table a viewer has to read: two parties decide whether you get paid, and neither
-// of them can see the work.
-await deckSlide(2, 8000, { label: "the problem" });
+// ---- the pairs ------------------------------------------------------------------
+// Claim, then its proof. Claim, then its proof. The founder asked for exactly this and it is
+// the right shape: the film used to run three live shots back to back, which is where the
+// restlessness came from — a viewer with no claim in front of them is just watching software.
+//
+// ONE exception, and it is deliberate: the cold open comes BEFORE the alternation starts.
+// Opening on a slide would cost the strongest move this film has. The theft is the prologue,
+// and it doubles as the problem slide's evidence, which is why slide 02 needs no pair.
+//
+// The pairs are NOT equal length. Perfect alternation at a fixed interval reads as a
+// metronome; these run 12 s to 25 s depending on how much the evidence has to show.
+//
+// Deck order IS film order. There is one sequence to keep straight instead of two.
 
-// ---- 01 · the answer to the cold open ------------------------------------------
-// The claim this beat used to make on a black card is exactly what deck slide 05 says, in
-// better type. One register, and one fewer place for the words to drift.
+// setup — the prologue was its evidence
+await deckSlide(3, 8000, { label: "the problem" });
+
+// ---- pair 1 · the inversion -> release, then refund ------------------------------
+await deckSlide(4, 7000, { label: "the inversion", navigate: BASE + "/arc.html" });
+await chrome("Both directions", "01");
+// A narrative beat, not an argument — so it belongs ON the evidence rather than in front of
+// it. Three full-screen interruptions became three lower thirds, and the film stopped
+// cutting to black to say things the picture was about to show anyway.
+await page.goto(BASE + "/arc.html", { waitUntil: "domcontentloaded" });
+await page.waitForNetworkIdle({ idleTime: 400, timeout: 30000 }).catch(() => {});
+await cursor();
+await chrome("Both directions", "02");
+await page.evaluate(() => window.scrollTo(0, 0));
+await sleep(900);
+await page.evaluate(() => document.getElementById("log")
+  ?.scrollIntoView({ behavior: "smooth", block: "center" }));
+await sleep(700);
+beat("02 evidence: release");
+lower("The proof this deal was funded against. It reproduces.<i>Released to the seller.</i>", 5200, { near: "#log" });
+await press('button[data-act="settle"][data-deal="honest"]:not([data-proof])', "tx 0x", { hold: 5200 });
+beat("02 evidence: refund");
+lower("Now a delivery that did <b>not</b> reproduce.<i>The same machinery refunds the buyer.</i>", 6600, { near: "#log" });
+await press('button[data-act="fund"][data-deal="decrease"]', "tx 0x", { hold: 1200 });
+await press('button[data-act="settle"][data-deal="decrease"]', "tx 0x", { hold: 5200 });
+
+// ---- pair 2 · the build condition -> the bytecode and the gauntlet ---------------
 await deckSlide(5, 7000, { label: "nobody could have overridden that", navigate: LIVE + "/" });
-await chrome("The build condition", "01");
+await chrome("The build condition", "02");
+// The beat between a pair's claim and its proof was lost when this block was re-ordered, so
+// beats.tsv described twenty seconds as one shot and VO.md was timed against that. The
+// lines still landed, but only by luck: a marker that is not emitted cannot be checked.
+beat("02 evidence: bytecode + no-keys");
 await page.waitForFunction(
   () => document.querySelector("#s-code")?.textContent === "\u2713",
   { timeout: 60000 },
@@ -912,52 +959,22 @@ await dwell("#d-code", 4000);
   await sleep(2600);
 }
 
-// ---- 02 · both directions, from the same machinery -----------------------------
-// A narrative beat, not an argument — so it belongs ON the evidence rather than in front of
-// it. Three full-screen interruptions became three lower thirds, and the film stopped
-// cutting to black to say things the picture was about to show anyway.
-await page.goto(BASE + "/arc.html", { waitUntil: "domcontentloaded" });
-await page.waitForNetworkIdle({ idleTime: 400, timeout: 30000 }).catch(() => {});
-await cursor();
-await chrome("Both directions", "02");
-await page.evaluate(() => window.scrollTo(0, 0));
-await sleep(900);
-await page.evaluate(() => document.getElementById("log")
-  ?.scrollIntoView({ behavior: "smooth", block: "center" }));
-await sleep(700);
-beat("02 evidence: release");
-lower("The proof this deal was funded against. It reproduces.<i>Released to the seller.</i>", 5200, { near: "#log" });
-await press('button[data-act="settle"][data-deal="honest"]:not([data-proof])', "tx 0x", { hold: 5200 });
-beat("02 evidence: refund");
-lower("Now a delivery that did <b>not</b> reproduce.<i>The same machinery refunds the buyer.</i>", 6600, { near: "#log" });
-await press('button[data-act="fund"][data-deal="decrease"]', "tx 0x", { hold: 1200 });
-await press('button[data-act="settle"][data-deal="decrease"]', "tx 0x", { hold: 5200 });
-
-// ---- 03 · what was removed is not a fee ----------------------------------------
-await page.goto(LIVE + "/", { waitUntil: "domcontentloaded" });
-await page.waitForNetworkIdle({ idleTime: 400, timeout: 30000 }).catch(() => {});
-await cursor();
+// ---- pair 3 · not a fee, the person -> the cost, from the receipts ---------------
+await deckSlide(6, 7500, { label: "not a fee, the person", navigate: LIVE + "/" });
 await chrome("What it removes", "03");
 await page.evaluate(() => document.querySelector("#t-cost")?.scrollIntoView({ block: "center" }));
 await sleep(700);
-lower("And nobody approved either one.<i>What was removed is not a fee. It is the person.</i>", 5600, { near: "#t-cost" });
 beat("03 evidence: what it replaces");
 await dwell("#t-cost", 9000, 260);
 
-// ---- 04 · THE THESIS, and it is not a negation ---------------------------------
-// This chapter used to be titled "This is not a bridge." A viewer cannot build a picture
-// out of what something is not, and it landed at 2:09 of a 3:04 film — after five chapters
-// of mechanism. It is the argument, so it is stated affirmatively and it comes early.
-// The slide states the inversion — "don't move the asset to reach the work; move a proof of
-// the work to reach the asset" — and the diagram behind it is the same SVG the deck uses.
-await deckSlide(3, 7000, { label: "the inversion" });
+// ---- pair 4 · the boundary -> four settlements, two decided on Solana ------------
+await deckSlide(7, 6500, { label: "only the proof crosses" });
 beat("17 SVG: out to Arc, scope held");
 await panStill("solana-proof-to-arc-settlement.svg",
   { s: 1.06, x: 1, y: 1 }, { s: 1.0, x: 0, y: 0 }, 5000, null, 900, { mat: false });
 await holdStill("solana-proof-to-arc-settlement.svg", { s: 1.0, x: 0, y: 0 }, 3500, { mat: false });
 await sleep(500);
 
-// ---- 05 · and it is running --------------------------------------------------
 await page.goto(LIVE + "/", { waitUntil: "domcontentloaded" });
 await page.waitForNetworkIdle({ idleTime: 400, timeout: 30000 }).catch(() => {});
 await cursor();
@@ -980,11 +997,8 @@ await chrome("It is running", "04");
   await dwell("#rows", 11000);
 }
 
-// ---- 06 · the half that is easy to leave out ----------------------------------
-// Three refusals on one slide, where a card could hold one: bridges are not made
-// unnecessary, liquidity is not fixed, and mainnet provenance is not proven. The live page
-// then shows the third of them in its own words.
-await deckSlide(7, 9000, {
+// ---- pair 5 · what it does not claim -> the page saying it too -------------------
+await deckSlide(9, 9000, {
   label: "what this does not claim",
   navigate: LIVE + "/",
   during: () => page.evaluate(() => document.querySelector("table.two")
@@ -993,7 +1007,6 @@ await deckSlide(7, 9000, {
 await chrome("What it does not prove", "05");
 beat("06 evidence: the two rows");
 await dwell("table.two", 11000);
-
 // ---- 07 · words do not move it -------------------------------------------------
 // No door here on purpose. Ten cards was one every eighteen seconds, and the founder read
 // that as choppy — correctly. The typing beat introduces itself, and the closing door is

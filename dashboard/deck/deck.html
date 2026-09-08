@@ -76,6 +76,13 @@
 
 <!-- 02 ---------------------------------------------------------------------->
 <section class="slide" id="s02">
+  <div class="kicker">Before anything is explained</div>
+  <h1 style="font-size:84px">A funded escrow.<br>A real proof.<br><span style="color:#3fb950">Watch it fail to take the money.</span></h1>
+  <div class="foot"><span>Everything on the next screen is a real transaction on a live chain.</span></div>
+</section>
+
+<!-- 03 ---------------------------------------------------------------------->
+<section class="slide" id="s03">
   <div class="n">01</div>
   <div class="kicker">The problem</div>
   <h2>Two parties decide whether you get paid.<br>Neither can see the work.</h2>
@@ -88,8 +95,8 @@
     <span><b>docs/why.md §0–0.1</b></span></div>
 </section>
 
-<!-- 03 ---------------------------------------------------------------------->
-<section class="slide" id="s03">
+<!-- 04 ---------------------------------------------------------------------->
+<section class="slide" id="s04">
   <div class="n">02</div>
   <div class="kicker">The inversion</div>
   <p class="quote">Don't move the asset to reach the work.<br>
@@ -101,18 +108,9 @@
   <div class="foot"><span><b>Don't make a bridge decide where money goes. Make proof decide.</b></span></div>
 </section>
 
-<!-- 04 ---------------------------------------------------------------------->
-<section class="slide" id="s04">
-  <div class="n">03</div>
-  <div class="kicker">What crosses the boundary</div>
-  <figure><img src="/*__SVG__*/" alt="Solana work re-executed in a zkVM; only a Groth16 proof crosses to Arc, where USDC stays in the escrow."></figure>
-  <div class="foot"><span>The proof crosses. <b>The asset never does.</b></span>
-    <span>No bridge. No light client. No resolver on the path that chooses the payout.</span></div>
-</section>
-
 <!-- 05 ---------------------------------------------------------------------->
 <section class="slide" id="s05">
-  <div class="n">04</div>
+  <div class="n">03</div>
   <div class="kicker">Nobody decides — as a build condition</div>
   <h2>No owner. No admin.<br>No resolver. No upgrade path.</h2>
   <p class="lede">Not a promise. If one ever appears, <b style="color:var(--fg)">the build
@@ -128,7 +126,33 @@
 
 <!-- 06 ---------------------------------------------------------------------->
 <section class="slide" id="s06">
+  <div class="n">04</div>
+  <div class="kicker">What it removes</div>
+  <h2>Not a fee. The person.</h2>
+  <p class="lede">An escrow a human approves is a serialisation point. Agents run in
+  parallel, at machine speed, and every release queues behind somebody reading something.</p>
+  <div class="cols">
+    <div class="card"><h3>The platform's cut</h3><div class="num">10–20%</div>
+      <p>A symptom of that person existing.</p></div>
+    <div class="card"><h3>Deciding one of ours</h3><div class="num">&lt;3¢</div>
+      <p>Computed from the receipts on the next screen.</p></div>
+  </div>
+  <div class="foot"><span>The ceiling is not price. It is human attention.</span>
+    <span><b>docs/why.md §0</b></span></div>
+</section>
+
+<!-- 07 ---------------------------------------------------------------------->
+<section class="slide" id="s07">
   <div class="n">05</div>
+  <div class="kicker">What crosses the boundary</div>
+  <figure><img src="/*__SVG__*/" alt="Solana work re-executed in a zkVM; only a Groth16 proof crosses to Arc, where USDC stays in the escrow."></figure>
+  <div class="foot"><span>The proof crosses. <b>The asset never does.</b></span>
+    <span>No bridge. No light client. No resolver on the path that chooses the payout.</span></div>
+</section>
+
+<!-- 08 ---------------------------------------------------------------------->
+<section class="slide" id="s08">
+  <div class="n">06</div>
   <div class="kicker">It is running</div>
   <h2>Four settlements on Arc testnet.</h2>
   <div class="cols" style="grid-template-columns:1fr 1fr 1fr">
@@ -143,9 +167,9 @@
     <span><b>psyto.github.io/reckn</b></span></div>
 </section>
 
-<!-- 07 ---------------------------------------------------------------------->
-<section class="slide" id="s07">
-  <div class="n">06</div>
+<!-- 09 ---------------------------------------------------------------------->
+<section class="slide" id="s09">
+  <div class="n">07</div>
   <div class="kicker">What this does not claim</div>
   <h2>The half that is easy to leave out.</h2>
   <table>
@@ -159,8 +183,8 @@
   <div class="foot"><span>Stated on the live page, in the film, and in a test — not in a footnote.</span></div>
 </section>
 
-<!-- 08 ---------------------------------------------------------------------->
-<section class="slide" id="s08">
+<!-- 10 ---------------------------------------------------------------------->
+<section class="slide" id="s10">
   <div class="kicker">Reckn</div>
   <h1>Keep assets native.<br>Settle on proof.</h1>
   <div class="rule"></div>

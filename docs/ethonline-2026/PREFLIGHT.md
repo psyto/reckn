@@ -104,7 +104,7 @@ Current state, measured:
 
 | requirement | `reckn-demo-v3.mp4` |
 |---|---|
-| 2–4 minutes | **2:48** ✅ |
+| 2–4 minutes | **3:09** ✅ |
 | ≥ 720p | **1920 × 1080** ✅ |
 | 16:9 | 1.7778 ✅ |
 | opens at all (faststart) | ✅ |
@@ -115,8 +115,10 @@ Current state, measured:
 [`../../dashboard/video/VO.md`](../../dashboard/video/VO.md) — timecoded from the recorder's
 own beats, every line inside its word budget *and* inside the shot it describes.
 
-Three of the film's beats are **deck slides** and are deliberately under-narrated: the voice
-names what a slide does not say and then stops, and the inversion slide is silent end to end.
+**The film is deck-led.** After a four-second claim and the cold open it introduces, every
+live shot has a slide in front of it stating what the shot is about to prove — claim, proof,
+claim, proof. Several of those slides are deliberately under-narrated: the voice names what a
+slide does not say and then stops, and the inversion slide is silent end to end.
 A narrator reciting text already on screen is the fastest way to make a good demo feel like a
 bad one, so silence there is the script, not a gap in it.
 

@@ -53,24 +53,24 @@ and no line runs past its shot.
 
 | # | in | for | words | line |
 |---|---|---|---|---|
-| 1 | 0:00 | 7.0 s | 15 / 16 | "This escrow is holding two hundred and fifty dollars. Nobody has a key to it." |
-| 2 | 0:08 | 7.5 s | 16 / 18 | "Now watch. That's a real proof, and it verifies — it's just about a different job." |
-| 3 | 0:16 | 7.0 s | 10 / 16 | "Binding mismatch. The money didn't move. Being valid wasn't enough." |
-| — | 0:23 | 9.0 s | — | *(plate: **Reckn — Keep assets native. Settle on proof.** then the door question)* |
-| 4 | 0:34 | 6.0 s | 10 / 14 | "Both are guessing. One from a claim, one from nothing." |
-| 5 | 0:42 | 9.0 s | 15 / 21 | "Nobody could have stepped in and overridden that. There's no owner, no admin, no resolver." |
-| 6 | 0:51 | 7.5 s | 13 / 18 | "And it isn't a promise. If one ever appeared, the build would fail." |
-| 7 | 1:04 | 7.0 s | 15 / 16 | "Here's the proof this deal was funded against. It reproduces, so the seller gets paid." |
-| 10 | 1:12 | 8.5 s | 13 / 20 | "And when the work doesn't reproduce, the same machinery sends the money back." |
-| 8 | 1:24 | 8.5 s | 15 / 20 | "What we took out isn't a fee. It's the person who used to approve this." |
-| 9 | 1:40 | 8.5 s | 19 / 20 | "The work happened on Solana. We re-ran it inside a zkVM. The proof crosses — the money never does." |
-| 11 | 1:50 | 10.0 s | 23 / 24 | "Four settlements on Arc testnet, read straight off the chain by your browser. Two were decided by proofs about work done on Solana." |
-| 12 | 2:01 | 5.5 s | 9 / 13 | "We would rather you heard this part from us." |
-| 13 | 2:11 | 7.5 s | 16 / 18 | "Arc never runs a Solana virtual machine — and we put that limit on the page." |
-| 14 | 2:19 | 5.0 s | 5 / 12 | "It's consistency. It isn't provenance." |
-| 15 | 2:25 | 6.5 s | 15 / 15 | "The one thing an observer controls is the story. So watch what the story moves." |
-| 16 | 2:32 | 6.0 s | 14 / 14 | "Every keystroke, a new hash. The verdict comes from the chain. It doesn't budge." |
-| — | 2:39 | 8.0 s | — | *(plate: **Keep assets native. Settle on proof.** then the door's last line)* |
+| 1 | 0:04 | 7.0 s | 15 / 16 | "This escrow is holding two hundred and fifty dollars. Nobody has a key to it." |
+| 2 | 0:13 | 7.5 s | 16 / 18 | "Now watch. That's a real proof, and it verifies — it's just about a different job." |
+| 3 | 0:21 | 7.0 s | 10 / 16 | "Binding mismatch. The money didn't move. Being valid wasn't enough." |
+| — | 0:28 | 9.0 s | — | *(plate: **Reckn — Keep assets native. Settle on proof.** then the door question)* |
+| 4 | 0:38 | 6.0 s | 10 / 14 | "Both are guessing. One from a claim, one from nothing." |
+| 5 | 1:14 | 9.0 s | 15 / 21 | "Nobody could have stepped in and overridden that. There's no owner, no admin, no resolver." |
+| 6 | 1:23 | 7.5 s | 13 / 18 | "And it isn't a promise. If one ever appeared, the build would fail." |
+| 7 | 0:56 | 7.0 s | 15 / 16 | "Here's the proof this deal was funded against. It reproduces, so the seller gets paid." |
+| 10 | 1:04 | 8.5 s | 13 / 20 | "And when the work doesn't reproduce, the same machinery sends the money back." |
+| 8 | 1:45 | 8.5 s | 15 / 20 | "What we took out isn't a fee. It's the person who used to approve this." |
+| 9 | 2:01 | 8.5 s | 19 / 20 | "The work happened on Solana. We re-ran it inside a zkVM. The proof crosses — the money never does." |
+| 11 | 2:11 | 10.0 s | 23 / 24 | "Four settlements on Arc testnet, read straight off the chain by your browser. Two were decided by proofs about work done on Solana." |
+| 12 | 2:22 | 5.5 s | 9 / 13 | "We would rather you heard this part from us." |
+| 13 | 2:33 | 7.5 s | 16 / 18 | "Arc never runs a Solana virtual machine — and we put that limit on the page." |
+| 14 | 2:41 | 5.0 s | 5 / 12 | "It's consistency. It isn't provenance." |
+| 15 | 2:46 | 6.5 s | 15 / 15 | "The one thing an observer controls is the story. So watch what the story moves." |
+| 16 | 2:53 | 6.0 s | 14 / 14 | "Every keystroke, a new hash. The verdict comes from the chain. It doesn't budge." |
+| — | 3:00 | 8.0 s | — | *(plate: **Keep assets native. Settle on proof.** then the door's last line)* |
 
 ## Recording it
 

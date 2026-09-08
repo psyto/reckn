@@ -51,7 +51,7 @@ SCRIPT = [
     # Over the problem slide. It does NOT read the table out — a narrator reciting what is
     # already on screen is the fastest way to make a good demo feel like a bad one. One line
     # names the insight, then silence while it is read.
-    (at("SLIDE 02 the problem"), 6.0, 4,
+    (at("SLIDE 03 the problem"), 6.0, 4,
      "Both are guessing. One from a claim, one from nothing."),
     (at("SLIDE 05 nobody could have overridden that"), 9.0, 5,
      "Nobody could have stepped in and overridden that. There's no owner, no admin, no resolver."),
@@ -72,7 +72,7 @@ SCRIPT = [
      "Four settlements on Arc testnet, read straight off the chain by your browser. Two were decided by proofs about work done on Solana."),
     # Over "what this does not claim". Three refusals are on the slide; the voice adds the
     # reason they are there at all, and then gets out of the way.
-    (at("SLIDE 07 what this does not claim"), 5.5, 12,
+    (at("SLIDE 09 what this does not claim"), 5.5, 12,
      "We would rather you heard this part from us."),
     (at("06 evidence: the two rows"), 7.5, 13,
      "Arc never runs a Solana virtual machine — and we put that limit on the page."),
