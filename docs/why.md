@@ -1,13 +1,13 @@
-# Who this is for, what it costs, and what it saves
+# Why Reckn exists — the two constraints, what they cost, and what they save
 
 Every number below is labelled **measured**, **cited**, or **unknown**. The unknown ones
 are the interesting ones and are not estimated into looking better.
 
 ---
 
-## 0. The constraint, before the costs
+## 0. The first constraint: a person in the release path
 
-**In a machine economy the binding constraint is not the fee. It is human attention.**
+**In a machine economy the first binding constraint is not the fee. It is human attention.**
 
 An escrow that a person approves is a serialisation point: agents run continuously, in
 parallel, at machine speed, and every release queues behind someone reading something. The
@@ -42,6 +42,43 @@ model is used today.
 the work begins and evaluated by a computation both parties can run; nobody reads anything,
 nobody approves anything, and there is no queue behind anybody. The cost sections below are
 what that costs to do — but the reason to do it is above.
+
+## 0.1 The second constraint: a bridge in the asset path — and why it is the same one
+
+There is a second serialisation point, and it is easy to miss because it does not look like
+a person. **In a multichain economy the money and the work are rarely on the same chain**, so
+before anything can be judged the asset is moved to where the judging happens — bridged,
+wrapped, or pooled. That movement is not a fee either. It is a second party inserted into the
+payment: **a bridge, deciding whether the payment happens.**
+
+Put the two side by side and they are the same defect:
+
+| what stands between the work and the payment | what it is asked to decide | what it can actually see |
+|---|---|---|
+| a human approver, a TEE operator, a bonded resolver | *was the work done?* | a claim someone wrote |
+| a bridge | *does the asset arrive?* | nothing about the work at all |
+
+**Both put the payment in the hands of something that cannot see whether the work was done.**
+One was told about it; the other was never asked. The first costs attention and the second
+costs custody, and both cost the thing that matters more than either — the payment stops
+being a function of the work.
+
+The inversion is the whole product, and it is one sentence:
+
+> **Do not move the asset to reach the work. Move a proof of the work to reach the asset.**
+>
+> ### Keep assets native. Settle on proof.
+
+That is why removing the approver and keeping the asset native are not two features. They are
+the same removal, applied to the two things that had crept into the payment path. §3.0 says
+carefully what is actually done; §7 says what would falsify it.
+
+**And the honest limit, before the arithmetic.** This does not mean assets never move. If you
+owe money on a chain where you hold none, you still have to get it there. What is removed is
+moving it **in order to be judged** — not moving it **in order to pay**. Reckn does not fix
+fragmented balances and does not claim to.
+
+---
 
 ## 1. The loss Reckn is aimed at, in the economy that already has this problem
 

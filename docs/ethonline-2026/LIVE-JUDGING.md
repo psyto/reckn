@@ -8,6 +8,34 @@ show first is what they remember, so it is not the architecture.
 
 ---
 
+## The frame, before the script
+
+**One sentence to leave them with, and it is not a feature:**
+
+> ### Keep assets native. Settle on proof.
+
+This is the **ETHOnline door** into that sentence — *who decides the work was done* — and the
+script below is built for it. The CWF door is the same product entered from *why are we
+bridging the asset every time*; both, and the wording that must never be used for either, are
+in [`../messaging.md`](../messaging.md).
+
+Say the thesis at **2:35**, on the boundary panel, not at 0:00. By then they have watched a
+real proof fail to take the money and a real proof release it, so "only the proof crosses" is
+a description of what they just saw rather than a promise about what is coming. Opening with
+it costs nothing and buys nothing; landing it there is the difference between a demo and an
+argument.
+
+**The three sentences that must survive even if you are cut off at two minutes:**
+
+1. Nobody decides — and that is a build condition, not a promise.
+2. Only the proof crosses. The USDC is on Arc before and after.
+3. It does not prove those inputs came from Solana mainnet. Consistency, not provenance.
+
+The third one is not a caveat to fit in if there is time. A judge who leaves without it
+cannot tell this apart from an oracle, and will assume we hoped they would not notice.
+
+---
+
 ## The 4 minutes
 
 Open with the browser already on <https://psyto.github.io/reckn/> and a terminal ready.

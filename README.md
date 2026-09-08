@@ -1,13 +1,60 @@
 # Reckn
 
-**Every disputed agent payment is re-reckoned on-chain by replaying it. Reproduce, or refund.**
+## Keep assets native. Settle on proof.
 
-**Keep assets native. Settle on proof.** The money stays on the chain it was funded on —
-a proof crosses, the asset does not. ([messaging](docs/messaging.md))
+An escrow that releases only when the work it was funded against can be **re-executed and
+reproduced** — and refunds the buyer when it cannot. The money never leaves the chain it was
+funded on: a proof crosses, the asset does not.
 
-An escrow whose release condition is a **proof**, not a person. No owner, no
-resolver, no admin, no upgrade path — and that is a **build condition**, not a
-promise: `scripts/no-keys.sh` fails the build if one appears.
+No owner, no resolver, no admin, no upgrade path. **Reproduce, or refund.**
+
+## The problem
+
+In an agent economy the money and the work are rarely on the same chain. That splits one
+payment into two questions, and **today a party with a key answers both**:
+
+- **Was the work actually done?** — an operator inside a TEE, a bonded resolver, a quorum of
+  voters. Each is per-chain: you redeploy the judge and re-earn its reputation on every chain
+  your agent touches.
+- **How does the asset get to where it is owed?** — a bridge.
+
+So the asset's fate ends up decided by the two parties **least able to tell whether the work
+was done**: a judge who was told, and a bridge that was not asked.
+
+## What Reckn does instead
+
+Do not move the asset to reach the work. **Move a proof of the work to reach the asset.**
+
+The buyer escrows the stablecoin **on the chain it already lives on**. The seller does the
+work wherever the work belongs. When the delivery is disputed, the execution is **replayed**
+against the pre-state the deal pinned. If it reproduces, the escrow releases to the seller.
+If it does not, the buyer is refunded.
+
+> ### Keep assets native. Settle on proof.
+>
+> *Don't make a bridge decide where money goes. Make proof decide.*
+
+Three things follow, and each is checkable rather than asserted:
+
+| | | where it is checked |
+|---|---|---|
+| **Nobody decides.** | No owner, admin, resolver, pause or upgrade path — and that is a **build condition**, not a promise. | `scripts/no-keys.sh` fails the build if one appears |
+| **Nothing crosses but a proof.** | The USDC is on Arc before the dispute and on Arc after it. Arc never runs a Solana VM. | [What crosses, and what does not](#what-crosses-and-what-does-not) |
+| **It is running.** | Four settlements on Arc testnet moved real USDC. **Two were decided by proofs about work performed on Solana.** | the live page reads them from the chain |
+
+**And what it does not do**, said here rather than in a footnote. It does not remove the need
+to hold funds on the chain you pay from — what it removes is moving them *in order to be
+judged*, not *in order to pay*. And it does not prove those Solana inputs came from mainnet:
+the guest recomputes a bank hash over the account set **the deal named**, which is
+consistency, not provenance. There is a test that says so, and a panel on the live page that
+says so to a judge.
+
+Positioning against the adjudicator-based alternatives is in [Why](#why); the full boundary
+is in [What crosses, and what does not](#what-crosses-and-what-does-not); the wording this
+project holds itself to, including the claims it refuses to make, is in
+[`docs/messaging.md`](docs/messaging.md).
+
+---
 
 ### Open this and your browser checks Arc for you — nothing to install
 
@@ -404,7 +451,9 @@ Note there is **no dispute process** in any of this. `RecknZkEscrow` has three s
 `None`, `Funded`, `Settled` — and no `Disputed` one, because re-execution is not a remedy a
 dispute triggers: it is how settlement works, every time. The full arithmetic, the cost we
 have *not* measured, and what would falsify the whole case are in
-**[`docs/why.md`](docs/why.md)**.
+**[`docs/why.md`](docs/why.md)** — the two constraints (a human in the release path, and a
+bridge in the asset path), why they are the same defect, and every number labelled
+**measured**, **cited** or **unknown**.
 
 ## What crosses, and what does not
 
