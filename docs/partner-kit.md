@@ -259,6 +259,58 @@ router cannot wrap — is refused with *"the call REVERTS at block …; terms we
 **What it does not establish:** that your call clears the floor. Simulation shows it runs, not
 that it delivers. And proving it still needs the SP1 toolchain and minutes of CPU.
 
+## Where the code lives, if you are going to read it
+
+One module per question. Nothing here is a layer for its own sake; the split exists so each
+question can be **asked directly**, which it could not be when they shared a function.
+
+| file | the question it answers |
+|---|---|
+| `predicate.ts` | given four numbers, does this replay pay the seller? *(the guest's rule, transcribed)* |
+| `binding.ts` | what is this deal's binding? *(a third transcription — see below)* |
+| `profile.ts` | is this profile well-formed, does it match the chain, can its evidence be followed? |
+| `rpc.ts` | how far can this node's answer be trusted, and whose fault is a failure? |
+| `witness.ts` | given what the call touched, what must travel with the deal? |
+| `token-policy.ts` | will this token actually pay this seller? |
+| `terms.ts` | can terms be built from your transaction? |
+| `deal.ts` | open a deal — **the only call that moves money** |
+| `preflight.ts` | what am I about to work on? |
+| `settlement.ts` | settle, and decode what a settlement did |
+
+`index.ts` is 23 lines of re-exports. Transport internals (`getBlock`, `captureWitness` and the
+like) are **not** exported: a public export is a compatibility promise, and promising those to
+nobody who asked is a debt with no creditor. What you do get from `rpc.ts` is the ability to tell
+failures apart by type — `EndpointCapabilityError`, `CallRevertedError`,
+`SimulationInconclusiveError`, `MalformedResponseError`.
+
+## Running it against an installed package, not the repository
+
+`reckn profiles` prints a **warning**, not an error, when it cannot reach the evidence a profile
+cites:
+
+```
+ok  arc-testnet-evm  Arc Testnet (5042002)  vm=evm
+    warning: evidence: none of the 5 cited paths resolve from here, so this is not the
+    repository and the evidence cannot be checked. That is not a defect in the profile.
+```
+
+Evidence paths point at this repository's gate scripts and records, which are deliberately not
+shipped in the package. Until 2026-09-09 that made every shipped profile read `INVALID` to
+anyone who installed it — the first command an adopter runs, calling our own profiles invalid.
+The distinction is drawn by a property, not by asking whether the code is installed: **all**
+cited paths absent means the tree is not here; **some** absent means a broken citation, which is
+still an error; a profile citing exactly one path cannot tell the two apart and stays strict.
+
+## Check that all of this still works
+
+```bash
+bash scripts/partner-kit-check.sh
+```
+
+The package's tests, the starter end to end, and the release gate — which packs, **installs into
+an empty project**, and runs the CLI as a consumer. Exit **3**, not 0, if `anvil` or `forge` is
+missing: a check that passes because it could not look is worse than no check.
+
 ## The deal binding, and why it is re-implemented here
 
 A buyer has to commit to the terms **before** the seller works, which means computing the

@@ -287,6 +287,23 @@ an unlisted function, add a `msg.sender` gate — each must fail it). Widening t
 surface is allowed, but only by changing the claim in the same commit: this
 README, [`AGENTS.md`](AGENTS.md), and the script move together, or not at all.
 
+A second condition, added 2026-09-09, covers the other end — not *is the claim still
+true* but *does the thing a stranger is told to run still run*:
+
+```bash
+bash scripts/partner-kit-check.sh   # 0 = it runs · 1 = broken · 3 = COULD NOT VERIFY
+```
+
+It runs the package's tests, the starter end to end, and the release gate — which packs
+the package, **installs it into an empty project** and drives the CLI as a consumer would,
+because reading a file list is not the same thing as installing one. It exists because
+nothing was doing this: on 2026-09-09 a commit made a profile field mandatory, updated the
+source and the tests, missed the example, and the starter stayed broken at `HEAD` while
+passing in every working tree. It was found by hand, hours later.
+
+**Three exit codes, not two.** A missing `anvil` or `forge` returns 3, never 0: a check that
+goes green because it could not look is the defect it exists to prevent.
+
 ## Why
 
 This is the "correct version" of a pattern that keeps winning agent-economy
@@ -417,7 +434,7 @@ during the event, so the boundary is stated here rather than reconstructed later
 | **Event work** | **commits dated 2026-09-04 or later — the date is primary, not the hash** |
 | `EVENT_START` | `121194ca3e25bab4ec92aaa4da1277f3a60b8421`, recorded in [`STATUS.md`](STATUS.md) |
 | Accepted | 2026-09-04, **Continuity Track** |
-| Retreat checkpoint | 9/9 — tasks 008 and 009 both green, or the founder decides. **Met early, 2026-09-07**: `ac009.sh --all` → `13/13 rows passed`, and its AC-12 ran `ac005.sh --all` and `ac008.sh --all` to completion inside the same run, `2/2 exit 0`. Confirming each gate in turn, on different trees, does not satisfy the word *simultaneously*; that is the only thing AC-12 exists for |
+| Retreat checkpoint | 9/9 — tasks 008 and 009 both green, or the founder decides. **Met early, 2026-09-07**: `ac009.sh --all` → `13/13 rows passed`, and its AC-12 ran `ac005.sh --all` and `ac008.sh --all` to completion inside the same run, `2/2 exit 0`. Confirming each gate in turn, on different trees, does not satisfy the word *simultaneously*; that is the only thing AC-12 exists for. **Re-measured 2026-09-09**, with the sibling set now four rather than two: twelve of thirteen rows green in one run, and AC-12 red *in that run* because the working tree moved while it ran — `README.md` was edited at 13:59, inside the 13:02–14:01 window. Its content assertions all matched and only the witness digest differed. Re-run on a still tree: `both-green` discovered 4 siblings, `4/4 exit 0`, `ac008 18/18`. Every row has a green measurement and they are not all from one run, which is the true statement |
 | Freeze | 9/12 |
 
 **Every feature described in this README is pre-event work**, disclosed to
@@ -601,6 +618,8 @@ thirty days and is the only exit that needs no proof.
   computing a `dealBinding` yourself before any work happens
 - **[`docs/partner-kit.md`](docs/partner-kit.md)** — the TypeScript package and starter in
   detail: the five refusals, the profiles, the endpoint requirements, the known limits
+- **`bash scripts/partner-kit-check.sh`** — run before believing any of the above. It is the
+  only thing that verifies the commands this section gives you actually work.
 - **[`docs/positioning.md`](docs/positioning.md)** — which layer this is and which layers it
   composes with. *AI chooses, negotiates, and explains. Re-execution decides the payout.* It
   also says what Reckn does **not** suit, which is most agent spending.
