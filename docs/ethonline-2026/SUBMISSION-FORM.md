@@ -123,22 +123,35 @@ Agent-payment escrow where a disputed delivery is re-executed, not judged. Repro
 > corrections recorded in `DISCLOSURE.md` §0 has been lost. Edit the narrative in
 > `description-intro.txt` and re-run the script; do not edit the block by hand.
 
-> **This field is SUBMITTED and is deliberately left unchanged (2026-09-08.)** The shared
-> ETHOnline/CWF positioning in [`docs/messaging.md`](../messaging.md) was written after the
-> form went in. Editing `description-intro.txt` now would regenerate this block and make the
-> repository disagree with what ETHGlobal actually holds — which is the exact divergence this
-> file exists to prevent, and the reason the disclosure is generated rather than retyped.
+> **REOPENED 2026-09-10 by founder decision.** This field was submitted on 2026-09-08 and was
+> frozen after that, on the reasoning that editing it would make the repository disagree with
+> what ETHGlobal holds. The form can be updated, so the narrative was revised — and the
+> revision is an **amendment made after submission**, a category `DISCLOSURE.md` §0 did not
+> have and now needs, because the two amendments already recorded there were made *before* the
+> form went in and must not be silently folded together with this one.
 >
-> If the field is reopened, the one paragraph worth adding is below. It adds no claim: both
-> halves are already in §12's measurements and in the boundary panel of the live page.
+> **Three changes, all structural rather than new claims.** A cross-review with Codex found the
+> same fault twice over: the strongest fact this entry has was arriving too late to be read.
 >
-> > *The asset never leaves the chain it was funded on. Only the proof crosses. Two of the
-> > four settlements were decided by proofs about work performed on Solana, with no bridge
-> > and no light client on the path that chose the payout.*
+> 1. The demonstrated result now leads. *"IT IS RUNNING. On Arc testnet, one escrow has settled
+>    four times in real USDC — and TWO OF THE FOUR WERE DECIDED BY PROOFS ABOUT WORK PERFORMED
+>    ON SOLANA…"* It used to sit inside the third numbered item of the event list, behind the
+>    pre-event disclosure. Every word of it was already in this file; only its position changed.
+> 2. `SUBMITTING FOR:` moved to the end. Prize administration was interrupting the argument
+>    between the problem and the proof.
+> 3. `STILL OPEN, AND NAMED` moved down to sit with the other limits. It had been landing
+>    immediately after the frozen-USDC failure and immediately before the core argument, so a
+>    judge finished that stretch remembering three unfinished initiatives rather than a shipped
+>    Arc result. The items are unchanged and none was softened — this is the same defect the
+>    README opening had on the same day: a caveat placed adjacent to the claim it qualifies.
 >
-> Adding it means editing `description-intro.txt`, re-running `build-form.py`, and recording
-> it under §0 AMENDMENTS as an amendment made **after** submission — a category that section
-> does not yet have, and which must not be silently folded in with the two made before it.
+> The economics section was compressed rather than cut. Codex argued for removing it; that is
+> the one recommendation not taken. The x402 derivation and the fixed-versus-percentage
+> crossover are what make this read as a business rather than a demo. What was removed is the
+> supporting detail around them — the chargeback aggregates and the two fee schedules quoted in
+> full — because the conclusions carry without them.
+>
+> **Still generated, not written.** Edit `description-intro.txt` and re-run `build-form.py`.
 
 <!--DISCLOSURE:BEGIN-->
 ```
@@ -146,7 +159,7 @@ When one AI agent pays another, the hard question is not which chain to deploy o
 
 Reckn's answer is that the decider should not be a party at all. A disputed delivery is re-executed: the pre-state is pinned, the disputed work is replayed against it, and the predicate the deal was funded against is evaluated. Reproduce, or refund. Because re-execution is deterministic anyone can redo it and reach the same verdict, and because it is a computation rather than an authority, it does not live on a chain.
 
-SUBMITTING FOR: Arc — Launch on Arc Testnet & Push to Mainnet (primary), and Arc — Best DeFi or Agentic Application. Arc mainnet is not deployed and the reason is not ours: Circle had not published Arc mainnet contract addresses as of 2026-09-06, so the bounty's "deployed OR deployment-ready" is met on the second branch, and the same script deploys there unchanged once that address list exists.
+IT IS RUNNING. On Arc testnet, one escrow has settled four times in real USDC — and TWO OF THE FOUR WERE DECIDED BY PROOFS ABOUT WORK PERFORMED ON SOLANA, one releasing the seller and one refunding the buyer. The asset never left the chain it was funded on. Only the proof crossed, and there was no bridge and no light client anywhere on the path that chose the payout. Your own browser can read those four settlements off Arc at psyto.github.io/reckn without installing anything and without a wallet.
 
 WHAT EXISTED BEFORE THE EVENT (built July–August 2026; the disclosure below is exact)
 
@@ -168,8 +181,6 @@ WHAT WAS BUILT DURING ETHONLINE (Continuity Track) — all of the following has 
 
 WHAT WE DID NOT PLAN, AND KEPT. The first live settlement reverted with "Blocked address": Circle's USDC blacklists well-known compromised keys and the first deal had named one as its seller. That deal still holds 1.000000 USDC and can never release, because the seller is fixed at funding — and it is not lost, because the keyless timeout returns it. It is on the live page and in the repository rather than quietly redeployed around.
 
-STILL OPEN, AND NAMED: the adversarial key gauntlet is stopped at a hard stop; the live adversarial-input feature has a round-3 specification and no implementation; the real ERC-20 workload is not started.
-
 WHAT IT REMOVES IS NOT A FEE — IT IS THE PERSON
 
 In a machine economy the binding constraint is human attention, not cost. An escrow that a person approves is a serialisation point: agents run continuously and in parallel, and every release queues behind somebody reading something.
@@ -178,7 +189,7 @@ x402 has processed 165 million payments across 69,000 active agents. At the disp
 
 Reckn's release condition is fixed BEFORE the work begins and evaluated by a computation both parties can run. Nobody reads anything, nobody approves anything, and nothing queues behind anybody. That is the point; the money below is what it costs to do it.
 
-A decided payment dispute costs a merchant $110 to $128 all-in today, against a $20-50 processor fee — the rest is people reading conflicting stories. Global chargeback volume is $33.79B in 2025 heading to $41.69B by 2028, and every $1 lost to one costs $5.13 once you count the disputes never contested. That cost exists because somebody has to decide.
+A decided payment dispute costs a merchant $110 to $128 all-in today against a $20-50 processor fee — the rest is people reading conflicting stories. That cost exists because somebody has to decide.
 
 Settling a dispute here costs 0.0070-0.0077 USDC — measured on Arc against our four live settlements at the real gas price. Verifying a Groth16 proof and paying out is under a cent, and it does not grow with the size of the dispute.
 
@@ -188,9 +199,9 @@ And it does not prevent disputes — it makes them not matter. The seller can in
 
 There is no dispute process here to invoke, either. The escrow has three states — None, Funded, Settled — and no Disputed one, because re-execution is not a remedy that a dispute triggers: it is how settlement works, every time. Money reaches the seller through exactly one function and that function requires a proof. There is no cheap happy path and there cannot be one, because "the buyer voluntarily releases" is a key moving a funded escrow, which is the thing this whole design exists to make impossible.
 
-So the comparison set is not every agent payment. It is the payments that would otherwise need an escrow at all — and nobody escrows a $0.52 API call either. Those payments are priced as a PERCENTAGE today: Upwork takes 20% on the first $500 with a client, 10% to $10k, 5% above, plus 3-5% from the client; Fiverr takes a flat 20% from the seller, 5.5% from the buyer, and a $2.50 surcharge under $75 — the incumbents already concede that below a threshold, mediated escrow does not pay for itself.
+So the comparison set is not every agent payment. It is the payments that would otherwise need an escrow at all — and nobody escrows a $0.52 API call either. Those payments are priced as a PERCENTAGE today — Upwork takes 20% falling to 5%, effectively 10-12%, plus 3-5% from the client; Fiverr a flat 20% from the seller and 5.5% from the buyer. Fiverr also charges a $2.50 surcharge under $75, which is an incumbent conceding that below a threshold a percentage does not cover the cost of standing behind the trade.
 
-Reckn charges a FIXED cost instead: one proof plus $0.007. Fixed and percentage cross at roughly a $10 delivery if a proof costs $1, or $50 if it costs $5. Above the crossover a $1,000 job pays $100-200 to a platform today, or a proof plus two thirds of a cent here — and what neither fee table prices is the operator: an arbiter who can be lobbied, subpoenaed, acquired or simply wrong, and who has to be re-established on every chain.
+Reckn charges a FIXED cost instead: one proof plus $0.007. Fixed and percentage cross at roughly a $10 delivery if a proof costs $1, or $50 if it costs $5. Above the crossover a $1,000 job pays $100-200 to a platform today at those rates, or a proof plus two thirds of a cent here — and what neither fee table prices is the operator: an arbiter who can be lobbied, subpoenaed, acquired or simply wrong, and who has to be re-established on every chain.
 
 What we deliberately do not quote is a dollar cost per proof. Succinct's network prices proofs by reverse auction and we have never bought one — we prove locally, 335 seconds for a fixture. That figure is unknown rather than estimated, and it is the one an adopter has to price.
 
@@ -208,39 +219,23 @@ Both halves or neither: without them a reader cannot tell this apart from a brid
 
 WHAT IS NOT TRUE YET
 
+STILL OPEN, AND NAMED, so you do not have to go looking: the adversarial key gauntlet is stopped at a hard stop; the live adversarial-input feature has a round-3 specification and no implementation; the real ERC-20 workload is not started. None of those three is load-bearing for anything claimed above, and all three are in the README rather than in a footnote.
+
 A proof carries the verdict's authority. It does not by itself prove the committed pre-state was the chain's real state: on EVM that anchoring lives in an off-chain layer, and on Solana the provenance of the committed bank_hash is not proven on-chain — a fabricated account set hashes just as well, and there is a test that says so. "No bridge, no light client" is true of the ADJUDICATION and not yet of the anchoring. Cross-VM settlement also created a new risk for the seller: a buyer can name a verifier that always returns Failed, and on-chain that is indistinguishable from an honest failure, so sellers must read the deal's verifier before working. Our open gaps are in the README, not in a footnote.
 
 HOW YOU WOULD USE IT, AND WHERE THAT STOPS
 
-Two calls. fund opens a deal; settleWithProof closes it. The second is permissionless — the key
-that pays the gas has no bearing on where the money goes — so there is no integration step where
-you hand us authority, because there is nothing to hand.
+Two calls. fund opens a deal; settleWithProof closes it. The second is permissionless — the key that pays the gas has no bearing on where the money goes — so there is no integration step where you hand us authority, because there is nothing to hand.
 
-Built during this event, for the half that had no tooling at all: a TypeScript package and a
-starter. createDeal opens a deal. sellerPreflight answers "what am I about to work on?" before you
-do the work, and it exists because a buyer can name a verifier that always fails. submitProof
-settles. verifySettlement decodes what happened from the chain rather than from our report of it,
-and it distinguishes a payout a proof authorised from the 30-day timeout refund, which the escrow
-emits as a separate event precisely so nobody has to infer which kind it was. reckn terms turns
-YOUR transaction into deal terms with one read-only call and no key — the step that previously
-meant reading a Rust crate and assembling an anchor, a plan and a predicate by hand. It refuses
-five kinds of terms that open a deal cleanly and then never settle, including a predicate
-satisfied by doing nothing, which pays the seller in full for no work.
+Built during this event, for the half that had no tooling at all: a TypeScript package and a starter. createDeal opens a deal. sellerPreflight answers "what am I about to work on?" before you do the work, and it exists because a buyer can name a verifier that always fails. submitProof settles. verifySettlement decodes what happened from the chain rather than from our report of it, and it distinguishes a payout a proof authorised from the 30-day timeout refund, which the escrow emits as a separate event precisely so nobody has to infer which kind it was. reckn terms turns YOUR transaction into deal terms with one read-only call and no key — the step that previously meant reading a Rust crate and assembling an anchor, a plan and a predicate by hand. It refuses five kinds of terms that open a deal cleanly and then never settle, including a predicate satisfied by doing nothing, which pays the seller in full for no work.
 
-reckn terms needs an endpoint that answers eth_createAccessList and eth_getProof, and Arc's
-public testnet RPC answers neither — measured 2026-09-09. So on Arc you can compute a binding and
-fund against it, which needs one block header; what you cannot do from that endpoint is simulate
-the call or capture the witness. We would rather say this here than have you find it.
+reckn terms needs an endpoint that answers eth_createAccessList and eth_getProof, and Arc's public testnet RPC answers neither — measured 2026-09-09. So on Arc you can compute a binding and fund against it, which needs one block header; what you cannot do from that endpoint is simulate the call or capture the witness. We would rather say this here than have you find it.
 
-WHERE IT STOPS, SAID PLAINLY. Settlement is complete and permissionless. Proving is not
-self-serve: a proof needs the SP1 toolchain and minutes of CPU — measured on one laptop, 335 s
-for the shipped fixture and 497 s for a real mainnet Uniswap v3 swap, which is 32x the cycles for
-1.49x the time. So using Reckn
-on YOUR OWN job today means proving it with that toolchain; what you can do without it is fund and
-settle against a workload already proved. Nobody outside this project has used any of this, and
-nothing here claims otherwise.
+WHERE IT STOPS, SAID PLAINLY. Settlement is complete and permissionless. Proving is not self-serve: a proof needs the SP1 toolchain and minutes of CPU — measured on one laptop, 335 s for the shipped fixture and 497 s for a real mainnet Uniswap v3 swap, which is 32x the cycles for 1.49x the time. So using Reckn on YOUR OWN job today means proving it with that toolchain; what you can do without it is fund and settle against a workload already proved. Nobody outside this project has used any of this, and nothing here claims otherwise.
 
 HOW TO CHECK ANY OF THIS WITHOUT TRUSTING US. Open https://psyto.github.io/reckn/ — your browser reads Arc directly and compares the deployed bytecode against the source in this repository. RecknZkEscrow has no constructor, so the same source always produces the same deployment, which is what makes that comparison mean anything.
+
+SUBMITTING FOR: Arc — Launch on Arc Testnet & Push to Mainnet (primary), and Arc — Best DeFi or Agentic Application. Arc mainnet is not deployed and the reason is not ours: Circle had not published Arc mainnet contract addresses as of 2026-09-06, so the bounty's "deployed OR deployment-ready" is met on the second branch, and the same script deploys there unchanged once that address list exists.
 
 ==============================================================================
 PRE-EXISTING WORK DISCLOSURE — reproduced in full, as ETHGlobal's rules require

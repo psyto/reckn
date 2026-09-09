@@ -2,9 +2,11 @@
 
 ## Keep assets native. Settle on proof.
 
-**Reckn is building the standard for proof-driven settlement across execution environments.**
-Agents may choose where work happens. Assets remain native.
-Reproducible execution decides payout.
+**Agents may choose where work happens. Assets remain native.**
+**Reproducible execution decides payout.**
+
+Reckn is building the standard for that — proof-driven settlement across execution
+environments.
 
 *`building`, not `is` — [`docs/positioning.md`](docs/positioning.md#what-a-standard-would-have-to-fix)
 names the five boundaries a standard would have to fix, and marks the one that is still open.*
@@ -210,6 +212,23 @@ virtual machine the work happened on.
 
 ![The Arc demo again: the Solana deal funded and settled with the Solana proof, the seller tile at 250.00 USDC.](dashboard/media/arc-demo-solana.jpg)
 
+**▶ Demo video — the ETHOnline submission (3:52, 1920×1080, narrated):**
+[`dashboard/media/Reckn_ETHOnline_20260909.mp4`](dashboard/media/Reckn_ETHOnline_20260909.mp4)
+— the deck's four checks, each one answered by the live page driving a real chain, ending on
+this run's own `no-keys.sh` output, with a **human English voice-over**. No synthetic voice was
+used anywhere. `docs/ethonline-2026/PREFLIGHT.md` measures it against the event's requirements
+and it now clears all six.
+
+The **silent master** it was cut from is
+[`dashboard/media/reckn-demo-v3.mp4`](dashboard/media/reckn-demo-v3.mp4) (3:57). It is **not
+the same picture**: the narrated file runs 5.8 s shorter and, from roughly 3:10 onward, ahead
+of the master. Re-recording the master will not reproduce the submission, and it is not meant
+to — the script it is timed against is [`dashboard/video/VO.md`](dashboard/video/VO.md).
+The earlier v2 film (`reckn-arc-demo-v2.mp4`, 3:04, and a no-cards cut at 3:03) and the v1
+files are kept for comparison and are not the submission.
+Regenerate it with `cd dashboard/video && npm install && node record.js`; the recorder
+asserts each step's result and refuses to record one that did not happen.
+
 **The same escrow source, unmodified, now settles on a second payment chain** — and that
 is a statement about the *source*, checked by a gate (`zk-verdict/scripts/tempo-arc-parity.sh`),
 not a claim that the two chains adjudicate alike. They do not: the adjudicator is named per
@@ -241,23 +260,6 @@ settled twice; that check exists so it cannot happen twice.
 
 Everything else on this page is Arc. **This is not claimed as ETHOnline event work** — see
 [`docs/ethonline-2026/PREFLIGHT.md`](docs/ethonline-2026/PREFLIGHT.md) §2.
-
-**▶ Demo video — the ETHOnline submission (3:52, 1920×1080, narrated):**
-[`dashboard/media/Reckn_ETHOnline_20260909.mp4`](dashboard/media/Reckn_ETHOnline_20260909.mp4)
-— the deck's four checks, each one answered by the live page driving a real chain, ending on
-this run's own `no-keys.sh` output, with a **human English voice-over**. No synthetic voice was
-used anywhere. `docs/ethonline-2026/PREFLIGHT.md` measures it against the event's requirements
-and it now clears all six.
-
-The **silent master** it was cut from is
-[`dashboard/media/reckn-demo-v3.mp4`](dashboard/media/reckn-demo-v3.mp4) (3:57). It is **not
-the same picture**: the narrated file runs 5.8 s shorter and, from roughly 3:10 onward, ahead
-of the master. Re-recording the master will not reproduce the submission, and it is not meant
-to — the script it is timed against is [`dashboard/video/VO.md`](dashboard/video/VO.md).
-The earlier v2 film (`reckn-arc-demo-v2.mp4`, 3:04, and a no-cards cut at 3:03) and the v1
-files are kept for comparison and are not the submission.
-Regenerate it with `cd dashboard/video && npm install && node record.js`; the recorder
-asserts each step's result and refuses to record one that did not happen.
 
 **▶ Demo video, pre-event cut (35s):**
 [`dashboard/media/reckn-demo-full.mp4`](dashboard/media/reckn-demo-full.mp4)
