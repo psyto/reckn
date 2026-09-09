@@ -1,0 +1,38 @@
+{
+  "_": "Golden vectors for the EVM deal binding. `expectedBinding` is the value the GUEST committed inside SP1 for the shipped Groth16 fixture, not this emitter's opinion — the emitter asserts the two agree before writing. Regenerate with: cargo run --release --bin binding_vector (in zk-verdict/script).",
+  "scheme": "reckn/zk/bind/evm/v2",
+  "source": "verdict_script::evm_demo_input(), the input the shipped reexec-groth16-fixture was produced from",
+  "vectors": [
+    {
+      "name": "shipped-reexec-fixture",
+      "terms": {
+        "stateRoot": "0x75091ab0490455d3a7a7985fe814ff6c2edacc3dbaeb83cb4f9ecf5ae215cdd5",
+        "env": {
+          "chainId": "1",
+          "specId": 17,
+          "blockNumber": "21000000",
+          "timestamp": "1800000000",
+          "baseFee": "0",
+          "blockGasLimit": "30000000",
+          "coinbase": "0xc0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0",
+          "prevrandao": "0x2222222222222222222222222222222222222222222222222222222222222222"
+        },
+        "check": {
+          "address": "0x7777777777777777777777777777777777777777",
+          "slot": "0x0000000000000000000000000000000000000000000000000000000000000007",
+          "min": "0x0000000000000000000000000000000000000000000000000000000000000064",
+          "max": "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+        },
+        "plan": {
+          "caller": "0xcacacacacacacacacacacacacacacacacacacaca",
+          "target": "0x7777777777777777777777777777777777777777",
+          "value": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "gasLimit": "100000",
+          "calldata": "0x0000000000000000000000000000000000000000000000010000000000000064"
+        }
+      },
+      "expectedBinding": "0x85ac262cbf7f0bdc2a0bda399b6c748a894825885424e361d0e107dcbcafa1ef",
+      "groundTruth": "committed by the guest inside SP1; read out of reexec-groth16-fixture.json public_values"
+    }
+  ]
+}

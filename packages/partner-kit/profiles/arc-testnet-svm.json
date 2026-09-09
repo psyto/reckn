@@ -1,0 +1,32 @@
+{
+  "$comment": "See arc-testnet-evm.json. A Verifier Profile describes and does not authorise.",
+  "id": "arc-testnet-svm",
+  "version": "1.0.0",
+  "status": "testnet",
+  "chain": { "name": "Arc Testnet", "chainId": 5042002, "rpc": "https://rpc.testnet.arc.io", "explorer": "https://testnet.arcscan.app" },
+  "escrow": "0x580f2c3268b0a13bf46c6d381bf807cbf1595669",
+  "verifier": "0x13d42c0acFa90a57E9A729F0b8d9494B18272366",
+  "verifierCodeHash": "0x6e31aeddcb7faca8677b824f59ed9e2fe5473b577a3de74c228861808acb5c69",
+  "verdictProgramVKey": "0x004ad9fc19b7c2694b20c68467be4a506445cab44263f0aa0bb0db2ebb6fe2ca",
+  "vm": "svm",
+  "predicate": {
+    "kind": "poststate-delta",
+    "description": "A Solana account's lamport/token balance must rise by at least `min`, measured by re-executing the committed instruction against a committed account set.",
+    "floorOfZeroIsSatisfiedByDoingNothing": true
+  },
+  "dealBindingScheme": "reckn/zk/bind/svm/v2",
+  "proving": {
+    "guest": "program-svm (ed25519 sigverify + bank_hash recompute + re-execution)",
+    "measuredCycles": { "shippedFixture": 986097 },
+    "requires": "SP1 toolchain and ~6.2 GB of Groth16 artifacts in ~/.sp1"
+  },
+  "settlementCostMeasured": { "gasSolanaProof": 320600, "gasSolanaFailure": 316120 },
+  "knownLimits": [
+    "The guest recomputes a bank_hash over the account set THE DEAL NAMED. That is internal consistency, not provenance: an account set we invented hashes just as well as a real one, and there is a test asserting it. This does not establish that the inputs came from Solana mainnet.",
+    "The buyer names the verifier — see arc-testnet-evm.json.",
+    "This verifier judges SVM proofs only. An EVM deal binding cannot settle here; the vkey is immutable and one verifier adjudicates one guest."
+  ],
+  "evidence": { "record": "zk-verdict/contracts/arc.json", "gates": ["zk-verdict/scripts/ac009.sh"], "testVectors": [] },
+  "measuredOn": "2026-09-09",
+  "howMeasured": "verifier codehash and vkey read from the chain. The codehash was not previously recorded anywhere; this is its first measurement."
+}
