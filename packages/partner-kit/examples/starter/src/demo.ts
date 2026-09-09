@@ -45,6 +45,7 @@ const profile: VerifierProfile = {
   verifierCodeHash: chainCfg.verifierCodeHash,
   verdictProgramVKey: REPRODUCED.vkey,
   vm: "evm",
+  specId: 17,
   predicate: { kind: "poststate-delta", description: sampleWorkloadSummary, floorOfZeroIsSatisfiedByDoingNothing: true },
   dealBindingScheme: "reckn/zk/bind/evm/v2",
   knownLimits: [
