@@ -159,8 +159,15 @@ that the Rust already agrees with the value the guest committed for the shipped 
 fixture, refusing to write one otherwise. So the expected value is the guest's.
 
 ```bash
-cd packages/partner-kit && npm test    # includes the golden vector
+cd packages/partner-kit && npm test              # 30 tests, no chain needed
+cd packages/partner-kit/examples/starter && npm test   # the three paths, end to end (needs anvil + forge)
 ```
+
+The first suite runs against the **built** package rather than the sources, so what passes is
+what ships. It covers the golden vector, the profile validator — including that every
+profile's cited evidence actually exists and is for the right binding scheme — and the
+preflight's output, because a warning that quietly disappears from what a seller reads is
+exactly the kind of regression nobody notices.
 
 **If that test fails, do not use `evmDealBinding`.** Compute the binding with the Rust
 (`verdict_script::evm_deal_binding`) instead. An unverified re-implementation of the value

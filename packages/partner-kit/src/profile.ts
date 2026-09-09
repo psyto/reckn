@@ -149,6 +149,62 @@ export function assertValidProfile(input: unknown): { profile: VerifierProfile; 
   return { profile: input as VerifierProfile, warnings: findings };
 }
 
+/**
+ * Check that a profile's `evidence` points at things that exist and agree with it.
+ *
+ * A profile lists gates, records and test vectors as its evidence. Until this existed,
+ * **nothing checked that any of them were real** — a profile could cite
+ * `test/vectors/does-not-exist.json` and validate green, which is a claim with a footnote to
+ * nowhere. That is the shape this repository treats as worse than no claim at all, and it
+ * was sitting inside the validator whose job is to catch it.
+ *
+ * `resolve` is injected so this module needs no filesystem and stays usable in a browser:
+ * pass something that returns the parsed JSON for a repo-relative path, `undefined` if the
+ * path does not exist, and the string `"exists"` for a non-JSON file that is merely present.
+ */
+export function validateProfileEvidence(
+  profile: VerifierProfile,
+  resolve: (repoRelativePath: string) => unknown,
+): Finding[] {
+  const f: Finding[] = [];
+  const err = (field: string, message: string) => f.push({ severity: "error", field, message });
+  const warn = (field: string, message: string) => f.push({ severity: "warning", field, message });
+
+  const ev = profile.evidence as
+    | { record?: string; gates?: string[]; testVectors?: string[]; spec?: string }
+    | undefined;
+  if (!ev) { warn("evidence", "no evidence listed: nothing here can be followed up"); return f; }
+
+  for (const [field, path] of [["evidence.record", ev.record], ["evidence.spec", ev.spec]] as const) {
+    if (path === undefined) continue;
+    if (resolve(path) === undefined) err(field, `points at ${path}, which does not exist`);
+  }
+  for (const g of ev.gates ?? []) {
+    if (resolve(g) === undefined) err("evidence.gates", `points at ${g}, which does not exist`);
+  }
+
+  for (const v of ev.testVectors ?? []) {
+    const doc = resolve(v);
+    if (doc === undefined) { err("evidence.testVectors", `points at ${v}, which does not exist`); continue; }
+    if (typeof doc !== "object" || doc === null) {
+      err("evidence.testVectors", `${v} is not a JSON object`); continue;
+    }
+    const d = doc as { scheme?: unknown; vectors?: unknown };
+    // The vector must be for THIS profile's binding scheme. A profile citing an SVM vector
+    // as evidence for an EVM deployment is citing something that proves nothing about it.
+    if (typeof d.scheme !== "string") {
+      err("evidence.testVectors", `${v} declares no scheme, so nothing ties it to this profile`);
+    } else if (d.scheme !== profile.dealBindingScheme) {
+      err("evidence.testVectors",
+        `${v} is for scheme "${d.scheme}" but this profile uses "${profile.dealBindingScheme}"`);
+    }
+    if (!Array.isArray(d.vectors) || d.vectors.length === 0) {
+      err("evidence.testVectors", `${v} contains no vectors`);
+    }
+  }
+  return f;
+}
+
 export interface ChainCheck { ok: boolean; findings: Finding[] }
 
 /**

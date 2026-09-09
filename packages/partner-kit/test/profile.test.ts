@@ -1,7 +1,17 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
-import { validateProfile, assertValidProfile } from "../src/profile.ts";
+import { existsSync, readFileSync as rf } from "node:fs";
+import { validateProfile, assertValidProfile, validateProfileEvidence } from "../dist/profile.js";
+
+/** Repo-relative paths, resolved from this test file. Injected so the module needs no fs. */
+const repoRoot = new URL("../../../", import.meta.url);
+const resolve = (rel: string): unknown => {
+  const u = new URL(rel, repoRoot);
+  if (!existsSync(u)) return undefined;
+  if (!rel.endsWith(".json")) return "exists";
+  try { return JSON.parse(rf(u, "utf8")); } catch { return "exists"; }
+};
 
 const load = (f: string) => JSON.parse(readFileSync(new URL(`../profiles/${f}`, import.meta.url), "utf8"));
 
@@ -69,4 +79,47 @@ test("the Tempo profile states that no EVM verifier exists there", () => {
     p.knownLimits.some((l: string) => /NO EVM-GUEST VERIFIER/i.test(l)),
     "the Tempo profile must state that an EVM deal binding cannot settle there",
   );
+});
+
+test("every shipped profile's evidence actually exists", () => {
+  // Until this test, a profile could cite a gate or a test vector that was never there and
+  // still validate green. A claim with a footnote to nowhere is the shape this repository
+  // treats as worse than no claim.
+  for (const f of readdirSync(new URL("../profiles", import.meta.url)).filter((x) => x.endsWith(".json"))) {
+    const findings = validateProfileEvidence(load(f), resolve);
+    const errs = findings.filter((x) => x.severity === "error");
+    assert.deepEqual(errs, [], `${f}: ${JSON.stringify(errs)}`);
+  }
+});
+
+test("evidence pointing at a file that does not exist is an error", () => {
+  const p = load("arc-testnet-evm.json");
+  p.evidence.testVectors = ["packages/partner-kit/test/vectors/does-not-exist.json"];
+  const f = validateProfileEvidence(p, resolve);
+  assert.ok(f.some((x) => x.severity === "error" && /does not exist/.test(x.message)));
+});
+
+test("a test vector for the wrong binding scheme is an error", () => {
+  // An SVM profile citing the EVM vector proves nothing about itself.
+  const p = load("tempo-moderato-svm.json");
+  p.evidence.testVectors = ["packages/partner-kit/test/vectors/evm-binding.json"];
+  const f = validateProfileEvidence(p, resolve);
+  assert.ok(
+    f.some((x) => x.severity === "error" && /scheme/.test(x.message)),
+    "a vector for reckn/zk/bind/evm/v2 must not count as evidence for an svm profile",
+  );
+});
+
+test("a missing gate script is an error", () => {
+  const p = load("arc-testnet-evm.json");
+  p.evidence.gates = ["zk-verdict/scripts/ac999.sh"];
+  const f = validateProfileEvidence(p, resolve);
+  assert.ok(f.some((x) => x.field === "evidence.gates" && x.severity === "error"));
+});
+
+test("a profile with no evidence at all warns rather than passing silently", () => {
+  const p = load("arc-testnet-evm.json");
+  delete p.evidence;
+  const f = validateProfileEvidence(p, resolve);
+  assert.ok(f.some((x) => x.field === "evidence" && x.severity === "warning"));
 });

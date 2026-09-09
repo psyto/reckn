@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { evmDealBinding, type EvmDealTerms } from "../src/binding.ts";
+import { evmDealBinding, type EvmDealTerms } from "../dist/binding.js";
 
 /**
  * **The test that decides whether this package's binding may be used at all.**

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { evmDealBinding, erc20BalanceSlot, type EvmDealTerms } from "../src/binding.ts";
+import { evmDealBinding, erc20BalanceSlot, type EvmDealTerms } from "../dist/binding.js";
 
 const base: EvmDealTerms = {
   stateRoot: "0x" + "11".repeat(32),

@@ -9,7 +9,8 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { createPublicClient, http } from "viem";
 import { sellerPreflight, verifySettlement } from "./index.js";
-import { assertValidProfile, validateProfile, type VerifierProfile } from "./profile.js";
+import { existsSync, readFileSync as readFileRaw } from "node:fs";
+import { assertValidProfile, validateProfile, validateProfileEvidence, type VerifierProfile } from "./profile.js";
 
 const USAGE = `reckn — read-only checks on a Reckn deal
 
@@ -59,7 +60,18 @@ const main = async () => {
     let bad = 0;
     for (const f of readdirSync(dir).filter((x) => x.endsWith(".json"))) {
       const p = JSON.parse(readFileSync(new URL(f, `${dir}/`), "utf8"));
-      const findings = validateProfile(p);
+      // Repo-relative, from packages/partner-kit/dist/ up to the repository root.
+      const repoRoot = new URL("../../../", import.meta.url);
+      const resolveEvidence = (rel: string): unknown => {
+        const u = new URL(rel, repoRoot);
+        if (!existsSync(u)) return undefined;
+        if (!rel.endsWith(".json")) return "exists";
+        try { return JSON.parse(readFileRaw(u, "utf8")); } catch { return "exists"; }
+      };
+      const findings = [
+        ...validateProfile(p),
+        ...(p.dealBindingScheme ? validateProfileEvidence(p as VerifierProfile, resolveEvidence) : []),
+      ];
       const errs = findings.filter((x) => x.severity === "error");
       console.log(`${errs.length ? "INVALID" : "ok     "} ${p.id ?? f}  ${p.chain?.name ?? "?"} (${p.chain?.chainId ?? "?"})  vm=${p.vm}`);
       console.log(`        escrow ${p.escrow}  verifier ${p.verifier}`);
