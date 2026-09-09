@@ -1,0 +1,3 @@
+node_modules/
+.local-chain.json
+.anvil.pid

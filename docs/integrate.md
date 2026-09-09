@@ -1,5 +1,10 @@
 # Using Reckn from your own agent
 
+> **If you are integrating rather than reading, start with
+> [`partner-kit.md`](partner-kit.md).** This page is the raw contract surface underneath it —
+> `cast`, a private key on the command line, and a seven-argument ABI call. It is the honest
+> description of the protocol and a poor way to adopt it.
+
 Two calls. The whole protocol surface a payer touches is `fund`, and the whole surface a
 settler touches is `settleWithProof` — which anyone may call, because the proof carries the
 authority and there is no signer to be.

@@ -544,6 +544,19 @@ permissionless, so the key that pays the gas has no bearing on where the money g
 with the part that is not ready: an EVM deal's `dealBinding` is still computed only
 in-guest, so today you can settle against a binding but not compute one before the work.
 
+## Use it from your own agent
+
+**[`docs/partner-kit.md`](docs/partner-kit.md)** — a TypeScript package and a starter you can
+fork: open a deal, check one before you work on it, settle it on a proof, verify the
+settlement. One command runs all three paths — release, refund, and a **real** proof of a
+different job being refused — on a local chain, with no wallet and no funds.
+
+**[`docs/positioning.md`](docs/positioning.md)** — which layer this is and which layers it
+composes with. *AI chooses, negotiates, and explains. Re-execution decides the payout.* It
+also says what Reckn does **not** suit, which is most agent spending.
+
+**Nobody outside this project has used it yet, and that is not claimed anywhere.**
+
 ## Status, and the gaps that are still open
 
 **[`docs/status.md`](docs/status.md)** — what is built, **what was closed during ETHOnline
