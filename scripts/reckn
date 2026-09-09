@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# The Reckn CLI, by a path that RESOLVES.
+#
+# `npx reckn` does not work: neither `reckn` nor `@reckn/partner-kit` is on the npm registry
+# (both 404, checked 2026-09-09), so npx falls through to the network and fails for anyone
+# outside a tree that has already installed it. Documenting it as an onboarding step was
+# telling people to run a command that does not exist.
+#
+# This runs from anywhere in the repository, needs no registry, and builds on first use.
+#
+#   bash scripts/reckn profiles
+#   bash scripts/reckn terms --rpc <url> --profile arc-testnet-evm ...
+set -euo pipefail
+kit="$(cd "$(dirname "${BASH_SOURCE[0]}")/../packages/partner-kit" && pwd)"
+if [[ ! -d "$kit/node_modules" ]]; then
+  echo "reckn: installing dependencies in packages/partner-kit (first run only)" >&2
+  ( cd "$kit" && npm install --silent )
+fi
+if [[ ! -f "$kit/dist/cli.js" || -n "$(find "$kit/src" -name '*.ts' -newer "$kit/dist/cli.js" -print -quit 2>/dev/null)" ]]; then
+  ( cd "$kit" && npm run build --silent )
+fi
+exec node "$kit/dist/cli.js" "$@"

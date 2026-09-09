@@ -11,9 +11,9 @@ registry (checked 2026-09-09), so `npm install @reckn/partner-kit` does not work
 does `npx reckn` from outside a tree that has it installed. Use it from the repository:
 
 ```bash
-git clone <this repo> && cd packages/partner-kit
-npm install && npm test          # no chain needed
-npx reckn                        # resolves via node_modules/.bin, from THIS directory
+git clone <this repo> && cd reckn
+bash scripts/reckn profiles      # works from anywhere in the tree; builds on first use
+cd packages/partner-kit && npm install && npm test   # no chain needed
 ```
 
 ## What it is for
@@ -23,6 +23,7 @@ is the only thing that releases or refunds the money: the escrow has no owner, n
 resolver, no pause and no upgrade path. This package is the client side of that.
 
 ```ts
+// resolves through the workspace (`"@reckn/partner-kit": "file:../.."`), not the registry
 import { buildTerms, createDeal, sellerPreflight, submitProof, verifySettlement } from "@reckn/partner-kit";
 ```
 
@@ -34,7 +35,8 @@ import { buildTerms, createDeal, sellerPreflight, submitProof, verifySettlement 
 | `submitProof` | settle. **Permissionless** — this function has no payment authority, and neither do you. |
 | `verifySettlement` | decode what happened from the chain, not from anyone's report of it. |
 
-There is also a read-only CLI: `npx reckn terms | preflight | verify | profiles`.
+There is also a read-only CLI: `bash scripts/reckn terms | preflight | verify | profiles`,
+run from the repository. Not `npx` — see above.
 
 ## The part worth knowing before you adopt it
 
@@ -53,7 +55,11 @@ There is also a read-only CLI: `npx reckn terms | preflight | verify | profiles`
 
 ```bash
 npm install
-npm test        # no chain needed
+npm test              # no chain needed
+npm run release-gate  # what a publish WOULD contain, and what still blocks one
 ```
+
+There are **no lifecycle scripts** in this package: nothing of ours runs on your machine at
+install time. `release-gate.sh` does that work when we publish, not when you install.
 
 Apache-2.0.

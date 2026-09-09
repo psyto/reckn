@@ -16,7 +16,10 @@ cleanup() { kill "$(cat "$here/.anvil.pid" 2>/dev/null)" 2>/dev/null || true
             pkill -f 'anvil --chain-id 5042002' 2>/dev/null || true; }
 trap cleanup EXIT INT TERM
 
-bash setup-chain.sh > "$log" 2>&1 || { echo "setup-chain failed:"; tail -20 "$log"; exit 1; }
+# The kit has no `prepare` hook -- deliberately, so nothing of ours runs on a consumer's
+# machine at install time -- so the workspace dependency is built here, explicitly.
+npm --prefix ../.. run build --silent > "$log" 2>&1 || { echo "building the kit failed:"; tail -20 "$log"; exit 1; }
+bash setup-chain.sh >> "$log" 2>&1 || { echo "setup-chain failed:"; tail -20 "$log"; exit 1; }
 node --experimental-strip-types src/demo.ts >> "$log" 2>&1 || {
   echo "the demo exited non-zero — it asserts its own outcomes, so this is a real failure:"
   tail -25 "$log"; exit 1; }

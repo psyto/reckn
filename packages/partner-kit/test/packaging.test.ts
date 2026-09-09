@@ -42,11 +42,21 @@ test("every entry in `files` exists, including the README it promises", () => {
   assert.ok((pkg.files as string[]).includes("README.md"));
 });
 
-test("the tarball is built by publishing, not by whoever happened to run the tests", () => {
-  // `dist/` is gitignored, so without a build hook the published bytes depend on the state of
-  // one machine's working tree. `prepare` runs on install and before pack/publish.
-  assert.equal(pkg.scripts.prepare, "npm run build");
-  assert.match(pkg.scripts.prepublishOnly, /npm test/);
+test("no lifecycle script ships with this package", () => {
+  // The first fix for the empty tarball was a `prepare` hook. It worked, and it was the wrong
+  // shape: npm runs `prepare` on the CONSUMER's machine when the package is installed from
+  // git, so a package whose entire claim is "nobody but a proof decides your payout" would
+  // have been executing our code on their machine at install time. The property the hook was
+  // protecting is asserted above and by release-gate.sh, which runs when WE publish.
+  const LIFECYCLE = ["preinstall", "install", "postinstall", "prepare", "prepublish",
+    "prepublishOnly", "prepack", "postpack", "preuninstall", "uninstall", "postuninstall"];
+  const declared = LIFECYCLE.filter((h) => pkg.scripts?.[h]);
+  assert.deepEqual(declared, [], `package.json declares lifecycle script(s): ${declared.join(", ")}`);
+});
+
+test("there is a release gate, and it is not a lifecycle hook", () => {
+  assert.equal(pkg.scripts["release-gate"], "bash release-gate.sh");
+  assert.ok(existsSync(at("release-gate.sh")), "release-gate.sh must exist");
 });
 
 test("the CLI it ships actually runs and prints its own usage", () => {

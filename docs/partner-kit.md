@@ -69,6 +69,7 @@ When you are done: `npm run stop`.
 ## The four calls
 
 ```ts
+// resolves through the workspace (`"@reckn/partner-kit": "file:../.."`), NOT the npm registry
 import { createDeal, sellerPreflight, submitProof, verifySettlement } from "@reckn/partner-kit";
 ```
 
@@ -104,24 +105,30 @@ assembling an anchor, a plan and a predicate by hand. The API was never the barr
 There is also a read-only CLI:
 
 ```bash
-npx reckn terms --rpc <url> --profile arc-testnet-evm \
+bash scripts/reckn terms --rpc <url> --profile arc-testnet-evm \
     --from 0x… --to 0x… --data 0x… \
     --check-token 0x… --check-holder 0x… --min 246000000 --out terms.json
 
-npx reckn preflight --rpc <url> --escrow 0x… --deal 0x… --profile arc-testnet-evm
-npx reckn verify    --rpc <url> --escrow 0x… --deal 0x… --tx 0x…
-npx reckn profiles
+bash scripts/reckn preflight --rpc <url> --escrow 0x… --deal 0x… --profile arc-testnet-evm
+bash scripts/reckn verify    --rpc <url> --escrow 0x… --deal 0x… --tx 0x…
+bash scripts/reckn profiles
 ```
 
 Neither subcommand sends a transaction, and neither has a flag that takes a key.
 
-**Where `npx reckn` resolves.** The package is **not published to npm** — `reckn` and
-`@reckn/partner-kit` both 404 on the registry, checked 2026-09-09. `npx reckn` finds the
-binary through `node_modules/.bin` inside the cloned tree, so it works from
-`packages/partner-kit` and from `examples/starter` (where the steps above leave you) and
-**fails from the repository root or anywhere outside**, with `E404 registry.npmjs.org/reckn`.
-Run it from the directory you installed in, or call `node packages/partner-kit/dist/cli.js`
-directly.
+**Why `bash scripts/reckn` and not `npx reckn`.** This package is **not published to npm**:
+`reckn` and `@reckn/partner-kit` both 404 on the registry (checked 2026-09-09). `npx reckn`
+therefore reaches the network and fails for anyone outside a tree that has already installed
+it — so it was documenting a command that does not exist. `scripts/reckn` runs from anywhere
+in the repository, installs and builds on first use, and needs no registry. It is the same
+CLI; only the path is honest.
+
+Nothing here will tell you to `npm install @reckn/partner-kit` until that command actually
+works. When it does, it will be a scoped package at a pinned version, published from CI with
+[npm provenance](https://docs.npmjs.com/generating-provenance-statements) via OIDC trusted
+publishing, verifiable with `npm audit signatures` — and the Git tag will stay supported, so
+the registry is never the only path you have to trust. `packages/partner-kit/release-gate.sh`
+holds those conditions and reports what it measured.
 
 ---
 
@@ -136,7 +143,7 @@ it — which is the only version that means anything.
    ERC-20 face at `0x3600…0000`.
 3. **Load the profile** — `arc-testnet-evm` ships with the package. `createDeal` verifies it
    against the chain before funding.
-4. **Your terms.** `npx reckn terms` builds them from your own transaction — one command,
+4. **Your terms.** `bash scripts/reckn terms` builds them from your own transaction — one command,
    read-only, no key. Or edit `examples/starter/src/terms.ts` by hand if you prefer.
 5. **A proof of your step.** This is the slow part; see below.
 
@@ -238,7 +245,7 @@ that the Rust already agrees with the value the guest committed for the shipped 
 fixture, refusing to write one otherwise. So the expected value is the guest's.
 
 ```bash
-cd packages/partner-kit && npm test              # 76 tests, no chain needed
+cd packages/partner-kit && npm test              # 77 tests, no chain needed
 cd packages/partner-kit/examples/starter && npm test   # the three paths, end to end (needs anvil + forge)
 ```
 

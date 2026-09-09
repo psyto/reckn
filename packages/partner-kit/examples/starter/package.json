@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "demo:local": "bash setup-chain.sh && node --experimental-strip-types src/demo.ts",
+    "demo:local": "npm --prefix ../.. run build --silent && bash setup-chain.sh && node --experimental-strip-types src/demo.ts",
     "stop": "kill $(cat .anvil.pid) 2>/dev/null || true",
     "test": "bash test.sh"
   },

@@ -1,7 +1,7 @@
 {
   "name": "@reckn/partner-kit",
   "version": "0.1.0",
-  "description": "Open a Reckn deal, check one before you work on it, settle it on a proof, and verify the settlement \u2014 without reading an ABI.",
+  "description": "Open a Reckn deal, check one before you work on it, settle it on a proof, and verify the settlement — without reading an ABI.",
   "license": "Apache-2.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -19,11 +19,10 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "prepare": "npm run build",
-    "prepublishOnly": "npm run build && npm test",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "npm run build --silent && node --test --experimental-strip-types test/*.test.ts",
-    "cli": "npm run build --silent && node dist/cli.js"
+    "cli": "npm run build --silent && node dist/cli.js",
+    "release-gate": "bash release-gate.sh"
   },
   "dependencies": {
     "@noble/hashes": "^1.5.0",
