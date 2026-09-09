@@ -274,8 +274,13 @@ reviewed**: `zk-verdict/script/src/bin/binding_vector.rs` emits a golden vector 
 that the Rust already agrees with the value the guest committed for the shipped Groth16
 fixture, refusing to write one otherwise. So the expected value is the guest's.
 
+**No test count is written down here.** It moved nine times in one day — 30, 55, 66, 76, 77,
+81, 89, 93, 95 — and every one of those was correct when written and wrong an hour later. A
+number in prose that nothing re-measures is a claim that decays; the command below is the only
+honest source for it.
+
 ```bash
-cd packages/partner-kit && npm test              # 81 tests, no chain needed
+cd packages/partner-kit && npm test              # no chain needed; the run prints the count
 cd packages/partner-kit/examples/starter && npm test   # the three paths, end to end (needs anvil + forge)
 ```
 

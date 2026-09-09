@@ -123,3 +123,30 @@ test("a profile with no evidence at all warns rather than passing silently", () 
   const f = validateProfileEvidence(p, resolve);
   assert.ok(f.some((x) => x.field === "evidence" && x.severity === "warning"));
 });
+
+test("evidence that is entirely unreachable is reported as not-here, not as an invalid profile", () => {
+  // Measured 2026-09-09 by installing the packed tarball into a clean consumer: `reckn
+  // profiles` printed INVALID for all three shipped profiles, with four "does not exist"
+  // errors each. The profiles were fine. The gates and records are repository paths and are
+  // not shipped — correctly — so every one of them missed. Calling a valid thing invalid is
+  // worse than saying nothing, and it is the first thing an adopter would have seen.
+  const p = load("arc-testnet-evm.json");
+  const nothingResolves = () => undefined;
+  const f = validateProfileEvidence(p, nothingResolves);
+  assert.deepEqual(f.filter((x) => x.severity === "error"), [], "must not be an error");
+  assert.ok(f.some((x) => x.severity === "warning" && /this is not the repository/.test(x.message)));
+});
+
+test("but ONE missing path among present ones is still an error, and one path alone fails closed", () => {
+  // The distinction is a property — all-absent versus some-absent — not a question about
+  // where the code is installed. A profile citing a single path cannot tell the two apart, so
+  // it keeps the stricter reading.
+  const p = load("arc-testnet-evm.json");
+  p.evidence.testVectors = ["packages/partner-kit/test/vectors/does-not-exist.json"];
+  assert.ok(validateProfileEvidence(p, resolve).some((x) => x.severity === "error"));
+
+  const single = load("arc-testnet-evm.json");
+  single.evidence = { record: "nowhere/at/all.json" };
+  assert.ok(validateProfileEvidence(single, () => undefined).some((x) => x.severity === "error"),
+    "a lone absent citation must not be excused as 'not the repository'");
+});

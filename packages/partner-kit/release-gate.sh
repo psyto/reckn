@@ -66,7 +66,33 @@ console.log("  dependencies: " + Object.entries(pkg.dependencies ?? {}).map(([k,
 process.exit(bad);
 NODE
 
-say "── 5. publishing itself ────────────────────────────────────────────────"
+say "── 5. the tarball, installed and actually run ──────────────────────────"
+# Inspecting the file LIST is not the same as installing it. Measured 2026-09-09: the list
+# looked perfect while `reckn profiles` printed INVALID for all three shipped profiles to
+# anyone who installed the package, because evidence paths are repository paths and resolve to
+# nothing from node_modules. Nothing that reads the manifest could have seen that. So this
+# installs the tarball into an empty project and runs the CLI as a consumer would.
+consumer="$tmp/consumer"; mkdir -p "$consumer"
+printf '{ "name": "consumer", "private": true, "type": "module", "version": "1.0.0" }\n' > "$consumer/package.json"
+tgz=$(npm pack --pack-destination "$tmp" 2>/dev/null | tail -1)
+if [[ -z "$tgz" || ! -f "$tmp/$tgz" ]]; then bad "npm pack produced no tarball"; else
+  if ( cd "$consumer" && npm install --silent "$tmp/$tgz" >/dev/null 2>&1 ); then
+    out=$( cd "$consumer" && npx reckn profiles 2>&1 ); rc=$?
+    n_ok=$(printf '%s\n' "$out" | grep -c '^ok ' || true)
+    n_bad=$(printf '%s\n' "$out" | grep -c '^INVALID' || true)
+    say "  installed and ran: $n_ok profile(s) ok, $n_bad reported INVALID, exit $rc"
+    [[ $rc -eq 0 ]] || bad "the CLI a consumer installs exits $rc on \`reckn profiles\`"
+    [[ $n_bad -eq 0 ]] || bad "$n_bad shipped profile(s) report INVALID from an installed package"
+    [[ $n_ok -gt 0 ]] || bad "no profile was readable from the installed package"
+    ( cd "$consumer" && node -e "import('@reckn/partner-kit').then(m=>{
+        const need=['createDeal','sellerPreflight','submitProof','verifySettlement','buildTerms','evmDealBinding'];
+        const miss=need.filter(x=>!(x in m)); if (miss.length) { console.log('FAIL  missing from the installed package: '+miss.join(' ')); process.exit(1); }
+        console.log('  importable: '+Object.keys(m).length+' exports, all entry points present');
+      }).catch(e=>{console.log('FAIL  import failed: '+e.message);process.exit(1)})" ) || fail=1
+  else bad "the tarball does not install into an empty project"; fi
+fi
+
+say "── 6. publishing itself ────────────────────────────────────────────────"
 say "  NOTE: with no lifecycle scripts, \`npm pack\` on its own does NOT build. A hand-run"
 say "  \`npm publish\` from a tree that has not been built ships a tarball with no dist/ --"
 say "  measured, that is 4 files and no code. That is not a defect to fix with an install-time"

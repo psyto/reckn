@@ -186,6 +186,26 @@ export function validateProfileEvidence(
     | undefined;
   if (!ev) { warn("evidence", "no evidence listed: nothing here can be followed up"); return f; }
 
+  // Evidence paths are REPOSITORY paths. Resolved from an installed package they all miss,
+  // because the gates and records are not shipped and should not be — and until 2026-09-09
+  // that made `reckn profiles` report every shipped profile as INVALID to anyone who
+  // installed the package. The profile was fine; the evidence was simply not reachable from
+  // where they stood, and saying "invalid" about a valid thing is worse than saying nothing.
+  //
+  // Told apart by a property rather than by asking "am I installed?": if EVERY cited path is
+  // absent, the tree is not here. If SOME resolve and others do not, that is a broken citation
+  // and stays an error. The ambiguous case — a profile citing exactly one path — FAILS CLOSED
+  // and is still an error, because one absent path cannot distinguish the two situations.
+  const cited = [ev.record, ...(ev.gates ?? []), ...(ev.testVectors ?? []), ev.spec]
+    .filter((x): x is string => typeof x === "string");
+  if (cited.length > 1 && cited.every((rel) => resolve(rel) === undefined)) {
+    warn("evidence",
+      `none of the ${cited.length} cited paths resolve from here, so this is not the repository ` +
+      `and the evidence cannot be checked. That is not a defect in the profile. Clone the repo ` +
+      `and re-run to follow them: ${cited.slice(0, 3).join(", ")}${cited.length > 3 ? ", …" : ""}`);
+    return f;
+  }
+
   for (const [field, path] of [["evidence.record", ev.record], ["evidence.spec", ev.spec]] as const) {
     if (path === undefined) continue;
     if (resolve(path) === undefined) err(field, `points at ${path}, which does not exist`);
