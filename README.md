@@ -242,12 +242,18 @@ settled twice; that check exists so it cannot happen twice.
 Everything else on this page is Arc. **This is not claimed as ETHOnline event work** — see
 [`docs/ethonline-2026/PREFLIGHT.md`](docs/ethonline-2026/PREFLIGHT.md) §2.
 
-**▶ Demo video (3:54, 1920×1080, recorded 2026-09-09):**
-[`dashboard/media/reckn-demo-v3.mp4`](dashboard/media/reckn-demo-v3.mp4) — the deck's four
-checks, each one answered by the live page driving a real chain, ending on this run's own
-`no-keys.sh` output. This is the ETHOnline cut; `docs/ethonline-2026/PREFLIGHT.md` measures it
-against the event's requirements. **It has no audio track yet** — the narration is recorded by
-a person, and no synthetic voice is used.
+**▶ Demo video — the ETHOnline submission (3:52, 1920×1080, narrated):**
+[`dashboard/media/Reckn_ETHOnline_20260909.mp4`](dashboard/media/Reckn_ETHOnline_20260909.mp4)
+— the deck's four checks, each one answered by the live page driving a real chain, ending on
+this run's own `no-keys.sh` output, with a **human English voice-over**. No synthetic voice was
+used anywhere. `docs/ethonline-2026/PREFLIGHT.md` measures it against the event's requirements
+and it now clears all six.
+
+The **silent master** it was cut from is
+[`dashboard/media/reckn-demo-v3.mp4`](dashboard/media/reckn-demo-v3.mp4) (3:57). It is **not
+the same picture**: the narrated file runs 5.8 s shorter and, from roughly 3:10 onward, ahead
+of the master. Re-recording the master will not reproduce the submission, and it is not meant
+to — the script it is timed against is [`dashboard/video/VO.md`](dashboard/video/VO.md).
 The earlier v2 film (`reckn-arc-demo-v2.mp4`, 3:04, and a no-cards cut at 3:03) and the v1
 files are kept for comparison and are not the submission.
 Regenerate it with `cd dashboard/video && npm install && node record.js`; the recorder

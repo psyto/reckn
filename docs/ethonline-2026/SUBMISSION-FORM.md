@@ -40,7 +40,7 @@ Audited 2026-09-07 against the form's live contents. Ranked, because they are no
 | 7 | how it's made | *"…or if the constructor stores its caller"* | That was check 4 **before 009**. There is no constructor at all now — and the old wording would match an empty range and pass **vacuously**, which is precisely why it was replaced. |
 | 8 | description | key gauntlet listed as being built, *"including a permissionless timeout"* | The **timeout landed** on 2026-09-06 as its own task. The key gauntlet is **stopped at a hard stop** and is a founder decision. |
 | 9 | description | *"try to talk the judge into approving"* | 004's specification removed exactly that framing: the claim is judge-independent, because a judge we wrote ourselves being persuaded is evidence of nothing. |
-| ~~10~~ | video upload | **v3, 2026-09-09: 3:54**, 1080p 16:9, deck-led with the live page answering each of the four checks. Submit `reckn-demo-v3.mp4` — **not** the v2 file this row named until 2026-09-09, which is a shorter, older cut. **Audio is still absent** and is the only remaining item — the timecoded script is in `dashboard/video/VO.md` and `check.sh` will refuse the file until a track exists. |
+| ~~10~~ | video upload | **DONE 2026-09-10.** Submit `Reckn_ETHOnline_20260909.mp4` — 3:52, 1080p 16:9, **human English voice-over**, no synthetic voice anywhere. `check.sh` is green on all six rows; it was red on `faststart` as delivered, which would have made the file play only after a full download. The script is `dashboard/video/VO.md`. |
 | **11** | images | *(nothing uploaded)* | A **logo** (square), a **cover** (16:9) and **at least three screenshots** are all required fields. |
 | 12 | AI tools | *"ChatGPT was used to generate the initial boilerplate…"* | The form's own placeholder, and false here. It is also the one field where the truthful answer is an advantage rather than a disclosure — see §9. |
 
@@ -547,7 +547,8 @@ printed on. The v1 files are kept on disk and are not the submission.
 
 | file | use |
 |---|---|
-| `dashboard/media/reckn-demo-v3.mp4` | **the master.** Deck-led, the live page answering each of the four checks; **3:54**, 1920×1080. |
+| `dashboard/media/Reckn_ETHOnline_20260909.mp4` | **THE SUBMISSION.** 3:52, 1920×1080, **human English voice-over**, `check.sh` green on all six rows. Delivered 2026-09-10 with the moov atom at the end; moved to the front by stream copy, so nothing was re-encoded. |
+| `dashboard/media/reckn-demo-v3.mp4` | the **silent master** the recorder produces; **3:57**. **Not the submission's picture** — the narrated file is 5.8 s shorter and runs ahead of this one from about 3:10, so re-recording will not reproduce it. |
 | `dashboard/media/reckn-arc-demo-v2.mp4`, `-v2-clean.mp4` | v2, 3:04 and 3:03 — superseded by v3 on 2026-09-09, kept for comparison, **not** the submission. |
 | `dashboard/media/reckn-arc-demo.mp4`, `-clean.mp4` | v1, 3:19 — superseded, kept for comparison, **not** the submission. |
 | `dashboard/video/VO.md` | the English voice-over, timecoded from `beats.tsv` — every line fits its shot at 145 wpm |

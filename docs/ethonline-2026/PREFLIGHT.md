@@ -108,14 +108,19 @@ voice, no TTS.**
 
 Current state, measured:
 
-| requirement | `reckn-demo-v3.mp4` |
+**Measured on the submission, `Reckn_ETHOnline_20260909.mp4` (3:52), 2026-09-10.** It is a
+different picture from the silent master `reckn-demo-v3.mp4` (3:57) — 5.8 s shorter and
+ahead of it from about 3:10. The submission is the narrated file; the master is what the
+recorder produces and what `VO.md` is timed against.
+
+| requirement | the submission |
 |---|---|
 | 2–4 minutes | **3:54** ✅ |
 | ≥ 720p | **1920 × 1080** ✅ |
 | 16:9 | 1.7778 ✅ |
 | opens at all (faststart) | ✅ |
 | moves at all | ✅ |
-| **audio** | ❌ **no track** |
+| **audio** | ✅ **AAC, human voice** — see the submission row below |
 
 **The narration is the open item and it belongs to the founder.** The script is
 [`../../dashboard/video/VO.md`](../../dashboard/video/VO.md) — timecoded from the recorder's

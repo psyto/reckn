@@ -62,7 +62,12 @@ done
 
 echo
 echo "== the video, measured from the file =="
-for f in dashboard/media/reckn-demo-v3.mp4 dashboard/media/reckn-demo-v3-cwf.mp4; do
+# The SUBMISSION goes first, because that is the file a judge opens and it is not the same
+# picture as the master: the narrated cut delivered on 2026-09-10 is 3:52 against the master's
+# 3:57. Listing only the masters here meant this script reported "NO AUDIO TRACK" on the day
+# the audio arrived.
+for f in dashboard/media/Reckn_ETHOnline_*.mp4 dashboard/media/reckn-demo-v3.mp4 dashboard/media/reckn-demo-v3-cwf.mp4; do
+  [[ -f "$f" ]] || continue
   [[ -f "$f" ]] || continue
   if command -v ffprobe >/dev/null; then
     dur=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$f")
