@@ -18,19 +18,20 @@ const CODE = "0x60006000";                       // any non-empty code
 const CODEHASH = "0x1f5eb51ceb9b9dc5d8a5b7d0d1c3fe0da6b5ea8d7e0c9c8ac1e4c1c6d1b3e5f7";
 
 function stub(over: Partial<{ codehash: string; code: string; state: number;
-    sellerBlocked: boolean; paused: boolean; noPolicy: boolean }> = {}) {
+    sellerBlocked: boolean; paused: boolean; noPolicy: boolean;
+    amount: bigint; decimals: number }> = {}) {
   const state = over.state ?? 1;
   const pinned = over.codehash ?? CODEHASH;
   return {
     async readContract({ functionName }: { functionName: string }) {
       if (functionName === "deals") {
         return ["0xb0b0000000000000000000000000000000000b0b", "0x5e11000000000000000000000000000000005e11",
-          "0x7075500000000000000000000000000000000705", 250_000000n, VERIFIER, pinned,
+          "0x7075500000000000000000000000000000000705", over.amount ?? 250_000000n, VERIFIER, pinned,
           "0xda1da1da1da1da1da1da1da1da1da1da1da1da1da1da1da1da1da1da1da1da1d", 1_700_000_000n, state];
       }
       if (functionName === "REFUND_AFTER") return 2_592_000n;      // 30 days
       if (functionName === "symbol") return "USDC";
-      if (functionName === "decimals") return 6;
+      if (functionName === "decimals") return over.decimals ?? 6;
       throw new Error(`unexpected readContract ${functionName}`);
     },
     async getCode() { return over.code ?? CODE; },
@@ -167,4 +168,24 @@ test("a token exposing none of the shapes is reported as such, not as clean", as
   const out = await sellerPreflight({ publicClient: stub({ noPolicy: true }), escrow: ESCROW, dealId: DEAL, profile });
   assert.deepEqual(out.tokenPolicy.probed, []);
   assert.ok(out.warnings.some((w) => /exposes none of the shapes we know/.test(w)));
+});
+
+
+test("the amount a seller reads is exact, not rounded through a float", async () => {
+  // `Number(amount) / 10 ** decimals` is fine for 6-decimal USDC and silently wrong above
+  // 2^53. This is the line a seller reads to decide whether the job is worth doing.
+  const amount = 123456789012345678901n;                       // 18 decimals, > 2^53
+  const out = await sellerPreflight({
+    publicClient: stub({ amount, decimals: 18 }) as never,
+    escrow: ESCROW, dealId: DEAL,
+  } as never);
+  assert.ok(out.report.includes("123.456789012345678901"), `exact value missing:\n${out.report}`);
+  assert.ok(!out.report.includes("123.45678901234568"), "a float-rounded amount must not appear");
+});
+
+test("a whole amount does not grow a trailing dot", async () => {
+  const out = await sellerPreflight({
+    publicClient: stub({ amount: 5_000000n, decimals: 6 }) as never, escrow: ESCROW, dealId: DEAL,
+  } as never);
+  assert.ok(out.report.includes("(5 USDC)"), out.report);
 });

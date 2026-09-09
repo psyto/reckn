@@ -251,3 +251,62 @@ test("the refusal is on the funding path itself, not merely on the terms builder
   const ok = await createDeal(args(c));
   assert.ok(ok.dealBinding.startsWith("0x"));
 });
+
+// ──────────────────── a timeout refund is not a settlement on proof ──
+
+const REFUNDED = keccak256(new TextEncoder().encode("RefundedAfterDeadline(bytes32,address,uint256)"));
+
+test("verifySettlement reports a deadline refund as a payout NO PROOF authorised", async () => {
+  // The escrow emits two events rather than one precisely so nobody has to infer this, and
+  // its comment says so. Decoding only SettledByProof answered "Settled" to a question about
+  // proofs: the state is Settled either way and cannot tell them apart.
+  const refund = { topics: [REFUNDED, DEAL, pad(BUYER)], data: word(250n), address: ESCROW };
+  const moved = { topics: [TRANSFER, pad(ESCROW), pad(BUYER)], data: word(250n), address: TOKEN };
+  const out = await verifySettlement({
+    publicClient: receiptClient([refund, moved]) as never,
+    escrow: ESCROW, dealId: DEAL, tx: "0xbb" as never,
+  });
+  assert.equal(out.settledBy, "deadline");
+  assert.equal(out.outcome, "RefundedAfterDeadline");
+  assert.equal(out.paidTo?.toLowerCase(), BUYER.toLowerCase());
+  assert.equal(out.amountMoved, 250n);
+  assert.match(out.report, /NO PROOF AUTHORISED THIS PAYOUT/);
+  assert.match(out.report, /TIMEOUT REFUND/);
+});
+
+test("a proof settlement is still marked as one, so the distinction cuts both ways", async () => {
+  const settled = { topics: [SETTLED, DEAL, pad(SELLER)], data: word(0n) + "aa".repeat(32), address: ESCROW };
+  const out = await verifySettlement({
+    publicClient: receiptClient([settled]) as never, escrow: ESCROW, dealId: DEAL, tx: "0xcc" as never,
+  });
+  assert.equal(out.settledBy, "proof");
+  assert.equal(out.outcome, "Reproduced");
+  assert.doesNotMatch(out.report, /NO PROOF AUTHORISED/);
+});
+
+test("the report does not claim no transaction was supplied when one was", async () => {
+  // It printed `verdict (no settling transaction supplied)` for a supplied tx that matched
+  // neither event -- a statement that was simply false, in the tool whose whole job is to
+  // decode rather than to be told.
+  const unrelated = { topics: [TRANSFER, pad(BUYER), pad(SELLER)], data: word(1n), address: TOKEN };
+  const out = await verifySettlement({
+    publicClient: receiptClient([unrelated]) as never, escrow: ESCROW, dealId: DEAL, tx: "0xdd" as never,
+  });
+  assert.doesNotMatch(out.report, /no settling transaction supplied/);
+  assert.match(out.report, /settles no deal with this id/);
+});
+
+test("amountMoved is not taken from a Transfer of a different token", async () => {
+  // A settling transaction that also moves another deal in another token emits a second
+  // Transfer FROM the escrow. It is last, so "take the last one" reports the wrong token's
+  // amount under this deal's name.
+  const ours = { topics: [TRANSFER, pad(ESCROW), pad(SELLER)], data: word(250n), address: TOKEN };
+  const otherToken = "0x00000000000000000000000000000000000fa17e";
+  const foreign = { topics: [TRANSFER, pad(ESCROW), pad(SELLER)], data: word(777777n), address: otherToken };
+  const settled = { topics: [SETTLED, DEAL, pad(SELLER)], data: word(0n) + "aa".repeat(32), address: ESCROW };
+  const out = await verifySettlement({
+    publicClient: receiptClient([ours, settled, foreign]) as never,
+    escrow: ESCROW, dealId: DEAL, tx: "0xee" as never,
+  });
+  assert.equal(out.amountMoved, 250n, "only this deal's token counts");
+});

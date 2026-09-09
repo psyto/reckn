@@ -22,16 +22,22 @@ const USAGE = `reckn — read-only checks on a Reckn deal
 
   reckn verify --rpc <url> --escrow <0x..> --deal <0x..> [--tx <0x..>]
       Did it settle, and where did the money go? Decoded from the chain, not from anyone's
-      report of it.
+      report of it. Exit 0 = settled (and, if you passed --tx, settled ON A PROOF).
+      Exit 3 = the deal is resolved but the payout was the 30-day timeout refund, which no
+      proof authorised. Exit 1 = not settled.
 
   reckn terms --rpc <url> --profile <id> --from <0x..> --to <0x..> --data <0x..>
-              --check-token <0x..> --check-holder <0x..> --min <n>
+              --check-token <0x..> --check-holder <0x..> --min <n> [--slot-index <n>]
               [--value <n>] [--gas <n>] [--block <n>] [--out terms.json]
       Turn YOUR transaction into deal terms. Reads a block, SIMULATES the call at it, and
       REFUSES to emit terms for a call that reverts there — a plan that fails at the anchor
       settles as Failed, and you would pay to be told your work did not reproduce. Captures
       the prestate witness in the same run, because public endpoints do not serve historical
       eth_getProof later. The hardfork comes from the profile; you are not asked for it.
+      --slot-index is where the token's balances mapping lives and DEFAULTS TO 9, which is
+      Circle's FiatToken layout, not a standard. OpenZeppelin's is usually 0. Get it wrong and
+      the predicate measures a slot nothing writes — this refuses to build those terms and
+      prints the slots the call did touch, so the right index is one comparison away.
 
   reckn profiles
       List the shipped verifier profiles and validate them.
@@ -151,7 +157,11 @@ const main = async () => {
     const tx = arg("tx");
     const out = await verifySettlement({ publicClient: client, escrow, dealId, ...(tx ? { tx: tx as `0x${string}` } : {}) });
     console.log(out.report);
-    process.exit(out.settled ? 0 : 1);
+    // Three outcomes, not two. A deal returned by the 30-day deadline reads `Settled` in the
+    // escrow exactly like one settled on a proof, so a script gating on `settled` alone calls
+    // a timeout refund a proof settlement. Exit 3 says "resolved, but no proof authorised it".
+    if (!out.settled) process.exit(1);
+    process.exit(out.settledBy === "deadline" ? 3 : 0);
   }
 
   console.log(USAGE);

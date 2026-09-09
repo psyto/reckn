@@ -317,7 +317,7 @@ export async function sellerPreflight(opts: {
   warnings.push("This preflight is NOT on-chain consent. The escrow does not require you to have run it, and nothing you do here is recorded.");
 
   const amt = tokenDecimals !== undefined
-    ? `${amount} (${Number(amount) / 10 ** tokenDecimals} ${tokenSymbol ?? ""})`.trim()
+    ? `${amount} (${formatUnits(amount, tokenDecimals)} ${tokenSymbol ?? ""})`.trim()
     : `${amount}`;
   const report = [
     `deal            ${dealId}`,
@@ -381,7 +381,15 @@ export interface Settlement {
   dealId: Hex;
   settled: boolean;
   state: string;
-  outcome?: "Reproduced" | "Failed" | undefined;
+  outcome?: "Reproduced" | "Failed" | "RefundedAfterDeadline" | undefined;
+  /**
+   * WHAT AUTHORISED the payout — the distinction the escrow declares two separate events to
+   * preserve. `"proof"` means a verified verdict decided it. `"deadline"` means nothing did:
+   * the money went back because no proof arrived in 30 days. Only present when a settling
+   * transaction was supplied; the escrow's `state` is `Settled` either way and cannot tell
+   * them apart.
+   */
+  settledBy?: "proof" | "deadline" | undefined;
   paidTo?: Address | undefined;
   amountMoved?: bigint | undefined;
   traceHash?: Hex | undefined;
@@ -412,7 +420,9 @@ export async function verifySettlement(opts: {
   const state = Number(d[8]);
   const dealBinding = d[6] as Hex;
 
+  const dealToken = (d[2] as Address).toLowerCase();
   let outcome: Settlement["outcome"], paidTo: Address | undefined, traceHash: Hex | undefined;
+  let settledBy: Settlement["settledBy"];
   let amountMoved: bigint | undefined, blockNumber: bigint | undefined, gasUsed: bigint | undefined;
   let feeToken: Address | undefined, feePayer: Address | undefined;
 
@@ -424,16 +434,32 @@ export async function verifySettlement(opts: {
     if (typeof raw.feePayer === "string") feePayer = raw.feePayer as Address;
 
     const settled = keccak256(toBytes("SettledByProof(bytes32,address,uint8,bytes32)"));
+    // The escrow declares this as a SEPARATE event on purpose — see its own comment: this is
+    // the one payout in the contract that no proof authorised, and a reader "should never
+    // have to infer which kind it was". Decoding only the first event forces exactly that
+    // inference, and answers "Settled" to a question about proofs.
+    const refunded = keccak256(toBytes("RefundedAfterDeadline(bytes32,address,uint256)"));
     const transfer = keccak256(toBytes("Transfer(address,address,uint256)"));
     for (const log of r.logs) {
       if (log.topics[0] === settled && log.topics[1]?.toLowerCase() === dealId.toLowerCase()) {
         paidTo = ("0x" + (log.topics[2] as string).slice(26)) as Address;
         outcome = Number(BigInt("0x" + log.data.slice(2, 66))) === Outcome.Reproduced ? "Reproduced" : "Failed";
         traceHash = ("0x" + log.data.slice(66, 130)) as Hex;
+        settledBy = "proof";
       }
-      // The transfer OUT of the escrow is the money actually moving. A Transfer log that is
-      // not from the escrow is somebody else's business and must not be counted as this one.
+      if (log.topics[0] === refunded && log.topics[1]?.toLowerCase() === dealId.toLowerCase()) {
+        paidTo = ("0x" + (log.topics[2] as string).slice(26)) as Address;
+        outcome = "RefundedAfterDeadline";
+        settledBy = "deadline";
+        amountMoved = BigInt(log.data);
+      }
+      // The transfer OUT of the escrow is the money actually moving. Two filters, not one:
+      // it must come FROM the escrow, and it must be THIS DEAL'S TOKEN. A settling
+      // transaction that also touches another deal in a different token emits a second
+      // qualifying log, and taking the last one silently reports the wrong token's amount
+      // under this deal's name.
       if (log.topics[0] === transfer && log.topics[1] &&
+          log.address.toLowerCase() === dealToken &&
           ("0x" + (log.topics[1] as string).slice(26)).toLowerCase() === escrow.toLowerCase()) {
         amountMoved = BigInt(log.data);
       }
@@ -444,7 +470,13 @@ export async function verifySettlement(opts: {
     `deal        ${dealId}`,
     `state       ${dealStateName(state)}`,
     `binding     ${dealBinding}`,
-    outcome ? `verdict     ${outcome}  (0 = Reproduced -> seller, 1 = Failed -> buyer)` : `verdict     (no settling transaction supplied)`,
+    settledBy === "proof"
+      ? `verdict     ${outcome}  (0 = Reproduced -> seller, 1 = Failed -> buyer)`
+      : settledBy === "deadline"
+        ? `verdict     none — NO PROOF AUTHORISED THIS PAYOUT`
+        : opts.tx
+          ? `verdict     the transaction you supplied settles no deal with this id`
+          : `verdict     (no settling transaction supplied)`,
     paidTo ? `paid to     ${paidTo}` : "",
     amountMoved !== undefined ? `moved       ${amountMoved} out of the escrow` : "",
     traceHash ? `traceHash   ${traceHash}` : "",
@@ -452,8 +484,13 @@ export async function verifySettlement(opts: {
     blockNumber !== undefined ? `block       ${blockNumber}  gas ${gasUsed}` : "",
     feeToken ? `feeToken    ${feeToken}   feePayer ${feePayer}` : "",
     "",
-    state === DealState.Settled
-      ? `The escrow's own state says Settled, so this deal cannot settle again and cannot be refunded.`
+    settledBy === "deadline"
+      ? `This is a TIMEOUT REFUND, not a settlement on proof. The deadline passed with no proof, ` +
+        `so the money went back to the buyer and no verdict was ever reached. The escrow's ` +
+        `state reads Settled for this and for a proof settlement alike — only the event tells ` +
+        `them apart, which is why the contract emits two.`
+      : state === DealState.Settled
+        ? `The escrow's own state says Settled, so this deal cannot settle again and cannot be refunded.`
       : state === DealState.Funded
         ? `Still Funded. No proof has moved this money; the buyer may reclaim it after the deadline.`
         : `No such deal at this escrow on this chain.`,
@@ -461,9 +498,23 @@ export async function verifySettlement(opts: {
 
   return {
     dealId, settled: state === DealState.Settled, state: dealStateName(state),
-    outcome, paidTo, amountMoved, traceHash, dealBinding,
+    outcome, settledBy, paidTo, amountMoved, traceHash, dealBinding,
     tx: opts.tx, blockNumber, gasUsed, feeToken, feePayer, report,
   };
+}
+
+/**
+ * Render a token amount exactly. `Number(amount) / 10 ** decimals` is fine for Arc USDC and
+ * silently wrong above 2^53 — and this is the line a seller reads to decide whether a job is
+ * worth doing, so it must not round.
+ */
+function formatUnits(amount: bigint, decimals: number): string {
+  if (decimals <= 0) return amount.toString();
+  const neg = amount < 0n;
+  const digits = (neg ? -amount : amount).toString().padStart(decimals + 1, "0");
+  const whole = digits.slice(0, digits.length - decimals);
+  const frac = digits.slice(digits.length - decimals).replace(/0+$/, "");
+  return `${neg ? "-" : ""}${whole}${frac ? "." + frac : ""}`;
 }
 
 export { erc20BalanceSlot };

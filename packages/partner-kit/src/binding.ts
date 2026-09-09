@@ -13,9 +13,14 @@
  * again. All three must agree, and `test/binding.golden.test.ts` requires this one to
  * reproduce, byte for byte, vectors whose expected value came out of the guest.
  *
- * **If that test does not pass, do not use this module.** Use `bindingViaRust()` in
- * `./binding-cli.ts`, which shells out to the Rust implementation instead. An unverified
- * re-implementation of the value that decides who gets paid is worse than no implementation.
+ * **If that test does not pass, do not use this module.** Compute the binding with the Rust
+ * host instead — `verdict_script::evm_deal_binding`, shown in `docs/integrate.md` — and treat
+ * the mismatch as the finding it is. An unverified re-implementation of the value that decides
+ * who gets paid is worse than no implementation.
+ *
+ * (Until 2026-09-09 this paragraph directed the reader to `bindingViaRust()` in
+ * `./binding-cli.ts`. Neither ever existed. A footnote to nowhere, inside the file whose whole
+ * argument is that an unchecked claim is worse than none.)
  *
  * The only dependency here is a keccak, deliberately: the part that decides a payment should
  * not pull in a chain client to compute a hash.

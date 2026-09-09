@@ -115,6 +115,14 @@ npx reckn profiles
 
 Neither subcommand sends a transaction, and neither has a flag that takes a key.
 
+**Where `npx reckn` resolves.** The package is **not published to npm** — `reckn` and
+`@reckn/partner-kit` both 404 on the registry, checked 2026-09-09. `npx reckn` finds the
+binary through `node_modules/.bin` inside the cloned tree, so it works from
+`packages/partner-kit` and from `examples/starter` (where the steps above leave you) and
+**fails from the repository root or anywhere outside**, with `E404 registry.npmjs.org/reckn`.
+Run it from the directory you installed in, or call `node packages/partner-kit/dist/cli.js`
+directly.
+
 ---
 
 ## Arc testnet, with **your** wallet
@@ -230,7 +238,7 @@ that the Rust already agrees with the value the guest committed for the shipped 
 fixture, refusing to write one otherwise. So the expected value is the guest's.
 
 ```bash
-cd packages/partner-kit && npm test              # 66 tests, no chain needed
+cd packages/partner-kit && npm test              # 76 tests, no chain needed
 cd packages/partner-kit/examples/starter && npm test   # the three paths, end to end (needs anvil + forge)
 ```
 
