@@ -33,7 +33,13 @@ if [[ ${#UNRESOLVED[@]} -eq 0 ]]; then
 fi
 
 echo
-files=$(git ls-files '*.md' '*.html' | grep -v node_modules)
+# Tracked files AND untracked-but-not-ignored ones. `git ls-files` alone missed the second
+# kind, and the miss was silent: docs/use-with-your-service.md -- a document written to be
+# followed by an outside reader -- was invisible to this check for no reason except that
+# nobody had committed it yet. A reader can follow a file that is not yet committed. Being
+# untracked is a fact about our git history, not about whether the instruction resolves, and
+# a check that keys on it is checking the wrong thing.
+files=$(git ls-files --cached --others --exclude-standard -- '*.md' '*.html' | grep -v node_modules | sort -u)
 for f in $files; do
   python3 - "$f" "${UNRESOLVED[@]}" <<'PY'
 import re, sys
