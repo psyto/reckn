@@ -31,3 +31,10 @@ v6.1.0-groth16.tar.gz
 # committing a snapshot of a throwaway chain.
 dashboard/arc-demo-state.json
 dashboard/video/node_modules/
+
+# Per-line recording clips, cut from the film by dashboard/video/split-scenes.py. They are a
+# derivative of two things that ARE committed -- reckn-demo-v3.mp4 and VO.md -- and they are
+# regenerated whenever either moves, which today was six times. Committing them would put 13 MB
+# of the same frames in the history on every take, and a stale clip is worse than no clip: it
+# shows a line landing on a picture that has since changed.
+dashboard/media/scenes/

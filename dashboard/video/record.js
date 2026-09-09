@@ -1173,7 +1173,11 @@ await deckSlide(11, slideMs(11, 10000), { label: "check it yourself" });
 // gone — the URL slide ends the film now. One short plate, door-specific, after it.
 // 6000 was sized for two lines. The plate now carries a third block of 25 words, and a
 // closing plate nobody can finish reading is a plate that undoes its own ending.
-await closingPlate(9200);
+// The plate is now READ ALOUD, which is the one place the "do not read the cards" rule
+// does not apply: mid-film a caption competes with the UI a viewer is also watching, and
+// at the end voice and text landing together is emphasis rather than redundancy. 9200 was
+// sized for a plate nobody spoke over; it has to hold long enough to say the thing now.
+await closingPlate(12000);
 
 beat("END");
 await rec.stop();

@@ -53,7 +53,7 @@ def at(label):
             f"vo-table: no beat named {label!r}.\nThe cut has:\n  " + "\n  ".join(order))
     return beats[label]
 
-CLOSE = 9.2   # closingPlate(9200) — trimmed to hold the 4:00 ceiling
+CLOSE = 12.0  # closingPlate(12000) — the plate is spoken now, so it has to be readable aloud
 
 SCRIPT = [
     # Written for a HUMAN first take: contractions, one idea per breath, no stacked noun
@@ -62,10 +62,26 @@ SCRIPT = [
     # out and then gets out of the way.
     (at("TITLE Reckn"), 8.0, None,
      "plate: **Reckn — Keep assets native. Settle on proof.** then the door question"),
-    (at("SLIDE 02 the claim, and the offer"), 6.5, 1,
+    # THE MONEY SHOT HAD NO VOICE ON IT. Twelve seconds carrying two captions and the whole
+    # argument for re-execution over a judge, and the first line did not arrive until the beat
+    # was over -- because the captions live in record.js and moved with the picture, while this
+    # file did not. The captions already say "two judges" and "only one you can redo yourself",
+    # so these two lines carry what the captions do not: the stake, and why anyone should care
+    # which kind of judge it is.
+    (at("00 opinion vs re-execution") + 1.0, 5.4, 1,
+     "An agent says the work is done, and asks to be paid."),
+    (at("00 opinion vs re-execution") + 6.8, 5.2, 2,
+     "Usually a person decides. Here, the work itself is run again."),
+    (at("SLIDE 02 the claim, and the offer"), 6.5, 3,
      "Nobody can move this money. Not the seller, not the buyer, and not us."),
+    (at("SLIDE 02 the claim, and the offer") + 8.0, 6.5, 31,
+     "The terms are fixed before the work starts — the job, the inputs, the target."),
+    (at("SLIDE 02 the claim, and the offer") + 15.0, 5.5, 32,
+     "After that, only a proof that the work reproduced can release it."),
     (at("SLIDE 03 check 1"), 6.0, 2,
      "That is easy to say, so don't take our word for it. Four checks."),
+    (at("SLIDE 03 check 1") + 7.0, 5.0, 33,
+     "Check one is a theft attempt, and we run it on camera."),
     (at("01 fund"), 6.5, 3,
      "Here's a funded deal. Two hundred and fifty dollars, and no key to it."),
     (at("01 BindingMismatch"), 8.0, 4,
@@ -80,12 +96,20 @@ SCRIPT = [
      "Byte for byte. And if an owner or an admin ever showed up in it, the build would fail."),
     (at("SLIDE 05 check 3"), 7.0, 9,
      "Check three. Four settlements, in real money, on Arc testnet."),
+    (at("SLIDE 05 check 3") + 8.0, 6.0, 34,
+     "A public testnet, so your browser can read every one of them without us."),
     (at("04 evidence: four settlements"), 9.0, 10,
      "Two of them were decided by proofs about work done on Solana. One escrow, two virtual machines."),
     (at("17 SVG: out to Arc, scope held"), 7.5, 11,
      "The proof crosses. The money never does. There's no bridge in here."),
+    # Sixteen seconds on the slide that answers the question ETHOnline asks hardest -- why this
+    # chain -- and not a word spoken over it. The slide argues; this says what the slide is for.
+    (at("SLIDE 06 why Arc") + 2.0, 8.0, 90,
+     "Arc is not a deployment target here. It is where the dollar already lives, and stays."),
     (at("SLIDE 09 check 4 - what it does not prove"), 9.0, 12,
      "Check four is the one nobody else shows you: what this does not prove."),
+    (at("SLIDE 09 check 4 - what it does not prove") + 11.0, 7.0, 35,
+     "Three of them. You should hear these from us rather than find them yourself."),
     (at("06 evidence: the two rows"), 7.5, 13,
      "It's consistency, not provenance. And it doesn't save you from holding funds where you pay."),
     (at("SLIDE 11 check it yourself"), 8.0, 14,
@@ -98,6 +122,16 @@ SCRIPT = [
      "Then clone it. One command runs a release, a refund, and a real proof of a different job refused."),
     (END - CLOSE, CLOSE, None,
      "plate: the door's last line"),
+    # READ THE PLATE. Three lines landing on the three things already on screen -- the
+    # principle, the closer, and the ambition. Founder's call, and the right one: this is the
+    # last thing anyone sees, and a closing plate that nobody says out loud is a film that
+    # stops rather than ends.
+    (END - CLOSE + 0.8, 3.2, 36,
+     "Keep assets native. Settle on proof."),
+    (END - CLOSE + 4.4, 2.6, 37,
+     "Reproduce, or refund."),
+    (END - CLOSE + 7.2, 4.8, 38,
+     "Reckn is building the standard for proof-driven settlement across execution environments."),
 ]
 
 # A line has to fit its SHOT, not just its own stated seconds. The old table only checked

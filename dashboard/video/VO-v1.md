@@ -1,4 +1,13 @@
-# English voice-over — timecoded to `reckn-demo-v3.mp4` (the four-checks cut)
+# English voice-over — v1, SUPERSEDED, kept for comparison
+
+> **This is not the script to record.** [`VO.md`](VO.md) is. This is the fifteen-line version
+> as it stood on 2026-09-09, kept because it was approved and read well, and because the
+> difference between the two is the interesting part: the film grew from 3:04 to 3:54 during
+> the day and this script gained one line, so it ended up speaking for 114 seconds of 234 —
+> and the opening money shot, twelve seconds carrying two on-screen captions and the whole
+> argument for re-execution over a judge, had no voice on it at all. The captions moved with
+> the picture because they live in `record.js`; the script did not, because it lives here.
+
 
 **This is not a recorded track. It is the script and the procedure for making one.**
 No speech audio ships from this repository; saying otherwise would be the one lie the rest
@@ -63,33 +72,22 @@ and no line runs past its shot.
 | # | in | for | words | line |
 |---|---|---|---|---|
 | — | 0:00 | 8.0 s | — | *(plate: **Reckn — Keep assets native. Settle on proof.** then the door question)* |
-| 1 | 0:10 | 5.4 s | 12 / 13 | "An agent says the work is done, and asks to be paid." |
-| 2 | 0:16 | 5.2 s | 11 / 12 | "Usually a person decides. Here, the work itself is run again." |
-| 3 | 0:21 | 6.5 s | 14 / 15 | "Nobody can move this money. Not the seller, not the buyer, and not us." |
-| 4 | 0:29 | 6.5 s | 15 / 15 | "The terms are fixed before the work starts — the job, the inputs, the target." |
-| 5 | 0:36 | 5.5 s | 12 / 13 | "After that, only a proof that the work reproduced can release it." |
-| 6 | 0:48 | 7.5 s | 12 / 18 | "The proof crosses. The money never does. There's no bridge in here." |
-| 7 | 0:55 | 6.0 s | 14 / 14 | "That is easy to say, so don't take our word for it. Four checks." |
-| 8 | 1:02 | 5.0 s | 12 / 12 | "Check one is a theft attempt, and we run it on camera." |
-| 9 | 1:08 | 6.5 s | 14 / 15 | "Here's a funded deal. Two hundred and fifty dollars, and no key to it." |
-| 10 | 1:16 | 8.0 s | 19 / 19 | "That's a real Groth16 proof. It verifies. It's just about a different job — so the money stays put." |
-| 11 | 1:30 | 6.0 s | 12 / 14 | "The proof this deal was funded against reproduces. The seller gets paid." |
-| 12 | 1:37 | 8.0 s | 13 / 19 | "And when the work doesn't reproduce, the same machinery sends the money back." |
-| 13 | 1:47 | 7.5 s | 16 / 18 | "Check two. Your browser reads the contract off the chain and compares it to our source." |
-| 14 | 2:00 | 9.0 s | 19 / 21 | "Byte for byte. And if an owner or an admin ever showed up in it, the build would fail." |
-| 15 | 2:12 | 7.0 s | 10 / 16 | "Check three. Four settlements, in real money, on Arc testnet." |
-| 16 | 2:20 | 6.0 s | 14 / 14 | "A public testnet, so your browser can read every one of them without us." |
-| 17 | 2:27 | 9.0 s | 17 / 21 | "Two of them were decided by proofs about work done on Solana. One escrow, two virtual machines." |
-| 18 | 2:38 | 8.0 s | 16 / 19 | "Arc is not a deployment target here. It is where the dollar already lives, and stays." |
-| 19 | 2:53 | 9.0 s | 14 / 21 | "Check four is the one nobody else shows you: what this does not prove." |
-| 20 | 3:04 | 7.0 s | 14 / 16 | "Three of them. You should hear these from us rather than find them yourself." |
-| 21 | 3:14 | 7.5 s | 15 / 18 | "It's consistency, not provenance. And it doesn't save you from holding funds where you pay." |
-| 22 | 3:22 | 8.0 s | 10 / 19 | "So go and check it. Nothing to install, no wallet." |
-| 23 | 3:31 | 8.0 s | 19 / 19 | "Then clone it. One command runs a release, a refund, and a real proof of a different job refused." |
-| — | 3:44 | 12.0 s | — | *(plate: the door's last line)* |
-| 24 | 3:45 | 3.2 s | 6 / 7 | "Keep assets native. Settle on proof." |
-| 25 | 3:49 | 2.6 s | 3 / 6 | "Reproduce, or refund." |
-| 26 | 3:52 | 4.8 s | 11 / 11 | "Reckn is building the standard for proof-driven settlement across execution environments." |
+| 1 | 0:21 | 6.5 s | 14 / 15 | "Nobody can move this money. Not the seller, not the buyer, and not us." |
+| 2 | 0:48 | 7.5 s | 12 / 18 | "The proof crosses. The money never does. There's no bridge in here." |
+| 3 | 0:55 | 6.0 s | 14 / 14 | "That is easy to say, so don't take our word for it. Four checks." |
+| 4 | 1:08 | 6.5 s | 14 / 15 | "Here's a funded deal. Two hundred and fifty dollars, and no key to it." |
+| 5 | 1:16 | 8.0 s | 19 / 19 | "That's a real Groth16 proof. It verifies. It's just about a different job — so the money stays put." |
+| 6 | 1:30 | 6.0 s | 12 / 14 | "The proof this deal was funded against reproduces. The seller gets paid." |
+| 7 | 1:37 | 8.0 s | 13 / 19 | "And when the work doesn't reproduce, the same machinery sends the money back." |
+| 8 | 1:47 | 7.5 s | 16 / 18 | "Check two. Your browser reads the contract off the chain and compares it to our source." |
+| 9 | 2:00 | 9.0 s | 19 / 21 | "Byte for byte. And if an owner or an admin ever showed up in it, the build would fail." |
+| 10 | 2:13 | 7.0 s | 10 / 16 | "Check three. Four settlements, in real money, on Arc testnet." |
+| 11 | 2:27 | 9.0 s | 17 / 21 | "Two of them were decided by proofs about work done on Solana. One escrow, two virtual machines." |
+| 12 | 2:53 | 9.0 s | 14 / 21 | "Check four is the one nobody else shows you: what this does not prove." |
+| 13 | 3:13 | 7.5 s | 15 / 18 | "It's consistency, not provenance. And it doesn't save you from holding funds where you pay." |
+| 14 | 3:21 | 8.0 s | 10 / 19 | "So go and check it. Nothing to install, no wallet." |
+| 15 | 3:30 | 8.0 s | 19 / 19 | "Then clone it. One command runs a release, a refund, and a real proof of a different job refused." |
+| — | 3:44 | 9.2 s | — | *(plate: the door's last line)* |
 
 ## Recording it
 
