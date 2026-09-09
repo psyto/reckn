@@ -52,7 +52,8 @@ opened, and `DISCLOSURE.md` states the same figures.
 
 ## What the form currently gets wrong — twelve things, ranked
 
-Audited 2026-09-07 against the form's live contents. Ranked, because they are not equal.
+Audited 2026-09-07 against what the form held then — a saved draft, not a submission; the
+entry has not been submitted. Ranked, because they are not equal.
 
 | # | field | what it says | why it is wrong |
 |---|---|---|---|
@@ -123,12 +124,13 @@ Agent-payment escrow where a disputed delivery is re-executed, not judged. Repro
 > corrections recorded in `DISCLOSURE.md` §0 has been lost. Edit the narrative in
 > `description-intro.txt` and re-run the script; do not edit the block by hand.
 
-> **REOPENED 2026-09-10 by founder decision.** This field was submitted on 2026-09-08 and was
-> frozen after that, on the reasoning that editing it would make the repository disagree with
-> what ETHGlobal holds. The form can be updated, so the narrative was revised — and the
-> revision is an **amendment made after submission**, a category `DISCLOSURE.md` §0 did not
-> have and now needs, because the two amendments already recorded there were made *before* the
-> form went in and must not be silently folded together with this one.
+> **NOT SUBMITTED — and this file said otherwise for two days.** From 2026-09-08 (`5476543`,
+> *"do not edit the field that is already submitted"*) until 2026-09-10 this section stated that
+> the Description had been submitted and was deliberately frozen, and every decision about it
+> was made on that basis. The founder confirms the entry has **not been submitted**. Nothing was
+> filed, so there is nothing to amend and no post-submission category is needed; the field is
+> simply still being written. The freeze was the expensive part: it kept the single most
+> important field of the entry closed for two days on a premise nobody re-checked.
 >
 > **Three changes, all structural rather than new claims.** A cross-review with Codex found the
 > same fault twice over: the strongest fact this entry has was arriving too late to be read.
@@ -444,7 +446,7 @@ https://github.com/psyto/reckn/blob/687bb0f/zk-verdict/contracts/script/DeployAr
 ```
 
 > A **commit-pinned** permalink, not a branch one: line numbers move, and a reviewer who
-> opens this next week should see what it said when it was submitted. Line 36 is the
+> opens this next week should see what it said when the entry went in. Line 36 is the
 > USDC predeploy address the escrow settles against; line 37 is the chain id.
 >
 > Worth adding underneath if the field takes more than one:
