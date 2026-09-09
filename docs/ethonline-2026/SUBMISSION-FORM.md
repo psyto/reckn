@@ -25,6 +25,31 @@
 
 ---
 
+## Before you paste: four numbers move, and one is now closed
+
+**Re-run `bash scripts/submission-stats.sh` in the minute before you submit, and take the
+counts from its output rather than from this file.** Four figures here change with every
+commit and every test anyone adds, and each has already been wrong at least once in a
+document that was correct when it was written:
+
+| moves | as of 2026-09-10 | why it moves |
+|---|---|---|
+| commits in the window | **182** | every commit, from every window |
+| `forge zk-verdict/contracts` | **55** | Solidity tests. This is the "55" that was mistaken for the kit's count |
+| `npm packages/partner-kit` | **95** | it was 55, then 66, then 81, then 95 within a day |
+| the video's rows | 3:52, 21.2 MB, audio ✅ | only if the film is re-cut |
+
+**The audio row is closed.** It was the one round-1 criterion this entry failed, from the
+first draft of this file until 2026-09-10. `Reckn_ETHOnline_20260909.mp4`, human English
+voice-over, `check.sh` green on all six rows. Nothing else in the list below is a blocker
+that is not a button press.
+
+The pre-event baseline — 93 commits, ~140 tests, the per-crate counts — does **not** move
+and must not be re-measured: it describes the repository as it stood before the window
+opened, and `DISCLOSURE.md` states the same figures.
+
+---
+
 ## What the form currently gets wrong — twelve things, ranked
 
 Audited 2026-09-07 against the form's live contents. Ranked, because they are not equal.
@@ -397,7 +422,7 @@ only projects that pass it present live.
 |---|---|
 | **Video presentation and quality** | **Still the weakest, and still the only one not finished — but the footage now meets every rule except one.** `dashboard/media/reckn-demo-v3.mp4` is **2:41**, 1920×1080 16:9, faststart, and opens on the theft rather than on a title. What is missing is **audio**: the rule requires it, and it must be a **human** English voice — no TTS. The timed script is `dashboard/video/VO.md`. (Superseded numbers: this row once read "1:41 and silent", which was a cut ago.) |
 | **Project live demo quality** | Strong. <https://psyto.github.io/reckn/> needs no install, no wallet and no clone: the visitor's own browser compares the deployed bytecode against the source and reads four settlements off Arc testnet. |
-| **Proper use of git commit history** | Strong, and measured rather than asserted — **152 commits inside the event window as of 2026-09-08, spread across every day of it** (34 / 37 / 18 / 30 / 33 on 09-04 → 09-08, still rising), no squash, no `wip:` subjects, the largest touching 22 files. **Regenerate this line at freeze with `bash scripts/submission-stats.sh` — it said 129 until this morning, and a number that invites the reader to check it is the worst possible place to be stale.** This is the same evidence the Continuity boundary rests on, so it was going to be true anyway. **Ask git the way `PREFLIGHT.md` §1 does**: `--since=2026-09-04` answers 117, because it resolves the date in another timezone and drops twelve commits from the morning of 09-04 JST. |
+| **Proper use of git commit history** | Strong, and measured rather than asserted — **182 commits inside the event window as of 2026-09-10, spread across every day of it** (34 / 37 / 18 / 30 / 33 on 09-04 → 09-08, still rising), no squash, no `wip:` subjects, the largest touching 22 files. **Regenerate this line at freeze with `bash scripts/submission-stats.sh` — it said 129 until this morning, and a number that invites the reader to check it is the worst possible place to be stale.** This is the same evidence the Continuity boundary rests on, so it was going to be true anyway. **Ask git the way `PREFLIGHT.md` §1 does**: `--since=2026-09-04` answers 117, because it resolves the date in another timezone and drops twelve commits from the morning of 09-04 JST. |
 
 The one thing to protect between now and then is the video's **audio**, because it is the
 only place where the artefact still does not meet a stated rule. The full pre-submission
@@ -510,25 +535,29 @@ All three fields are required and none was uploaded.
 Screenshot 1 first if the order is preserved. It is the only one that shows the claim
 being *attacked*, and a judge scrolling a gallery gives the first image the most attention.
 
-## 12. Video page — **the cut on disk does not yet satisfy the requirements**
+## 12. Video page — **satisfied**
 
-**Measured 2026-09-08 by `bash dashboard/video/check.sh dashboard/media/reckn-demo-v3.mp4`,
-not typed. The rows moved since they were last written by hand — 3:04 became 2:55, 15.6 MB
-became 11.0 MB — and one row did not move at all.**
+**Measured 2026-09-10 by `bash dashboard/video/check.sh dashboard/media/Reckn_ETHOnline_20260909.mp4`, not typed.**
 
-| requirement | as it stands |
+| requirement | the submission |
 |---|---|
-| 2–4 minutes | **2:55** ✅ |
+| 2–4 minutes | **3:52** ✅ |
 | ≥ 720p | **1920 × 1080** ✅ |
 | 16:9 | **1.7778** ✅ |
 | opens at all | **faststart** ✅ — `moov` at the front |
-| moves at all | **7/8** distinct frames per 4 s at the least lively point ✅ |
-| size | **11.0 MB** |
-| **audio** | **STILL NO TRACK ✗** — the event requires audio. This has been the one outstanding row since it was first written, the cut has been re-recorded several times since, and it is **still the only thing standing between this video and the requirements**. `VO.md` holds the script; nobody has recorded it |
+| moves at all | **8/8** distinct frames per 4 s at the least lively point ✅ |
+| **audio** | **AAC, human English voice ✅** - mean -26.1 dB, peak -3.3 dB, no clipping, no silence over six seconds |
+| size | **21.2 MB** |
 
-> **This is the last hard blocker on the submission that is not a button press.** The form
-> can be sent, but a video that fails a stated requirement is a round-one loss on a criterion
-> nobody argues about. The checker's own closing line applies: *"whether the audio is speech,
+**Upload `Reckn_ETHOnline_20260909.mp4`.** Not `reckn-demo-v3.mp4` - that is the *silent
+master* the recorder produces, it is **3:57 and a different picture** (5.8 s longer, and the
+narrated cut runs ahead of it from about 3:10), and re-recording it will not reproduce the
+submission.
+
+> **The audio row was the last hard blocker and it is closed.** It arrived on 2026-09-10 with
+> its `moov` atom at the END, which would have made a judge watch a spinner rather than a film;
+> a stream copy moved it to the front without re-encoding a frame. The checker's own closing
+> line still applies and no tool replaces it: *"whether the audio is speech,
 > is clear, and carries no music is NOT checked here. Listen to it."*
 
 `bash dashboard/video/check.sh <file>` measures all of these. Two of the rows exist because
@@ -540,10 +569,12 @@ Both cuts are 1080p **16:9**, re-recorded on 2026-09-07 for exactly this reason:
 earlier one was 1280 × 800, which is 16:10, and putting that on a 16:9 timeline either
 letterboxes it or crops it — and cropping a screen recording eats the thing being shown.
 
-**Submit the `-v2` files.** The stills are matted — a smaller frame on a near-black
-surround with the caption in the dark below it — because printing type across the
-illustration needed a scrim to stay legible, and that scrim dimmed the picture it was
-printed on. The v1 files are kept on disk and are not the submission.
+**Submit `Reckn_ETHOnline_20260909.mp4`, and nothing else from this directory.** The line
+above said "submit the `-v2` files" until 2026-09-10, which was true for two days in September
+and has been wrong ever since; v2 and v1 are kept for comparison and neither is the entry. The
+stills inside the film are matted — a smaller frame on a near-black surround with the caption
+in the dark below it — because printing type across the illustration needed a scrim to stay
+legible, and that scrim dimmed the picture it was printed on.
 
 | file | use |
 |---|---|

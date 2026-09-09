@@ -35,7 +35,7 @@ event work.
 
 ## 2. New work during the event ✅ DONE
 
-**2026-09-04 onward: 152 commits** as of 2026-09-08, every day of the window, no squash,
+**2026-09-04 onward: 182 commits** as of 2026-09-10, every day of the window, no squash,
 largest commit 22 files:
 
 ```sh
@@ -96,7 +96,7 @@ the longer form it summarises.
 Round 1 scores "proper use of git commit history" and this is the strongest of the three
 criteria:
 
-- **152 commits and counting, every day of the window** (2026-09-08), no squash, no `wip:` subjects (`git log --format='%s' | grep -ci 'squash\|wip'` → 0) — regenerate with `bash scripts/submission-stats.sh`
+- **182 commits and counting, every day of the window** (2026-09-10), no squash, no `wip:` subjects (`git log --format='%s' | grep -ci 'squash\|wip'` → 0) — regenerate with `bash scripts/submission-stats.sh`
 - **Every failed specification review is committed** — 16 verdicts, 15 of them `CHANGES`
 - Commit messages carry the *reasoning and the defects found*, not just what changed
 - The Continuity boundary rests on this same history, so it had to be true anyway
