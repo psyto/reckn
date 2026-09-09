@@ -34,8 +34,19 @@
 import { keccak_256 } from "@noble/hashes/sha3";
 import { evmDealBinding, erc20BalanceSlot, type EvmDealTerms } from "./binding.js";
 import type { VerifierProfile } from "./profile.js";
+import { assertPredicateCanDecide, MAX_U256 } from "./predicate.js";
+import { createAccessList, getBlock, getChainId, type Rpc } from "./rpc.js";
+import { assertPredicateSlotIsTouched, captureWitness, touchedByCall, type WitnessAccount } from "./witness.js";
 
-export type Rpc = (method: string, params: unknown[]) => Promise<any>;
+// Re-exported so `reproduces` keeps its place in the package's public surface after moving to
+// predicate.ts. The name a consumer imports must not depend on where we filed the code.
+export { reproduces, assertPredicateCanDecide, NOTHING_HAPPENED, MAX_U256 } from "./predicate.js";
+
+export type { Rpc } from "./rpc.js";
+export {
+  EndpointCapabilityError, CallRevertedError, SimulationInconclusiveError, MalformedResponseError,
+  isMethodMissing,
+} from "./rpc.js";
 
 export interface BuildTermsArgs {
   profile: VerifierProfile;
@@ -60,12 +71,7 @@ export interface BuildTermsArgs {
   blockNumber?: bigint;
 }
 
-export interface WitnessAccount {
-  address: string; balance: string; nonce: string;
-  storageHash: string; codeHash: string; code: string;
-  accountProof: string[];
-  storageProof: Array<{ key: string; value: string; proof: string[] }>;
-}
+export type { WitnessAccount } from "./witness.js";
 
 export interface TermsBundle {
   terms: EvmDealTerms;
@@ -85,25 +91,6 @@ const hexToBigInt = (h: string): bigint => BigInt(h);
 const pad32 = (v: bigint): string => "0x" + v.toString(16).padStart(64, "0");
 const lc = (s: string) => s.toLowerCase();
 
-/**
- * `delta_outcome`, transcribed from `zk-verdict/lib/src/lib.rs:36` — the **only** predicate the
- * EVM guest has. `Reproduced` iff `post - pre`, saturating at zero, lies in `[min, max]`.
- *
- * It is transcribed rather than described because the two refusals below are *evaluations of
- * the guest's own rule*, not comparisons against a magic constant. `min === 0n` happens to be
- * the answer today; asking the predicate means a differently-shaped one still has to answer.
- *
- * Saturation is why a *decrease* is delta 0 rather than a wrapped enormous number, and so why
- * the default `max` of 2^256-1 does not quietly admit every losing execution.
- */
-export function reproduces(pre: bigint, post: bigint, min: bigint, max: bigint): boolean {
-  const delta = post > pre ? post - pre : 0n;
-  return delta >= min && delta <= max;
-}
-
-/** The empty execution: nothing ran, so the slot ends where it started. */
-const NOTHING_HAPPENED = { pre: 0n, post: 0n };
-
 export async function buildTerms(args: BuildTermsArgs): Promise<TermsBundle> {
   const { profile, rpc } = args;
 
@@ -117,31 +104,13 @@ export async function buildTerms(args: BuildTermsArgs): Promise<TermsBundle> {
     );
   }
 
-  // (4) The predicate has to be capable of deciding. Two ways it is not, both of which fund
-  // cleanly and both of which are only discovered once someone is owed money. Checked here,
-  // before a single request goes out, because neither depends on the chain.
+  // (4) The predicate has to be capable of deciding — see predicate.ts for the two ways it
+  // cannot be. Asked here, before a single request goes out, because neither depends on the chain.
   const min = args.check.min;
-  const max = args.check.max ?? (2n ** 256n - 1n);
-  if (max < min) {
-    throw new Error(
-      `this predicate cannot be satisfied by any execution: max (${max}) is below min (${min}).\n` +
-      `The guest would return Failed for every replay, including a perfect one, so the seller ` +
-      `would work and the money would sit until the buyer's 30-day refund. No terms were produced.`,
-    );
-  }
-  if (reproduces(NOTHING_HAPPENED.pre, NOTHING_HAPPENED.post, min, max)) {
-    throw new Error(
-      `this predicate is satisfied by doing nothing, so it decides nothing.\n` +
-      `The guest measures the increase the plan itself caused, saturating at zero. With ` +
-      `min = ${min} the empty execution scores a delta of 0 and settles as Reproduced: the ` +
-      `seller is paid in full for no work, and it is the BUYER who loses. Set a floor the work ` +
-      `must clear.\n` +
-      `If what you wanted was a cap, note this guest has one check, and a delta check with no ` +
-      `floor cannot express "at most X" as a condition for payment. No terms were produced.`,
-    );
-  }
+  const max = args.check.max ?? MAX_U256;
+  assertPredicateCanDecide(min, max);
 
-  const onChainId = Number(await rpc("eth_chainId", []));
+  const onChainId = await getChainId(rpc);
   if (onChainId !== profile.chain.chainId) {
     throw new Error(`the endpoint answers chain ${onChainId}, not the profile's ${profile.chain.chainId}`);
   }
@@ -149,9 +118,8 @@ export async function buildTerms(args: BuildTermsArgs): Promise<TermsBundle> {
   // Pin the block by NUMBER at once. Everything after this reads the same block, so nothing
   // can shift underneath the bundle mid-build.
   const tag = args.blockNumber !== undefined ? "0x" + args.blockNumber.toString(16) : "latest";
-  const block = await rpc("eth_getBlockByNumber", [tag, false]);
-  if (!block) throw new Error(`no block at ${tag}`);
-  const blockNumber: string = block.number;
+  const block = await getBlock(rpc, tag);
+  const blockNumber = block.number;
 
   const value = args.value ?? 0n;
   const gasLimit = args.gasLimit ?? 500_000n;
@@ -166,105 +134,20 @@ export async function buildTerms(args: BuildTermsArgs): Promise<TermsBundle> {
     gasPrice: "0x" + gasPrice.toString(16),
   };
 
-  // (2) Simulate. `eth_createAccessList` executes the call and reports what it touched, so
-  // one request both proves the call succeeds and enumerates the witness.
-  let access: any;
-  try {
-    access = await rpc("eth_createAccessList", [tx, blockNumber]);
-  } catch (e) {
-    const msg = (e as Error).message ?? String(e);
-    // Distinguish "your call is bad" from "this endpoint cannot answer the question". They
-    // are opposite problems and the first message blamed the caller for both. Measured
-    // 2026-09-09: Arc's public RPC (rpc.testnet.arc.io) supports NEITHER eth_createAccessList
-    // NOR eth_getProof, so `reckn terms` cannot run against it at all — while Tempo's
-    // (rpc.moderato.tempo.xyz) supports both. That is a property of the endpoint, not of the
-    // chain and not of your transaction, and saying otherwise sends people to fix the wrong thing.
-    // JSON-RPC's -32601 is the reliable signal; the text is not, and every node words it
-    // differently ("method not supported" on Arc, "the method X does not exist" on geth-family
-    // nodes, "Method not found" per the spec). Both are checked, and when NEITHER matches this
-    // does not guess — see below. The first version of this pattern missed "does not exist",
-    // which is the most common wording, and a test caught it.
-    const code = (e as { code?: number } | undefined)?.code;
-    if (code === -32601 || /(-32601)|method[^\n]*(not (found|supported|available)|does not exist|unsupported)/i.test(msg)) {
-      throw new Error(
-        `this endpoint cannot simulate: it does not implement eth_createAccessList.\n` +
-        `  endpoint  ${msg}\n` +
-        `Nothing is wrong with your call — the node will not answer the question. Terms need an ` +
-        `endpoint that serves eth_createAccessList AND eth_getProof; a node you run yourself, or ` +
-        `an archive provider, will. Measured 2026-09-09: Arc's public RPC serves neither; ` +
-        `Tempo's Moderato RPC serves both.\n` +
-        `What still works without them: the deal BINDING commits only stateRoot, env, check and ` +
-        `plan, so it needs one eth_getBlockByNumber. You can compute and fund terms from this ` +
-        `endpoint; what you cannot do here is prove the call succeeds, or capture the witness ` +
-        `the prover will need.`,
-      );
-    }
-    // Not a recognised "no such method", and not the structured revert the node returns in
-    // `access.error` either. So it is genuinely unknown, and this says so rather than picking
-    // the explanation that blames the reader.
-    throw new Error(
-      `the simulation at block ${blockNumber} did not complete, and this cannot tell you why.\n` +
-      `  raw error  ${msg}\n` +
-      `It is one of two unrelated things: your call fails at the anchor, or this endpoint will ` +
-      `not answer. Terms need an endpoint serving eth_createAccessList and eth_getProof — check ` +
-      `that first, because it is the cheaper of the two to rule out. No terms were produced.`,
-    );
-  }
-  if (access?.error) {
-    throw new Error(
-      `the call REVERTS at block ${blockNumber}: ${access.error}\n` +
-      `Terms were not produced. Fix the call, or pick an anchor where it succeeds.`,
-    );
-  }
+  // (2) Simulate. One request both proves the call succeeds at the anchor and enumerates the
+  // witness. The three ways this fails — endpoint lacks the method, the call reverts, or we
+  // cannot tell — are classified in rpc.ts, because telling them apart is transport knowledge
+  // and not something a terms builder should carry.
+  const access = await createAccessList(rpc, tx, blockNumber);
 
-  const touches = new Map<string, Set<string>>();
-  for (const e of access.accessList ?? []) {
-    const set = touches.get(lc(e.address)) ?? new Set<string>();
-    for (const k of e.storageKeys ?? []) set.add(lc(k));
-    touches.set(lc(e.address), set);
-  }
-  for (const a of [args.caller, args.target, block.miner]) {
-    if (a && !touches.has(lc(a))) touches.set(lc(a), new Set());
-  }
+  const touches = touchedByCall(access.accessList, [args.caller, args.target, block.miner]);
 
-  // (5) The predicate must be about something this plan actually moves. The simulation has
-  // just enumerated every slot the call touches, so this costs nothing and closes the gap
-  // between "the slot I meant" and "the slot I computed" — a gap that nothing else in the
-  // pipeline can see: `erc20BalanceSlot` returns a well-formed keccak for a wrong slot index
-  // just as happily as for the right one, funding succeeds, and the guest then measures a
-  // slot no execution writes. Delta is zero forever, the verdict is Failed forever, and the
-  // seller does the work and is not paid.
+  // (5) The predicate must be about something this plan actually moves — see witness.ts.
   const checkSlot = erc20BalanceSlot(args.check.holder, args.check.balancesSlotIndex);
-  const touchedByToken = touches.get(lc(args.check.token));
-  if (!touchedByToken?.has(lc(checkSlot))) {
-    throw new Error(
-      `the call never touches the slot this predicate measures, so no execution of this plan ` +
-      `can satisfy it.\n` +
-      `  predicate slot  ${checkSlot}\n` +
-      `                  (holder ${args.check.holder}, balances slot index ${args.check.balancesSlotIndex})\n` +
-      `  token           ${args.check.token}\n` +
-      `  slots the call actually touches on that token: ` +
-      `${touchedByToken && touchedByToken.size ? [...touchedByToken].join(", ") : "(none)"}\n` +
-      `The two usual causes: the balances mapping is not at index ${args.check.balancesSlotIndex} ` +
-      `for this token (that default is Circle's FiatToken layout, not a standard), or the holder ` +
-      `is not the address this call credits. The guest would prove a delta of zero and return ` +
-      `Failed on a correct replay, so the seller would work and not be paid. No terms were produced.`,
-    );
-  }
+  assertPredicateSlotIsTouched(touches, { ...args.check, slot: checkSlot });
 
-  // (3) Capture the witness now. A public endpoint will not serve these proofs for this block
-  // later; "we can fetch it when we prove" is how a bundle becomes unprovable.
-  const witness: WitnessAccount[] = [];
-  for (const [address, slots] of [...touches].sort(([a], [b]) => (a < b ? -1 : 1))) {
-    const proof = await rpc("eth_getProof", [address, [...slots].sort(), blockNumber]);
-    const code = await rpc("eth_getCode", [address, blockNumber]);
-    witness.push({
-      address, balance: proof.balance, nonce: proof.nonce,
-      storageHash: proof.storageHash, codeHash: proof.codeHash, code,
-      accountProof: proof.accountProof,
-      storageProof: (proof.storageProof ?? []).map((s: any) => ({ key: s.key, value: s.value, proof: s.proof })),
-    });
-  }
+  // (3) Capture the witness now, in the same run, so the bundle is self-contained.
+  const witness: WitnessAccount[] = await captureWitness(rpc, touches, blockNumber);
 
   const terms: EvmDealTerms = {
     stateRoot: block.stateRoot,
