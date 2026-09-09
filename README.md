@@ -6,11 +6,8 @@
 Agents may choose where work happens. Assets remain native.
 Reproducible execution decides payout.
 
-*`building` — and not a word stronger. There is no independent adoption, no second
-implementation and no standards body; [`docs/messaging.md`](docs/messaging.md) names the three
-things that would have to be true before the claim could be raised, and
-[`docs/positioning.md`](docs/positioning.md#what-a-standard-would-have-to-fix) names the five
-boundaries a standard would have to fix — including the one that is still open.*
+*`building`, not `is` — [`docs/positioning.md`](docs/positioning.md#what-a-standard-would-have-to-fix)
+names the five boundaries a standard would have to fix, and marks the one that is still open.*
 
 An escrow that releases only when the work it was funded against can be **re-executed and
 reproduced** — and refunds the buyer when it cannot. The money never leaves the chain it was
