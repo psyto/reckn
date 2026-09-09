@@ -28,7 +28,10 @@ const terms = {
   stateRoot: "0x" + "11".repeat(32),
   env: { chainId: 5042002n, specId: 17, blockNumber: 1n, timestamp: 2n, baseFee: 3n,
     blockGasLimit: 4n, coinbase: "0x" + "c0".repeat(20), prevrandao: "0x" + "22".repeat(32) },
-  check: { address: TOKEN, slot: "0x" + "33".repeat(32), min: "0x" + "00".repeat(32), max: "0x" + "ff".repeat(32) },
+  // min was `00`*32 until 2026-09-09 — a floor of zero, which is the very predicate
+  // `createDeal` now refuses. The fixture had quietly encoded the defect it was meant to
+  // be a neutral background for.
+  check: { address: TOKEN, slot: "0x" + "33".repeat(32), min: "0x" + "00".repeat(31) + "01", max: "0x" + "ff".repeat(32) },
   plan: { caller: "0x" + "ca".repeat(20), target: "0x" + "77".repeat(20),
     value: "0x" + "00".repeat(32), gasLimit: 1n, calldata: "0x" },
 };
@@ -209,4 +212,42 @@ test("verifyProfileAgainstChain reports a verifier with no code at all", async (
   const r = await verifyProfileAgainstChain(baseProfile(), rpcFor({ code: "0x" }), keccak256 as never);
   assert.equal(r.ok, false);
   assert.ok(r.findings.some((f) => f.field === "verifier" && /no code/.test(f.message)));
+});
+
+// ───────────────────────────────────── a predicate that cannot decide ──
+// The harm here runs the other way from every refusal above: nothing reverts, the deal funds
+// and settles, and the loser is the BUYER, who pays in full for an execution that did nothing.
+
+test("createDeal refuses to fund a predicate satisfied by doing nothing", async () => {
+  const c = clients();
+  const vacuous = { ...terms, check: { ...terms.check, min: "0x" + "00".repeat(32) } };
+  await assert.rejects(
+    () => createDeal({ ...(args(c) as object), terms: vacuous } as never),
+    /satisfied by doing nothing/,
+  );
+  assert.equal(c.writes.length, 0, "nothing may be sent when the predicate decides nothing");
+});
+
+test("createDeal refuses a band no execution can satisfy, so the seller is not made to work for nothing", async () => {
+  const c = clients();
+  const empty = {
+    ...terms,
+    check: { ...terms.check, min: "0x" + "00".repeat(31) + "05", max: "0x" + "00".repeat(31) + "04" },
+  };
+  await assert.rejects(
+    () => createDeal({ ...(args(c) as object), terms: empty } as never),
+    /no execution satisfies this predicate/,
+  );
+  assert.equal(c.writes.length, 0);
+});
+
+test("the refusal is on the funding path itself, not merely on the terms builder", async () => {
+  // Terms can be hand-written, carried from an older version, or made by another tool. If the
+  // only check lived in `buildTerms`, this deal would fund. It reaches `createDeal` directly.
+  const c = clients();
+  const vacuous = { ...terms, check: { ...terms.check, min: "0x" + "00".repeat(32) } };
+  await assert.rejects(() => createDeal({ ...(args(c) as object), terms: vacuous } as never));
+  // and the honest control: the same call with a real floor gets past the predicate gate.
+  const ok = await createDeal(args(c));
+  assert.ok(ok.dealBinding.startsWith("0x"));
 });

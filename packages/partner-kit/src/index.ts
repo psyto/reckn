@@ -12,6 +12,7 @@ import { keccak256, toBytes } from "viem";
 import { escrowAbi, erc20Abi, DealState, Outcome, dealStateName } from "./escrow.js";
 import { evmDealBinding, erc20BalanceSlot, type EvmDealTerms } from "./binding.js";
 import { assertValidProfile, verifyProfileAgainstChain, type VerifierProfile } from "./profile.js";
+import { reproduces } from "./terms.js";
 
 export * from "./binding.js";
 export * from "./profile.js";
@@ -64,6 +65,26 @@ export async function createDeal(args: CreateDealArgs): Promise<CreateDealResult
       `profile "${profile.id}" adjudicates ${profile.vm}, and these terms are EVM. ` +
       `One verifier is bound to one guest, so a proof from the EVM guest cannot settle there. ` +
       `Use a profile with "vm": "evm".`,
+    );
+  }
+
+  // `buildTerms` refuses a predicate that decides nothing, but terms can be written by hand,
+  // carried from an older version, or produced by someone else's tool. This is where the money
+  // actually leaves, so the question is asked again here rather than trusted upstream — a pin
+  // on one side of a boundary is not a pin.
+  const pMin = BigInt(terms.check.min);
+  const pMax = BigInt(terms.check.max);
+  if (pMax < pMin) {
+    throw new Error(
+      `refusing to fund: no execution satisfies this predicate (max ${pMax} < min ${pMin}), so ` +
+      `every replay returns Failed and the seller cannot be paid for work they actually did.`,
+    );
+  }
+  if (reproduces(0n, 0n, pMin, pMax)) {
+    throw new Error(
+      `refusing to fund: this predicate is satisfied by doing nothing (min = ${pMin}), so the ` +
+      `seller can take the ${amount} you are about to escrow without performing the work. ` +
+      `Set a floor the work must clear.`,
     );
   }
 

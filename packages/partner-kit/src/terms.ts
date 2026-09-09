@@ -5,8 +5,9 @@
  * settle, and then had to read the `keeper` crate and assemble an anchor, a plan and a
  * predicate by hand. The API was never the barrier; this was.
  *
- * **Three things it refuses to let you get wrong**, because each of them produces a deal that
- * opens cleanly and can never settle — which is worse than an error:
+ * **Four things it refuses to let you get wrong.** Each produces a deal that opens cleanly and
+ * then settles wrongly — or never settles at all — which is worse than an error, because the
+ * cost lands after the money has moved:
  *
  *   1. **The hardfork.** `specId` is committed into the binding. Choose a different one and
  *      you get a valid-looking hash that no proof from this guest can match, with nothing
@@ -18,6 +19,15 @@
  *   3. **An anchor that ages out.** Public endpoints do not serve historical `eth_getProof`
  *      (measured on both Arc and Tempo). Capture the witness later and it is simply gone. So
  *      the witness is captured *now*, in the same run, and the bundle is self-contained.
+ *   4. **A predicate that decides nothing.** A band the *empty* execution already satisfies
+ *      pays the seller for doing no work, and a band *no* execution can satisfy makes the
+ *      seller work for a payment that can never arrive. Both are asked as questions about the
+ *      guest's predicate rather than as comparisons against a constant — see `reproduces`.
+ *   5. **A predicate aimed at a slot the plan never moves.** The slot is computed from a
+ *      `balancesSlotIndex` that defaults to Circle's layout and a holder the caller supplies,
+ *      and neither is checked by anything else. Point it one slot wrong and the bundle still
+ *      builds, still binds, and still funds — and then proves a delta of zero forever. The
+ *      simulation already knows every slot the call touches, so it is asked.
  *
  * No key, no signature, nothing sent: every call here is `eth_`-read-only.
  */
@@ -75,6 +85,25 @@ const hexToBigInt = (h: string): bigint => BigInt(h);
 const pad32 = (v: bigint): string => "0x" + v.toString(16).padStart(64, "0");
 const lc = (s: string) => s.toLowerCase();
 
+/**
+ * `delta_outcome`, transcribed from `zk-verdict/lib/src/lib.rs:36` — the **only** predicate the
+ * EVM guest has. `Reproduced` iff `post - pre`, saturating at zero, lies in `[min, max]`.
+ *
+ * It is transcribed rather than described because the two refusals below are *evaluations of
+ * the guest's own rule*, not comparisons against a magic constant. `min === 0n` happens to be
+ * the answer today; asking the predicate means a differently-shaped one still has to answer.
+ *
+ * Saturation is why a *decrease* is delta 0 rather than a wrapped enormous number, and so why
+ * the default `max` of 2^256-1 does not quietly admit every losing execution.
+ */
+export function reproduces(pre: bigint, post: bigint, min: bigint, max: bigint): boolean {
+  const delta = post > pre ? post - pre : 0n;
+  return delta >= min && delta <= max;
+}
+
+/** The empty execution: nothing ran, so the slot ends where it started. */
+const NOTHING_HAPPENED = { pre: 0n, post: 0n };
+
 export async function buildTerms(args: BuildTermsArgs): Promise<TermsBundle> {
   const { profile, rpc } = args;
 
@@ -85,6 +114,30 @@ export async function buildTerms(args: BuildTermsArgs): Promise<TermsBundle> {
     throw new Error(
       `profile "${profile.id}" does not pin specId. It is committed into every binding, so a ` +
       `guess would produce a deal that opens and can never settle. Fix the profile.`,
+    );
+  }
+
+  // (4) The predicate has to be capable of deciding. Two ways it is not, both of which fund
+  // cleanly and both of which are only discovered once someone is owed money. Checked here,
+  // before a single request goes out, because neither depends on the chain.
+  const min = args.check.min;
+  const max = args.check.max ?? (2n ** 256n - 1n);
+  if (max < min) {
+    throw new Error(
+      `this predicate cannot be satisfied by any execution: max (${max}) is below min (${min}).\n` +
+      `The guest would return Failed for every replay, including a perfect one, so the seller ` +
+      `would work and the money would sit until the buyer's 30-day refund. No terms were produced.`,
+    );
+  }
+  if (reproduces(NOTHING_HAPPENED.pre, NOTHING_HAPPENED.post, min, max)) {
+    throw new Error(
+      `this predicate is satisfied by doing nothing, so it decides nothing.\n` +
+      `The guest measures the increase the plan itself caused, saturating at zero. With ` +
+      `min = ${min} the empty execution scores a delta of 0 and settles as Reproduced: the ` +
+      `seller is paid in full for no work, and it is the BUYER who loses. Set a floor the work ` +
+      `must clear.\n` +
+      `If what you wanted was a cap, note this guest has one check, and a delta check with no ` +
+      `floor cannot express "at most X" as a condition for payment. No terms were produced.`,
     );
   }
 
@@ -142,6 +195,31 @@ export async function buildTerms(args: BuildTermsArgs): Promise<TermsBundle> {
     if (a && !touches.has(lc(a))) touches.set(lc(a), new Set());
   }
 
+  // (5) The predicate must be about something this plan actually moves. The simulation has
+  // just enumerated every slot the call touches, so this costs nothing and closes the gap
+  // between "the slot I meant" and "the slot I computed" — a gap that nothing else in the
+  // pipeline can see: `erc20BalanceSlot` returns a well-formed keccak for a wrong slot index
+  // just as happily as for the right one, funding succeeds, and the guest then measures a
+  // slot no execution writes. Delta is zero forever, the verdict is Failed forever, and the
+  // seller does the work and is not paid.
+  const checkSlot = erc20BalanceSlot(args.check.holder, args.check.balancesSlotIndex);
+  const touchedByToken = touches.get(lc(args.check.token));
+  if (!touchedByToken?.has(lc(checkSlot))) {
+    throw new Error(
+      `the call never touches the slot this predicate measures, so no execution of this plan ` +
+      `can satisfy it.\n` +
+      `  predicate slot  ${checkSlot}\n` +
+      `                  (holder ${args.check.holder}, balances slot index ${args.check.balancesSlotIndex})\n` +
+      `  token           ${args.check.token}\n` +
+      `  slots the call actually touches on that token: ` +
+      `${touchedByToken && touchedByToken.size ? [...touchedByToken].join(", ") : "(none)"}\n` +
+      `The two usual causes: the balances mapping is not at index ${args.check.balancesSlotIndex} ` +
+      `for this token (that default is Circle's FiatToken layout, not a standard), or the holder ` +
+      `is not the address this call credits. The guest would prove a delta of zero and return ` +
+      `Failed on a correct replay, so the seller would work and not be paid. No terms were produced.`,
+    );
+  }
+
   // (3) Capture the witness now. A public endpoint will not serve these proofs for this block
   // later; "we can fetch it when we prove" is how a bundle becomes unprovable.
   const witness: WitnessAccount[] = [];
@@ -170,9 +248,9 @@ export async function buildTerms(args: BuildTermsArgs): Promise<TermsBundle> {
     },
     check: {
       address: args.check.token,
-      slot: erc20BalanceSlot(args.check.holder, args.check.balancesSlotIndex),
-      min: pad32(args.check.min),
-      max: pad32(args.check.max ?? (2n ** 256n - 1n)),
+      slot: checkSlot,
+      min: pad32(min),
+      max: pad32(max),
     },
     plan: {
       caller: args.caller, target: args.target, value: pad32(value),

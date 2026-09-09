@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildTerms, evmDealBinding } from "../dist/index.js";
+import { buildTerms, evmDealBinding, reproduces, erc20BalanceSlot } from "../dist/index.js";
+import { readFileSync } from "node:fs";
 import type { VerifierProfile } from "../dist/profile.js";
 
 /**
@@ -29,19 +30,25 @@ const BLOCK = {
   miner: "0x" + "c0".repeat(20), mixHash: "0x" + "22".repeat(32),
 };
 
-function rpcFor(over: Partial<{ chainId: number; accessError: string; throwOnSim: string }> = {}) {
+/** The slot the predicate measures. The mock below MUST touch it: a call that does not is
+ *  precisely the bundle `buildTerms` now refuses, so a fixture that omitted it was quietly
+ *  asserting the happy path over an unprovable deal. */
+const CHECK_SLOT = erc20BalanceSlot(CALLER, 9);
+
+function rpcFor(over: Partial<{ chainId: number; accessError: string; throwOnSim: string; touchSlot: string }> = {}) {
   return async (method: string, params: unknown[]) => {
     if (method === "eth_chainId") return "0x" + (over.chainId ?? 5042002).toString(16);
     if (method === "eth_getBlockByNumber") return BLOCK;
     if (method === "eth_createAccessList") {
       if (over.throwOnSim) throw new Error(over.throwOnSim);
       if (over.accessError) return { error: over.accessError, gasUsed: "0x0", accessList: [] };
-      return { gasUsed: "0x1234", accessList: [{ address: TOKEN, storageKeys: ["0x" + "01".repeat(32)] }] };
+      return { gasUsed: "0x1234", accessList: [{ address: TOKEN, storageKeys: [over.touchSlot ?? CHECK_SLOT] }] };
     }
     if (method === "eth_getProof") {
+      const keys = (params as [string, string[], string])[1] ?? [];
       return { balance: "0x0", nonce: "0x0", storageHash: "0x" + "55".repeat(32),
         codeHash: "0x" + "66".repeat(32), accountProof: ["0xabcd"],
-        storageProof: [{ key: "0x" + "01".repeat(32), value: "0x0", proof: ["0xef"] }] };
+        storageProof: keys.map((k) => ({ key: k, value: "0x0", proof: ["0xef"] })) };
     }
     if (method === "eth_getCode") return "0x6000";
     throw new Error(`unexpected ${method}`);
@@ -112,10 +119,45 @@ test("the binding it returns is the one evmDealBinding computes from the same te
 });
 
 test("the predicate points at the holder's balance slot, not somewhere else", async () => {
+  // This asserted `slot.length === 66` until 2026-09-09, which every keccak satisfies —
+  // including the wrong one. It measured the shape of the answer and never the answer.
   const b = await buildTerms(args());
   assert.equal(b.terms.check.address, TOKEN);
   assert.equal(BigInt(b.terms.check.min), 100n);
-  assert.equal(b.terms.check.slot.length, 66);
+  assert.equal(b.terms.check.slot, erc20BalanceSlot(CALLER, 9));
+  // and it must actually depend on both inputs, or the equality above proves nothing
+  assert.notEqual(erc20BalanceSlot(CALLER, 9), erc20BalanceSlot(CALLER, 0));
+  assert.notEqual(erc20BalanceSlot(CALLER, 9), erc20BalanceSlot(TARGET, 9));
+});
+
+test("REFUSES a predicate aimed at a slot the call never touches", async () => {
+  // The default `balancesSlotIndex` of 9 is Circle's layout, not a standard. Aim it at a
+  // token whose balances live at slot 0 and everything downstream still works: the slot is a
+  // well-formed keccak, the binding is well-formed, funding succeeds — and the guest then
+  // measures a slot no execution writes, returning Failed on a correct replay forever.
+  await assert.rejects(
+    () => buildTerms(args({ check: { token: TOKEN, holder: CALLER, balancesSlotIndex: 0, min: 100n } })),
+    /never touches the slot this predicate measures[\s\S]*seller would work and not be paid/,
+  );
+});
+
+test("the refusal reports the slots the call did touch, so the right index is recoverable", async () => {
+  // A refusal that only says no leaves the partner guessing at 2^256 slots. It has the
+  // access list in hand; the correct index is one comparison away.
+  await assert.rejects(
+    () => buildTerms(args({ check: { token: TOKEN, holder: CALLER, balancesSlotIndex: 0, min: 100n } })),
+    new RegExp(CHECK_SLOT),
+  );
+});
+
+test("the predicate slot is carried into the witness with a storage proof", async () => {
+  // Refusing the untouched case is only half of it: when the slot IS touched, the bundle must
+  // actually prove it, or the guest cannot read `pre` and the deal is unprovable anyway.
+  const b = await buildTerms(args());
+  const tokenAcct = b.witness.find((w) => w.address === TOKEN.toLowerCase());
+  assert.ok(tokenAcct, "the token must be in the witness");
+  const proven = tokenAcct.storageProof.map((s) => s.key);
+  assert.ok(proven.includes(b.terms.check.slot), "the predicate slot must carry a proof");
 });
 
 test("provenance says what was and was not established", async () => {
@@ -123,4 +165,69 @@ test("provenance says what was and was not established", async () => {
   assert.match(b.provenance.note, /SIMULATED/);
   assert.match(b.provenance.note, /not a promise it will satisfy the floor/);
   assert.match(b.provenance.note, /still needs the SP1 toolchain/);
+});
+
+// ─────────────────────────── the predicate has to be able to decide ──
+/**
+ * `reproduces` is a fourth transcription of guest logic, so it is checked the way the other
+ * three are: against what the guest ACTUALLY COMMITTED, not against review. Each fixture below
+ * carries `pre`, `post`, `min_delta`, `max_delta` and the `outcome` the guest produced inside
+ * SP1 for exactly those numbers.
+ *
+ * `reexec-falserelease-fixture` is the one that earns its place: pre = 2^64 and post = 2^64-1,
+ * a DECREASE, with `max` wide open. Transcribe the subtraction as wrapping instead of
+ * saturating and the delta becomes enormous, lands inside the band, and this returns
+ * Reproduced where the guest returned Failed. The test fails.
+ */
+const FIXTURES = [
+  "groth16-fixture.json",
+  "reexec-groth16-fixture.json",
+  "reexec-falserelease-fixture.json",
+  "svm-groth16-fixture.json",
+  "svm-failed-fixture.json",
+];
+
+test("reproduces() agrees with every verdict the guest actually committed", () => {
+  const dir = new URL("../../../zk-verdict/contracts/src/fixtures/", import.meta.url);
+  const seen = new Set<number>();
+  for (const name of FIXTURES) {
+    const f = JSON.parse(readFileSync(new URL(name, dir), "utf8"));
+    const got = reproduces(BigInt(f.pre), BigInt(f.post), BigInt(f.min_delta), BigInt(f.max_delta));
+    const guest = f.outcome === 0;
+    assert.equal(got, guest, `${name}: guest said ${guest ? "Reproduced" : "Failed"}, we said ${got}`);
+    seen.add(f.outcome);
+  }
+  // A row set that only ever says one thing would pass for a function stuck on that answer.
+  assert.deepEqual([...seen].sort(), [0, 1], "the fixtures must exercise both verdicts");
+});
+
+test("buildTerms refuses a floor of zero, and says who loses", async () => {
+  await assert.rejects(
+    () => buildTerms(args({ check: { token: TOKEN, holder: CALLER, balancesSlotIndex: 9, min: 0n } })),
+    /satisfied by doing nothing[\s\S]*BUYER/,
+  );
+});
+
+test("buildTerms refuses a band no execution can satisfy", async () => {
+  await assert.rejects(
+    () => buildTerms(args({ check: { token: TOKEN, holder: CALLER, balancesSlotIndex: 9, min: 10n, max: 9n } })),
+    /cannot be satisfied by any execution/,
+  );
+});
+
+test("a predicate that decides nothing is refused before a single request goes out", async () => {
+  // Not cosmetic: it is the difference between a local mistake costing nothing and costing an
+  // eth_getProof sweep. The rpc here THROWS on any call, so reaching one fails the test.
+  let calls = 0;
+  const rpc = async (m: string) => { calls++; throw new Error(`must not reach the network: ${m}`); };
+  await assert.rejects(
+    () => buildTerms(args({ rpc, check: { token: TOKEN, holder: CALLER, balancesSlotIndex: 9, min: 0n } })),
+    /satisfied by doing nothing/,
+  );
+  assert.equal(calls, 0);
+});
+
+test("a floor of exactly one is accepted — the smallest predicate that decides anything", async () => {
+  const b = await buildTerms(args({ check: { token: TOKEN, holder: CALLER, balancesSlotIndex: 9, min: 1n } }));
+  assert.equal(BigInt(b.terms.check.min), 1n);
 });

@@ -181,8 +181,9 @@ package's `evmDealBinding` produces — cannot settle there today. Use `arc-test
 
 ## What `reckn terms` refuses to do
 
-Three mistakes here produce a deal that **opens cleanly and can never settle**, which is worse
-than an error because you find out after paying. It refuses all three:
+Five mistakes here produce a deal that **opens cleanly and then settles wrongly** — or never
+settles at all. Each is worse than an error, because the cost lands after the money has moved.
+It refuses all five:
 
 1. **A call that reverts at the anchor.** The plan is replayed against the committed prestate;
    if it fails there, the verdict is `Failed` and the buyer pays to be told the work did not
@@ -193,6 +194,18 @@ than an error because you find out after paying. It refuses all three:
 3. **An anchor that ages out.** Public endpoints do not serve historical `eth_getProof`
    (measured on Arc and on Tempo). Capture the witness later and it is gone, so it is captured
    in the same run and the bundle is self-contained.
+4. **A predicate that decides nothing.** A floor of zero is met by doing nothing: the guest
+   measures the increase *the plan itself caused*, so the empty execution scores zero, settles
+   as `Reproduced`, and the seller is paid in full for no work — the **buyer** loses. The
+   mirror case, a band no execution can satisfy, makes the seller work for a payment that can
+   never arrive. Both are refused, and refused again at `createDeal`, because terms can be
+   hand-written and the funding call is where the money actually leaves.
+5. **A predicate aimed at a slot the plan never moves.** `--slot-index` defaults to **9**,
+   which is Circle's FiatToken layout and not a standard. Point it at a token whose balances
+   live at slot 0 and everything still works — the slot is a well-formed hash, the binding is
+   well-formed, funding succeeds — and then the guest measures a slot nothing writes and
+   returns `Failed` forever. The simulation already lists every slot the call touches, so the
+   two are compared, and the refusal prints the slots it did touch.
 
 Measured on a real mainnet Uniswap v3 swap: block pinned, call simulated at **118,183 gas**,
 **7 accounts and 12 storage slots** captured, binding emitted. Sending no `value` — so the
@@ -217,7 +230,7 @@ that the Rust already agrees with the value the guest committed for the shipped 
 fixture, refusing to write one otherwise. So the expected value is the guest's.
 
 ```bash
-cd packages/partner-kit && npm test              # 30 tests, no chain needed
+cd packages/partner-kit && npm test              # 66 tests, no chain needed
 cd packages/partner-kit/examples/starter && npm test   # the three paths, end to end (needs anvil + forge)
 ```
 
