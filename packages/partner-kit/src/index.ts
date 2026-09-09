@@ -143,6 +143,16 @@ export interface Preflight {
   verifierCodeHashOnChain: Hex;
   verifierCodeHashMatches: boolean;
   verdictProgramVKeyOnChain?: Hex | undefined;
+  /**
+   * What the TOKEN says about the people this deal would pay. A valid proof can authorise a
+   * payout that the token then refuses, which leaves the deal Funded until the deadline.
+   */
+  tokenPolicy: {
+    probed: string[];
+    sellerBlocked?: boolean | undefined;
+    buyerBlocked?: boolean | undefined;
+    paused?: boolean | undefined;
+  };
   dealBinding: Hex;
   fundedAt: bigint;
   refundOpensAt: bigint;
@@ -188,6 +198,42 @@ export async function sellerPreflight(opts: {
     } catch { /* a verifier need not expose it; absence is not a fault */ }
   }
 
+  /**
+   * Probe the token for the policies that can block a payout a proof already authorised.
+   *
+   * **These are known shapes, not a closed set.** `isBlacklisted` is what Circle's FiatToken
+   * exposes and `isFrozen` is the other common spelling; a token can refuse a transfer for
+   * reasons no probe here can see. **A quiet result is not a promise that you will be paid** —
+   * it means none of the questions we knew how to ask came back yes.
+   *
+   * This exists because the generic warning was not enough. On Arc there is a deal whose
+   * seller IS blacklisted, and until this probe the preflight told them only that "USDC on Arc
+   * carries a blacklist" — true, and not the same sentence as "you specifically will not be
+   * paid".
+   */
+  const policyProbes: Array<[string, string, "seller" | "buyer" | "token"]> = [
+    ["isBlacklisted(address)", "0xfe575a87", "seller"],
+    ["isBlacklisted(address)", "0xfe575a87", "buyer"],
+    ["isFrozen(address)", "0xe5839836", "seller"],
+    ["paused()", "0x5c975abb", "token"],
+  ];
+  const tokenPolicy: Preflight["tokenPolicy"] = { probed: [] };
+  if (exists) {
+    for (const [name, selector, subject] of policyProbes) {
+      const who = subject === "seller" ? (seller as string) : subject === "buyer" ? (buyer as string) : undefined;
+      const data = who ? (selector + who.slice(2).toLowerCase().padStart(64, "0")) : selector;
+      try {
+        const res = await publicClient.call({ to: token as Address, data: data as Hex });
+        if (!res.data || res.data === "0x") continue;
+        const truthy = BigInt(res.data) === 1n;
+        tokenPolicy.probed.push(`${name}${who ? `(${subject})` : ""}`);
+        if (subject === "seller") tokenPolicy.sellerBlocked = tokenPolicy.sellerBlocked || truthy;
+        else if (subject === "buyer") tokenPolicy.buyerBlocked = tokenPolicy.buyerBlocked || truthy;
+        else tokenPolicy.paused = truthy;
+      } catch { /* the token does not implement it; that is not a fault */ }
+    }
+  }
+
   let tokenSymbol: string | undefined, tokenDecimals: number | undefined;
   if (exists) {
     try {
@@ -219,6 +265,29 @@ export async function sellerPreflight(opts: {
   } else {
     warnings.push("No verifier profile supplied, so nothing here describes what this verifier is or what it can judge. That is a gap in what you are being shown, not a clean bill of health.");
   }
+  if (tokenPolicy.sellerBlocked) {
+    warnings.push(
+      "THE TOKEN WILL NOT PAY THIS SELLER. The token reports this deal's seller as blacklisted or frozen, so " +
+      "a `Reproduced` verdict would revert on the transfer and the deal would stay Funded until the 30-day " +
+      "deadline returns it to the buyer. Doing this work would not get you paid.",
+    );
+  }
+  if (tokenPolicy.buyerBlocked) {
+    warnings.push(
+      "The token reports the BUYER as blocked, so a `Failed` verdict — and the deadline refund — would revert. " +
+      "The money would stay in the escrow with no exit.",
+    );
+  }
+  if (tokenPolicy.paused) {
+    warnings.push("The token is PAUSED. No payout can move, in either direction, until that changes.");
+  }
+  if (exists) {
+    warnings.push(
+      `Token policy probed with: ${tokenPolicy.probed.join(", ") || "nothing — this token exposes none of the shapes we know"}. ` +
+      "These are known shapes, not a closed set: a token can refuse a transfer for reasons no probe here can see, " +
+      "so a quiet result is not a promise that you will be paid.",
+    );
+  }
   warnings.push(
     "The buyer chose this verifier. If it is a program that always returns Failed, you will work for nothing " +
     "and the chain cannot tell that from an honest failure. Read the verifier, not just this summary.",
@@ -238,6 +307,7 @@ export async function sellerPreflight(opts: {
     `  pinned hash   ${verifierCodeHash}`,
     `  on-chain hash ${onChainHash}   ${matches ? "MATCH" : "*** MISMATCH ***"}`,
     vkey ? `  judges guest  ${vkey}` : `  judges guest  (verifier does not expose verdictProgramVKey)`,
+    tokenPolicy.sellerBlocked ? `token policy    *** THE TOKEN WILL NOT PAY THIS SELLER ***` : "",
     `binding         ${dealBinding}`,
     profile ? `predicate       ${profile.predicate.description}` : `predicate       (no profile supplied)`,
     profile ? `chain           ${profile.chain.name} (${profile.chain.chainId})` : "",
@@ -253,7 +323,7 @@ export async function sellerPreflight(opts: {
     tokenSymbol, tokenDecimals,
     verifier: verifier as Address, verifierCodeHash: verifierCodeHash as Hex,
     verifierCodeHashOnChain: onChainHash, verifierCodeHashMatches: matches,
-    verdictProgramVKeyOnChain: vkey,
+    verdictProgramVKeyOnChain: vkey, tokenPolicy,
     dealBinding: dealBinding as Hex, fundedAt: BigInt(fundedAt), refundOpensAt,
     profile, warnings, report,
   };

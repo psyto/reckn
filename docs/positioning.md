@@ -167,6 +167,8 @@ not remove that requirement and does not pretend to.
 
 ## Where to go next
 
+- **[`docs/chain-fit.md`](chain-fit.md)** — why Arc and why Tempo, and why the answer is a
+  *different* property of each chain rather than the same sentence twice.
 - **[`docs/partner-kit.md`](partner-kit.md)** — using Reckn from your own agent or service.
 - **[`docs/integrate.md`](integrate.md)** — the raw contract surface, and the part that is not
   ready.

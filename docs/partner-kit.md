@@ -63,6 +63,15 @@ you make.
 code still hashes to what the deal pinned, the predicate, the deadline, and the known limits.
 **Run this before you do the work.**
 
+It also asks the **token** whether it will pay the people this deal names. There is a deal on
+Arc right now whose seller is blacklisted by USDC: a valid `Reproduced` proof would revert on
+the transfer and the money would sit until the deadline returned it to the buyer. Before this
+probe, the preflight told that seller only that "USDC on Arc carries a blacklist" — true, and
+not the same sentence as **"you specifically will not be paid."** It now says the second one.
+The probe covers known shapes (`isBlacklisted`, `isFrozen`, `paused`) and reports which ones it
+managed to ask; **a quiet result is not a promise that you will be paid**, and the output says
+so every time.
+
 **`submitProof`** — sends `settleWithProof`, which is permissionless. The key paying the gas
 has no bearing on where the money goes; anyone may call it, including someone who is neither
 party.
