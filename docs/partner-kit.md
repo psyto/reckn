@@ -194,6 +194,25 @@ package's `evmDealBinding` produces — cannot settle there today. Use `arc-test
 
 ---
 
+## The endpoint has to be able to answer, and not all of them can
+
+`reckn terms` needs **`eth_createAccessList`** (to simulate) and **`eth_getProof`** (to capture
+the witness). Measured 2026-09-09, on the two chains this repo actually deploys to:
+
+| endpoint | `eth_createAccessList` | `eth_getProof` | `reckn terms` |
+|---|---|---|---|
+| `rpc.moderato.tempo.xyz` | yes | yes | works |
+| `rpc.testnet.arc.io` | **no** | **no** | **cannot build terms** |
+
+This is a property of the endpoint, not of the chain and not of your transaction — and the
+tool used to report it as *"the call could not be simulated"*, which sends you to debug a call
+that is fine. It now names the missing method and says what still works: the **binding**
+commits only stateRoot, env, check and plan, so it needs one `eth_getBlockByNumber`. You can
+compute and fund terms from a limited endpoint; what you cannot do there is prove the call
+succeeds or capture the witness.
+
+Funding, settling and verifying are unaffected — none of them simulates anything.
+
 ## What `reckn terms` refuses to do
 
 Five mistakes here produce a deal that **opens cleanly and then settles wrongly** — or never
@@ -245,7 +264,7 @@ that the Rust already agrees with the value the guest committed for the shipped 
 fixture, refusing to write one otherwise. So the expected value is the guest's.
 
 ```bash
-cd packages/partner-kit && npm test              # 77 tests, no chain needed
+cd packages/partner-kit && npm test              # 81 tests, no chain needed
 cd packages/partner-kit/examples/starter && npm test   # the three paths, end to end (needs anvil + forge)
 ```
 

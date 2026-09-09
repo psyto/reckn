@@ -172,10 +172,42 @@ export async function buildTerms(args: BuildTermsArgs): Promise<TermsBundle> {
   try {
     access = await rpc("eth_createAccessList", [tx, blockNumber]);
   } catch (e) {
+    const msg = (e as Error).message ?? String(e);
+    // Distinguish "your call is bad" from "this endpoint cannot answer the question". They
+    // are opposite problems and the first message blamed the caller for both. Measured
+    // 2026-09-09: Arc's public RPC (rpc.testnet.arc.io) supports NEITHER eth_createAccessList
+    // NOR eth_getProof, so `reckn terms` cannot run against it at all — while Tempo's
+    // (rpc.moderato.tempo.xyz) supports both. That is a property of the endpoint, not of the
+    // chain and not of your transaction, and saying otherwise sends people to fix the wrong thing.
+    // JSON-RPC's -32601 is the reliable signal; the text is not, and every node words it
+    // differently ("method not supported" on Arc, "the method X does not exist" on geth-family
+    // nodes, "Method not found" per the spec). Both are checked, and when NEITHER matches this
+    // does not guess — see below. The first version of this pattern missed "does not exist",
+    // which is the most common wording, and a test caught it.
+    const code = (e as { code?: number } | undefined)?.code;
+    if (code === -32601 || /(-32601)|method[^\n]*(not (found|supported|available)|does not exist|unsupported)/i.test(msg)) {
+      throw new Error(
+        `this endpoint cannot simulate: it does not implement eth_createAccessList.\n` +
+        `  endpoint  ${msg}\n` +
+        `Nothing is wrong with your call — the node will not answer the question. Terms need an ` +
+        `endpoint that serves eth_createAccessList AND eth_getProof; a node you run yourself, or ` +
+        `an archive provider, will. Measured 2026-09-09: Arc's public RPC serves neither; ` +
+        `Tempo's Moderato RPC serves both.\n` +
+        `What still works without them: the deal BINDING commits only stateRoot, env, check and ` +
+        `plan, so it needs one eth_getBlockByNumber. You can compute and fund terms from this ` +
+        `endpoint; what you cannot do here is prove the call succeeds, or capture the witness ` +
+        `the prover will need.`,
+      );
+    }
+    // Not a recognised "no such method", and not the structured revert the node returns in
+    // `access.error` either. So it is genuinely unknown, and this says so rather than picking
+    // the explanation that blames the reader.
     throw new Error(
-      `the call could not be simulated at block ${blockNumber}: ${(e as Error).message}\n` +
-      `A plan that does not succeed at the anchor settles as Failed — you would pay to be told ` +
-      `your work did not reproduce. No terms were produced.`,
+      `the simulation at block ${blockNumber} did not complete, and this cannot tell you why.\n` +
+      `  raw error  ${msg}\n` +
+      `It is one of two unrelated things: your call fails at the anchor, or this endpoint will ` +
+      `not answer. Terms need an endpoint serving eth_createAccessList and eth_getProof — check ` +
+      `that first, because it is the cheaper of the two to rule out. No terms were produced.`,
     );
   }
   if (access?.error) {

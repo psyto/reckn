@@ -1,5 +1,5 @@
 {
-  "$comment": "A Verifier Profile is DISCOVERY AND DESCRIPTION. It is off-chain metadata that helps you find a deployment and understand what it can adjudicate. It is NOT a trust root: nothing in this file authorises a payment, and a deal settles on the codehash the FUNDER pinned on chain, never on what a JSON file said. Verify before you trust \u2014 `sellerPreflight` reads the chain, not this.",
+  "$comment": "A Verifier Profile is DISCOVERY AND DESCRIPTION. It is off-chain metadata that helps you find a deployment and understand what it can adjudicate. It is NOT a trust root: nothing in this file authorises a payment, and a deal settles on the codehash the FUNDER pinned on chain, never on what a JSON file said. Verify before you trust — `sellerPreflight` reads the chain, not this.",
   "id": "arc-testnet-evm",
   "version": "1.0.0",
   "status": "testnet",
@@ -47,10 +47,11 @@
     "feeRange": "0.0070-0.0077 USDC"
   },
   "knownLimits": [
-    "The buyer names the verifier. A buyer who names one that always returns Failed makes the seller work for nothing, and on-chain that is indistinguishable from an honest failure. A seller must read the deal before working \u2014 that is what sellerPreflight is for.",
+    "The buyer names the verifier. A buyer who names one that always returns Failed makes the seller work for nothing, and on-chain that is indistinguishable from an honest failure. A seller must read the deal before working — that is what sellerPreflight is for.",
     "USDC on Arc carries a blacklist. A frozen recipient makes settlement revert and the deal stays Funded; one such deal holds 1.000000 USDC and is refundable only by the 30-day keyless deadline.",
     "refundAfterDeadline waits 30 days and cannot be demonstrated inside any event window.",
-    "The tie from the committed state_root to a real block header lives in an off-chain layer. The proof establishes consistency over the declared prestate, not provenance."
+    "The tie from the committed state_root to a real block header lives in an off-chain layer. The proof establishes consistency over the declared prestate, not provenance.",
+    "The public RPC at rpc.testnet.arc.io serves NEITHER eth_createAccessList NOR eth_getProof (measured 2026-09-09), so `reckn terms` cannot build terms against it: it can compute a binding, but it cannot prove the call succeeds or capture the witness a prover needs. Use a node you run or an archive provider for that step. Funding, settling and verifying on this chain are unaffected."
   ],
   "evidence": {
     "record": "zk-verdict/contracts/arc.json",
@@ -65,5 +66,5 @@
     "sourceParity": "zk-verdict/scripts/tempo-arc-parity.sh proves this escrow's bytecode is byte-identical to the Tempo deployment and to what this repository compiles"
   },
   "measuredOn": "2026-09-09",
-  "howMeasured": "verifier and codehash read with eth_getCode + keccak against the chain; verdictProgramVKey read with eth_call. Not transcribed from the record \u2014 the record was compared against these and agreed."
+  "howMeasured": "verifier and codehash read with eth_getCode + keccak against the chain; verdictProgramVKey read with eth_call. Not transcribed from the record — the record was compared against these and agreed."
 }

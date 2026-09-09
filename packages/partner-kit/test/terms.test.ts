@@ -86,9 +86,12 @@ test("REFUSES a call that reverts at the anchor", async () => {
 });
 
 test("REFUSES when the node will not simulate at all", async () => {
+  // Asserts the BEHAVIOUR — nothing is produced when the simulation does not complete —
+  // rather than a sentence. This test pinned the old wording and went red when the message
+  // was made more accurate, which is a test measuring the phrasing of an answer, not the answer.
   await assert.rejects(
     () => buildTerms(args({ rpc: rpcFor({ throwOnSim: "insufficient funds" }) })),
-    /could not be simulated/,
+    (e: Error) => /No terms were produced/.test(e.message) && /insufficient funds/.test(e.message),
   );
 });
 
@@ -230,4 +233,40 @@ test("a predicate that decides nothing is refused before a single request goes o
 test("a floor of exactly one is accepted — the smallest predicate that decides anything", async () => {
   const b = await buildTerms(args({ check: { token: TOKEN, holder: CALLER, balancesSlotIndex: 9, min: 1n } }));
   assert.equal(BigInt(b.terms.check.min), 1n);
+});
+
+test("an endpoint that cannot simulate is not reported as a bad call", async () => {
+  // Opposite problems, and one message blamed the caller for both. Measured 2026-09-09: Arc's
+  // public RPC implements neither eth_createAccessList nor eth_getProof, so `reckn terms`
+  // against the profile we ship FOR ARC failed with "the call could not be simulated" — which
+  // sends a partner to debug a call that is fine.
+  await assert.rejects(
+    () => buildTerms(args({ rpc: rpcFor({ throwOnSim: "method not supported" }) })),
+    /does not implement eth_createAccessList[\s\S]*Nothing is wrong with your call/,
+  );
+});
+
+test("that refusal still says what CAN be done from a limited endpoint", async () => {
+  // A refusal that only says no strands the reader. The binding needs one block read; only
+  // the proof of success and the witness need the methods this node lacks.
+  await assert.rejects(
+    () => buildTerms(args({ rpc: rpcFor({ throwOnSim: "the method eth_createAccessList does not exist" }) })),
+    /BINDING commits only stateRoot, env, check and plan/,
+  );
+});
+
+test("a genuine revert is still reported as a bad call, not as a bad endpoint", async () => {
+  await assert.rejects(
+    () => buildTerms(args({ rpc: rpcFor({ accessError: "execution reverted" }) })),
+    /REVERTS at block/,
+  );
+});
+
+test("an unrecognised simulation failure does not guess which side is at fault", async () => {
+  // The default used to be "your work did not reproduce", which is an accusation. When the
+  // cause is genuinely unknown, saying so beats picking the reading that blames the reader.
+  await assert.rejects(
+    () => buildTerms(args({ rpc: rpcFor({ throwOnSim: "connection reset by peer" }) })),
+    /cannot tell you why[\s\S]*one of two unrelated things/,
+  );
 });
