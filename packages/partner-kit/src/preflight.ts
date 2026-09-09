@@ -6,11 +6,12 @@
  * the adjudicator, and a buyer who names a verifier that always fails makes the seller work
  * for nothing, indistinguishably from an honest failure.
  */
-import type { Address, Hex, PublicClient, WalletClient, Account } from "viem";
-import { keccak256, toBytes } from "viem";
+import type { Address, Hex, PublicClient } from "viem";
+import { keccak256 } from "viem";
 import { escrowAbi, erc20Abi, DealState, dealStateName } from "./escrow.js";
-import { assertValidProfile, type VerifierProfile } from "./profile.js";
+import { type VerifierProfile } from "./profile.js";
 import { formatUnits } from "./format.js";
+import { probeTokenPolicy, type TokenPolicy } from "./token-policy.js";
 
 export interface Preflight {
   exists: boolean;
@@ -25,12 +26,7 @@ export interface Preflight {
    * What the TOKEN says about the people this deal would pay. A valid proof can authorise a
    * payout that the token then refuses, which leaves the deal Funded until the deadline.
    */
-  tokenPolicy: {
-    probed: string[];
-    sellerBlocked?: boolean | undefined;
-    buyerBlocked?: boolean | undefined;
-    paused?: boolean | undefined;
-  };
+  tokenPolicy: TokenPolicy;
   dealBinding: Hex;
   fundedAt: bigint;
   refundOpensAt: bigint;
@@ -76,41 +72,9 @@ export async function sellerPreflight(opts: {
     } catch { /* a verifier need not expose it; absence is not a fault */ }
   }
 
-  /**
-   * Probe the token for the policies that can block a payout a proof already authorised.
-   *
-   * **These are known shapes, not a closed set.** `isBlacklisted` is what Circle's FiatToken
-   * exposes and `isFrozen` is the other common spelling; a token can refuse a transfer for
-   * reasons no probe here can see. **A quiet result is not a promise that you will be paid** —
-   * it means none of the questions we knew how to ask came back yes.
-   *
-   * This exists because the generic warning was not enough. On Arc there is a deal whose
-   * seller IS blacklisted, and until this probe the preflight told them only that "USDC on Arc
-   * carries a blacklist" — true, and not the same sentence as "you specifically will not be
-   * paid".
-   */
-  const policyProbes: Array<[string, string, "seller" | "buyer" | "token"]> = [
-    ["isBlacklisted(address)", "0xfe575a87", "seller"],
-    ["isBlacklisted(address)", "0xfe575a87", "buyer"],
-    ["isFrozen(address)", "0xe5839836", "seller"],
-    ["paused()", "0x5c975abb", "token"],
-  ];
-  const tokenPolicy: Preflight["tokenPolicy"] = { probed: [] };
-  if (exists) {
-    for (const [name, selector, subject] of policyProbes) {
-      const who = subject === "seller" ? (seller as string) : subject === "buyer" ? (buyer as string) : undefined;
-      const data = who ? (selector + who.slice(2).toLowerCase().padStart(64, "0")) : selector;
-      try {
-        const res = await publicClient.call({ to: token as Address, data: data as Hex });
-        if (!res.data || res.data === "0x") continue;
-        const truthy = BigInt(res.data) === 1n;
-        tokenPolicy.probed.push(`${name}${who ? `(${subject})` : ""}`);
-        if (subject === "seller") tokenPolicy.sellerBlocked = tokenPolicy.sellerBlocked || truthy;
-        else if (subject === "buyer") tokenPolicy.buyerBlocked = tokenPolicy.buyerBlocked || truthy;
-        else tokenPolicy.paused = truthy;
-      } catch { /* the token does not implement it; that is not a fault */ }
-    }
-  }
+  const tokenPolicy = exists
+    ? await probeTokenPolicy(publicClient, token as string, seller as string, buyer as string)
+    : { probed: [] };
 
   let tokenSymbol: string | undefined, tokenDecimals: number | undefined;
   if (exists) {
@@ -206,12 +170,3 @@ export async function sellerPreflight(opts: {
     profile, warnings, report,
   };
 }
-
-/**
- * Submit a proof.
- *
- * **This function has no authority over the payout and could not be given any.**
- * `settleWithProof` is permissionless: the key that pays the gas has no bearing on where the
- * money goes, there is no allow-list, and the verdict comes from the public values the proof
- * commits to. Anyone may call it, including someone who is neither party.
- */

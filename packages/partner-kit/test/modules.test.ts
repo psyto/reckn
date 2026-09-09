@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import {
-  reproduces, assertPredicateCanDecide, MAX_U256, formatUnits, isMethodMissing,
-} from "../dist/index.js";
+import { reproduces, assertPredicateCanDecide, MAX_U256, formatUnits } from "../dist/index.js";
+// isMethodMissing is transport-internal and not on the package surface — reached directly.
+import { isMethodMissing } from "../dist/rpc.js";
 import { touchedByCall, assertPredicateSlotIsTouched } from "../dist/witness.js";
 import { createAccessList, getBlock, getChainId, getProof } from "../dist/rpc.js";
 
@@ -89,4 +89,63 @@ test("assertPredicateSlotIsTouched names the slots that WERE touched", () => {
   assert.throws(() => assertPredicateSlotIsTouched(t,
     { token: "0xTOK", holder: "0xh", balancesSlotIndex: 0, slot: "0xbeef" }),
     /never touches the slot[\s\S]*0xdead/, "the refusal must print what was touched");
+});
+
+// ────────────── the endpoint must never be reported as the reader's mistake ──
+test("a node answering null for the simulation is named as such, not blamed on --slot-index", async () => {
+  // The regression this guards is not hypothetical: `createAccessList` coerced a non-object
+  // response to an empty access list, the empty set flowed into the witness, and
+  // assertPredicateSlotIsTouched then told the reader in four confident lines that their
+  // balances slot index was wrong. A gateway proxying an unsupported method answers null.
+  // At HEAD this was a TypeError — ugly, but impossible to believe. The refactor made it
+  // articulate, which is worse.
+  const nullish = async () => null;
+  await assert.rejects(() => createAccessList(nullish as never, {}, "0x1"),
+    (e: Error) => e.name === "MalformedResponseError" && /answered null/.test(e.message));
+
+  const noList = async () => ({ gasUsed: "0x1" });
+  await assert.rejects(() => createAccessList(noList as never, {}, "0x1"),
+    (e: Error) => /no accessList in the result/.test(e.message));
+});
+
+test("buildTerms surfaces that fault as the endpoint's, not the caller's", async () => {
+  const { buildTerms } = await import("../dist/index.js");
+  const BLK = { number: "0x64", hash: "0x" + "b1".repeat(32), stateRoot: "0x" + "57".repeat(32),
+    timestamp: "0x1000", baseFeePerGas: "0x7", gasLimit: "0x1c9c380", miner: "0x" + "c0".repeat(20) };
+  const rpc = async (m: string) => {
+    if (m === "eth_chainId") return "0x" + (5042002).toString(16);
+    if (m === "eth_getBlockByNumber") return BLK;
+    if (m === "eth_createAccessList") return null;
+    throw new Error(m);
+  };
+  const prof = { id: "t", version: "1.0.0", status: "testnet",
+    chain: { name: "T", chainId: 5042002, rpc: "http://x" },
+    escrow: "0x" + "e5".repeat(20), verifier: "0x" + "1f".repeat(20),
+    verifierCodeHash: "0x" + "aa".repeat(32), verdictProgramVKey: "0x" + "bb".repeat(32),
+    vm: "evm", specId: 17, predicate: { kind: "poststate-delta", description: "d" },
+    dealBindingScheme: "reckn/zk/bind/evm/v2", knownLimits: ["x"] };
+  await assert.rejects(
+    () => buildTerms({ profile: prof, rpc, caller: "0x" + "ca".repeat(20), target: "0x" + "77".repeat(20),
+      calldata: "0xdead", check: { token: "0x" + "70".repeat(20), holder: "0x" + "ca".repeat(20),
+        balancesSlotIndex: 9, min: 100n } } as never),
+    (e: Error) => /eth_createAccessList/.test(e.message) && !/slot-index|balances slot index/.test(e.message),
+  );
+});
+
+test("gasUsed is accepted as a number and refused as anything else, never substituted", async () => {
+  // It decides nothing — and a substituted zero printed next to measured values is still a lie.
+  const num = async () => ({ accessList: [], gasUsed: 4660 });
+  assert.equal((await createAccessList(num as never, {}, "0x1")).gasUsed, "0x1234");
+  const obj = async () => ({ accessList: [], gasUsed: {} });
+  await assert.rejects(() => createAccessList(obj as never, {}, "0x1"), /gasUsed was object/);
+});
+
+test("a storage proof without a value is refused rather than given one", async () => {
+  // `value` is the committed PRESTATE of a slot. Inventing it puts a fabricated number inside
+  // a witness. It fails closed downstream; that is not a reason to write it.
+  const p = async () => ({ balance: "0x0", nonce: "0x0", storageHash: "0x" + "55".repeat(32),
+    codeHash: "0x" + "66".repeat(32), accountProof: ["0xab"],
+    storageProof: [{ key: "0x" + "01".repeat(32), proof: [] }] });
+  await assert.rejects(() => getProof(p as never, "0xa", [], "0x1"),
+    (e: Error) => e.name === "MalformedResponseError" && /bad storageProof entry/.test(e.message));
 });

@@ -43,9 +43,12 @@ import { assertPredicateSlotIsTouched, captureWitness, touchedByCall, type Witne
 export { reproduces, assertPredicateCanDecide, NOTHING_HAPPENED, MAX_U256 } from "./predicate.js";
 
 export type { Rpc } from "./rpc.js";
+// `isMethodMissing` is deliberately NOT re-exported. index.ts states the policy — transport
+// internals are not compatibility promises — and implements it by naming four error classes.
+// A review found this one name walking around that policy through `export * from "./terms.js"`,
+// which is the shape R-7 warns about: a rule stated as a property, enforced by a list.
 export {
   EndpointCapabilityError, CallRevertedError, SimulationInconclusiveError, MalformedResponseError,
-  isMethodMissing,
 } from "./rpc.js";
 
 export interface BuildTermsArgs {
@@ -89,7 +92,6 @@ export interface TermsBundle {
 
 const hexToBigInt = (h: string): bigint => BigInt(h);
 const pad32 = (v: bigint): string => "0x" + v.toString(16).padStart(64, "0");
-const lc = (s: string) => s.toLowerCase();
 
 export async function buildTerms(args: BuildTermsArgs): Promise<TermsBundle> {
   const { profile, rpc } = args;
@@ -178,7 +180,7 @@ export async function buildTerms(args: BuildTermsArgs): Promise<TermsBundle> {
     dealBinding: evmDealBinding(terms),
     anchor: { blockNumber, blockHash: block.hash, stateRoot: block.stateRoot },
     simulation: {
-      gasUsed: access.gasUsed ?? "0x0",
+      gasUsed: access.gasUsed,
       touchedAccounts: witness.length,
       touchedSlots: witness.reduce((n, a) => n + a.storageProof.length, 0),
     },

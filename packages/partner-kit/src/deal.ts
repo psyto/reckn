@@ -9,7 +9,7 @@
  * boundary is not a pin.
  */
 import type { Address, Hex, PublicClient, WalletClient, Account } from "viem";
-import { keccak256, toBytes } from "viem";
+import { keccak256 } from "viem";
 import { escrowAbi, erc20Abi, DealState, dealStateName } from "./escrow.js";
 import { evmDealBinding, type EvmDealTerms } from "./binding.js";
 import { assertValidProfile, verifyProfileAgainstChain, type VerifierProfile } from "./profile.js";

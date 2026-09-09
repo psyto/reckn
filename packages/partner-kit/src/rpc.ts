@@ -116,9 +116,24 @@ export async function createAccessList(rpc: Rpc, tx: unknown, blockNumber: strin
       `the call REVERTS at block ${blockNumber}: ${String(res["error"])}\n` +
       `Terms were not produced. Fix the call, or pick an anchor where it succeeds.`);
   }
-  const list = isObj(res) ? res["accessList"] : undefined;
-  const gasUsed = isObj(res) && typeof res["gasUsed"] === "string" ? res["gasUsed"] : "0x0";
-  return { accessList: Array.isArray(list) ? (list as AccessListResult["accessList"]) : [], gasUsed };
+  // This wrapper had no MalformedResponseError path until a review found the hole, and the
+  // hole was the exact failure this module exists to prevent. A gateway that proxies an
+  // unsupported method commonly answers `null` rather than erroring. Coercing that to an
+  // empty access list produced no error at all: the empty set flowed into the witness, and
+  // `assertPredicateSlotIsTouched` then told the reader, in four confident lines, that their
+  // --slot-index was wrong. An endpoint fault reported as a well-formatted accusation against
+  // the user is worse than the TypeError it replaced, because the TypeError could not be believed.
+  if (!isObj(res)) throw new MalformedResponseError("eth_createAccessList", `answered ${JSON.stringify(res)} instead of a result`);
+  const list = res["accessList"];
+  if (!Array.isArray(list)) throw new MalformedResponseError("eth_createAccessList", "no accessList in the result");
+  // Numbers are accepted because nodes really do send them; anything else is not quietly
+  // replaced with a plausible zero. `gasUsed` decides nothing, but a substituted value that
+  // looks measured is still a lie printed next to values that are.
+  const raw = res["gasUsed"];
+  const gasUsed = typeof raw === "string" ? raw
+    : typeof raw === "number" ? "0x" + raw.toString(16)
+    : (() => { throw new MalformedResponseError("eth_createAccessList", `gasUsed was ${typeof raw}`); })();
+  return { accessList: list as AccessListResult["accessList"], gasUsed };
 }
 
 export interface ProofResult {
@@ -153,8 +168,14 @@ export async function getProof(rpc: Rpc, address: string, keys: string[], blockN
     storageHash: p["storageHash"] as string, codeHash: p["codeHash"] as string,
     accountProof: p["accountProof"] as string[],
     storageProof: sp.map((s: unknown) => {
-      if (!isObj(s) || typeof s["key"] !== "string") throw new MalformedResponseError("eth_getProof", `bad storageProof entry for ${address}`);
-      return { key: s["key"] as string, value: String(s["value"] ?? "0x0"), proof: Array.isArray(s["proof"]) ? s["proof"] as string[] : [] };
+      // `value` is the COMMITTED PRESTATE of a slot. `String(s.value ?? "0x0")` invented one
+      // when a node omitted it — a fabricated number inside a witness, which is the last place
+      // anything should be invented. It fails closed downstream (the guest checks each proof
+      // against storage_root) but "it would be caught later" is not a reason to write it.
+      if (!isObj(s) || typeof s["key"] !== "string" || typeof s["value"] !== "string") {
+        throw new MalformedResponseError("eth_getProof", `bad storageProof entry for ${address}`);
+      }
+      return { key: s["key"] as string, value: s["value"] as string, proof: Array.isArray(s["proof"]) ? s["proof"] as string[] : [] };
     }),
   };
 }
