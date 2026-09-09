@@ -59,7 +59,7 @@ const profile: VerifierProfile = {
   chain: { name: "Test", chainId: 1, rpc: "http://x" },
   escrow: ESCROW, verifier: VERIFIER, verifierCodeHash: CODEHASH,
   verdictProgramVKey: "0x00c2ee9999a00a5987a5b5c5261bee355bbb6e86c145429775d9fe89f496e16d",
-  vm: "evm",
+  vm: "evm", specId: 17,
   predicate: { kind: "poststate-delta", description: "the slot must rise by at least 100" },
   dealBindingScheme: "reckn/zk/bind/evm/v2",
   knownLimits: ["the token can be paused"],

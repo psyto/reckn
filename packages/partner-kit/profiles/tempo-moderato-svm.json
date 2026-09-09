@@ -3,31 +3,58 @@
   "id": "tempo-moderato-svm",
   "version": "1.0.0",
   "status": "testnet",
-  "chain": { "name": "Tempo Moderato", "chainId": 42431, "rpc": "https://rpc.moderato.tempo.xyz", "explorer": "https://explore.testnet.tempo.xyz" },
+  "chain": {
+    "name": "Tempo Moderato",
+    "chainId": 42431,
+    "rpc": "https://rpc.moderato.tempo.xyz",
+    "explorer": "https://explore.testnet.tempo.xyz"
+  },
   "escrow": "0x7e953a6ac16744ef1a02e343277ec55d7410f439",
   "verifier": "0x44e6bCae6A745fF2d75b7389421BEE81143bea30",
   "verifierCodeHash": "0x70538b70e18484263b2feb4ac02d366fe786fc47f8c9100e589191152b9bda66",
   "verdictProgramVKey": "0x004ad9fc19b7c2694b20c68467be4a506445cab44263f0aa0bb0db2ebb6fe2ca",
   "vm": "svm",
+  "specId": null,
+  "specIdNote": "not applicable to the SVM guest; present so tooling can fail loudly rather than default.",
   "predicate": {
     "kind": "poststate-delta",
     "description": "As arc-testnet-svm: a committed Solana execution must credit at least `min`.",
     "floorOfZeroIsSatisfiedByDoingNothing": true
   },
   "dealBindingScheme": "reckn/zk/bind/svm/v2",
-  "settlementTokenExample": { "symbol": "PathUSD", "address": "0x20C0000000000000000000000000000000000000", "decimals": 6, "note": "Tempo has NO native gas token: this same TIP-20 both funds the escrow and pays the fee that releases it." },
-  "proving": { "guest": "program-svm", "measuredCycles": { "shippedFixture": 986097 }, "requires": "SP1 toolchain and ~6.2 GB of Groth16 artifacts in ~/.sp1" },
-  "settlementCostMeasured": { "gasSettle": 310242, "feePaid": "0.155307 PathUSD to release 1.000000", "note": "fee = gasUsed * effectiveGasPrice / 1e12, derived from real receipts" },
+  "settlementTokenExample": {
+    "symbol": "PathUSD",
+    "address": "0x20C0000000000000000000000000000000000000",
+    "decimals": 6,
+    "note": "Tempo has NO native gas token: this same TIP-20 both funds the escrow and pays the fee that releases it."
+  },
+  "proving": {
+    "guest": "program-svm",
+    "measuredCycles": {
+      "shippedFixture": 986097
+    },
+    "requires": "SP1 toolchain and ~6.2 GB of Groth16 artifacts in ~/.sp1"
+  },
+  "settlementCostMeasured": {
+    "gasSettle": 310242,
+    "feePaid": "0.155307 PathUSD to release 1.000000",
+    "note": "fee = gasUsed * effectiveGasPrice / 1e12, derived from real receipts"
+  },
   "knownLimits": [
-    "THERE IS NO EVM-GUEST VERIFIER DEPLOYED ON TEMPO. An EVM deal binding — what the Partner Kit's evmDealBinding produces — cannot be settled on this chain today. Use arc-testnet-evm for EVM re-execution.",
+    "THERE IS NO EVM-GUEST VERIFIER DEPLOYED ON TEMPO. An EVM deal binding \u2014 what the Partner Kit's evmDealBinding produces \u2014 cannot be settled on this chain today. Use arc-testnet-evm for EVM re-execution.",
     "A TIP-20 can be paused or policy-gated by its issuer. A pause blocks a payout a valid proof authorised AND blocks refundAfterDeadline, so a third party can close both exits. Disclosed and tested, not mitigated.",
     "Tempo prices state, not compute: a cold SSTORE is ~11.5x and a deployed byte ~12.8x Ethereum's, while BN254 pairing is identical to the gas unit. Any cost sentence about this chain must be about state.",
-    "The buyer names the verifier — see arc-testnet-evm.json.",
-    "Consistency, not provenance — see arc-testnet-svm.json."
+    "The buyer names the verifier \u2014 see arc-testnet-evm.json.",
+    "Consistency, not provenance \u2014 see arc-testnet-svm.json."
   ],
   "evidence": {
     "record": "zk-verdict/contracts/tempo.json",
-    "gates": ["zk-verdict/scripts/ac011.sh", "zk-verdict/scripts/tempo-verify.sh", "zk-verdict/scripts/tempo-receipts.sh", "zk-verdict/scripts/tempo-arc-parity.sh"],
+    "gates": [
+      "zk-verdict/scripts/ac011.sh",
+      "zk-verdict/scripts/tempo-verify.sh",
+      "zk-verdict/scripts/tempo-receipts.sh",
+      "zk-verdict/scripts/tempo-arc-parity.sh"
+    ],
     "testVectors": [],
     "spec": "docs/specs/011-tempo-tip20-slice.md"
   },

@@ -34,6 +34,14 @@ export interface VerifierProfile {
   /** 32-byte hex — the ONE guest this verifier can judge. Immutable on chain. */
   verdictProgramVKey: string;
   vm: Vm;
+  /**
+   * revm's `SpecId` discriminant — the hardfork the guest executes under. **Committed into
+   * the deal binding**, so a wrong value yields a valid-looking binding that no proof from
+   * this guest can ever match, with nothing erroring at funding time. It lives in the profile
+   * precisely so a partner is never asked to pick it. `null` for guests where it does not apply.
+   */
+  specId?: number | null | undefined;
+  specIdNote?: string | undefined;
   predicate: { kind: string; description: string; floorOfZeroIsSatisfiedByDoingNothing?: boolean };
   /** The domain tag of the binding preimage, e.g. `reckn/zk/bind/evm/v2`. */
   dealBindingScheme: string;
@@ -128,6 +136,9 @@ export function validateProfile(input: unknown): Finding[] {
       "a floor of zero IS satisfied by doing nothing on every predicate shipped so far; claiming otherwise needs evidence");
   }
 
+  if (p.vm === "evm" && typeof p.specId !== "number") {
+    err("specId", "an EVM profile must pin the hardfork the guest executes under; it is committed into every binding");
+  }
   if (p.status === "mainnet") {
     warn("status", "no Reckn deployment is on mainnet. If this profile is real, the claim in the README is out of date; if it is not, this field is wrong");
   }

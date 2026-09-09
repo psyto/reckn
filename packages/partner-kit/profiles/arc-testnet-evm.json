@@ -1,41 +1,69 @@
 {
-  "$comment": "A Verifier Profile is DISCOVERY AND DESCRIPTION. It is off-chain metadata that helps you find a deployment and understand what it can adjudicate. It is NOT a trust root: nothing in this file authorises a payment, and a deal settles on the codehash the FUNDER pinned on chain, never on what a JSON file said. Verify before you trust — `sellerPreflight` reads the chain, not this.",
+  "$comment": "A Verifier Profile is DISCOVERY AND DESCRIPTION. It is off-chain metadata that helps you find a deployment and understand what it can adjudicate. It is NOT a trust root: nothing in this file authorises a payment, and a deal settles on the codehash the FUNDER pinned on chain, never on what a JSON file said. Verify before you trust \u2014 `sellerPreflight` reads the chain, not this.",
   "id": "arc-testnet-evm",
   "version": "1.0.0",
   "status": "testnet",
-  "chain": { "name": "Arc Testnet", "chainId": 5042002, "rpc": "https://rpc.testnet.arc.io", "explorer": "https://testnet.arcscan.app" },
+  "chain": {
+    "name": "Arc Testnet",
+    "chainId": 5042002,
+    "rpc": "https://rpc.testnet.arc.io",
+    "explorer": "https://testnet.arcscan.app"
+  },
   "escrow": "0x580f2c3268b0a13bf46c6d381bf807cbf1595669",
   "verifier": "0xc5f45b9dec0f0b00a1493c63c0204c8c920197b7",
   "verifierCodeHash": "0x17ab71beea4f9a76789fe48a1e08a6b4e3af05288280ff6508c74f4185d64720",
   "verdictProgramVKey": "0x00c2ee9999a00a5987a5b5c5261bee355bbb6e86c145429775d9fe89f496e16d",
   "vm": "evm",
+  "specId": 17,
+  "specIdNote": "17 = revm SpecId::PRAGUE, the value the shipped Groth16 fixture and the re-execution guest use. A partner must NOT choose this: a different value produces a valid-looking binding that no proof from this guest can ever match, and nothing errors at funding time.",
   "predicate": {
     "kind": "poststate-delta",
     "description": "One storage slot on one contract must rise by at least `min` and at most `max`, measured across a single re-executed CALL. A min-out condition is this predicate pointed at the output token's balance slot.",
     "floorOfZeroIsSatisfiedByDoingNothing": true
   },
   "dealBindingScheme": "reckn/zk/bind/evm/v2",
-  "settlementTokenExample": { "symbol": "USDC", "address": "0x3600000000000000000000000000000000000000", "decimals": 6, "note": "Circle's ERC-20 face of the native gas token on Arc." },
+  "settlementTokenExample": {
+    "symbol": "USDC",
+    "address": "0x3600000000000000000000000000000000000000",
+    "decimals": 6,
+    "note": "Circle's ERC-20 face of the native gas token on Arc."
+  },
   "proving": {
     "guest": "program-revm (in-guest revm over an MPT-verified prestate)",
-    "measuredCycles": { "shippedFixture": 406715, "realMainnetUniswapV3Swap": 13006200 },
-    "measuredWallClockSeconds": { "shippedFixture": 335, "realMainnetUniswapV3Swap": 497 },
+    "measuredCycles": {
+      "shippedFixture": 406715,
+      "realMainnetUniswapV3Swap": 13006200
+    },
+    "measuredWallClockSeconds": {
+      "shippedFixture": 335,
+      "realMainnetUniswapV3Swap": 497
+    },
     "measuredOn": "laptop CPU, no prover network",
     "requires": "SP1 toolchain and ~6.2 GB of Groth16 artifacts in ~/.sp1"
   },
-  "settlementCostMeasured": { "gasReproduced": 345874, "gasSolanaProof": 320600, "feeRange": "0.0070-0.0077 USDC" },
+  "settlementCostMeasured": {
+    "gasReproduced": 345874,
+    "gasSolanaProof": 320600,
+    "feeRange": "0.0070-0.0077 USDC"
+  },
   "knownLimits": [
-    "The buyer names the verifier. A buyer who names one that always returns Failed makes the seller work for nothing, and on-chain that is indistinguishable from an honest failure. A seller must read the deal before working — that is what sellerPreflight is for.",
+    "The buyer names the verifier. A buyer who names one that always returns Failed makes the seller work for nothing, and on-chain that is indistinguishable from an honest failure. A seller must read the deal before working \u2014 that is what sellerPreflight is for.",
     "USDC on Arc carries a blacklist. A frozen recipient makes settlement revert and the deal stays Funded; one such deal holds 1.000000 USDC and is refundable only by the 30-day keyless deadline.",
     "refundAfterDeadline waits 30 days and cannot be demonstrated inside any event window.",
     "The tie from the committed state_root to a real block header lives in an off-chain layer. The proof establishes consistency over the declared prestate, not provenance."
   ],
   "evidence": {
     "record": "zk-verdict/contracts/arc.json",
-    "gates": ["zk-verdict/scripts/ac005.sh", "zk-verdict/scripts/arc-receipts.sh", "zk-verdict/scripts/arc-constants.sh"],
-    "testVectors": ["packages/partner-kit/test/vectors/evm-binding.json"],
+    "gates": [
+      "zk-verdict/scripts/ac005.sh",
+      "zk-verdict/scripts/arc-receipts.sh",
+      "zk-verdict/scripts/arc-constants.sh"
+    ],
+    "testVectors": [
+      "packages/partner-kit/test/vectors/evm-binding.json"
+    ],
     "sourceParity": "zk-verdict/scripts/tempo-arc-parity.sh proves this escrow's bytecode is byte-identical to the Tempo deployment and to what this repository compiles"
   },
   "measuredOn": "2026-09-09",
-  "howMeasured": "verifier and codehash read with eth_getCode + keccak against the chain; verdictProgramVKey read with eth_call. Not transcribed from the record — the record was compared against these and agreed."
+  "howMeasured": "verifier and codehash read with eth_getCode + keccak against the chain; verdictProgramVKey read with eth_call. Not transcribed from the record \u2014 the record was compared against these and agreed."
 }

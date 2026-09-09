@@ -15,6 +15,7 @@ import { assertValidProfile, verifyProfileAgainstChain, type VerifierProfile } f
 
 export * from "./binding.js";
 export * from "./profile.js";
+export * from "./terms.js";
 export { escrowAbi, erc20Abi, DealState, Outcome, dealStateName } from "./escrow.js";
 
 export interface CreateDealArgs {

@@ -18,7 +18,25 @@ cheapest time to find that out.
 
 ---
 
+## Before you install anything
+
+The cheapest rung needs **no clone, no npm, no wallet**:
+
+| | |
+|---|---|
+| **[psyto.github.io/reckn](https://psyto.github.io/reckn/)** | your browser fetches the deployed bytecode from Arc and compares it against this source, then reads **four settlements** off the chain — two of them decided by proofs about work performed on Solana |
+| **[/money-shot.html](https://psyto.github.io/reckn/money-shot.html)** | one dispute, judged two ways: an opinion model approves a false claim, a replay overrules it, the money goes back |
+| **the page's own "Check it without this page"** | the `curl` calls that do the same thing with no page at all |
+
+If that is enough to tell you this is the wrong tool for your job, you have spent ninety
+seconds instead of an afternoon. That is the point of the order.
+
 ## Ten minutes, on a chain that costs nothing
+
+> **Verified 2026-09-09**: `npm run demo:local` ran to completion here — release, refund, and
+> the refusal — exit 0. The refusal printed *"The proof verified. The money did not move."*
+> If it does not do that on your machine, that is a bug and we want the output.
+
 
 ```bash
 git clone https://github.com/psyto/reckn && cd reckn/packages/partner-kit
@@ -79,9 +97,17 @@ party.
 **`verifySettlement`** — decodes the state, verdict, recipient, amount and binding **off the
 chain**, so a third party can check a settlement without taking your word for it.
 
+**`buildTerms`** — turns *your* transaction into deal terms. This is the step that had no
+tool: before it, replacing the starter's sample meant reading the `keeper` crate and
+assembling an anchor, a plan and a predicate by hand. The API was never the barrier; this was.
+
 There is also a read-only CLI:
 
 ```bash
+npx reckn terms --rpc <url> --profile arc-testnet-evm \
+    --from 0x… --to 0x… --data 0x… \
+    --check-token 0x… --check-holder 0x… --min 246000000 --out terms.json
+
 npx reckn preflight --rpc <url> --escrow 0x… --deal 0x… --profile arc-testnet-evm
 npx reckn verify    --rpc <url> --escrow 0x… --deal 0x… --tx 0x…
 npx reckn profiles
@@ -102,7 +128,8 @@ it — which is the only version that means anything.
    ERC-20 face at `0x3600…0000`.
 3. **Load the profile** — `arc-testnet-evm` ships with the package. `createDeal` verifies it
    against the chain before funding.
-4. **Your terms.** Replace `examples/starter/src/terms.ts`. That file is the only one you edit.
+4. **Your terms.** `npx reckn terms` builds them from your own transaction — one command,
+   read-only, no key. Or edit `examples/starter/src/terms.ts` by hand if you prefer.
 5. **A proof of your step.** This is the slow part; see below.
 
 ### What you should know before you budget an afternoon
@@ -151,6 +178,28 @@ Tempo 0x44e6bCae…  ->  SVM guest
 package's `evmDealBinding` produces — cannot settle there today. Use `arc-testnet-evm`.
 
 ---
+
+## What `reckn terms` refuses to do
+
+Three mistakes here produce a deal that **opens cleanly and can never settle**, which is worse
+than an error because you find out after paying. It refuses all three:
+
+1. **A call that reverts at the anchor.** The plan is replayed against the committed prestate;
+   if it fails there, the verdict is `Failed` and the buyer pays to be told the work did not
+   reproduce. The call is simulated first, and no terms are produced for one that reverts.
+2. **A guessed hardfork.** `specId` is committed into the binding. A different value yields a
+   valid-looking hash that no proof from this guest can ever match, with nothing failing at
+   funding time. It comes from the profile; you are not asked for it.
+3. **An anchor that ages out.** Public endpoints do not serve historical `eth_getProof`
+   (measured on Arc and on Tempo). Capture the witness later and it is gone, so it is captured
+   in the same run and the bundle is self-contained.
+
+Measured on a real mainnet Uniswap v3 swap: block pinned, call simulated at **118,183 gas**,
+**7 accounts and 12 storage slots** captured, binding emitted. Sending no `value` — so the
+router cannot wrap — is refused with *"the call REVERTS at block …; terms were not produced."*
+
+**What it does not establish:** that your call clears the floor. Simulation shows it runs, not
+that it delivers. And proving it still needs the SP1 toolchain and minutes of CPU.
 
 ## The deal binding, and why it is re-implemented here
 

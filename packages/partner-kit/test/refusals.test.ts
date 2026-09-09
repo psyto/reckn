@@ -38,7 +38,7 @@ function baseProfile(over: Partial<VerifierProfile> = {}): VerifierProfile {
     id: "t", version: "1.0.0", status: "testnet",
     chain: { name: "T", chainId: 5042002, rpc: "http://x" },
     escrow: ESCROW, verifier: VERIFIER, verifierCodeHash: REAL_CODEHASH, verdictProgramVKey: VKEY,
-    vm: "evm", predicate: { kind: "poststate-delta", description: "d" },
+    vm: "evm", specId: 17, predicate: { kind: "poststate-delta", description: "d" },
     dealBindingScheme: "reckn/zk/bind/evm/v2", knownLimits: ["x"], ...over,
   };
 }
@@ -107,7 +107,7 @@ test("createDeal refuses an SVM profile for EVM terms, and says why", async () =
   // so an EVM binding funded there could never settle.
   const c = clients();
   await assert.rejects(
-    () => createDeal(args(c, baseProfile({ vm: "svm", dealBindingScheme: "reckn/zk/bind/svm/v2" }))),
+    () => createDeal(args(c, baseProfile({ vm: "svm", specId: null, dealBindingScheme: "reckn/zk/bind/svm/v2" }))),
     /adjudicates svm/,
   );
   assert.deepEqual(c.writes, []);
