@@ -110,7 +110,7 @@ Current state, measured:
 
 | requirement | `reckn-demo-v3.mp4` |
 |---|---|
-| 2–4 minutes | **3:29** ✅ |
+| 2–4 minutes | **3:54** ✅ |
 | ≥ 720p | **1920 × 1080** ✅ |
 | 16:9 | 1.7778 ✅ |
 | opens at all (faststart) | ✅ |
@@ -145,9 +145,16 @@ one script cannot contradict itself:
 
 | cut | file | measured | limit |
 |---|---|---|---|
-| `RECKN_CUT=full` (default) | `reckn-demo-v3.mp4` | **3:29** | ETHOnline, 2–4 min ✅ |
-| `RECKN_DOOR=cwf RECKN_CUT=presentation` | `reckn-cwf-presentation.mp4` | **2:15** | CWF, 2–3 min ✅ |
-| `RECKN_DOOR=cwf RECKN_CUT=demo` | `reckn-cwf-demo.mp4` | **2:54** | CWF, ≤3 min ✅ |
+| `RECKN_CUT=full` (default) | `reckn-demo-v3.mp4` | **3:54** | ETHOnline, 2–4 min ✅ |
+| `RECKN_DOOR=cwf RECKN_CUT=presentation` | `reckn-cwf-presentation.mp4` | **3:04** | CWF, 2–3 min ❌ **over** |
+| `RECKN_DOOR=cwf RECKN_CUT=demo` | `reckn-cwf-demo.mp4` | **3:27** | CWF, ≤3 min ❌ **over** |
+
+**Measured again 2026-09-09, and two rows went red.** The numbers above were true when written
+and stopped being true as the cuts changed underneath them. The two CWF files on disk are
+**stale as well as over length** — they predate both the slide-timing fix and the change that
+moved the integration-kit slide into the presentation only, so they must be re-recorded rather
+than trimmed. `dashboard/video/check.sh` now takes its duration band from the filename, because
+a single 2:00–4:00 band had been passing both of these while they broke CWF's own limits.
 
 The presentation carries the argument plus **one** live proof — the theft — so it is not a
 slide deck, and not a second demo. The demo carries the mechanism and drops the pitch slide,
@@ -191,7 +198,7 @@ caught doing it costs more than any prize.
 | Hedera | **No.** Nothing runs on Hedera | **Do not select** — the largest purse on offer at $15,000, and declining it is the point |
 | World AgentKit | **No.** Never built; dropped by founder ruling 2026-09-06 | **Do not select** |
 | Solana-badged prizes | Solana *work* is proven, but the settlement is on Arc and nothing is deployed to Solana | **Do not select** unless a specific prize's rules cover proving Solana execution elsewhere — read the rules, do not assume |
-| Tempo-badged prizes, if any | **No.** Local implementation only, nothing proven on testnet | **Do not select** |
+| Tempo-badged prizes, if any | **No** — and the reason is scope, not capability. Tempo *is* proven on testnet (2026-09-08), which is exactly why it is **not** claimed here: `DISCLOSURE.md` §3 enumerated what would be built during the event and Tempo is not on that list. *(This row read "nothing proven on testnet" until 2026-09-09 — true when written, false after 09-08.)* | **Do not select** |
 
 **Use two of the three slots.** An empty slot costs nothing; a false one costs the
 submission's credibility, which is the only thing this project is actually selling.

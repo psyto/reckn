@@ -1,9 +1,10 @@
-# Using Reckn from your own agent
+# Contract reference — `fund`, `settleWithProof`, and the binding
 
-> **If you are integrating rather than reading, start with
-> [`partner-kit.md`](partner-kit.md).** This page is the raw contract surface underneath it —
-> `cast`, a private key on the command line, and a seven-argument ABI call. It is the honest
-> description of the protocol and a poor way to adopt it.
+> **This is the reference, not the guide.** If you are working out *how to adopt Reckn*, start
+> with **[`use-with-your-service.md`](use-with-your-service.md)** — what it can decide, which
+> side you are on, and the path through the TypeScript package. This page is the raw surface
+> underneath all of that: `cast`, a private key on the command line, and a seven-argument ABI
+> call. It is the honest description of the protocol and a poor way to adopt it.
 
 Two calls. The whole protocol surface a payer touches is `fund`, and the whole surface a
 settler touches is `settleWithProof` — which anyone may call, because the proof carries the

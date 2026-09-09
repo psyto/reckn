@@ -14,6 +14,17 @@ set -euo pipefail
 f=${1:-dashboard/media/reckn-arc-demo.mp4}
 [[ -f "$f" ]] || { echo "check: no such file: $f"; exit 2; }
 
+# The duration band belongs to the EVENT, not to the encoder. ETHOnline asks for two to
+# four minutes; CWF asks for a two-to-three-minute presentation and a demo of AT MOST
+# three. A single 2:00-4:00 band passed both CWF cuts while they were over their own
+# limits -- 3:04 and 3:27 on 2026-09-09 -- a gate reporting green on a rule it was not
+# checking. The band is chosen from the filename, since that is what names the event.
+case "$(basename "$f")" in
+  reckn-cwf-presentation.mp4) lo=120; hi=180; band="2:00-3:00, CWF presentation" ;;
+  reckn-cwf-demo.mp4)         lo=60;  hi=180; band="at most 3:00, CWF product demo" ;;
+  *)                          lo=120; hi=240; band="2:00-4:00" ;;
+esac
+
 dur=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$f")
 read -r w h < <(ffprobe -v error -select_streams v -show_entries stream=width,height \
   -of csv=p=0 "$f" | tr ',' ' ')
@@ -22,15 +33,16 @@ mb=$(python3 -c "import os;print(f'{os.path.getsize(\"$f\")/1e6:.1f}')")
 fail=0
 say() { printf '  %s %s\n' "$1" "$2"; }
 
-python3 - "$dur" "$w" "$h" <<'PY'
+python3 - "$dur" "$w" "$h" "$lo" "$hi" "$band" <<'PY'
 import sys
 d, w, h = float(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3])
+lo, hi, band = int(sys.argv[4]), int(sys.argv[5]), sys.argv[6]
 ok = lambda b: "✓" if b else "✗"
-print(f"  {ok(120 <= d <= 240)} duration      {int(d//60)}:{int(d%60):02d}  (must be 2:00–4:00)")
+print(f"  {ok(lo <= d <= hi)} duration      {int(d//60)}:{int(d%60):02d}  (must be {band})")
 print(f"  {ok(h >= 720)} resolution    {w}x{h}  (must be at least 720 lines)")
 r = w / h
 print(f"  {ok(abs(r - 16/9) < 0.01)} aspect        {r:.4f}  (16:9 is {16/9:.4f})")
-sys.exit(0 if (120 <= d <= 240 and h >= 720 and abs(r - 16/9) < 0.01) else 1)
+sys.exit(0 if (lo <= d <= hi and h >= 720 and abs(r - 16/9) < 0.01) else 1)
 PY
 rc=$?
 # motion: a screen recording of a page that only repaints on events is a SLIDESHOW. The

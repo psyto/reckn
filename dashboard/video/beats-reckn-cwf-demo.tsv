@@ -1,18 +1,19 @@
 0.0	TITLE Reckn
 4.6	CARD the door
-9.1	00 opinion vs re-execution
-26.8	SLIDE 03 check 1
-37.5	01 fund
-45.0	01 BindingMismatch
-59.2	02 evidence: release
-66.2	02 evidence: refund
-76.2	SLIDE 04 check 2
-87.4	02 evidence: bytecode + no-keys
-99.4	SLIDE 05 check 3
-111.5	04 evidence: four settlements
-122.5	17 SVG: out to Arc, scope held
-131.6	SLIDE 07 check 4 - what it does not prove
-148.3	06 evidence: the two rows
-159.3	SLIDE 08 check it yourself
-167.9	CARD close
-173.9	END
+9.2	00 opinion vs re-execution
+27.9	SLIDE 03 check 1
+39.0	01 fund
+47.6	01 BindingMismatch
+62.9	02 evidence: release
+70.1	02 evidence: refund
+80.0	SLIDE 04 check 2
+98.5	02 evidence: bytecode + no-keys
+110.6	SLIDE 05 check 3
+125.6	04 evidence: four settlements
+136.6	SLIDE 07 why Tempo
+151.4	17 SVG: out to Arc, scope held
+160.7	SLIDE 09 check 4 - what it does not prove
+181.1	06 evidence: the two rows
+192.1	SLIDE 11 check it yourself
+200.7	CARD close
+206.8	END

@@ -93,11 +93,15 @@
   <div class="rule step"></div>
   <p class="lede step">An escrow that releases only when the work it was funded against can be
   re-executed and reproduced — and refunds the buyer when it cannot.</p>
+  <p class="lede step" style="font-size:30px;color:var(--dim)">Reckn is <b>building the
+  standard</b> for proof-driven settlement across execution environments. Agents may choose
+  where work happens. Assets remain native. Reproducible execution decides payout.</p>
   <div class="foot"><span><b>Live on Arc testnet.</b> psyto.github.io/reckn</span></div>
 </section>
 
 <!-- 02 ---------------------------------------------------------------------->
 <section class="slide" id="s02">
+  <div class="n">02</div>
   <div class="kicker step">The claim</div>
   <h2 class="step">Nobody can move this money.<br>Including us.</h2>
   <p class="lede step">The buyer locks USDC <b>in advance</b>, on the chain it already lives on.
@@ -109,7 +113,7 @@
 
 <!-- 03 ---------------------------------------------------------------------->
 <section class="slide" id="s03">
-  <div class="n">01</div>
+  <div class="n">03</div>
   <div class="kicker step">Check one</div>
   <h2 class="step">A real proof that<br>cannot take the money.</h2>
   <p class="lede step">A valid Groth16 proof of a <b>different</b> execution, submitted against a funded deal.</p>
@@ -118,7 +122,7 @@
 
 <!-- 04 ---------------------------------------------------------------------->
 <section class="slide" id="s04">
-  <div class="n">02</div>
+  <div class="n">04</div>
   <div class="kicker step">Check two</div>
   <h2 class="step">The code holding it,<br>verified in your browser.</h2>
   <p class="lede step">Your browser compares the deployed bytecode against this source. Byte for byte.</p>
@@ -127,7 +131,7 @@
 
 <!-- 05 ---------------------------------------------------------------------->
 <section class="slide" id="s05">
-  <div class="n">03</div>
+  <div class="n">05</div>
   <div class="kicker step">Check three</div>
   <h2 class="step">Real money — and work<br>proven on another chain.</h2>
   <div class="cols step" style="grid-template-columns:1fr 1fr 1fr">
@@ -140,16 +144,36 @@
 
 <!-- 06 ---------------------------------------------------------------------->
 <section class="slide" id="s06">
-  <div class="n">04</div>
+  <div class="n">06</div>
+  <div class="kicker step">Why Arc</div>
+  <h2 class="step">Arc is where the dollar stays.</h2>
+  <p class="lede step">The work happened on Solana. <b>The USDC never left Arc.</b> A conditional
+  payment settles on a stablecoin-native rail without the asset being bridged anywhere.</p>
+  <div class="foot"><span>Reckn removes a protocol-level judge. It does not erase issuer policy.</span></div>
+</section>
+
+<!-- 07 ---------------------------------------------------------------------->
+<section class="slide" id="s07">
+  <div class="n">07</div>
+  <div class="kicker step">Why Tempo</div>
+  <h2 class="step">Not just another EVM deployment.</h2>
+  <p class="lede step">Tempo has <b>no native gas token</b>. The escrow holds a stablecoin — and
+  <b>the fee that releases it is paid in that same stablecoin</b>. Read off the receipt, not asserted.</p>
+  <div class="foot"><span>Reckn removes a protocol-level judge. It does not erase issuer policy.</span></div>
+</section>
+
+<!-- 08 ---------------------------------------------------------------------->
+<section class="slide" id="s08">
+  <div class="n">08</div>
   <div class="kicker step">What crosses the boundary</div>
   <figure class="step"><img src="/*__SVG__*/" alt="Solana work re-executed in a zkVM; only a Groth16 proof crosses to Arc, where USDC stays in the escrow."></figure>
   <div class="foot"><span>The proof crosses. <b>The asset never does.</b> &nbsp;·&nbsp;
     <b>No bridge and no relayer has the authority to permit this payment.</b></span></div>
 </section>
 
-<!-- 07 ---------------------------------------------------------------------->
-<section class="slide" id="s07">
-  <div class="n">05</div>
+<!-- 09 ---------------------------------------------------------------------->
+<section class="slide" id="s09">
+  <div class="n">09</div>
   <div class="kicker step">Check four — the one nobody else shows you</div>
   <h2 class="step">What it does <i style="font-style:normal;color:#f0837a">not</i> prove.</h2>
   <table class="step">
@@ -162,12 +186,45 @@
     undemonstrated because a public chain cannot be fast-forwarded.</span></div>
 </section>
 
-<!-- 08 ---------------------------------------------------------------------->
-<section class="slide" id="s08">
-  <div class="kicker step">Check it yourself</div>
-  <h1 class="step" style="font-size:82px">psyto.github.io/reckn<br><span style="color:#8a7f72;font-size:54px">/money-shot.html</span></h1>
+<!-- 10 ---------------------------------------------------------------------->
+<section class="slide" id="s10">
+  <div class="n">10</div>
+  <div class="kicker step">Four rungs. The first three touch no key.</div>
+  <h2 class="step">Try it at whatever depth you want.</h2>
+  <table class="step">
+    <tr><td class="k">0 min</td>
+        <td><span style="font-family:var(--mono);font-size:27px">npm run demo:local</span><br>
+        <span style="color:var(--dim);font-size:28px">Release, refund, and a <b>real</b> proof of a
+        different job refused — on a throwaway chain.</span></td></tr>
+    <tr><td class="k">2 min</td>
+        <td><span style="font-family:var(--mono);font-size:27px">bash scripts/reckn terms</span><br>
+        <span style="color:var(--dim);font-size:28px"><b>Your</b> transaction becomes the terms you
+        would fund. Read-only, no key — on an endpoint that answers
+        <span style="font-family:var(--mono);font-size:25px">eth_createAccessList</span>.</span></td></tr>
+    <tr><td class="k">5 min</td>
+        <td>Your wallet on Arc testnet.<br>
+        <span style="color:var(--dim);font-size:28px">Fund, preflight, watch a mismatched proof refused.</span></td></tr>
+    <tr><td class="k">Later</td>
+        <td>Prove your step, settle, send the receipt.<br>
+        <span style="color:var(--dim);font-size:28px">Nobody outside has walked it yet.</span></td></tr>
+  </table>
+  <div class="foot"><span>The local run is a local chain — not evidence about a public network.</span></div>
+</section>
+
+<!-- 11 ---------------------------------------------------------------------->
+<section class="slide" id="s11">
+  <div class="kicker step">Two things you can do now</div>
+  <h1 class="step" style="font-size:72px">psyto.github.io/reckn<br><span style="color:#8a7f72;font-size:46px">/money-shot.html</span></h1>
   <div class="rule step"></div>
-  <p class="quote step" style="font-size:40px;color:#cbbfae">Watch an opinion get overruled by a replay.<br>Then check the receipts next door.</p>
+  <table class="step">
+    <tr><td class="k">Now</td>
+        <td>An opinion <b>overruled by a replay</b>, then four settlements read off Arc.<br>
+        <span style="color:var(--dim);font-size:28px">Nothing installed, no wallet.</span></td></tr>
+    <tr><td class="k">10 min</td>
+        <td>Clone it and run <span style="font-family:var(--mono);font-size:27px">npm run
+        demo:local</span>.<br><span style="color:var(--dim);font-size:28px">A release, a refund,
+        and a <b>real</b> proof of a different job refused.</span></td></tr>
+  </table>
 </section>
 
 </body>

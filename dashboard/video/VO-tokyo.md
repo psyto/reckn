@@ -28,10 +28,18 @@ later.
 
 ## The CTA has two stages, and stage two is gated
 
+> **Correction, 2026-09-09.** Stage one used to read "talk to us — we're opening the kit on
+> Arc testnet", and that was weaker than the truth. The gate belongs on the **Arc testnet path
+> with your own wallet**, which nobody outside this project has walked. The **local** starter
+> needs no wallet, no funds and no key, and it was verified end to end on 2026-09-09: release,
+> refund, and a real proof of a different job refused, exit 0. Telling people to email us about
+> something they could already run was under-claiming, which is its own kind of inaccuracy.
+
+
 **Stage 1 — while the Partner Kit is incomplete.** This is the truthful line today:
 
-> **"If your agent has a job that can be replayed, talk to us. We're opening the integration
-> kit on Arc testnet."**
+> **"If your agent has a job that can be replayed, clone the starter and run it. No wallet,
+> no funds, no key — release, refund, and a real proof of a different job being refused."**
 
 It promises a conversation and an intent. It does **not** promise that a stranger can run
 anything, because right now they cannot.
@@ -75,13 +83,64 @@ Three details in it are load-bearing and should not be smoothed away:
 
 ---
 
+## Three chain-specific lines, and the one that keeps them honest
+
+Tokyo and CWF get a *why this chain* beat that the ETHOnline cut does not have. Use whichever
+chain the room is about — **never both in one cut**, because the two lines say different things
+and stacking them turns a specific claim into a sponsor list.
+
+**Arc.**
+
+> **"Arc is where the dollar stays. The work happened on Solana; the USDC never left Arc."**
+
+**The standard, said at the strength it has earned.** Tokyo is where the ambition may be
+stated first rather than last, because the room is about whether an outside team can adopt this:
+
+> **"Reckn is building the standard for proof-driven settlement across execution environments.
+> Agents may choose where work happens. Assets remain native. Reproducible execution decides
+> payout."**
+
+**`building`, and not a word stronger.** There is no independent adoption, no second
+implementation and no standards body — [`messaging.md`](../../docs/messaging.md) names the three
+things that would have to be true first, and the five boundaries are in
+[`positioning.md`](../../docs/positioning.md#what-a-standard-would-have-to-fix). If someone in
+the room asks "whose standard?", the honest answer is *nobody's yet, and here is exactly what
+would make it one*.
+
+**Tempo.**
+
+> **"Tempo is not just another EVM deployment. The escrow and the cost of deciding it are paid
+> in the same stablecoin."**
+
+**Say the geography before the property, or the property has nowhere to land:**
+
+> **"The work happens on Solana. A TIP-20 stays on Tempo, and a proof about the Solana work
+> decides whether it is released or refunded — the token never moves to Solana."**
+
+Backed by [`zk-verdict/contracts/tempo.json`](../../zk-verdict/contracts/tempo.json): chain
+**42431** (Moderato testnet), escrow funded with **PathUSD** `0x20C0…0000`, two settlements —
+one released on a `Reproduced` proof, one refunded on a `Failed` one — and on **both receipts
+the `feeToken` is `0x20c0…0000`**, the token the escrow was holding. That last row is the whole
+Tempo argument, and it is read off the receipt rather than asserted.
+
+**And immediately after either one, without a pause:**
+
+> **"Reckn removes a protocol-level judge. It does not erase issuer policy."**
+
+That third line is not a caveat to fit in if there is time. It is the sentence that makes the
+first two believable, and on Tempo it is load-bearing: a TIP-20 issuer can pause the token, and
+a pause stops a proof-authorised release **and** the thirty-day refund. Saying the good part
+without it is the kind of claim a judge checks and a partner discovers later.
+
+Full argument and receipts: [`../../docs/chain-fit.md`](../../docs/chain-fit.md).
+
 ## The line table, as a diff against `VO.md`
 
 Lines 1–13 and their timings are unchanged. Only these differ:
 
 | # | in | for | words | line |
 |---|---|---|---|---|
-| 14 | 2:59 | 8.0 s | 17 / 19 | **stage 1:** "If your agent has a job that can be replayed, talk to us. We're opening the integration kit on Arc testnet." |
+| 14 | — | 8.0 s | — | **stage 1 (now):** "If your agent has a job that can be replayed, clone the starter and run it. No wallet, no funds, no key." |
 | 14 | 2:59 | 8.0 s | 19 / 19 | **stage 2:** "Have a deterministic job your agent needs to settle? Run the starter on Arc testnet. Your wallet. Your job." |
 | — | 3:08 | 6.0 s | — | *(plate: the Tokyo closer, on screen rather than spoken — it is an ask, and an ask reads better than it listens)* |
 

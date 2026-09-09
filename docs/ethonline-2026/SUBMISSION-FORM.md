@@ -40,7 +40,7 @@ Audited 2026-09-07 against the form's live contents. Ranked, because they are no
 | 7 | how it's made | *"…or if the constructor stores its caller"* | That was check 4 **before 009**. There is no constructor at all now — and the old wording would match an empty range and pass **vacuously**, which is precisely why it was replaced. |
 | 8 | description | key gauntlet listed as being built, *"including a permissionless timeout"* | The **timeout landed** on 2026-09-06 as its own task. The key gauntlet is **stopped at a hard stop** and is a founder decision. |
 | 9 | description | *"try to talk the judge into approving"* | 004's specification removed exactly that framing: the claim is judge-independent, because a judge we wrote ourselves being persuaded is evidence of nothing. |
-| ~~10~~ | video upload | **v2, 2026-09-07: 3:04**, six chapters, 1080p 16:9, cards 29.6% of the running time; stills matted, no diagram close-up. Submit `reckn-arc-demo-v2.mp4`. **Audio is still absent** and is the only remaining item — the timecoded script is in `dashboard/video/VO.md` and `check.sh` will refuse the file until a track exists. |
+| ~~10~~ | video upload | **v3, 2026-09-09: 3:54**, 1080p 16:9, deck-led with the live page answering each of the four checks. Submit `reckn-demo-v3.mp4` — **not** the v2 file this row named until 2026-09-09, which is a shorter, older cut. **Audio is still absent** and is the only remaining item — the timecoded script is in `dashboard/video/VO.md` and `check.sh` will refuse the file until a track exists. |
 | **11** | images | *(nothing uploaded)* | A **logo** (square), a **cover** (16:9) and **at least three screenshots** are all required fields. |
 | 12 | AI tools | *"ChatGPT was used to generate the initial boilerplate…"* | The form's own placeholder, and false here. It is also the one field where the truthful answer is an advantage rather than a disclosure — see §9. |
 
@@ -184,6 +184,36 @@ Both halves or neither: without them a reader cannot tell this apart from a brid
 WHAT IS NOT TRUE YET
 
 A proof carries the verdict's authority. It does not by itself prove the committed pre-state was the chain's real state: on EVM that anchoring lives in an off-chain layer, and on Solana the provenance of the committed bank_hash is not proven on-chain — a fabricated account set hashes just as well, and there is a test that says so. "No bridge, no light client" is true of the ADJUDICATION and not yet of the anchoring. Cross-VM settlement also created a new risk for the seller: a buyer can name a verifier that always returns Failed, and on-chain that is indistinguishable from an honest failure, so sellers must read the deal's verifier before working. Our open gaps are in the README, not in a footnote.
+
+HOW YOU WOULD USE IT, AND WHERE THAT STOPS
+
+Two calls. fund opens a deal; settleWithProof closes it. The second is permissionless — the key
+that pays the gas has no bearing on where the money goes — so there is no integration step where
+you hand us authority, because there is nothing to hand.
+
+Built during this event, for the half that had no tooling at all: a TypeScript package and a
+starter. createDeal opens a deal. sellerPreflight answers "what am I about to work on?" before you
+do the work, and it exists because a buyer can name a verifier that always fails. submitProof
+settles. verifySettlement decodes what happened from the chain rather than from our report of it,
+and it distinguishes a payout a proof authorised from the 30-day timeout refund, which the escrow
+emits as a separate event precisely so nobody has to infer which kind it was. reckn terms turns
+YOUR transaction into deal terms with one read-only call and no key — the step that previously
+meant reading a Rust crate and assembling an anchor, a plan and a predicate by hand. It refuses
+five kinds of terms that open a deal cleanly and then never settle, including a predicate
+satisfied by doing nothing, which pays the seller in full for no work.
+
+reckn terms needs an endpoint that answers eth_createAccessList and eth_getProof, and Arc's
+public testnet RPC answers neither — measured 2026-09-09. So on Arc you can compute a binding and
+fund against it, which needs one block header; what you cannot do from that endpoint is simulate
+the call or capture the witness. We would rather say this here than have you find it.
+
+WHERE IT STOPS, SAID PLAINLY. Settlement is complete and permissionless. Proving is not
+self-serve: a proof needs the SP1 toolchain and minutes of CPU — measured on one laptop, 335 s
+for the shipped fixture and 497 s for a real mainnet Uniswap v3 swap, which is 32x the cycles for
+1.49x the time. So using Reckn
+on YOUR OWN job today means proving it with that toolchain; what you can do without it is fund and
+settle against a workload already proved. Nobody outside this project has used any of this, and
+nothing here claims otherwise.
 
 HOW TO CHECK ANY OF THIS WITHOUT TRUSTING US. Open https://psyto.github.io/reckn/ — your browser reads Arc directly and compares the deployed bytecode against the source in this repository. RecknZkEscrow has no constructor, so the same source always produces the same deployment, which is what makes that comparison mean anything.
 
@@ -517,8 +547,8 @@ printed on. The v1 files are kept on disk and are not the submission.
 
 | file | use |
 |---|---|
-| `dashboard/media/reckn-arc-demo-v2.mp4` | **the master.** Six chapter cards over the evidence; **3:04**, 1920×1080, 29.6% cards / 70.4% evidence. |
-| `dashboard/media/reckn-arc-demo-v2-clean.mp4` | the same beats with **no cards** (3:03), if titles are added in the editor instead. |
+| `dashboard/media/reckn-demo-v3.mp4` | **the master.** Deck-led, the live page answering each of the four checks; **3:54**, 1920×1080. |
+| `dashboard/media/reckn-arc-demo-v2.mp4`, `-v2-clean.mp4` | v2, 3:04 and 3:03 — superseded by v3 on 2026-09-09, kept for comparison, **not** the submission. |
 | `dashboard/media/reckn-arc-demo.mp4`, `-clean.mp4` | v1, 3:19 — superseded, kept for comparison, **not** the submission. |
 | `dashboard/video/VO.md` | the English voice-over, timecoded from `beats.tsv` — every line fits its shot at 145 wpm |
 | `dashboard/video/check.sh` | run it on the finished file before submitting |

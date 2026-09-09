@@ -137,6 +137,24 @@ Same product, same demo, same numbers, same limits. **Only the first sentence ch
 >
 > **Don't make a bridge decide where money goes. Make proof decide.**"
 
+### Chain lines, assigned per event — never mixed
+
+The two chains buy different things, so they get different sentences, and a cut carries **one**.
+Stacking them turns a specific claim into a sponsor list. Full argument and receipts:
+[`chain-fit.md`](chain-fit.md).
+
+| event | chain line | why it is that chain |
+|---|---|---|
+| **ETHOnline** (Arc only) | *"Arc is where the dollar stays. The work happened on Solana; the USDC never left Arc."* | a stablecoin-native rail where a conditional payment settles **without bridging the asset** |
+| **Tokyo / CWF** (Tempo) | *"Tempo is not just another EVM deployment. The escrow and the cost of deciding it are paid in the same stablecoin."* | Tempo has **no native gas token**, so payment and the cost of deciding it are one unit |
+
+**Either line is followed immediately by:** *"Reckn removes a protocol-level judge. It does not
+erase issuer policy."* On Tempo that is load-bearing rather than polite — a TIP-20 issuer's
+pause stops a proof-authorised release **and** the thirty-day refund.
+
+**Tempo does not appear in ETHOnline material at all.** That submission stands on Arc; the
+boundary is `ethonline-2026/PREFLIGHT.md` §2 and it is a founder decision, not a fact.
+
 ### CWF — Tempo, as of 2026-09-08
 
 **Until this date the only permitted sentence was "Tempo is the settlement chain Reckn is
@@ -161,6 +179,60 @@ can be paused or policy-gated. One source is the claim. One behaviour is not.
 unnecessary; and the thirty-day timeout, which is not demonstrated on any chain.
 
 ---
+
+## Founder ruling 2026-09-09 — the door line stays as it is
+
+The ETHOnline door plate reads, verbatim:
+
+> A payment lives on Arc. The work happens on Solana.
+> **No bridge and no judge decides the payout.** A proof does.
+
+A messaging rule adopted the same day says to treat bridges and oracles as **different roles
+rather than worse ones** — a bridge makes a remote asset or remote state actionable; an oracle
+adjudicates an external claim; Reckn settles a locally held asset from a reproducible execution
+result. Read strictly, the third line puts "not a bridge" at the centre of the claim, which that
+rule would demote to a comparison.
+
+**The line stays.** The founder's ruling: *"slightly prone to misunderstanding, but very easy to
+understand."* Ten seconds of plate is where compression is the job. The precision belongs one
+layer down, and it is already there — [`README.md` § What crosses, and what does not](../README.md#what-crosses-and-what-does-not)
+states that it is the escrow's **adjudication path** that carries no bridge, no light client and
+no resolver, which is not a claim that bridges are unnecessary or that nothing was bridged to get
+the money to Arc in the first place.
+
+So: **do not "correct" the door line for accuracy.** It was weighed and kept. If the precision
+ever stops being reachable from the README, fix the README rather than the plate.
+
+## "Building the standard" — the exact strength of that claim, and what would raise it
+
+The wording is:
+
+> **Reckn is building the standard** for proof-driven settlement across execution environments.
+> Agents may choose where work happens. Assets remain native. Reproducible execution decides
+> payout.
+
+**Never** `Reckn is a standard`, `the open standard`, `the industry standard`, or any phrasing
+that implies it has been adopted. As of 2026-09-09 there is **no independent adoption, no second
+implementation, and no standards body**. `building` is the whole difference between an ambition
+stated honestly and a claim a judge can falsify in one search.
+
+**Three things must be true before the claim may be strengthened.** All three, not any of them:
+
+1. A **published, versioned specification** of Deal Terms / Binding, the Verifier Profile, and
+   the Proof Receipt — not code that happens to define them.
+2. An **independent implementation, or an outside team's integration** — someone who is not this
+   project.
+3. **A third party verifying a receipt** against their own repository, their own wallet, and
+   their own deterministic job.
+
+Until then the honest form of the ambition is the boundary table in
+[`positioning.md`](positioning.md#what-a-standard-would-have-to-fix), which says what Reckn wants
+to make common and marks the one boundary that is still open.
+
+**Where it may appear.** The closing plate of the film, the deck cover, `README.md`, and the
+Tokyo/CWF script. **Not** in the ETHOnline door plate — that is ten seconds carrying the
+concrete claim, and an abstraction there competes with the thing that earns attention. See the
+founder ruling above.
 
 ## 1. What may be claimed, and where it is checkable
 

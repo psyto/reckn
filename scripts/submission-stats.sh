@@ -48,6 +48,18 @@ for d in zk-verdict/contracts contracts; do
   printf '  forge %-22s: %s\n' "$d" "$n"
 done
 
+# The npm suites were the one set of numbers this script did NOT measure, and they are the ones
+# that actually moved: on 2026-09-09 the partner kit was described as 55, then 66, then 81 tests
+# within four hours, and every one of those was true when it was written. A number nobody counts
+# is a number that drifts; a number this script prints is one nobody has to remember.
+for d in packages/partner-kit; do
+  if [[ -f "$d/package.json" ]]; then
+    n=$( (cd "$d" && npm test 2>&1 | sed -n 's/.*[^0-9]pass \([0-9][0-9]*\).*/\1/p' | tail -1) 2>/dev/null )
+    f=$( (cd "$d" && npm test 2>&1 | sed -n 's/.*[^0-9]fail \([0-9][0-9]*\).*/\1/p' | tail -1) 2>/dev/null )
+    printf '  npm   %-22s: %s pass, %s fail\n' "$d" "${n:-?}" "${f:-?}"
+  fi
+done
+
 echo
 echo "== the video, measured from the file =="
 for f in dashboard/media/reckn-demo-v3.mp4 dashboard/media/reckn-demo-v3-cwf.mp4; do

@@ -106,4 +106,4 @@ keeper/                     # resolver keeper — replay, EIP-712 signature, liv
 
 Planned (not yet in the tree): `mcp-server` and the rest of
 `packages/protocol`'s production spec/delivery/anchor codecs. See the module map in
-[`docs/protocol-architecture.md`](docs/protocol-architecture.md).
+[`docs/protocol-architecture.md`](protocol-architecture.md).

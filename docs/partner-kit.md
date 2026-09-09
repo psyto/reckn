@@ -33,9 +33,20 @@ seconds instead of an afternoon. That is the point of the order.
 
 ## Ten minutes, on a chain that costs nothing
 
-> **Verified 2026-09-09**: `npm run demo:local` ran to completion here — release, refund, and
-> the refusal — exit 0. The refusal printed *"The proof verified. The money did not move."*
-> If it does not do that on your machine, that is a bug and we want the output.
+> **Verified 2026-09-09, morning**: `npm run demo:local` ran to completion here — release,
+> refund, and the refusal — exit 0. The refusal printed *"The proof verified. The money did
+> not move."* If it does not do that on your machine, that is a bug and we want the output.
+>
+> **Re-verified 2026-09-09, just after 14:01**, on a still tree after the acceptance gates finished — and
+> it took a fix to get there. The first re-run **failed**: `invalid verifier profile: specId`.
+> Making `specId` mandatory for EVM profiles landed at 11:13 with `reckn terms`, and the
+> starter builds its local profile at runtime, so it was the one profile in the repository that
+> nobody updated. One field fixed it. All three paths then behaved, exit 0, and the refusal
+> printed the line above.
+>
+> The interesting part is that nothing caught it for three hours: the starter is not in any
+> gate, so a change to a validator in one package silently broke the first command a partner
+> is told to run.
 
 
 ```bash

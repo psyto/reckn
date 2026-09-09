@@ -8,6 +8,24 @@ funded on: a proof crosses, the asset does not.
 
 No owner, no resolver, no admin, no upgrade path. **Reproduce, or refund.**
 
+---
+
+**This page is long because it is the evidence, not the pitch.** Jump to what you came for:
+
+| you want to | go to |
+|---|---|
+| **use it with your own service** | **[`docs/use-with-your-service.md`](docs/use-with-your-service.md)** — the whole integration in one page |
+| understand the idea | [The problem](#the-problem) · [What Reckn does instead](#what-reckn-does-instead) · [Why](#why) |
+| see how it compares | [`docs/positioning.md`](docs/positioning.md) — bridges, oracles, TEEs, x402: which layer decides what · [`docs/chain-fit.md`](docs/chain-fit.md) — why Arc and why Tempo are different answers |
+| know what it can decide | [Scope](#scope-what-re-execution-can-adjudicate) · [The one design invariant](#the-one-design-invariant) |
+| check the claim yourself | [The claim is a build condition](#the-claim-is-a-build-condition-not-a-promise) · [What crosses, and what does not](#what-crosses-and-what-does-not) |
+| run it in ten minutes | [Try it (one command)](#try-it-one-command) |
+| see what is *not* done | [`docs/status.md`](docs/status.md) — `Known gaps (not closed)` |
+| find any other document | [`docs/README.md`](docs/README.md) — what each page is *for* |
+| judge the ETHOnline entry | [Where the boundary is](#ethonline-2026--where-the-boundary-is) · [`docs/ethonline-2026/`](docs/ethonline-2026/) |
+
+---
+
 ## The problem
 
 In an agent economy the money and the work are rarely on the same chain. That splits one
@@ -18,8 +36,9 @@ payment into two questions, and **today a party with a key answers both**:
   your agent touches.
 - **How does the asset get to where it is owed?** — a bridge.
 
-So the asset's fate ends up decided by the two parties **least able to tell whether the work
-was done**: a judge who was told, and a bridge that was not asked.
+So the asset's fate is decided by two parties that **were never asked the question**: a judge
+who was told the answer, and a bridge whose job is to move value, not to know whether it was
+earned. Both are doing their own work correctly. The seat that is empty is the one that decides.
 
 ## What Reckn does instead
 
@@ -29,6 +48,13 @@ The buyer escrows the stablecoin **on the chain it already lives on**. The selle
 work wherever the work belongs. When the delivery is disputed, the execution is **replayed**
 against the pre-state the deal pinned. If it reproduces, the escrow releases to the seller.
 If it does not, the buyer is refunded.
+
+**This is for deterministic, high-value work — not a way to grade arbitrary AI output.** What
+re-execution can settle is a claim that is recomputable from committed inputs: *this call, over
+this pre-state, moved this number by at least this much*. "Was the summary any good" is not that,
+and no amount of integration makes it that — see
+[`docs/use-with-your-service.md` §1](docs/use-with-your-service.md) for the one-minute version and
+[Scope](#scope-what-re-execution-can-adjudicate) for the reasoning.
 
 > ### Keep assets native. Settle on proof.
 >
@@ -120,7 +146,7 @@ Five buttons, five real transactions against a local chain at Arc's chain id:
 | **refund now** → **wait 30 days** → **refund** | `TooEarly()`, then *anyone* may return the money to the buyer — and the caller gets nothing for it |
 
 Everything else in this README is the argument for why those five buttons behave that
-way, and what is still **not** true ([the gaps are listed](#known-gaps-not-closed),
+way, and what is still **not** true ([the gaps are listed](docs/status.md#known-gaps-not-closed),
 not buried).
 
 ---
@@ -153,7 +179,7 @@ an EVM proof and a Solana proof side by side. No resolver, no bridge, and no lig
 client on the adjudication path. The funder chooses the program; the proof, checked by
 that program, chooses the payout. Scope and limits are stated honestly in
 [`zk-verdict/`](zk-verdict), including what is **not** closed
-([below](#known-gaps-not-closed)).
+([in `docs/status.md`](docs/status.md#known-gaps-not-closed)).
 
 **▶ Why it matters, in twenty seconds:** the same dispute, judged by an opinion LLM
 and by deterministic re-execution, **watching them disagree** — the animation below is
@@ -209,10 +235,13 @@ settled twice; that check exists so it cannot happen twice.
 Everything else on this page is Arc. **This is not claimed as ETHOnline event work** — see
 [`docs/ethonline-2026/PREFLIGHT.md`](docs/ethonline-2026/PREFLIGHT.md) §2.
 
-**▶ Demo video (3:04, 1920×1080, re-recorded 2026-09-07 — it now ends on the *public* chain):**
-[`dashboard/media/reckn-arc-demo-v2.mp4`](dashboard/media/reckn-arc-demo-v2.mp4) — the hook,
-then the five presses above driven live, ending on this run's own `no-keys.sh` output.
-A no-cards cut for editors sits beside it as `reckn-arc-demo-v2-clean.mp4` (3:03); the v1
+**▶ Demo video (3:54, 1920×1080, recorded 2026-09-09):**
+[`dashboard/media/reckn-demo-v3.mp4`](dashboard/media/reckn-demo-v3.mp4) — the deck's four
+checks, each one answered by the live page driving a real chain, ending on this run's own
+`no-keys.sh` output. This is the ETHOnline cut; `docs/ethonline-2026/PREFLIGHT.md` measures it
+against the event's requirements. **It has no audio track yet** — the narration is recorded by
+a person, and no synthetic voice is used.
+The earlier v2 film (`reckn-arc-demo-v2.mp4`, 3:04, and a no-cards cut at 3:03) and the v1
 files are kept for comparison and are not the submission.
 Regenerate it with `cd dashboard/video && npm install && node record.js`; the recorder
 asserts each step's result and refuses to record one that did not happen.
@@ -265,6 +294,10 @@ economy"). Every entry in that lane gates payment on a **trusted adjudicator**:
 | **Reckn** | **re-execution** | *deterministic replay anyone can reproduce* |
 
 ## Scope (what re-execution can adjudicate)
+
+*The practical version of this section — a table you can check your own agent against in a
+minute — is [`docs/use-with-your-service.md` §1](docs/use-with-your-service.md). This one is the
+reasoning behind it.*
 
 Re-execution cannot judge subjective quality ("was the essay good?"). Reckn's
 lane is the class of agent payments whose deliverable is **machine-verifiable**:
@@ -387,7 +420,7 @@ is described as finished before it is.
 What the event is for, in execution order ([`AGENTS.md`](AGENTS.md) §3):
 
 1. **008 — verdict domain soundness.** Close the false release described
-   [below](#known-gaps-not-closed): the guest judges the balance delta on the low 64
+   [in `docs/status.md`](docs/status.md#known-gaps-not-closed): the guest judges the balance delta on the low 64
    bits while the off-chain engine uses the full `U256`, so a *decrease* proves as a
    maximal credit. Also make "the same engine runs in-guest" checkable rather than
    assumed.
@@ -486,6 +519,15 @@ have *not* measured, and what would falsify the whole case are in
 bridge in the asset path), why they are the same defect, and every number labelled
 **measured**, **cited** or **unknown**.
 
+## Why Arc, why Tempo
+
+Same principle, different property used each time — **[`docs/chain-fit.md`](docs/chain-fit.md)**.
+The Arc architecture diagram — what calls what, and the two edges that carry the design — is in
+**[`docs/arc-usdc.md` § The architecture](docs/arc-usdc.md#the-architecture)**.
+Arc is a stablecoin-native rail where a conditional payment settles without bridging the asset.
+On Tempo the escrow **and the fee that releases it** are the same stablecoin, because Tempo has
+no native gas token. Receipts for both, and the limits neither of them fixes, are on that page.
+
 ## What crosses, and what does not
 
 > **What "settled by a Solana proof" means, precisely.** The escrow's *adjudication path*
@@ -536,24 +578,25 @@ That buys a precise thing, and it is worth stating both halves out loud:
 Without both rows, a reader cannot tell this apart from a bridge, from a light client, or
 from an oracle. With them, the boundary is the interesting part rather than the hidden one.
 
-## Using it from your own agent
-
-Two calls: `fund` to open a deal, `settleWithProof` to close it — and the second is
-permissionless, so the key that pays the gas has no bearing on where the money goes.
-**[`docs/integrate.md`](docs/integrate.md)** is the whole surface in about a page, ending
-with the part that is not ready: an EVM deal's `dealBinding` is still computed only
-in-guest, so today you can settle against a binding but not compute one before the work.
-
 ## Use it from your own agent
 
-**[`docs/partner-kit.md`](docs/partner-kit.md)** — a TypeScript package and a starter you can
-fork: open a deal, check one before you work on it, settle it on a proof, verify the
-settlement. One command runs all three paths — release, refund, and a **real** proof of a
-different job being refused — on a local chain, with no wallet and no funds.
+**→ [`docs/use-with-your-service.md`](docs/use-with-your-service.md) — the whole integration in
+one page.** What Reckn decides and how to tell in a minute whether it fits your agent; the two
+calls; the buyer path and the seller path; and what you have to bring. If you read one page
+after this README, read that one.
 
-**[`docs/positioning.md`](docs/positioning.md)** — which layer this is and which layers it
-composes with. *AI chooses, negotiates, and explains. Re-execution decides the payout.* It
-also says what Reckn does **not** suit, which is most agent spending.
+The short version: **two calls.** `fund` opens a deal, `settleWithProof` closes it, and the
+second is permissionless — the key that pays the gas has no bearing on where the money goes, so
+there is no step where you hand anyone authority. `refundAfterDeadline` returns the money after
+thirty days and is the only exit that needs no proof.
+
+- **[`docs/integrate.md`](docs/integrate.md)** — the contract surface in about a page, including
+  computing a `dealBinding` yourself before any work happens
+- **[`docs/partner-kit.md`](docs/partner-kit.md)** — the TypeScript package and starter in
+  detail: the five refusals, the profiles, the endpoint requirements, the known limits
+- **[`docs/positioning.md`](docs/positioning.md)** — which layer this is and which layers it
+  composes with. *AI chooses, negotiates, and explains. Re-execution decides the payout.* It
+  also says what Reckn does **not** suit, which is most agent spending.
 
 **Nobody outside this project has used it yet, and that is not claimed anywhere.**
 

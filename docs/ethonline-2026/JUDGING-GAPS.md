@@ -80,7 +80,7 @@ scrolling. Worth re-reading the opening of the description with that in mind.
 | # | work | why it is here | cost |
 |---|---|---|---|
 | **1** | **Resolve the schedule collision** (founder) | The deadline moved three days earlier than the plan assumes and now overlaps the R[3]sidency window. Everything else is worthless if the form locks first. | a decision |
-| **2** | **Finish the video** | Already the one round-1 criterion we fail: the cut on disk is 1:41 and silent against 2–4 minutes with audio. | in progress |
+| **2** | **Finish the video** | Already the one round-1 criterion we fail. **Updated 2026-09-09:** the length is fixed — `reckn-demo-v3.mp4` is **3:54**, inside the 2–4 minute band — and the cut is **still silent**, so the criterion still fails on audio alone. The "1:41" this row cited was superseded. | in progress |
 | ~~3~~ | ~~A 4-minute live demo plan and a Q&A sheet~~ | **Done 2026-09-07** — [`LIVE-JUDGING.md`](LIVE-JUDGING.md): a minute-by-minute demo with the theft attempt at 0:50, and seven questions answered in thirty seconds each, concession first. |  |
 | ~~4~~ | ~~Something a visitor can DO~~ | **Done 2026-09-07** — the live page takes a typed claim, hashes it in the browser, and shows the dealBinding, traceHash and verdict read from Arc not moving. Interactive without pretending to re-execute. |  |
 | ~~5~~ | ~~An integration path~~ | **Done 2026-09-07** — [`../integrate.md`](../integrate.md): two calls, and it ends by naming what is not ready rather than stopping at the easy half. |  |

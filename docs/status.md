@@ -14,11 +14,11 @@ type. What remains is judge-legibility integrations (Arc / x402 / MCP), a
 challenge/bond layer, the cross-chain settlement around routing, and production
 content publication.
 
-- **Protocol:** locked — [`docs/protocol-architecture.md`](docs/protocol-architecture.md)
+- **Protocol:** locked — [`docs/protocol-architecture.md`](protocol-architecture.md)
   (VM-neutral verdict envelope, committed spec/delivery/anchor codecs, EVM V1
   profile, data-availability + timeout policy, and the reproducibility vs
   settlement-authority split).
-- **Settlement contract (EVM V1):** implemented in [`contracts/`](contracts) —
+- **Settlement contract (EVM V1):** implemented in [`contracts/`](../contracts) —
   escrow state machine, EIP-712 resolver verdicts, resolver/backend allow-list,
   timeout escape hatches, nonzero-window guards, a cross-language digest pin
   against the keeper, an ERC-8004-style `ReputationEvidence` projection (below),
@@ -53,7 +53,7 @@ content publication.
   evidence to force a timeout; the zero trace distinguishes it from a reproduced
   `Failed`. Emitted on-chain and asserted by contract tests.
 - **Re-execution backend (EVM V1):** revm 38 replay implemented in
-  [`reexec-evm/`](reexec-evm) — deterministic CALL replay with four predicate
+  [`reexec-evm/`](../reexec-evm) — deterministic CALL replay with four predicate
   kinds: `RESULT_EQUALS`, `POSTSTATE_EQUALS`, `POSTSTATE_BOUNDED`, and
   `POSTSTATE_DELTA`. `POSTSTATE_BOUNDED` widens adjudication to a **funded
   envelope** over an inclusive `[min, max]` range (`≥ minOut`, `≤ cap`, or
@@ -67,23 +67,23 @@ content publication.
   the closed replay witness to `anchor.state_root`; proof failure or a missing
   witness is an operational error, not a verdict. And `state_root` itself is now
   bindable to the real block: when the anchor carries the block header,
-  [`header.rs`](reexec-evm/src/header.rs) proves
+  [`header.rs`](../reexec-evm/src/header.rs) proves
   `keccak256(rlp(header)) == block_hash` and the header's `state_root` +
   environment equal the anchor's — so a forged `state_root` is impossible without
   breaking the consensus `block_hash` (the EVM analogue of the SVM `bank_hash`
   verifier), a mismatch being `OperationalError::HeaderMismatch`. This is
   **enforced in the keyless verdict path** (the keeper commits the block header;
   `recompute_verdict` verifies it) and exercised end-to-end against a real anvil
-  block header in [`anvil-e2e.sh`](#try-it-one-command). Replay ignores
+  block header in [`anvil-e2e.sh`](../README.md#try-it-one-command). Replay ignores
   tx-validity ceremony (base-fee / nonce) so honest deliveries reproduce against
   real blocks; balance for `value` is still enforced. `cargo test`: **16 passing**
   (incl. adversarial: a no-op plan cannot forge a `POSTSTATE_DELTA` credit, and a
   `state_root` cannot be forged without breaking `block_hash`).
-- **Re-execution backend (Solana / SVM):** [`reexec-svm/`](reexec-svm) — the same
+- **Re-execution backend (Solana / SVM):** [`reexec-svm/`](../reexec-svm) — the same
   mechanism on Solana via `LiteSVM`, replaying a committed **signed** transaction
   against a committed account snapshot and emitting the **identical VM-neutral
   `ReplayRecordV1`** as the EVM backend. That shared record — one Rust codec in
-  [`packages/protocol-rs`](packages/protocol-rs), asserted against the same golden
+  [`packages/protocol-rs`](../packages/protocol-rs), asserted against the same golden
   as the TS/Solidity vectors — proves the VM-neutral waist across a second VM and
   is the foundation the cross-VM binder will stand on. The **replay boundary is
   settlement-grade (V2)**: signatures verified (a forged signer → `Failed`), the
@@ -91,14 +91,14 @@ content publication.
   runtime profile, ELF derived from ProgramData not the seller, and a closed-world
   account-load trap (a small vendored LiteSVM fork) makes any unwitnessed read an
   operational error, never a phantom-default `Reproduced`. Snapshot
-  **authenticity** now has a real verifier: [`reexec-svm/src/bankhash.rs`](reexec-svm/src/bankhash.rs)
+  **authenticity** now has a real verifier: [`reexec-svm/src/bankhash.rs`](../reexec-svm/src/bankhash.rs)
   recomputes the SIMD-0215 accounts lattice hash over the account set and
   re-derives `bank_hash` (via the audited `solana-lattice-hash` crate), so with
   `snapshot_is_complete` set, a snapshot that does not reproduce the committed
   `bank_hash` is an `OperationalError::BankHashMismatch` rather than a decorative
   field. Because Solana (unlike EVM's MPT) has **no compact per-account inclusion
   proof**, the compact per-tx prestate binds *transitively*:
-  [`reexec-svm/src/authenticity.rs`](reexec-svm/src/authenticity.rs)'s
+  [`reexec-svm/src/authenticity.rs`](../reexec-svm/src/authenticity.rs)'s
   `verify_prestate_authenticity` checks the full snapshot is the committed archive,
   reproduces `bank_hash`, and that every compact account is a faithful subset of
   it — no per-account proof needed. This is **enforced in the dispute path**: the
@@ -106,7 +106,7 @@ content publication.
   (`KeeperError::SnapshotAuthenticity`) before any replay, for both the resolver
   and the keyless verifier. The remaining piece is *ingesting* a real Agave archive
   into that full snapshot. See
-  [`docs/svm-snapshot-authenticity.md`](docs/svm-snapshot-authenticity.md). The
+  [`docs/svm-snapshot-authenticity.md`](svm-snapshot-authenticity.md). The
   closed runtime still permits only the System builtin (custom SBF is
   `UnsupportedEnvironmentDependency`). The predicate set is
   symmetric with the EVM backend: `RESULT_EQUALS`, `LamportsEquals`, the bound
@@ -116,7 +116,7 @@ content publication.
   the two VMs. `cargo test`: **30 passing** (reckn-record: 1; incl. the
   no-op-cannot-forge-a-delta adversarial regression, the `bank_hash`
   lattice-hash authenticity verifier, and the compact-prestate archive binding).
-- **Settlement contract (Solana / SVM):** [`escrow-svm/`](escrow-svm) — a Pinocchio
+- **Settlement contract (Solana / SVM):** [`escrow-svm/`](../escrow-svm) — a Pinocchio
   program mirroring the EVM escrow: the same four-state machine, a Token-2022 vault,
   and a `resolve` that verifies the resolver's verdict by strict introspection of a
   preceding native **Ed25519** instruction over a domain-separated
@@ -136,7 +136,7 @@ content publication.
   double-resolve / conservation, **plus** optimistic finalize, unbonded/unregistered
   rejects, peer-conflict refund, bond deposit/slash): **10 passing** via
   `cargo build-sbf`.
-- **Keeper (Solana):** [`reckn-svm-keeper/`](reckn-svm-keeper) — the SVM analog of
+- **Keeper (Solana):** [`reckn-svm-keeper/`](../reckn-svm-keeper) — the SVM analog of
   the EVM keeper: SHA-256-check the content store, match it to the on-chain deal,
   replay via `reexec-svm` (an operational error is never signed), build the
   escrow's `VerdictCommitment`, and emit the exact `[ed25519(current-ix), resolve]`
@@ -150,7 +150,7 @@ content publication.
   SHA-256 → fund → deliver → challenge → replay → register + bond → the keeper's
   `[ed25519, resolve_optimistic]` accepted → window elapses → finalize → honest
   releases the seller / false claim refunds the buyer → keyless `verify` agrees.
-- **Cross-VM binder (one router, both VMs):** [`binder/`](binder) — a `ReexecBackend`
+- **Cross-VM binder (one router, both VMs):** [`binder/`](../binder) — a `ReexecBackend`
   trait both VMs implement, an `EvmBackend` + `SvmBackend` adapter pair, and a
   `BackendRouter` that verifies the committed content hashes and routes a dispute to
   the backend named by its committed `backend_id` (fails closed on unknown/ambiguous
@@ -160,7 +160,7 @@ content publication.
   witness, the SVM snapshot + runtime profile — is pulled only through a
   content-addressed `BackendArtifactResolver` (SHA-256 re-verified, never live RPC);
   a missing or tampered artifact is an operational `BackendError`, never a verdict.
-  **Proven by a single-router integration test** ([`tests/router_two_vms.rs`](binder/tests/router_two_vms.rs)):
+  **Proven by a single-router integration test** ([`tests/router_two_vms.rs`](../binder/tests/router_two_vms.rs)):
   one `BackendRouter` with both adapters registered re-executes four disputes through
   one `route()` — EVM honest → `Reproduced`, EVM false → `Failed`, SVM honest →
   `Reproduced`, SVM false → `Failed`, all the same `VerdictEnvelopeV1` — while a
@@ -172,18 +172,18 @@ content publication.
   propagation, double-settle rules) is the remaining frame-thick step — with a
   **self-verifying ZK verdict** as the trust-minimized verdict transport (A verifies
   the proof itself, no light client for the authority) —
-  [`docs/cross-chain-settlement.md`](docs/cross-chain-settlement.md).
-- **Money-shot dashboard:** [`dashboard/`](dashboard) — a self-contained,
+  [`docs/cross-chain-settlement.md`](cross-chain-settlement.md).
+- **Money-shot dashboard:** [`dashboard/`](../dashboard) — a self-contained,
   animated money-shot driven by real `reexec-evm` output: the escrow pot moves, a
   live `reckn-keeper` console + ledger stream the resolve, and the outcome lands on
   an on-chain `resolve()` receipt. Same dispute — the opinion judge releases escrow
   to a false claim; Reckn replays the actual plan and refunds the buyer. Open it
   locally — the data is inline, so `file://` works with no server and no setup.
-- **Keeper (chain shell + settlement signature):** [`keeper/`](keeper) — maps a reproducible
+- **Keeper (chain shell + settlement signature):** [`keeper/`](../keeper) — maps a reproducible
   replay to the `VerdictCommitment` and EIP-712-signs it. The digest is
   cross-checked against the contract in both Rust and Foundry (a shared golden),
   so a keeper signature is provably accepted by `resolve()`. It decodes all EVM
-  content through the shared [`reckn-evm-content`](reckn-evm-content) codec (no
+  content through the shared [`reckn-evm-content`](../reckn-evm-content) codec (no
   drift with the binder adapter). The **witness is committed, not RPC-built at
   dispute time**: the seller publishes a proof-carrying witness with
   `reckn-keeper witness … --write <store>` and the delivery commits its SHA-256
@@ -215,10 +215,10 @@ content publication.
   Optimistic settlement is now the default on **both** VMs — the EVM keeper submits
   `resolveOptimistic` and the SVM keeper submits `resolve_optimistic` (registry +
   bond + window + peer-conflict + finalize + slash), each driven end-to-end.
-- **Toward zero-trust (ZK, PoC):** [`zk-verdict/`](zk-verdict) proves reckn's
+- **Toward zero-trust (ZK, PoC):** [`zk-verdict/`](../zk-verdict) proves reckn's
   causal delta verdict inside an **SP1 zkVM** and verifies the proof — the verdict
   *derivation* needs no trusted resolver, run end-to-end on CPU. The verdict is also
-  **verifiable on-chain**: [`RecknVerdictVerifier.sol`](zk-verdict/contracts/src/RecknVerdictVerifier.sol)
+  **verifiable on-chain**: [`RecknVerdictVerifier.sol`](../zk-verdict/contracts/src/RecknVerdictVerifier.sol)
   checks an SP1 proof against the program vkey and exposes the verdict, authoritative
   *because the proof verifies* — a chain-agnostic check, which is what makes a ZK
   verdict the **trustless cross-chain settlement primitive** (any paying chain
@@ -226,7 +226,7 @@ content publication.
   with a **real Groth16 proof** against SP1's canonical `SP1Verifier` (circuit
   v6.1.0) on-chain (`forge test`, mock + real-verifier suites green).
 - **Full re-execution in the zkVM (trusted-prestate AND trusted-`post` gaps, closed):**
-  a second guest ([`zk-verdict/program-revm`](zk-verdict/program-revm/src/main.rs))
+  a second guest ([`zk-verdict/program-revm`](../zk-verdict/program-revm/src/main.rs))
   **verifies the committed prestate is authentic** (each account MPT-proven against
   the committed `state_root`, each slot against the account storage root — via
   `alloy-trie` in-guest, the same check `reexec-evm` does off-chain) and then runs
@@ -241,7 +241,7 @@ content publication.
   (`RecknReexecVerdict.t.sol`). Remaining on the EVM side: the disabled
   `c-kzg`/`ecrecover` precompiles and scale (a full block).
 - **SVM re-execution in the zkVM (the Solana mirror):** a third guest
-  ([`zk-verdict/program-svm`](zk-verdict/program-svm/src/main.rs)) closes both
+  ([`zk-verdict/program-svm`](../zk-verdict/program-svm/src/main.rs)) closes both
   authenticity gaps like the EVM guest: it **recomputes the block `bank_hash`** from
   the committed accounts (SIMD-0215 lattice hash, `solana-lattice-hash` in-guest) and
   requires it to match the committed one, **signature-verifies the real committed
@@ -260,7 +260,7 @@ content publication.
   none); the `bank_hash` check is conclusive over a *complete* account set (the demo
   treats its set as the world, as reckn's tests do).
 - **ZK settlement — the proof moves money:**
-  [`RecknZkEscrow`](zk-verdict/contracts/src/RecknZkEscrow.sol) settles escrow **purely
+  [`RecknZkEscrow`](../zk-verdict/contracts/src/RecknZkEscrow.sol) settles escrow **purely
   on a ZK-verified verdict, no resolver**: `settleWithProof` verifies the SP1 proof via
   `RecknVerdictVerifier` and, only if the proof's `dealBinding` (a commitment each guest
   makes over its authenticated prestate + predicate + plan, matched to the deal at
@@ -268,7 +268,7 @@ content publication.
   (`Failed`). Tested end-to-end with a **real Groth16 proof of the EVM re-execution
   settling to the seller**; binding mismatch and unverified proof revert. The whole
   path — re-execute in-guest → prove → verify on-chain → settle — runs in one command:
-  [`bash zk-verdict/scripts/zk-e2e.sh`](zk-verdict/scripts/zk-e2e.sh). `forge test`: **12
+  [`bash zk-verdict/scripts/zk-e2e.sh`](../zk-verdict/scripts/zk-e2e.sh). `forge test`: **12
   passing**. Integrating `settleWithProof` into the main `RecknEscrow` lifecycle is the
   follow-up.
 - **Next:** the EVM quorum-slashing mirror on the SVM escrow (Ed25519 quorum
@@ -280,42 +280,14 @@ content publication.
 
 ### Arc — a conditional USDC payment whose condition is a proof
 
-**The architecture** (both Arc prizes ask for one; this is the only copy — `docs/arc-usdc.md`
-points here rather than keeping a second that could drift):
+**The architecture diagram lives in
+[`arc-usdc.md` § The architecture](arc-usdc.md#the-architecture)** — on the page about Arc,
+rather than here. It is kept in one place on purpose: a diagram copied into two files is two
+things that drift.
 
-```mermaid
-flowchart TB
-    subgraph offchain["off-chain — nobody's opinion enters here"]
-        W["seller's work<br/>(a committed CALL over a committed prestate)"]
-        RE["reexec-evm<br/>real revm, MPT-verified prestate"]
-        G["SP1 zkVM guest<br/>re-executes and commits<br/>pre / post / minDelta / maxDelta /<br/>outcome / traceHash / dealBinding"]
-        PR["Groth16 proof"]
-        W --> RE --> G --> PR
-    end
-
-    subgraph arc["Arc — USDC is the native asset AND the gas"]
-        U["USDC 0x3600…0000<br/>ERC-20 face, 6 decimals"]
-        E["RecknZkEscrow<br/>no owner · no resolver · no admin<br/>no constructor · no immutable"]
-        V["RecknVerdictVerifier<br/>bound to ONE guest vkey"]
-        S["SP1Verifier (Groth16)<br/>fixed, not a gateway"]
-        E -->|"view call = STATICCALL"| V --> S
-        E -->|"transfer"| U
-    end
-
-    B["buyer (agent)"] -->|"fund(dealId, seller, USDC, amount,<br/>verifier, verifierCodeHash, dealBinding)"| E
-    PR -->|"settleWithProof(dealId, publicValues, proof)<br/>permissionless — anyone may submit"| E
-    E -->|"Reproduced → USDC to seller"| SE["seller (agent)"]
-    E -->|"Failed → USDC to buyer"| B
-
-    style E fill:#0b3d2e,stroke:#0f7,color:#fff
-    style PR fill:#123,stroke:#6cf,color:#fff
-    style U fill:#1a1a3a,stroke:#88f,color:#fff
-```
-
-Two edges carry the whole design: the escrow reaches its verifier through a **`view`
-call**, so the funder-chosen adjudicator runs under `STATICCALL` and cannot write state;
-and `settleWithProof` takes **no adjudicator parameter**, because the deal named it at
-funding.
+Two edges carry the whole design: the escrow reaches its verifier through a **`view` call**, so
+the funder-chosen adjudicator runs under `STATICCALL` and cannot write state; and
+`settleWithProof` takes **no adjudicator parameter**, because the deal named it at funding.
 
 
 On [Arc](https://docs.arc.io), USDC is the native gas token and Circle exposes an
@@ -336,7 +308,7 @@ cd zk-verdict/contracts && forge test --match-contract RecknArcUsdc   # 7 tests,
 the sentence this repository exists to make true — **USDC escrowed on Arc released by
 a proof about work performed on Solana**, with no bridge, no light client and no
 signature anywhere on the path that decides who is paid. Why Arc is load-bearing rather than a deployment target, the architecture
-diagram, and the limits are in [`docs/arc-usdc.md`](docs/arc-usdc.md).
+diagram, and the limits are in [`docs/arc-usdc.md`](arc-usdc.md).
 
 **That paragraph used to end "nothing is deployed to Arc yet."** It is deployed now:
 the escrow lives at
@@ -405,7 +377,7 @@ and `AC-03` run those vectors and assert the count before they assert success, a
 
 Stated here so no reader has to discover them by reading the source. None of these
 is closed by anything above; the honest scope in
-[`zk-verdict/README.md`](zk-verdict/README.md) governs.
+[`zk-verdict/README.md`](../zk-verdict/README.md) governs.
 
 - ~~**`RecknZkEscrow` has no timeout.**~~ **Closed 2026-09-06** — see the closed
   list above. A funded deal whose proof never arrives is returned to its buyer after
@@ -444,5 +416,5 @@ is closed by anything above; the honest scope in
 - **SVM scope.** The Solana guest permits System builtins only — not the full
   Agave/LiteSVM runtime, and no custom SBF.
 - **Not yet submitted anywhere.** The repository is private until submission; the
-  pre-flight in [`SUBMISSION.md`](SUBMISSION.md) is unchecked on exactly those two
+  pre-flight in [`SUBMISSION.md`](../SUBMISSION.md) is unchecked on exactly those two
   lines.

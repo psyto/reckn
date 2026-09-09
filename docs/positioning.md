@@ -30,6 +30,29 @@ inconveniences.
 
 ---
 
+## What a standard would have to fix
+
+Reckn is **building** the standard for proof-driven settlement across execution environments —
+`building`, with no independent adoption yet; the exact strength of that claim and the three
+things that would raise it are in [`messaging.md`](messaging.md). This table is the useful part
+of the ambition: the five boundaries that would have to be common for anyone's escrow, on
+anyone's chain, to settle on anyone's proof.
+
+| boundary | what it fixes | where it stands here |
+|---|---|---|
+| **Deal Terms / Binding** | which work, over which inputs, under which predicate, for how much, by when — committed as 32 bytes before the work starts | **implemented.** `evm_deal_binding` and `svm_deal_binding`, each an independent transcription of its guest, checked byte for byte against a shipped fixture |
+| **Verifier Profile** | which execution environment, which verifier, and which code hash a party is about to trust | **implemented.** Three ship with the kit; a profile is *discovery metadata, not a trust root* — `sellerPreflight` checks it against the chain, and the chain is what counts |
+| **Proof Receipt** | which proof released or refunded which deal, readable without anyone's report of it | **implemented.** `SettledByProof` and `RefundedAfterDeadline` are separate events, so no one has to infer which kind of exit happened |
+| **Permissionless Settlement** | that whoever submits the proof gets no discretion over the payout | **implemented, and enforced at build time.** `settleWithProof` takes no adjudicator argument and `scripts/no-keys.sh` fails the build if a key-holding path appears |
+| **Provenance Adapter** | separating *the computation was correct* from *the inputs came from a real chain* | **open.** This is the unresolved one. A proof establishes re-execution over a **committed** prestate; it does not establish that the prestate was ever a live chain's. Anchoring needs a light client or an oracle **in addition**, and Reckn does not provide one |
+
+The last row is the honest edge of the ambition. Four of these are things the repository does
+today. The fifth is a boundary that has been *named* and not *fixed*, and calling the set a
+standard while one of its members is open would be the kind of claim this project spends most of
+its gates preventing.
+
+---
+
 ## The two sentences that place it
 
 > **AI chooses, negotiates, and explains. Re-execution decides the payout.**

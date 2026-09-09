@@ -10,6 +10,7 @@
 // rather than shipping a video of something that did not happen.
 import path from "node:path";
 import fs from "node:fs";
+import os from "node:os";
 import { fileURLToPath } from "node:url";
 import { execSync, spawn, execFileSync } from "node:child_process";
 import puppeteer from "puppeteer";
@@ -53,6 +54,12 @@ console.error("• starting the demo chain (anvil at Arc's chain id, deploy, USD
 // freshness gate refused it — correctly, but the operator had to diagnose a stale process
 // to get a video. Reap first, and key the reap on THIS repository's path so it can only
 // ever match processes this script started.
+// A stale chain does not announce itself as staleness. On 2026-09-09 a take died on the
+// theft step with `custom error 0x7fcdd1f4` = ProofInvalid(), which reads like the SP1
+// proof itself had stopped verifying — a far more alarming thing than a leftover process.
+// It was not: on a reaped tree the same step returns BindingMismatch() and the fixtures,
+// their vkeys and the guests were all untouched. If this step ever reports ProofInvalid,
+// suspect the chain under the page before you suspect zk-verdict.
 const reap = () => {
   let listed = "";
   try {
@@ -76,13 +83,31 @@ const reap = () => {
     const mine = argv0.includes(".cache/puppeteer/chrome")
               || (argv0.endsWith("/anvil") && cmd.includes("--chain-id 5042002"))
               || (argv0.endsWith("/bash") && cmd.includes(repo + "/scripts/arc-demo.sh"))
-              || (argv0.endsWith("python3") && cmd.includes(repo + "/dashboard/arc-demo.py"));
+              || (argv0.endsWith("python3") && cmd.includes(repo + "/dashboard/arc-demo.py"))
+              // The docs server this script spawns for the live page. A crashed take leaves it
+              // holding :8898, and the next run's spawn cannot bind — which surfaces as
+              // ERR_CONNECTION_REFUSED against our own server and looks like a page bug.
+              // Third leftover class found the same way as the first two: by it breaking a run.
+              || (argv0.endsWith("python3") && cmd.includes("http.server 8898"));
     if (!mine) continue;
     console.error("• reaping a leftover from an earlier take: " + pid + "  " + cmd.slice(0, 60));
     try { process.kill(Number(pid), "SIGKILL"); } catch {}
   }
 };
 reap();
+
+// A BEAT IS A WALL-CLOCK SLEEP, so the film is only as long as the machine is fast. Recorded
+// on 2026-09-09 while four acceptance gates were running (load average 24), the same deck came
+// out 4:01 -- over ETHOnline's ceiling -- against 3:49 for the same content on an idle machine.
+// Nothing in the film was wrong; the measurement was. Refuse rather than ship a length that
+// belongs to the load. RECKN_ALLOW_LOAD=1 overrides, for when you want a take regardless.
+const load1 = os.loadavg()[0];
+if (load1 > 8 && process.env.RECKN_ALLOW_LOAD !== "1") {
+  console.error(`\n✗ load average is ${load1.toFixed(1)} — a take now would be stretched by`);
+  console.error("  whatever else is running, and its duration would not be the film's.");
+  console.error("  Wait for the machine to go quiet, or set RECKN_ALLOW_LOAD=1.\n");
+  process.exit(1);
+}
 
 const demo = spawn("bash", [path.join(repo, "scripts", "arc-demo.sh")], {
   cwd: repo, stdio: "ignore", detached: true,
@@ -440,13 +465,25 @@ async function closingPlate(ms = 8000) {
        transition:opacity .7s ease}
     .b{opacity:0;transition:opacity .7s ease;
        font:400 40px/1.35 ui-sans-serif,-apple-system,Inter,sans-serif;color:#cbbfae}
+    .c{opacity:0;transition:opacity .7s ease;margin-top:38px;
+       font:400 27px/1.5 ui-sans-serif,-apple-system,Inter,sans-serif;color:#8a7f72}
   </style><div class="w">
     <div class="a" id="a">Keep assets native.<br>Settle on proof.</div>
     <div class="r" id="r"></div>
     <div class="b" id="b">${LAST}</div>
+    <div class="c" id="c">Reckn is <b style="color:#cbbfae">building the standard</b> for
+      proof-driven settlement across execution environments.<br>
+      Agents may choose where work happens. Assets remain native.<br>
+      Reproducible execution decides payout.</div>
   </div>`);
   await sleep(500);
-  for (const id of ["a", "r", "b"]) {
+  // The ambition goes LAST, not first. At the top of the film it would be an abstraction
+  // competing with the door's concreteness for the ten seconds that decide whether anyone keeps
+  // watching; here it lands on a viewer who has just seen four settlements and a theft fail, and
+  // the same sentence carries more weight for it. "building the standard" is deliberate and
+  // gated -- see docs/messaging.md for the three things that have to be true before it can be
+  // said any more strongly than that.
+  for (const id of ["a", "r", "b", "c"]) {
     await page.evaluate((x) => { const e = document.getElementById(x); if (e) e.style.opacity = "1"; }, id);
     await sleep(900);
   }
@@ -729,13 +766,24 @@ async function deckSlide(n, ms, { navigate = null, during = null, label = "" } =
   // and `motion` dropped from 8/8 to 5/8, which is the check catching a defect I introduced.
   const hold = Math.max(900, ms - 700);
   const per = steps.length ? Math.floor(hold / (steps.length + 1)) : hold;
+  // Bill the reveal loop for what it actually slept, not for what it planned to. The first
+  // band is deliberately quick (min(600, per)) so the slide starts moving at once, but the
+  // closing hold used to subtract `per * steps.length` as though every band had cost `per`.
+  // The slide therefore ended `per - 600` early -- 3.3s on "why Arc", whose 16.5s budget was
+  // measured at 13.0s, i.e. 152 wpm against a 135 wpm target. The loss scaled with `per`, so
+  // slides were not uniformly fast, they were fast in proportion to how much they asked you
+  // to read. That is the founder's "too short for the amount of text", still unfixed after
+  // READ_WPM was lowered to compensate -- a global constant cannot correct a per-slide error.
+  let spent = 0;
   for (let i = 0; i < steps.length; i++) {
-    await sleep(i === 0 ? Math.min(600, per) : per);
+    const band = i === 0 ? Math.min(600, per) : per;
+    await sleep(band);
+    spent += band;
     await page.evaluate((id) => {
       const m = document.getElementById(id); if (m) m.style.opacity = "0";
     }, `m${i}`);
   }
-  await sleep(Math.max(700, ms - per * steps.length - 700));
+  await sleep(Math.max(700, ms - spent - 700));
   await page.evaluate(() => { const e = document.getElementById("s"); if (e) e.style.opacity = "0"; });
   await sleep(450);
   if (navigate) {
@@ -887,6 +935,17 @@ await cursor();
 await chrome("Try to steal it", "00");
 await sleep(600);
 
+// FRAME ZERO IS NOT THE PRODUCT. The warm-up above deliberately loads index.html and then
+// arc.html so that later beats are instant, and for the older structure -- which opened ON
+// the escrow -- leaving the camera to start there was the whole point of the cold open. The
+// film now opens on a TITLE PLATE, so that same warm page became a flash of UI before the
+// title, which is what the founder saw. Blank to the plate's own background first: the
+// warming is kept (it is the HTTP cache that matters, not this DOM), and the recording now
+// begins on the colour the plate is about to paint over.
+await page.setContent('<!doctype html><meta charset="utf-8">'
+  + '<style>html,body{margin:0;height:100%;background:#0d0b09;overflow:hidden}</style>');
+await sleep(250);
+
 await rec.start(RAW(out));
 t0 = Date.now();
 
@@ -925,9 +984,9 @@ await sleep(900);
 await page.evaluate(() => document.getElementById("btnFalse")?.click());
 await sleep(1200);
 await page.evaluate(() => document.getElementById("btnReplay")?.click());
-await sleep(6000);
+await sleep(4000);
 lower("They disagree about who gets paid.<i>Only one of them is something you can redo yourself.</i>", 6800);
-await dwell(".judges", 9000);
+await dwell(".judges", 6000);
 
 }
 
@@ -936,11 +995,24 @@ await dwell(".judges", 9000);
 if (CUT !== "demo") {
   await deckSlide(2, slideMs(2), { label: "the claim, and the offer" });
 }
-await page.goto(BASE + "/arc.html", { waitUntil: "domcontentloaded" });
-await page.waitForNetworkIdle({ idleTime: 400, timeout: 30000 }).catch(() => {});
-await cursor();
+// ---- where the money is, and where the work is ----------------------------------
+// The geography BEFORE the transactions. This pair used to sit after check 3, which meant a
+// viewer watched three checks' worth of chain activity before being told which chain held the
+// money and which one did the work. It is the same fifteen seconds either way -- a move, not
+// an addition, and the film is already at the event's ceiling.
+if (CUT !== "demo") await deckSlide(8, slideMs(8), { label: "the boundary" });
+beat("17 SVG: out to Arc, scope held");
+await panStill("solana-proof-to-arc-settlement.svg",
+  { s: 1.06, x: 1, y: 1 }, { s: 1.0, x: 0, y: 0 }, 4300, null, 900, { mat: false });
+await holdStill("solana-proof-to-arc-settlement.svg", { s: 1.0, x: 0, y: 0 }, 2600, { mat: false });
+await sleep(250);
 
 // ---- check 1 · a real proof that cannot take the money ---------------------------
+// No navigation here. There used to be a goto to arc.html on this line, and deckSlide's own
+// `navigate` then did the same thing again -- so the UI appeared for one beat between the
+// claim slide and check 1 and was immediately painted over by the slide. The slide's
+// `navigate` runs AFTER its hold, which is the point: the page loads behind the slide the
+// viewer is reading, and is on screen by the time it is wanted.
 await deckSlide(3, slideMs(3), { label: "check 1", navigate: BASE + "/arc.html" });
 await chrome("Check 1 · try to steal it", "01");
 await page.evaluate(() => window.scrollTo(0, 0));
@@ -1056,22 +1128,24 @@ if (CUT !== "presentation") {
     if (!shown.includes(tx)) throw new Error(`the page does not carry recorded settlement ${tx}`);
   }
   beat("04 evidence: four settlements");
-  await dwell("#rows", 11000);
+  await dwell("#rows", 9500);
 }
 
 }
 
-// A chapter marker for a diagram that already carries its own headline — the same redundancy
-// removed once before. Kept where there is room; dropped from the demo, which has a ceiling.
-if (CUT !== "demo") await deckSlide(6, slideMs(6), { label: "the boundary" });
-beat("17 SVG: out to Arc, scope held");
-await panStill("solana-proof-to-arc-settlement.svg",
-  { s: 1.06, x: 1, y: 1 }, { s: 1.0, x: 0, y: 0 }, 5000, null, 900, { mat: false });
-await holdStill("solana-proof-to-arc-settlement.svg", { s: 1.0, x: 0, y: 0 }, 3500, { mat: false });
-await sleep(500);
+// WHY THIS CHAIN. One per cut, never both: the two slides say different things and stacking
+// them turns a specific claim into a sponsor list (docs/messaging.md, "Chain lines, assigned
+// per event"). ETHOnline is Arc-only by founder decision; the CWF door gets Tempo.
+// Not in the demo. "Why this chain" is an ARGUMENT, and the demo's job is the mechanism —
+// the same call already made for the pitch slide. CWF also caps the demo at three minutes.
+if (CUT !== "demo") {
+  await deckSlide(DOOR === "cwf" ? 7 : 6, slideMs(DOOR === "cwf" ? 7 : 6),
+                  { label: DOOR === "cwf" ? "why Tempo" : "why Arc" });
+}
+
 
 // ---- check 4 · the one nobody else shows you ------------------------------------
-await deckSlide(7, slideMs(7), {
+await deckSlide(9, slideMs(9), {
   label: "check 4 - what it does not prove",
   navigate: LIVE + "/",
   during: () => page.evaluate(() => document.querySelector("table.two")
@@ -1080,19 +1154,26 @@ await deckSlide(7, slideMs(7), {
 await chrome("Check 4 · what it does not prove", "04");
 if (CUT !== "presentation") {
 beat("06 evidence: the two rows");
-await dwell("table.two", 11000);
+await dwell("table.two", 8000);
 
 }
+
+// The integration kit — absent from every cut until now, and the thing almost no hackathon
+// entry ships. Stage-one CTA only: partner-kit.md says nobody outside this project has used
+// it, so "run the starter" would be promising an experience nobody has had.
+if (CUT === "presentation") await deckSlide(10, slideMs(10), { label: "the integration kit" });
 
 // ---- the URL, big, and nothing after it -----------------------------------------
 // The one slide whose hold is NOT a reading-speed problem. Ten words, so the formula gives
 // it the six-second floor — but the constraint on a closing call to action is whether a
 // viewer can read an address and remember it, not whether they can read it once. The VO
 // generator caught this: the closing line ran 2.4 s past the shot.
-await deckSlide(8, slideMs(8, 10000), { label: "check it yourself" });
+await deckSlide(11, slideMs(11, 10000), { label: "check it yourself" });
 // The door's last line still has to land, and the closing plate that used to carry it is
 // gone — the URL slide ends the film now. One short plate, door-specific, after it.
-await closingPlate(6000);
+// 6000 was sized for two lines. The plate now carries a third block of 25 words, and a
+// closing plate nobody can finish reading is a plate that undoes its own ending.
+await closingPlate(9200);
 
 beat("END");
 await rec.stop();

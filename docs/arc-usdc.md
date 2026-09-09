@@ -1,5 +1,18 @@
 # Reckn on Arc — a conditional USDC payment whose condition is a proof
 
+## Why Arc?
+
+**Arc is where the dollar stays.** The work happens on Solana; the USDC never leaves Arc. It
+sits in a local escrow for the whole story, and the only thing that crosses the boundary is a
+proof — which decides where local value goes rather than moving any.
+
+The property being used is that Arc is a **stablecoin-native payment rail**: a conditional
+payment can settle there without the asset being bridged anywhere. And it needed no contract
+change to prove it, because a deal names its payment token at `fund()`.
+
+Full comparison, including what Tempo gives that Arc does not:
+[`chain-fit.md`](chain-fit.md).
+
 *Submission aid for ETHOnline 2026, Continuity Track. Written 2026-09-06. Every number
 here is measured on this tree; every claim about Arc is transcribed from Circle's docs
 with the date it was read.*
@@ -78,10 +91,50 @@ deployment cannot tell you afterwards:
 
 ## The architecture
 
-The diagram lives in [the README](../README.md#arc--a-conditional-usdc-payment-whose-condition-is-a-proof),
-where a judge actually reads it. It is kept in **one** place on purpose: a diagram copied
-into two files is two things that drift, and this repository spent 2026-09-06 finding two
-defects of exactly that shape.
+This is the **only copy** of the diagram. It is kept in one place on purpose: a diagram copied
+into two files is two things that drift, and this repository spent 2026-09-06 finding two defects
+of exactly that shape.
+
+```mermaid
+flowchart TB
+    subgraph offchain["off-chain — nobody's opinion enters here"]
+        W["seller's work<br/>(a committed CALL over a committed prestate)"]
+        RE["reexec-evm<br/>real revm, MPT-verified prestate"]
+        G["SP1 zkVM guest<br/>re-executes and commits<br/>pre / post / minDelta / maxDelta /<br/>outcome / traceHash / dealBinding"]
+        PR["Groth16 proof"]
+        W --> RE --> G --> PR
+    end
+
+    subgraph arc["Arc — USDC is the native asset AND the gas"]
+        U["USDC 0x3600…0000<br/>ERC-20 face, 6 decimals"]
+        E["RecknZkEscrow<br/>no owner · no resolver · no admin<br/>no constructor · no immutable"]
+        V["RecknVerdictVerifier<br/>bound to ONE guest vkey"]
+        S["SP1Verifier (Groth16)<br/>fixed, not a gateway"]
+        E -->|"view call = STATICCALL"| V --> S
+        E -->|"transfer"| U
+    end
+
+    B["buyer (agent)"] -->|"fund(dealId, seller, USDC, amount,<br/>verifier, verifierCodeHash, dealBinding)"| E
+    PR -->|"settleWithProof(dealId, publicValues, proof)<br/>permissionless — anyone may submit"| E
+    E -->|"Reproduced → USDC to seller"| SE["seller (agent)"]
+    E -->|"Failed → USDC to buyer"| B
+
+    style E fill:#0b3d2e,stroke:#0f7,color:#fff
+    style PR fill:#123,stroke:#6cf,color:#fff
+    style U fill:#1a1a3a,stroke:#88f,color:#fff
+```
+
+Two edges carry the whole design: the escrow reaches its verifier through a **`view`
+call**, so the funder-chosen adjudicator runs under `STATICCALL` and cannot write state;
+and `settleWithProof` takes **no adjudicator parameter**, because the deal named it at
+funding.
+
+> **Rehomed here 2026-09-09.** This diagram lived in the README until the README was shortened,
+> which moved it into `status.md` without updating the link on this page — so for two days this
+> page pointed at a heading that no longer existed, and the architecture sat on the page about
+> what is *unfinished*. It now lives on the page about the thing it draws, and `status.md`
+> points here.
+
 
 
 Two edges carry the whole design:
