@@ -101,6 +101,13 @@ fi
 
 [[ $bad -eq 0 ]] || exit 1
 
+# A gate must not dirty the tree it judges (see ac011.sh). The 2026-09-08 fix covered
+# tempo-verify.sh and tempo-tip20-probe.sh and MISSED this one, which then moved
+# `checkedOn` during the very next both-green run. Two out of three is how a fix looks
+# when it is applied to the instances you remembered rather than to the property.
+if [[ -n "${RECKN_NO_WRITE:-}" ]]; then
+  echo "  (RECKN_NO_WRITE set -- checked everything above, wrote nothing)"
+else
 jq --arg ah "$(h "$ARC_CODE")" --arg arc "$ARC_ESC" --arg aid "$arc_id" \
    --arg t "$T_ESC" --arg tid "$t_id" --arg when "$(date -u +%Y-%m-%d)" '
   .deployedByReckn.sameCodeAsArc = {
@@ -112,6 +119,7 @@ jq --arg ah "$(h "$ARC_CODE")" --arg arc "$ARC_ESC" --arg aid "$arc_id" \
     whyItMeansSomething: "RecknZkEscrow has no constructor and no immutable, so its deployed bytecode is a pure function of its source. Equal codehashes on two chains therefore mean the same source, not merely the same configuration. The verifier is deliberately NOT compared: it takes a vkey and an address at construction, so its code legitimately differs per deployment.",
     whatItDoesNotClaim: "That the two chains adjudicate identically. They do not: the deals name different verifiers and different tokens. What is shared is the source, and the payout logic it fixes."
   }' "$tempo" > "$tempo.tmp" && mv "$tempo.tmp" "$tempo"
+fi
 
 echo
 echo "  Recorded in tempo.json -> deployedByReckn.sameCodeAsArc"

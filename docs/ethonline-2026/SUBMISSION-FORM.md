@@ -530,21 +530,31 @@ hand-timed against a 1:45 cut and every timecode on it is now wrong. Its beat 9b
 boundary paragraph — is still the best wording of what the proof does and does not
 establish, and that is the only reason it is kept.
 
-## 13. Measured, on the tree at commit `5d86292` (2026-09-07)
+## 13. Measured, on a still tree, 2026-09-09
 
 | what | result |
 |---|---|
-| **008 and 009 green *simultaneously*** | `ac009: 13/13 rows passed; canary M-4c detected by AC-7`, whose AC-12 ran `ac005.sh --all` and `ac008.sh --all` to completion inside the same run: `both-green: 2 sibling gate(s) discovered, 2/2 exit 0` |
+| **every acceptance gate green in one run** | `both-green: 4 sibling gate(s) discovered, 4/4 exit 0; witness=a2bed0e089118f0c` — `ac004: 4/4`, `ac005: 4/4`, `ac008: 18/18 rows passed; canary M-9 detected by AC-06`, `ac011: 8/8`. This is the row 009's AC-12 asserts, run on a tree that did not move. **It was two gates on 09-07 and is four now** because the closure discovers `ac[0-9][0-9][0-9].sh` by pattern rather than from a list |
+| the run that did **not** pass, said before anyone finds it | the same closure went red once on 09-09 with `ac008: 1/18`, because `docs-check.sh` still required a limitation sentence in `README.md` after the README was shortened and its gaps moved to `docs/status.md`. **The sentence was never removed** — the checker was pointing at the old address. Repointed, and with a second marker so the disclosure cannot become unreachable from the front page while the check stays green |
+| **not re-measured since that fix** | `ac009 --all` itself. Its twelve other rows passed on 09-09 and its AC-12 is the row above, so it is expected to be 13/13 — **expected is not measured**, and this line says so rather than printing a number nobody ran |
 | 008 mutation | `ac008-selftest: 21/21 mutants detected; witness=797a221a69627422` |
 | 009 mutation | `ac009-selftest: 15/15 mutants detected, 15/15 sandbox controls clean` |
 | 005 (Arc) gate | `ac005: 4/4 rows passed` |
-| forge — `zk-verdict/contracts` | **47** tests (`forge test --list --json`) |
+| forge — `zk-verdict/contracts` | **55** tests (`forge test --list --json`) |
 | forge — `contracts` | **57** tests |
 | `reexec-svm` | 30 passed (2026-09-06) |
 | deployed bytecode vs local build | **byte-identical, 5,569 bytes** |
 | Arc testnet settlements | **4**, two decided by Solana proofs; one deal frozen by Circle's blacklist at 1.000000 USDC |
 | cycles (measured, unrounded) | verdict **30,355** / reexec **406,715** / svm **986,097** (2026-09-05, `zk-verdict/cycles.json`) |
 | Groth16 fixture, end-to-end regeneration | **335 s** (the gnark wrap alone is 31.71 s) |
+
+**One of the four gates is not ETHOnline work, and is counted here only because the closure
+counts it.** `ac011` is the Tempo slice: it is **deliberately not claimed as event work** for
+this submission (`PREFLIGHT.md` §2), and appears above solely to explain why the gate count
+moved from two to four. Nothing about Tempo is offered here as something built for ETHOnline.
+
+**Regenerate every number in this section with `bash scripts/submission-stats.sh` before the
+freeze.** The forge count in this table read 47 until 09-09, which was true when it was typed.
 
 **Not done, named rather than omitted:** 003 (key gauntlet) is stopped at a hard stop and
 is a founder decision, not a scheduling one; 002 (real ERC-20 workload) is not started;
