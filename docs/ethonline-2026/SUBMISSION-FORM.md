@@ -560,13 +560,19 @@ hand-timed against a 1:45 cut and every timecode on it is now wrong. Its beat 9b
 boundary paragraph — is still the best wording of what the proof does and does not
 establish, and that is the only reason it is kept.
 
-## 13. Measured, on a still tree, 2026-09-09
+## 13. Measured, 2026-09-09 — and where the tree was **not** still, this says so
+
+> The heading read *"Measured, on a still tree"* until the `ac009 --all` row below was filled
+> in. That run was **not** on a still tree, and the row is about exactly that. A heading that
+> asserts the condition every row underneath it satisfies is a claim of its own, and it stopped
+> being true the moment one row's honest answer was "the tree moved and here is what that cost".
 
 | what | result |
 |---|---|
 | **every acceptance gate green in one run** | `both-green: 4 sibling gate(s) discovered, 4/4 exit 0; witness=a2bed0e089118f0c` — `ac004: 4/4`, `ac005: 4/4`, `ac008: 18/18 rows passed; canary M-9 detected by AC-06`, `ac011: 8/8`. This is the row 009's AC-12 asserts, run on a tree that did not move. **It was two gates on 09-07 and is four now** because the closure discovers `ac[0-9][0-9][0-9].sh` by pattern rather than from a list |
 | the run that did **not** pass, said before anyone finds it | the same closure went red once on 09-09 with `ac008: 1/18`, because `docs-check.sh` still required a limitation sentence in `README.md` after the README was shortened and its gaps moved to `docs/status.md`. **The sentence was never removed** — the checker was pointing at the old address. Repointed, and with a second marker so the disclosure cannot become unreachable from the front page while the check stays green |
-| **not re-measured since that fix** | `ac009 --all` itself. Its twelve other rows passed on 09-09 and its AC-12 is the row above, so it is expected to be 13/13 — **expected is not measured**, and this line says so rather than printing a number nobody ran |
+| **`ac009 --all`, now measured** | Run 13:02–14:01 on 2026-09-09. **Twelve of thirteen rows green in one run.** The thirteenth, AC-12, went red *in that run*, and the cause is measured rather than guessed: the working tree moved while it ran — `README.md` was edited at **13:59**, inside the window, and `zk-verdict/README.md` at **13:28**. The gate detects this itself and prints *"a red row here may be drift, not a defect. Re-run on a still tree before believing any failure."* Its content assertions **all matched** — `9/9` stale claims absent, `12/12` replacements present, `0` tilde cycle literals, `1/1` qualified site, `cycles.json` matching `3/3` guests — and **only the witness digest differed**. Re-measured on a still tree, the row above: `both-green` 4 siblings, `4/4 exit 0`, `ac008 18/18`, with the witness **identical to the failing run** (`a2bed0e089118f0c`) and only the exit count moving `3/4 → 4/4`. That is what drift looks like and what a defect does not. **So every one of the thirteen rows has a green measurement, and they are not all from one run.** That is the true statement, and this line prints it rather than `13/13` |
+| the adopter path, measured the same day | `scripts/partner-kit-check.sh` — the package's tests, the starter end to end (`10/10`: release, refund, and a real proof of a different job refused), and the release gate, which packs the package, **installs it into an empty project** and drives the CLI as a consumer would. Added because **nothing had been running any of it**: a commit on 09-09 made a profile field mandatory, updated the source and the tests, missed the example, and the starter stayed broken at `HEAD` while passing in every working tree. Exit `3`, never `0`, when `anvil` or `forge` is absent |
 | 008 mutation | `ac008-selftest: 21/21 mutants detected; witness=797a221a69627422` |
 | 009 mutation | `ac009-selftest: 15/15 mutants detected, 15/15 sandbox controls clean` |
 | 005 (Arc) gate | `ac005: 4/4 rows passed` |
