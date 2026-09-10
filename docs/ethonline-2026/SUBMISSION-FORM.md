@@ -128,9 +128,10 @@ Agent-payment escrow where a disputed delivery is re-executed, not judged. Repro
 > *"do not edit the field that is already submitted"*) until 2026-09-10 this section stated that
 > the Description had been submitted and was deliberately frozen, and every decision about it
 > was made on that basis. The founder confirms the entry has **not been submitted**. Nothing was
-> filed, so there is nothing to amend and no post-submission category is needed; the field is
-> simply still being written. The freeze was the expensive part: it kept the single most
-> important field of the entry closed for two days on a premise nobody re-checked.
+> filed, so there is nothing to amend and no post-submission category is needed. **The field is
+> complete and paste-ready** — 84 paragraphs, 23,440 characters, no placeholder left in it; what
+> it is not is frozen. The freeze was the expensive part: it kept the single most important
+> field of the entry closed for two days on a premise nobody re-checked.
 >
 > **Three changes, all structural rather than new claims.** A cross-review with Codex found the
 > same fault twice over: the strongest fact this entry has was arriving too late to be read.
