@@ -25,19 +25,24 @@
 
 ---
 
-## Before you paste: four numbers move, and one is now closed
+## Before you submit: re-measure, but not to type anything in
 
-**Re-run `bash scripts/submission-stats.sh` in the minute before you submit, and take the
-counts from its output rather than from this file.** Four figures here change with every
-commit and every test anyone adds, and each has already been wrong at least once in a
-document that was correct when it was written:
+**Re-run `bash scripts/submission-stats.sh` before you decide the entry is ready.** Not to
+copy numbers into the form — **none of these figures appears anywhere in the text you paste.**
+They appear in this document's own self-assessment against the three round-1 criteria (§10)
+and in the description of the file you upload (§12), and their job is to tell *you* whether
+those two sections still describe reality. On 2026-09-10 they did not: §10 still called the
+video "the weakest, and the only one not finished" a day after the audio landed and closed it.
 
-| moves | as of 2026-09-10 | why it moves |
+An earlier version of this box said to re-measure "before you paste", which tied the check to
+the wrong action and implied the numbers go into a field. They do not:
+
+| moves | as of 2026-09-10 | where it is used |
 |---|---|---|
-| commits in the window | **182** | every commit, from every window |
-| `forge zk-verdict/contracts` | **55** | Solidity tests. This is the "55" that was mistaken for the kit's count |
-| `npm packages/partner-kit` | **95** | it was 55, then 66, then 81, then 95 within a day |
-| the video's rows | 3:52, 21.2 MB, audio ✅ | only if the film is re-cut |
+| commits in the window | **182** | §10's git-history row, and PREFLIGHT §1. Not in any pasted field |
+| the video's rows | 3:52, 21.2 MB, audio ✅ | §12, describing the file you upload. Nothing is typed |
+| `forge zk-verdict/contracts` | **55** | **nowhere in the form.** A health number for the live demo and Q&A — and the "55" that was once mistaken for the kit's count |
+| `npm packages/partner-kit` | **95** | **nowhere in the form.** Same. It was 55, then 66, then 81, then 95 within one day |
 
 **The audio row is closed.** It was the one round-1 criterion this entry failed, from the
 first draft of this file until 2026-09-10. `Reckn_ETHOnline_20260909.mp4`, human English
@@ -418,7 +423,7 @@ only projects that pass it present live.
 
 | criterion | state |
 |---|---|
-| **Video presentation and quality** | **Still the weakest, and still the only one not finished — but the footage now meets every rule except one.** `dashboard/media/reckn-demo-v3.mp4` is **2:41**, 1920×1080 16:9, faststart, and opens on the theft rather than on a title. What is missing is **audio**: the rule requires it, and it must be a **human** English voice — no TTS. The timed script is `dashboard/video/VO.md`. (Superseded numbers: this row once read "1:41 and silent", which was a cut ago.) |
+| **Video presentation and quality** | **Closed 2026-09-10 — it was the only unfinished one for the whole event.** `dashboard/media/Reckn_ETHOnline_20260909.mp4` is **3:52**, 1080p 16:9, with a **human English voice-over** and no synthetic voice anywhere; `check.sh` is green on all six rows. It arrived with its `moov` atom at the end, which would have shown a judge a spinner rather than a film, and a stream copy fixed that without re-encoding. What no tool checks is whether the voice is clear and carries no music — that was listened to. |
 | **Project live demo quality** | Strong. <https://psyto.github.io/reckn/> needs no install, no wallet and no clone: the visitor's own browser compares the deployed bytecode against the source and reads four settlements off Arc testnet. |
 | **Proper use of git commit history** | Strong, and measured rather than asserted — **182 commits inside the event window as of 2026-09-10, spread across every day of it** (34 / 37 / 18 / 30 / 33 on 09-04 → 09-08, still rising), no squash, no `wip:` subjects, the largest touching 22 files. **Regenerate this line at freeze with `bash scripts/submission-stats.sh` — it said 129 until this morning, and a number that invites the reader to check it is the worst possible place to be stale.** This is the same evidence the Continuity boundary rests on, so it was going to be true anyway. **Ask git the way `PREFLIGHT.md` §1 does**: `--since=2026-09-04` answers 117, because it resolves the date in another timezone and drops twelve commits from the morning of 09-04 JST. |
 
