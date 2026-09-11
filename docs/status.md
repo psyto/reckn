@@ -379,6 +379,33 @@ Stated here so no reader has to discover them by reading the source. None of the
 is closed by anything above; the honest scope in
 [`zk-verdict/README.md`](../zk-verdict/README.md) governs.
 
+- **The escrow does not check what the token returns, and does not measure what it
+  received.** `IERC20Min` declares `returns (bool)` and all three call sites in
+  `RecknZkEscrow.sol` — the `transferFrom` in `fund` and the `transfer` in each payout —
+  discard it. There is no `SafeERC20`. Separately, `fund` records the `amount` it was
+  passed and performs no balance-delta measurement around the pull.
+
+  **What this does and does not expose.** A token that *reverts* on failure is safe, and a
+  token that returns **no data** at all (the USDT shape) **fails closed** rather than open:
+  Solidity ≥0.8 emits a returndata-size check for a declared `bool`, so `fund` reverts and
+  the deal never opens. The exposure is a token that returns **`false`** instead of
+  reverting. Because the escrow holds one commingled pool per token across all deals, an
+  under-funded deal is then paid out of *other deals' money in that same token* — cross-deal
+  theft, not self-harm, which is how an earlier draft of this entry had it wrong. A
+  fee-on-transfer token produces the same shortfall by a different route, and the last deal
+  to exit reverts on both `settleWithProof` and `refundAfterDeadline`, with no third exit.
+
+  **Not exploitable against the current Arc deployment**: Circle's FiatToken reverts on
+  blacklist rather than returning false, which is why `arc.json` records a deal stuck at
+  `Funded` with 1.00 USDC rather than one that settled wrongly. But the escrow is
+  token-agnostic **by design** — a deal names its payment token when it is funded — so this
+  is a property of the token a buyer chooses, and nothing on-chain constrains that choice.
+
+  Not fixed before the ETHOnline freeze on purpose: any edit to `RecknZkEscrow.sol` changes
+  the deployed codehash, which breaks `tempo-arc-parity.sh`'s byte-identical-across-two-chains
+  property and invalidates the recorded settlements as evidence for the shipped source. Found
+  by independent review on 2026-09-09; recorded here rather than carried in someone's head.
+
 - ~~**`RecknZkEscrow` has no timeout.**~~ **Closed 2026-09-06** — see the closed
   list above. A funded deal whose proof never arrives is returned to its buyer after
   thirty days by `refundAfterDeadline`, which anyone may call and which pays the
