@@ -14,6 +14,57 @@
 | 凍結予定 | **9/12**（9/13–15 は R[3]sidency 締切 9/15 に明け渡す） |
 | 撤退可能点 | **9/9** — **`008` と `009` の両方が緑**でなければ founder 判断（`AGENTS.md` §7、2026-09-04 の応募提出に合わせて `003` → `009` に差し替え。`003` は撤退判定の対象外だが **9/12 の凍結までに着地させる対象**。旧文言「001/002 が緑」「008 と 003 が緑」は使わない） |
 
+## 二つ目の大会 — Crypto World's Fair（2026-09-12、founder 裁定）
+
+**Reckn は CWF（Colosseum、9/14 20:00 JST → 10/12）に Tempo × Solana で参加する。**
+ETHOnline は**提出済み**（Arc × Solana）で、**判定窓は 9/14 01:00 → 9/17 01:00 JST**
+（R1 非同期 9/14 04:00 / R2 ライブ 9/15 01:00 / Finale 9/17 01:00）。
+
+規約の一次資料は [`docs/cwf-2026/RULES.md`](docs/cwf-2026/RULES.md)、9/14 までの表は
+[`docs/cwf-2026/PREFLIGHT.md`](docs/cwf-2026/PREFLIGHT.md)。**この2枚を先に読む。**
+
+**この裁定が生む拘束が3つ。**
+
+1. **`master` は 9/14 01:00 → 9/17 01:00 JST の間凍結**し、CWF の作業は `cwf-2026` ブランチへ。
+   Finale 後に日付を保ってマージ。**強制する検査は無く、枝が離れていることだけが機構**である。
+2. **CWF は窓の内側で完成した作業だけを審査する**（*"products are judged only on the work
+   completed between the competition's start and end dates"*）。よって **09-08 の Tempo スライスは
+   CWF から見て事前作業**であり、提出フォームの過去作業欄に書く。**当日作業として書かない。**
+   同じ理由で **spec 010 の実装を 9/14 20:00 JST より前に始めない**（仕様は 09-06 に書けている）。
+   境界の commit は `bash scripts/cwf-baseline.sh --write` が窓の内側でだけ記録する。
+3. **2026-10-08 11:59:56 JST に、公開チェーン上で timeout 返金が初めて実演できる。** Tempo の
+   `mismatch` deal は 09-08 02:59:56 UTC から `Funded`（block 34352010、09-12 にチェーンから読取）で、
+   30 日は**締切の3日前**に満了する。**011 §7.2 の「窓の内側では実演できない」は窓の内側で funded した
+   deal の話**であって、この deal には当てはまらない。proof 由来の返金（T-2）と混ぜて書かない。
+
+**9/12 に測ったもの（すべて静止ツリー、変異走行なし）**
+
+```
+bash zk-verdict/scripts/ac011.sh --all      -> 8/8 rows passed（AC-3/4/6/7 は実チェーンを読む）
+bash scripts/no-keys.sh                     -> PASS
+python3 docs/check-links.py                 -> 192 links / 55 files, all resolve
+cd reexec-svm && cargo test                 -> 30 passed
+cd escrow-svm && cargo test                 -> 10 passed（tests/e2e.rs、LiteSVM）
+solana-cli 4.1.2 / cargo-build-sbf 4.1.0 / anchor-cli 0.32.1 / spl-token-cli 5.6.1（導入済み）
+```
+
+**9/12 に入れた commit**: Tempo ライブページの "Why Tempo?" と `tempo-run.json` の ignore 化 /
+`docs/cwf-2026/` 2枚と `scripts/cwf-baseline.sh` / spec 010 の §0 Amendments と CLAUDE.md の
+大会節 / spec 010 §4.0 の一次資料 pin。
+
+**残っている OPEN（所有者つき）**
+
+| 期日 | 誰 | 何 |
+|---|---|---|
+| 9/14 20:00 JST | agent/founder | `bash scripts/cwf-baseline.sh --write`、その後 010 P1 着手 |
+| 9/14 以降 | founder | CWF のプロジェクト登録。**過去作業欄に §3 の表を貼る**（フォームが開示の場所であり、repo のファイルでは義務を果たさない） |
+| 9/14 | founder | 公開される trackやsponsor・judges・フォーム項目を読み、`RULES.md` §4 の [unknown] を埋める |
+| 9/15 01:00 JST | founder | ETHOnline ライブ判定 |
+| 未定 | founder | **ETHGlobal 側の規約が「他大会にも出している project」を制限するか**は未確認（`PREFLIGHT.md` §2） |
+| 窓の内側 | founder | CWF 動画2本の再収録（現状 3:04 / 3:27 で**両方 3:00 超過**、かつ stale） |
+| 窓の内側 | founder | 審査基準7つのうち4つ（market size / viability / traction / GTM）に**この repo には成果物が無い** |
+| 2026-10-08 | 誰でも | Tempo の `refundAfterDeadline` を呼び、receipt を記録 |
+
 ## 008 実装の進捗（2026-09-05、実測。再起動で失われないようここに置く）
 
 | part | commit | 内容 |

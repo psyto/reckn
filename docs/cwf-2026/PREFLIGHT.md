@@ -72,12 +72,20 @@ form this disclosure can take: a judge can check it rather than believe it.
 Green, measured today on a still tree (no mutation run in progress):
 
 ```
+bash zk-verdict/scripts/ac011.sh --all         -> 8/8 rows passed   <- the CWF story's own gate
 bash scripts/no-keys.sh                        -> PASS  (the claim holds)
-python3 docs/check-links.py                    -> 187 links across 53 files, all resolve
-bash zk-verdict/scripts/tempo-constants.sh     -> 7 Tempo literals match the record
+python3 docs/check-links.py                    -> 192 links across 55 files, all resolve
 cd reexec-svm && cargo test                    -> 30 passed
 cd escrow-svm && cargo test                    -> 10 passed (tests/e2e.rs, LiteSVM)
 ```
+
+**AC-3, AC-4, AC-6 and AC-7 of that gate read the live chain**, so 8/8 is not a statement about
+a local mock: the recorded hashes were confirmed on Tempo today, the three deals were
+re-derived from the chain (2 settled), the live page rendered its rows from it, and the six
+assumptions the escrow makes about a token were re-checked against the real TIP-20. A network
+failure is a red row in that gate rather than a skip, which is why the number means something.
+**Re-run it before the submission**, and never on a tree with a mutation run in progress
+(`CLAUDE.md`).
 
 ## 4. What the in-window work is — 🚫 MUST NOT START BEFORE KICKOFF
 

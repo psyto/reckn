@@ -138,14 +138,35 @@ off-chain replay は **committed prestate から取り出した本物の ELF** �
 
 ## 4. 対象取引（最初の一枚の全定義）
 
+### 4.0 一次資料で pin した値（**2026-09-12 に読取**。[要一次資料] だったものを閉じる）
+
+読んだのはこのマシン上の crate ソース本体であり、ブログでも検索結果でもない。出所は
+`~/.cargo/registry/.../spl-token-interface-3.0.0`（`spl-token` 9.0.0 が `pub use` で再輸出している実体）。**版を書いてあるのは、版が上がれば読み直すという意味**である。
+
+| 値 | pin | 一次資料の行 |
+|---|---|---|
+| legacy SPL Token の program id | `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA` | `src/lib.rs:17` の `solana_pubkey::declare_id!` |
+| `TransferChecked` の tag | **12**、続けて `amount: u64 LE`（8）、`decimals: u8`（1）= **10 bytes** | `src/instruction.rs:713` の `pack`（`buf.push(12)`）と `:605` の `unpack`（`12 =>`） |
+| `Mint::LEN` | **82** | `src/state.rs:38` |
+| `Account::LEN` | **165** | `src/state.rs:132` |
+| `Multisig::LEN` | **355** | `src/state.rs:218` |
+| mint の `decimals` の offset | **44** | `Mint::unpack_from_slice` の `array_refs![src, 36, 8, 1, 1, 36]`（36+8 = 44） |
+| token account の offset | `mint` 0..32 / `owner` 32..64 / **`amount` 64..72** / `delegate` 72..108 / **`state` 108** / **`is_native` 109..121（tag は 109..113）** / `delegated_amount` 121..129 / `close_authority` 129..165 | `Account::unpack_from_slice` の `array_refs![src, 32, 32, 8, 36, 1, 12, 8, 36]` |
+| wrapped SOL の mint id | `So11111111111111111111111111111111111111112` | `src/native_mint.rs:7` |
+
+**まだ [要一次資料] のままのものが1つある**: pin する **ELF のバイト列そのもの**。これは crate の
+ソースからは出ない（program account の `data` を実チェーンから取るしかない）。§12 L-2 のとおり、
+実装時に「その 32 bytes をどこから取ったか」を仕様の中に literal で書く。**§10 の 2〜6 に依存する
+唯一の pin であり、P1 を LiteVM 内で閉じる分には自前で組んだ ELF で足りる。**
+
 ### 4.1 許す集合（これ以外は全部拒否）
 
 - **program**: legacy SPL Token **1本のみ**。program id と `sha256(elf)` を pin する。
-  program id は `Tokenkeg…` **[要一次資料: `solana-program-library/token/program` の宣言 id]**。
+  program id は **`TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`**（§4.0 で pin 済み）。
   loader は legacy BPF loader なので **ELF は program account の `data` そのもの**であり、
   ProgramData account を必要としない（`:364`）。**これが legacy を一枚目に選ぶ理由の半分**である。
 - **instruction**: `TransferChecked`（tag **12**、`amount: u64 LE` + `decimals: u8`、計 10 bytes）
-  **[要一次資料: `spl_token::instruction::TokenInstruction` の discriminant]**。
+  **discriminant は 12、§4.0 で pin 済み。**
   **命令数はちょうど 1**。ComputeBudget も Memo も付けない。
 - **authority**: source token account の **owner フィールド（offset 32..64）と一致する
   message signer**。delegate 経路・multisig 経路は拒否（§6.2）。
@@ -156,8 +177,8 @@ off-chain replay は **committed prestate から取り出した本物の ELF** �
 |---|---|
 | 他の program（Token-2022 含む） | derive された image 集合が pin 集合と**厳密に一致**しない → operational error |
 | 他の instruction | 命令数 ≠ 1、または program id ≠ pin、または tag ≠ 12 → 拒否 |
-| **あらゆる Token-2022 extension** | mint の `data.len()` が**ちょうど 82**、token account の `data.len()` が**ちょうど 165** でなければ拒否。**extension は必ず TLV を後ろに足すので長さが伸びる**。禁止 extension の名前を1つも書かずに閉じる **[要一次資料: `spl_token::state::{Mint,Account}::LEN`、および Token-2022 の `account_type` が base の直後に来ること]** |
-| multisig authority | authority pubkey が snapshot に存在し、かつその owner が pin した token program なら拒否（multisig account は token program 所有。長さ 355 **[要一次資料]** に依存せず owner で閉じる） |
+| **あらゆる Token-2022 extension** | mint の `data.len()` が**ちょうど 82**、token account の `data.len()` が**ちょうど 165** でなければ拒否。**extension は必ず TLV を後ろに足すので長さが伸びる**。禁止 extension の名前を1つも書かずに閉じる **82 / 165 は §4.0 で pin 済み。Token-2022 の `account_type` が base の直後に来ることは、今日読んだ crate には無い事実なので [要一次資料] のまま** |
+| multisig authority | authority pubkey が snapshot に存在し、かつその owner が pin した token program なら拒否（multisig account は token program 所有。長さ 355（§4.0 で pin 済み）に依存せず owner で閉じる） |
 | wrapped SOL | token account の `is_native` COption tag（offset 109..113）が 0 でなければ拒否 |
 | frozen | 両 token account の state（offset 108）が `Initialized` = 1 でなければ拒否 |
 | sysvar / durable nonce | 既存の `reject_unsupported_environment_dependencies` がそのまま効く（`:658`） |
@@ -277,8 +298,13 @@ TokenAmountDelta {
 - **A-10 syscall 経由の ambient 依存。** message に sysvar account が無くても、program は
   `get_sysvar` で Clock / Rent を読める。`reject_unsupported_environment_dependencies` は
   **message しか見ない**。`TransferChecked` がそれを踏むかは
-  **[要一次資料: `spl_token` の processor]** であり、踏まないことを**仮定しない** ——
-  AC-6（clock/slot を変えて同一 verdict）が**観測で**閉じる。
+  **2026-09-12 に一次資料で測った**: `spl-token` 9.0.0 の `src/processor.rs` で `Rent::get()` /
+  `Rent::from_account_info` が現れるのは `InitializeMint` / `InitializeAccount` /
+  `InitializeMultisig` の3経路（`:37` `:98` `:180`）だけで、**`process_transfer`（`:227`）の本体には
+  `Rent` も `Clock` も `get_sysvar` も1つも無い**。
+  **それでも仮定にはしない** —— 走るのは pin した ELF であってこのソースではないので、
+  AC-6（clock/slot を変えて同一 verdict）が**観測で**閉じる。この測定は AC-6 を置き換えず、
+  **落ちたときに「実装が変わった」と「pin が別物だった」を切り分ける基準線**として置く。
 - **A-11 CU 予算。** LiteSVM の既定 CU は profile hash に入っていない。transfer では効かないが、
   **profile が replay 入力であるという INV-6 の主張に穴が開いている**。§13 OQ-2。
 
