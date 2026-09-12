@@ -53,6 +53,16 @@ Everything in **[ethonline-2026/](ethonline-2026/)** is about the submission rat
 protocol: the boundary between pre-event and event work, the submission text, the AI-usage
 disclosure, the preflight checklist, and the live-judging plan.
 
+## The Crypto World's Fair entry
+
+**[cwf-2026/](cwf-2026/)** is the second event, 2026-09-14 → 10-12.
+[`RULES.md`](cwf-2026/RULES.md) is the rules as read, with the provenance of each quotation and
+what is still unpublished; [`PREFLIGHT.md`](cwf-2026/PREFLIGHT.md) is the checklist, one owner
+and one date per open line; [`DAY-1.md`](cwf-2026/DAY-1.md) is what happens in the first hour of
+the window, in order. The rule everything there turns on is that **only work completed inside
+the window is judged** — which makes the Tempo slice pre-existing work for this event, and says
+so in the submission rather than around it.
+
 ## Specifications
 
 **[specs/](specs/)** holds the numbered specs. They are the working record — written before the
