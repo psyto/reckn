@@ -574,17 +574,24 @@ Arc is a stablecoin-native rail where a conditional payment settles without brid
 On Tempo the escrow **and the fee that releases it** are the same stablecoin, because Tempo has
 no native gas token. Receipts for both, and the limits neither of them fixes, are on that page.
 
-**And what Tempo's own tooling is for.** Tempo's developer material is aimed at agents *building
-and operating* payment integrations; the Machine Payments Protocol is how one gets paid. That is
-the layer before a dispute exists — Reckn is the layer after it.
+**Where Tempo's own verification stops, and Reckn starts.** Tempo publishes
+[**Tempo Evals**](https://github.com/tempoxyz/tempo-evals) — *"Evaluation harnesses for agents
+building on Tempo and related protocols"* — which grades an agent's integration with a verifier
+that *"deterministically checks the submission"* rather than with a judge. That is the layer
+**before** any commerce exists. Reckn is the layer after the work.
 
-> **Tempo helps verify that agents can build and operate payment integrations correctly. Reckn
-> complements that layer by making the payment itself conditional on a verifiable result.**
+> **Tempo Evals verifies that an agent can correctly integrate and operate on Tempo. Reckn
+> verifies whether that agent's committed delivery earned the payment.**
 
-**Complementary layers, not an integration.** Reckn is an ordinary EVM contract on Tempo: it reads
-nothing from that tooling, and no evaluation result reaches the escrow. Tempo runs no Solana VM,
-and the absence of a bridge is a statement about *who may authorise the payment* — **not** about
-Solana provenance, which remains unproven either way.
+> **Tempo makes agent payments operable and evaluable; Reckn makes high-stakes agent payments
+> accountable.**
+
+**Complementary layers — not an integration, and not an endorsement.** Reckn is an ordinary EVM
+contract on Tempo: it reads no Evals, Harbor or RewardKit score, is not a suite in that
+repository, and has not been evaluated by it. Tempo runs no Solana VM, and the absence of a bridge
+is a statement about *who may authorise the payment* — **not** about Solana provenance, which
+remains unproven either way. Side by side, with the receipts:
+[`docs/chain-fit.md`](docs/chain-fit.md).
 
 ## What crosses, and what does not
 

@@ -107,21 +107,28 @@ blacklist, which froze one named address and left the timeout open.
 **Reckn removes a protocol-level judge. It does not erase issuer policy.** Anyone who tells you
 otherwise is selling something.
 
-**What Tempo's own tooling is for, and why Reckn does not duplicate it.** Tempo's developer
-material is aimed at agents *building and operating* payment integrations — *"Give coding agents
-Tempo docs, source context, MCP tools, and agent workflow plugins"*
-([docs](https://tempo.xyz/developers/docs/guide/using-tempo-with-ai)) — and its Machine Payments
-Protocol is how an agent gets paid
-([docs](https://tempo.xyz/developers/docs/guide/machine-payments)). That is the layer *before* a
-dispute exists. Reckn is the layer after it:
+**Where Tempo's own verification stops, and Reckn starts.** Tempo publishes
+**[Tempo Evals](https://github.com/tempoxyz/tempo-evals)** — *"Evaluation harnesses for agents
+building on Tempo and related protocols, powered by Harbor"*, with suites for TypeScript
+integrations that *submit and verify Tempo testnet transactions*, for MCP efficiency, and for MPP
+services (marked *Unstable* there). It grades with a verifier that *"deterministically checks the
+submission"*, and its oracle solution is never shown to the agent. That is the layer **before**
+any commerce exists: *can this agent integrate and operate correctly.*
 
-> **Tempo helps verify that agents can build and operate payment integrations correctly. Reckn
-> complements that layer by making the payment itself conditional on a verifiable result.**
+> **Tempo Evals verifies that an agent can correctly integrate and operate on Tempo. Reckn
+> verifies whether that agent's committed delivery earned the payment.**
 
-**Complementary, not integrated.** Reckn is an ordinary EVM contract on Tempo; it reads nothing
-from that tooling, and no evaluation result of any kind reaches the escrow. The wording limits
-are in [`messaging.md`](messaging.md#rdk-lineage-and-the-tempo-complement--approved-wording), and
-the layer map is [`positioning.md`](positioning.md#where-the-execution-engineering-came-from).
+> **Tempo makes agent payments operable and evaluable; Reckn makes high-stakes agent payments
+> accountable.**
+
+**Complementary, not integrated, and not endorsed.** Reckn is an ordinary EVM contract on Tempo:
+it reads no Evals, Harbor or RewardKit score, is not a suite inside that repository, and has not
+been evaluated by it. Same agentic commerce stack, two different jobs. *A parallel worth noticing
+and not overselling:* Evals states that *"RewardKit quality signals are reported separately and
+cannot replace functional correctness"* — Reckn is that sentence applied to money, which is a
+convergence observed from the outside rather than a joint design. Wording limits:
+[`messaging.md`](messaging.md#rdk-lineage-and-the-tempo-complement--approved-wording); layer map:
+[`positioning.md`](positioning.md#the-stack-layer-by-layer).
 
 **Not claimed.** Tempo **mainnet** is not deployed. Nothing here is offered as ETHOnline event
 work — that submission stands on Arc, and the boundary is

@@ -52,8 +52,10 @@ solana-cli 4.1.2 / cargo-build-sbf 4.1.0 / anchor-cli 0.32.1 / spl-token-cli 5.6
 した。**言えること/言ってはいけないこと**は [`docs/messaging.md` の
 "RDK lineage and the Tempo complement"](docs/messaging.md) に登録済みで、150 語の提出用
 description は [`docs/cwf-2026/PITCH.md`](docs/cwf-2026/PITCH.md)。**RDK は設計知見の由来であって
-コードの由来ではない**（Reckn は `revm 38` + `alloy`、`reth` 依存は無い）。**Tempo とは
-相互補完であって統合ではない**（評価結果は escrow に一切届かない）。
+コードの由来ではない**（Reckn は `revm 38` + `alloy`、`reth` 依存は無い）。**Tempo Evals とは
+相互補完であって統合ではない**（`tempoxyz/tempo-evals`、09-12 に現物を読んで引用可能にした。
+**スコアは escrow に一切届かないし、評価されてもいない/一員でもない**）。主語は「Tempo」ではなく
+**Tempo Evals** —— チェーンは商取引を裁定しないし、評価ハーネスは支払いを決めない。
 **この作業でチェーン・契約・テスト証跡は1バイトも触っていない。**
 
 **副産物で1つ、偽になっていた文を直した**: `messaging.md` §2 と `chain-fit.md` が

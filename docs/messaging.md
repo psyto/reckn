@@ -205,25 +205,54 @@ cross by accident. The 150-word form that uses them is
   guest ([`specs/008`](specs/008-verdict-domain-soundness.md)), and the prestate is
   MPT-verified rather than supplied ([`reexec-evm-mpt-verification.md`](reexec-evm-mpt-verification.md)).
 
-**The Tempo complement — the two sentences, and which to write.**
+**The Tempo complement — the sentences to use, and the one that was corrected.**
 
-> **"Tempo helps verify that agents can build and operate payment integrations correctly. Reckn
-> complements that layer by making the payment itself conditional on a verifiable result."**
+**The primary pair** (founder, 2026-09-12, after the citation below arrived):
 
-> **"Tempo verifies that an agent can operate. Reckn verifies whether an agent earned the
-> payment."**
+> **"Tempo Evals verifies that an agent can correctly integrate and operate on Tempo. Reckn
+> verifies whether that agent's committed delivery earned the payment."**
 
-- The first is the one to **write**. It is grounded in Tempo's own developer material —
-  *"Give coding agents Tempo docs, source context, MCP tools, and agent workflow plugins"*
-  (`/developers/docs/guide/using-tempo-with-ai`) and the Machine Payments Protocol
-  (`/developers/docs/guide/machine-payments`), both read 2026-09-12.
-- The second is the sharper line and is fine **in speech**. A fetch of `tempo.xyz/developers/docs`
-  on 2026-09-12 found no page named *agent evaluation* or *agent verification*, so in written
-  copy it asserts a product surface this project cannot cite. Use the long form, or cite the page
-  once one exists.
-- **Never say the two are integrated**, and never say Reckn consumes Tempo's evaluation results
-  on chain. Reckn deploys to Tempo as an ordinary EVM contract and reads **nothing** from
-  Tempo's developer tooling. "Complementary layers" is the claim; "integrated" is not.
+> **"Tempo makes agent payments operable and evaluable; Reckn makes high-stakes agent payments
+> accountable."**
+
+Also usable, and slower: *"Tempo helps verify that agents can build and operate payment
+integrations correctly. Reckn complements that layer by making the payment itself conditional on a
+verifiable result."*
+
+~~*"Tempo verifies that an agent can operate."*~~ **Superseded** — it was carried for a few hours
+as speech-only because no page could be cited. **The subject is `Tempo Evals`, not "Tempo"**, and
+the distinction is the whole accuracy of the sentence: the chain does not adjudicate anyone's
+commerce, and an evaluation harness does not decide a payment. Say the tool's name.
+
+**The citation, read 2026-09-12** — <https://github.com/tempoxyz/tempo-evals>, Apache-2.0 / MIT:
+
+- *"Evaluation harnesses for agents building on Tempo and related protocols, powered by Harbor."*
+- suites: **Tempo integration v1** — *"TypeScript integrations that submit and verify Tempo
+  testnet transactions"* · **Tempo MCP efficiency v1** — *"Live Tempo investigations using direct
+  documentation tools or docs_code"* · **MPP integration** *(marked **Unstable** there — repeat
+  that word if the suite is named)* — *"Paid HTTP and MCP services and clients on Tempo testnet"*
+- *"The **verifier** deterministically checks the submission and writes the Harbor reward."* The
+  oracle solution proves a task is solvable and is never shown to the agent.
+
+**So the layers can be named exactly**, which is stronger than "complementary" on its own:
+
+| layer | the question it answers | who |
+|---|---|---|
+| agent capability & integration quality | *can this agent integrate with the rail and operate it correctly?* — development and evaluation, **before** any commerce | **Tempo Evals** |
+| payment rail | *is the transfer authorised and paid for, under the token's own policy?* | **Tempo** |
+| delivery assurance & conditional settlement | *did this agent's **committed delivery** actually happen, and therefore does the money move?* — **after** the work, in a dispute | **Reckn** |
+
+- **Never say Reckn reads, references or settles on a Tempo Evals score.** No such integration
+  exists. The accurate form is: **the same agentic commerce stack, with the evaluation layer and
+  the delivery-assurance / settlement layer each doing its own job.** Reckn is an ordinary EVM
+  contract on Tempo and reads **nothing** from Evals, Harbor or RewardKit.
+- **Never imply endorsement or membership.** Reckn is not part of Tempo Evals, is not a suite in
+  it, and has not been evaluated by it. Citing a public repository is not a relationship.
+- **The parallel may be pointed out, and only as a parallel.** Tempo Evals grades with a
+  *deterministic verifier* rather than a judge, and says plainly that *"RewardKit quality signals
+  are reported separately and cannot replace functional correctness."* Reckn's whole architecture
+  is that sentence applied to money. **Observed convergence — not a joint design, not a shared
+  component, and not something Tempo has said about Reckn.**
 - **Never say "Tempo verifies Solana."** Tempo runs no Solana VM and inspects no Solana state.
   What settles on Tempo is a **local** TIP-20 payment, decided by a proof.
 
@@ -311,7 +340,7 @@ Nothing here is claimed on the strength of a file appearing.*
 | Reckn fixes fragmented balances or cross-chain liquidity | **it does not.** The buyer must already hold the settlement asset on the payment chain |
 | It can prove arbitrary Solana mainnet state | it proves **consistency over the account set the deal named** — not provenance. It does not establish that those inputs came from mainnet |
 | Reckn **reuses RDK's** re-execution code | **it does not.** *The deterministic-execution **design** grew out of that work*; the MPT witness, the closed-world replay, the zkVM guests and the Solana backend are Reckn's own. And Reckn is **not built on Reth** — `revm 38` + `alloy`, with `reth-trie` declined on purpose |
-| Reckn is **integrated with** Tempo's agent tooling, or settles on Tempo's evaluation results | **it is not.** They are **complementary layers**: one helps an agent build and operate a payment integration, the other decides whether a payment was earned. Reckn is an ordinary EVM contract on Tempo and reads nothing from that tooling |
+| Reckn is **integrated with** Tempo Evals, or settles on an Evals / Harbor / RewardKit score | **it is not, and it is not endorsed by or part of it.** Same agentic commerce stack, different layers: **Tempo Evals** asks *can this agent integrate and operate correctly*, **Reckn** asks *did its committed delivery earn the payment*. Reckn is an ordinary EVM contract on Tempo and reads **nothing** from any of them |
 | **Tempo verifies Solana**, or: there is no bridge, therefore the Solana state is proven | **both false, and the second is two unrelated facts glued together.** Tempo runs no Solana VM. The absence of a bridge is about *who may authorise the payment*; provenance is a separate question and it is **not** answered — see the row above |
 | The Arc × Solana demonstration also runs on Tempo | **it is a different demonstration, not the same one relocated.** Tempo settled its *own* deals — 1.000000 PathUSD each, its own hashes (`docs/specs/011` §10) — while the four Arc settlements stayed on Arc. What is shared, and gated, is the **escrow source**: byte-identical on both chains (`tempo-arc-parity.sh`). "Same source, two chains" is the claim; "the same demo, twice" is not. *(This row read "Tempo is not deployed" until 2026-09-09 — true when written, false after the deployment on 09-08.)* |
 | "like a bank's daily netting" | do not use it. There is no netting and no clearing here |
