@@ -71,7 +71,7 @@ description は [`docs/cwf-2026/PITCH.md`](docs/cwf-2026/PITCH.md)。**RDK は�
 
 | 期日 | 誰 | 何 |
 |---|---|---|
-| 9/14 20:00 JST | agent/founder | `bash scripts/cwf-baseline.sh --write`、その後 010 P1 着手 |
+| 9/14 20:00 JST | agent/founder | `bash scripts/cwf-baseline.sh --write`、その後 010 P1 着手。**着手前に spec r1 の 3 findings（`docs/reviews/010-spec-r1.md`）を仕様に反映して凍結する** |
 | 9/14 以降 | founder | CWF のプロジェクト登録。**過去作業欄に §3 の表を貼る**（フォームが開示の場所であり、repo のファイルでは義務を果たさない） |
 | 9/14 | founder | 公開される trackやsponsor・judges・フォーム項目を読み、`RULES.md` §4 の [unknown] を埋める |
 | 9/15 01:00 JST | founder | ETHOnline ライブ判定 |
@@ -455,6 +455,54 @@ founder が許可したときだけ。`reckn-codex-review` は `stage=spec` 専�
 | **008 verdict domain soundness** | spec | **r6（hard stop / 時刻上限）** | **APPROVE** | `docs/reviews/008-spec-r6.md` |
 | **009 cross-VM settlement** | spec | **r1** | **CHANGES** | `docs/reviews/009-spec-r1.md` |
 | **009 cross-VM settlement** | spec | **r2** | **CHANGES** | `docs/reviews/009-spec-r2.md` |
+| **010 SVM token replay** | spec | **r1（1回で hard stop）** | **CHANGES** | `docs/reviews/010-spec-r1.md` |
+
+## 010 spec review r1（2026-09-12）— **CHANGES**（**仕様レビューはこれで hard stop**）
+
+記録: `docs/reviews/010-spec-r1.md`（payload `/tmp/reckn-payload-010-spec-r1.md` /
+Codex raw `/tmp/reckn-codex-010-spec-r1.md`、**呼び出しは 1 回・`-s read-only`**）。
+対象 `docs/specs/010-svm-token-replay.md`（**524 行**、round 0）は `reckn-spec`（Claude）起草＝
+**Codex は自分の宿題を採点していない**。走行時のツリーは静止・clean（変異走行なし）なので
+`reexec-svm/` の読取は信頼できる。`ac008.sh --all` / `ac009.sh --all` は**走らせていない**
+（tracked source に patch を当てるため。この裁定はそれに依存しない）。
+
+**findings 3件（BLOCKER 2 / MAJOR 1）。Codex の3件は全部、現物のファイルに当てて生き残った**
+（却下0件）。うち2件は Codex が持っていなかった証拠で**悪化する方向に**鋭くした。
+
+1. **[BLOCKER] 述語の6フィールドのうち3つが verdict を縛っていない**（`010:232` INV-2）。
+   INV-2 は `pre` vs `post` の比較しか書いておらず、**buyer が funding 時に書いた
+   `mint` / `owner` / `decimals` が実際の account と一致することを、不変条件・§5.4 の
+   「全列挙」・§7 の AC・§8.2 の mutant のどれも要求していない**。§5.1 の散文には書いてある。
+   → *フィールドが存在するから通る述語*そのもの。買主の条件と違う mint の送金が `Reproduced`。
+2. **[BLOCKER] pin した ELF は実行されない**（`010:242`–`:245` / AC-2 / AC-8）。
+   D-1 は `reexec-svm/src/lib.rs:485` だけを差し替えるが、seeding は executable account を
+   `:501` で飛ばし、**`LiteSVM::new()` が Tokenkeg を自前の ELF で preload する**。しかも
+   `MAINNET_ACTIVE_FEATURES` に `replace_spl_token_with_p_token` が入っている
+   （`vendor/litesvm/crates/litesvm/src/features.rs:230`）ので、実際に走るのは
+   **`pinocchio_token_program.so`（upgradeable loader）＝ SPL Token の別実装**。
+   §1 が guest を触らない理由に挙げた *"committed prestate から取り出した本物の ELF を走らせる"* は
+   **仕様どおり実装すると偽**で、`AGENTS.md` §5 が precompile について開示済みの
+   「同じものの別実装・等価性未検証」を**資金移動の上で再生産する**。
+   付随して: **AC-2 の repro は到達不能**（ELF を1 byte 変えると `snapshot_commitment` が変わり
+   `:419` の `PrestateCommitmentMismatch` が先に出る。既存 test
+   `tampered_program_image_is_bound_by_snapshot_commitment` がそれを assert している）、
+   **AC-8 は誤った error 名**（`:411` が先に `RuntimeProfileMismatch` を返す）。
+   → **INV-6 は真だが空虚、INV-5 は偽**（CU だけでなく **feature set** が profile hash に無く、
+   それが「どちらの token 実装が答えるか」を決めている）。
+3. **[MAJOR] mutant M-5 が存在しない test に帰属している**（`010:391`）。
+   「`authority == owner` 検査を削る → AC-1 の負側（delegate case）」だが、AC-1 の負は
+   ATA / Clock / 無関係 token account の3つで delegate は無く、§8.3 の6本も **multisig** であって
+   delegate ではない。**§6.1 A-3 が名指ししている攻撃に vector が1本も無い。**
+   → `CLAUDE.md` が「同じ形で2回死んだ」と書いている**正しい文の下に名前が並んでいる**型。
+
+**却下0件。** finding として立てなかったもの（検査済み）: §0 の kickoff 制約は `RULES.md` §1 と
+整合（規約が禁じているのでなく、*審査される作業*の定義から出る founder 制約だと §0 自身が書いて
+いる）／§9・§12 L-6・§13 OQ-1 の tier 規律は**装飾でなく荷重を持っている**（P0 の devnet 署名を
+P1–P3 の証拠に読み替える経路は塞がれている）。
+
+**次の手**: 3件は `reckn-spec`（Claude）が**仕様の中で**直して凍結する。**010 は stage=spec を
+再レビューしない**（1回で hard stop）。中心主張を破る新しい再現可能 BLOCKER が出たときだけ
+founder 承認で例外。**実装は 9/14 20:00 JST より前に着手しない**（010 §0）。
 
 ## 009 spec review r2（2026-09-05）— **CHANGES**
 
