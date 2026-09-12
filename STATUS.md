@@ -459,6 +459,8 @@ founder が許可したときだけ。`reckn-codex-review` は `stage=spec` 専�
 
 ## 010 spec review r1（2026-09-12）— **CHANGES**（**仕様レビューはこれで hard stop**）
 
+**BLOCKER 1 は設計判断なので founder に上げた**: [`docs/decisions/010-A-which-elf-executes.md`](docs/decisions/010-A-which-elf-executes.md)。3案（A 環境を宣言してハッシュする / B 世界を閉じて snapshot の ELF を実際に走らせる / C 一枚目の対象を preload 実装に変える）を実測で比較し、**推奨は B**、**4時間の time-box で未知（seed した legacy-loader の program account が `add_program_preverified` 無しで実行されるか）を潰し、落ちなければ C を開示付きで出す**。全案に共通する前提が2つ: **feature set を profile に入れてハッシュする**（どの token 実装が存在するかを選ぶのはこれ）と、**M-9**（pin した ELF を挙動の違う ELF に差し替えたら verdict が動くことを要求する mutant。これだけが BLOCKER 1 を単独で捕まえられる）。
+
 記録: `docs/reviews/010-spec-r1.md`（payload `/tmp/reckn-payload-010-spec-r1.md` /
 Codex raw `/tmp/reckn-codex-010-spec-r1.md`、**呼び出しは 1 回・`-s read-only`**）。
 対象 `docs/specs/010-svm-token-replay.md`（**524 行**、round 0）は `reckn-spec`（Claude）起草＝
