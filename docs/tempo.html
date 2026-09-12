@@ -60,6 +60,21 @@ page loads. Nothing here is a screenshot and nothing is typed into the page by h
   establish that those inputs came from Solana mainnet.
 </div>
 
+<h2>Why Tempo?</h2>
+<div class="card">
+  <p><b>Tempo is not just another EVM deployment.</b> It has <b>no native gas token</b>: fees are
+  paid in a USD-denominated TIP-20. So the escrow holds a stablecoin, and <b>the fee that releases
+  it is paid in that same stablecoin</b> — the payment and the cost of deciding the payment are
+  one unit. On Arc that sentence is false (USDC is the 18-decimal native gas token and the escrow
+  holds a separate 6-decimal ERC-20 face of it), and on a chain with a separate gas asset it is
+  false by construction.</p>
+  <p class="note">Section&nbsp;4 below reads that off real receipts rather than asserting it.
+  What Tempo also adds is a limit: a TIP-20 issuer can <b>pause</b> the token or a TIP-403 policy
+  can refuse a recipient, and a pause stops a proof-authorised release <b>and</b> the thirty-day
+  refund. Reckn removes a protocol-level judge; it does not erase issuer policy. Side by side with
+  Arc: <a href="chain-fit.md">chain-fit.md</a>.</p>
+</div>
+
 <h2>1. Which chain this is — and the URL that is not it</h2>
 <div class="card">
   <p><span class="st pend" id="s-chain">…</span> <span class="big" id="t-chain">asking both endpoints…</span></p>
@@ -194,7 +209,7 @@ const CFG = {
   "feeToken": "0x20C0000000000000000000000000000000000000",
   "feeTokenDecimals": 6,
   "scanBlocks": 12,
-  "commit": "7c7479d6853a",
+  "commit": "cf6eb958b7dd",
   "deployment": {
     "escrow": "0x7e953a6ac16744ef1a02e343277ec55d7410f439",
     "verifier": "0x44e6bcae6a745ff2d75b7389421bee81143bea30",
