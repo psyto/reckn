@@ -4,8 +4,15 @@
 > **CWF 参加の裁定より前に**書かれている。訂正は §0 にあり、旧文は消さずに引用してある。
 > **実装は 2026-09-14 20:00 JST より前に着手しない**（理由は §0）。
 >
-> **Status:** spec draft, **round 0**. `reckn-codex-impl` must not start until
-> `docs/reviews/010-spec-r1.md` ends with `VERDICT: APPROVE`.
+> **Status: FROZEN 2026-09-12.** Round 1 of the independent spec review returned
+> **`VERDICT: CHANGES`** ([`010-spec-r1.md`](../reviews/010-spec-r1.md)), its three findings are
+> folded in at **§0.1**, and **spec review is one round — hard stop** (`AGENTS.md` §7). So the old
+> gate below can never be satisfied and is replaced rather than waited on:
+>
+> ~~*"`reckn-codex-impl` must not start until `docs/reviews/010-spec-r1.md` ends with
+> `VERDICT: APPROVE`."*~~ → **implementation is gated on the clock, not on a second review**:
+> P1's first line is not written before **2026-09-14 20:00 JST**, and
+> `bash scripts/cwf-baseline.sh --write` records the boundary commit first.
 >
 > **Lane:** this is **R&D**, not ETHOnline day-work. It is **not** part of the 9/9
 > checkpoint (`AGENTS.md` §7), not part of the 9/12 freeze, and **nothing in it is
@@ -60,17 +67,54 @@ completed between the competition's start and end dates."*（`RULES.md` §1、20
 **同日に測った現状（P1 の出発点）**: `cd reexec-svm && cargo test` → **30 passed**、
 `cd escrow-svm && cargo test` → **10 passed**（`tests/e2e.rs`、LiteSVM）。
 
+### 0.1 第二次裁定（2026-09-12）— レビュー r1 を畳み込み、ここで凍結する
+
+[`docs/reviews/010-spec-r1.md`](../reviews/010-spec-r1.md) が **CHANGES**（BLOCKER 2 / MAJOR 1）。
+**仕様レビューは1ラウンドで hard stop**（`AGENTS.md` §7）なので、3件をこの文書に畳み込んで**凍結**する。
+再レビューはしない。
+
+- **BLOCKER 1（pin した ELF が走らない）** → **設計判断**として founder に上げ、
+  [`docs/decisions/010-A-which-elf-executes.md`](../decisions/010-A-which-elf-executes.md) で
+  **案 B（世界を閉じる）を採択**。D-1 を §1 で書き換えた（旧文は引用して残した）。
+  未知は **4時間の time-box**（seed した legacy-loader の program account が
+  `add_program_preverified` 無しで実行されるか）。落ちたら**案 C を開示付きで一枚目に出す** ——
+  これは第二ラウンドではなく、記録済みの fallback である。
+- **BLOCKER 2（funded な述語フィールドが verdict を縛っていない）** → **INV-8** を新設し、
+  §5.4 に3行、§7 に **AC-12**、§8.2 に **M-10 / M-11** を足した。
+- **MAJOR（M-5 が存在しない case に紐付く）** → §8.3 に **delegate の vector**（A-3）を足し、
+  M-5 の帰属をそれに直した。
+- **全案に共通する前提**（裁定で採択）: **feature set を profile に入れて hash する**（INV-5 / INV-6 を
+  §5.3 で訂正）と、**M-9**（pin した ELF を挙動の違う ELF に差し替えたら verdict が動くことを要求）。
+  **M-9 だけが BLOCKER 1 を単独で捕まえられる。** AC-2 では捕まらない（理由は §7 の AC-2 に書いた）。
+
 ---
 
 ## 1. 判断（一つだけ）
 
-> **D-1.** Solana R&D の最初の一枚は、**legacy SPL Token の `TransferChecked` 1命令だけ**を
-> `reexec-svm` の off-chain replay で決定的に再実行する枚である。そのために
-> `reexec-svm/src/lib.rs:485` の *「derived program image が1つでもあれば
-> `UnsupportedEnvironmentDependency`」* という all-or-nothing 拒否を、
-> **`(program_id, sha256(elf))` の pin 集合が runtime profile に入り、derive された集合が
-> それと厳密に一致するときだけ通す**検査へ置き換える。
+> **D-1（2026-09-12 改訂、案 B）.** Solana R&D の最初の一枚は、**legacy SPL Token の
+> `TransferChecked` 1命令だけ**を `reexec-svm` の off-chain replay で決定的に再実行する枚である。
+> そのために **replay の VM を閉じた世界として構成し** ——
+> `LiteSVM::new()` をやめ、`LiteSVM::default()` に `with_builtins()` / `with_sysvars()` /
+> **pin した `with_feature_set(...)`** / `with_sigverify(true)` を明示して
+> **`with_default_programs()` を呼ばない** —— さらに `:501` の
+> *「executable account を seed しない」*をやめて **snapshot の program account を seed** し、
+> `:485` の all-or-nothing 拒否を **`(program_id, loader, sha256(elf))` の pin 集合が runtime profile
+> に入り、derive された集合がそれと厳密に一致するときだけ通す**検査へ置き換える。
+> **pin したバイトが、実行されるバイトである。**
 > **zkVM guest（`zk-verdict/program-svm`）はこの一枚で一行も変えない。**
+
+**旧 D-1 は偽だった。消さずに引用して残す**（2026-09-12、レビュー r1 finding 1）:
+
+> ~~*「`:485` の all-or-nothing 拒否を、`(program_id, sha256(elf))` の pin 集合が runtime profile に
+> 入り、derive された集合がそれと厳密に一致するときだけ通す検査へ置き換える。」*~~
+
+**なぜ偽か。** `LiteSVM::new()` は `default().into_basic()` で、`into_basic()` が
+`with_default_programs()` を呼び、`load_default_programs` が **8本**を `add_program_preverified` で
+preload する。そして **`Tokenkeg…` に何が載るかは feature gate が決める** ——
+`replace_spl_token_with_p_token` が有効なので、載るのは **`pinocchio_token_program.so`
+（SPL Token の*別実装*）で、しかも `bpf_loader_upgradeable` の下**である。snapshot 側の
+executable account は `:501` で飛ばされるので、**pin したバイトは一度も実行されない**。
+拒否を緩めるだけの旧 D-1 では、pin は何も縛らない記述になる。
 
 判断はこれ一つである。`TokenAmountDelta`（§5）も fail-closed 機構（§6）も、この一枚を
 **閉じたまま**通すために必要な最小の随伴であって、別の判断ではない。
@@ -97,6 +141,10 @@ off-chain replay は **committed prestate から取り出した本物の ELF** �
 | `derive_program_images` は **snapshot の executable account から**プログラム像を導く。seller 供給の `(program_id, elf)` 入力は V2 に無い。legacy loader なら `data` がそのまま ELF、upgradeable loader なら ProgramData account を辿る | `:331`–`:395` |
 | **その像が1つでもあれば `replay()` は即 operational error** —— 今日 off-chain replay も実質 System 限定 | `:485` |
 | LiteSVM の seeding は **executable account を飛ばす**（ambient cache を作らないため）。`AccountLoadPolicy::RejectUnseeded` | `:496`–`:503` |
+| **【2026-09-12 追記、この行が無かったことが BLOCKER 1 の原因】** `LiteSVM::new()` は `default().into_basic()` で、`into_basic()` が **`with_default_programs()`** を呼ぶ。`load_default_programs` は **8本**を `add_program_preverified`（*preverified*）で preload する | `reexec-svm/src/lib.rs:491`／vendor `litesvm/src/lib.rs:535`／`programs/mod.rs:10`–`:66` |
+| **`Tokenkeg…` に載る実装は feature gate が決める。** `replace_spl_token_with_p_token` が active mainnet set に入っているので、載るのは **`pinocchio_token_program.so`（別実装）／`bpf_loader_upgradeable`**。無効時のみ `spl_token-3.5.0.so`／`bpf_loader` | vendor `features.rs:230`／`programs/mod.rs:13`–`:28` |
+| **`:485` の拒否は封じ込めであって手抜きではない。** コード自身がそう書いている: *「Treating those as a caller-selectable allowlist would merely move the old ambient-code trust bug into the profile. Until their account/loader state is reconstructed, the System builtin is the only permitted ambient executable.」* | `:269`–`:273` |
+| profile が hash するのは litesvm の**バージョン文字列** `litesvm/0.13.1/reckn-closed-world/1`。**feature set 自体は hash していない** | `:27`, `:287` |
 | message の全 account key は snapshot か ambient に**無ければ `ImplicitAccountLoad`** | `:639` |
 | sysvar account と durable nonce は**入口で拒否** | `:658` |
 | 述語は4つ。causal なのは `LamportsDelta` のみ（`post - pre` saturating が `[min,max]`） | `:114`–`:135` |
@@ -153,6 +201,12 @@ off-chain replay は **committed prestate から取り出した本物の ELF** �
 | mint の `decimals` の offset | **44** | `Mint::unpack_from_slice` の `array_refs![src, 36, 8, 1, 1, 36]`（36+8 = 44） |
 | token account の offset | `mint` 0..32 / `owner` 32..64 / **`amount` 64..72** / `delegate` 72..108 / **`state` 108** / **`is_native` 109..121（tag は 109..113）** / `delegated_amount` 121..129 / `close_authority` 129..165 | `Account::unpack_from_slice` の `array_refs![src, 32, 32, 8, 36, 1, 12, 8, 36]` |
 | wrapped SOL の mint id | `So11111111111111111111111111111111111111112` | `src/native_mint.rs:7` |
+
+**【2026-09-12】この表のレイアウトは crate が宣言している値である。** 案 B の下で実行されるのは
+**snapshot が運ぶ ELF** なので、*その ELF のレイアウトがこの表と一致すること*は
+**M-11 が観測で閉じる**（一致しなければ transfer は落ちるか、delta が動かない）。
+案 C に落ちた場合は **`pinocchio_token_program.so` のレイアウト互換性が load-bearing になる**ので、
+その時点で `[要一次資料]` を1つ増やす（決定メモ §3 案 C）。
 
 **まだ [要一次資料] のままのものが1つある**: pin する **ELF のバイト列そのもの**。これは crate の
 ソースからは出ない（program account の `data` を実チェーンから取るしかない）。§12 L-2 のとおり、
@@ -237,12 +291,28 @@ TokenAmountDelta {
   「送った額 ≠ 着いた額」を、述語は構造的に取り違えない。**
 - **INV-4（domain）**: 内部は u64、`VerdictPublicValues` へ渡すときのみ `U256::from(u64)` で
   **拡大**する。**縮小・limb 取り出しはどこにも無い**（008 が閉じた偽解放の再来を作らない）。
-- **INV-5（決定性）**: 同じ `(anchor, snapshot, profile, plan, predicate)` は同じ verdict を返す。
-  LiteSVM の clock / slot / CU 設定を変えても変わらない（AC-6 が検定する）。
-- **INV-6（profile が replay 入力）**: pin 集合は `runtime_profile_hash` に入り、したがって
-  `snapshot_commitment` に入る。**pin を1つ足すことは anchor を変えることであり、実装詳細ではない。**
+- **INV-5（決定性、2026-09-12 訂正）**: 同じ `(anchor, snapshot, profile, plan, predicate)` は同じ
+  verdict を返す。**profile は feature set を含む** —— どの token 実装が*存在するか*を選ぶのは
+  feature set なので、それを固定しない profile は環境の記述ではない。
+  旧文は *「LiteSVM の clock / slot / CU 設定を変えても変わらない」*だけを言っており、
+  **決定性の主張として不足していた**（レビュー r1）。CU は依然 §13 OQ-2 で開いている。
+- **INV-6（profile が replay 入力、2026-09-12 訂正）**: pin 集合**と feature set**は
+  `runtime_profile_hash` に入り、したがって `snapshot_commitment` に入る。
+  **旧 INV-6 は真だが空虚だった** —— 「pin を足すと hash が変わる」は `Sha256` の性質であって
+  この設計の性質ではない。**言うべきことは「hash に入っていない環境入力が無い」**であり、
+  2026-09-12 まで **feature set がまさにそれだった**（バージョン文字列が慣習で代理していただけで、
+  vendored `features.rs` を編集しても hash は動かない）。
 - **INV-7（ambient は増えない）**: `allowed_ambient_programs` は System のままである。
   token program は **ambient ではなく snapshot 由来**として入る。`:275` の拒否は緩めない。
+  **案 B はこれを初めて本当に達成する** —— `with_default_programs()` を呼ばないので、
+  ambient に非 builtin のコードが**物理的に存在しない**。
+- **INV-8（funded なフィールドは verdict を縛る。2026-09-12 新設、レビュー r1 finding 2）**:
+  `TokenAmountDelta` の `mint` / `owner` / `decimals` は**述語の一部として検定される**。
+  `token_account` の実際の mint フィールドが `mint` と、owner フィールドが `owner` と、
+  **committed prestate の mint account の `decimals`（offset 44）が `decimals` と**一致しない場合は
+  `Failed`。**旧仕様は §5.1 の散文でしか言っておらず、不変条件も §5.4 の行も AC も mutant も
+  無かった** —— つまり **別 mint への transfer が `Reproduced` になった**。
+  6つある入力のうち3つが何も縛らない述語は、述語ではない。
 
 ### 5.4 失敗条件（全列挙）
 
@@ -258,6 +328,10 @@ TokenAmountDelta {
 | transaction が実行時に落ちる | `Verdict::Failed(Execution)`（既存） |
 | delta が `[min,max]` の外 | `Verdict::Failed(TokenAmountDeltaOutOfBounds)`（新設） |
 | post 側で mint / owner / 長さが変わった | `Verdict::Failed(TokenAmountDeltaOutOfBounds)` |
+| **述語の `mint` ≠ token account の実際の mint フィールド**（INV-8） | `Verdict::Failed(TokenAmountDeltaOutOfBounds)` |
+| **述語の `owner` ≠ token account の実際の owner フィールド**（INV-8） | `Verdict::Failed(TokenAmountDeltaOutOfBounds)` |
+| **述語の `decimals` ≠ committed mint の `decimals`（offset 44）**（INV-8） | `Verdict::Failed(TokenAmountDeltaOutOfBounds)` |
+| **pin した ELF と、実行された program の image が違う**（案 B。`with_default_programs()` を呼ばない構成で ambient に非 builtin コードが存在しないこと） | `OperationalError::ProgramImageMismatch` |
 
 `min = 0` は**仕様として拒否しない**が、`LamportsDelta` と同じく **floor 0 は「何もしない」で
 満たされる**（`AGENTS.md` §5）。010 はこれを閉じない。§12 L-1 に置く。
@@ -307,6 +381,9 @@ TokenAmountDelta {
   **落ちたときに「実装が変わった」と「pin が別物だった」を切り分ける基準線**として置く。
 - **A-11 CU 予算。** LiteSVM の既定 CU は profile hash に入っていない。transfer では効かないが、
   **profile が replay 入力であるという INV-6 の主張に穴が開いている**。§13 OQ-2。
+  **【2026-09-12】この穴は CU だけではなかった。** より大きい穴は **feature set** で、
+  それは *どの token 実装が存在するか*を選ぶ。INV-5 / INV-6 を訂正し、feature set は
+  profile に入れて hash する（AC-11）。**CU は引き続き開いており、OQ-2 のまま。**
 
 ### 6.3 なぜ legacy が先で Token-2022 が後か（3つとも構造上の理由）
 
@@ -332,9 +409,14 @@ TokenAmountDelta {
   `ImplicitAccountLoad` か `UnsupportedEnvironmentDependency` になる。
   *空虚な実装*: 常に成功を返す replay。→ **同じ test 関数が正1・負3を持ち、負が verdict でなく
   operational error であることまで assert する。**
-- **AC-2 — program pin が address でなく bytes を縛る。** pin した address に **1 byte だけ
-  異なる ELF** を置いた snapshot が `ProgramImageMismatch` になる。
-  *空虚な実装*: address だけ比較。→ **この test は address が一致する case でしか落ちない。**
+- **AC-2 — program pin が address でなく bytes を縛る（2026-09-12 訂正）。** pin した address に
+  **1 byte だけ異なる ELF** を置いた snapshot が拒否される。
+  **旧文は `ProgramImageMismatch` を要求していたが、その repro は到達不能だった** ——
+  ELF を1バイト変えると `snapshot_commitment` が動くので `:419` の
+  `PrestateCommitmentMismatch` が先に返り、それは既存テスト（`:1177`）が既に assert している。
+  **正しい repro は「commitment を作り直した上で pin だけ古いまま」**にすること。
+  *空虚な実装*: address だけ比較 → **M-1 が落とす。**
+  **この AC は BLOCKER 1 を捕まえられない**（pin が実行されるかを見ていない）。それは **M-9** の仕事。
 - **AC-3 — extension が長さで閉じる。** mint 83 bytes / token account 166 bytes の2 case が
   `UnsupportedTokenLayout` になる。**extension の名前は test にも実装にも1つも現れない**
   （`grep -c 'transfer_fee\|transfer_hook\|permanent_delegate\|confidential' reexec-svm/src` が **0**）。
@@ -354,10 +436,26 @@ TokenAmountDelta {
   `pre = u64::MAX`, `post = 0` の vector が、それぞれ `delta = 1` / `delta = 0` として
   **U256 の上で**判定される。**limb 取り出しも縮小キャストも無いことを**、
   `grep -c 'as u64\|\.to::<u64>()\|limbs()' ` が新規コードで **0** であることで示す。
-- **AC-8 — profile が入力である。** pin 集合を1つ足した profile が**異なる
-  `runtime_profile_hash`** を出し、古い anchor に対する replay が
-  `PrestateCommitmentMismatch` になる。
-- **AC-9 — 変異検出。** §8.2 の mutant 8本すべてが、**どの test に検出されたかを名指しで**
+- **AC-8 — profile が入力である（2026-09-12 訂正）。** pin 集合を1つ足した profile が**異なる
+  `runtime_profile_hash`** を出し、古い anchor に対する replay が拒否される。
+  **旧文は `PrestateCommitmentMismatch` を名指ししていたが、`:411` は先に
+  `RuntimeProfileMismatch` を返す。** エラー名を実際に返るものへ直す。
+  **そして旧 AC-8 は `Sha256` の性質を検定していた** —— 「入力を足せば digest が変わる」は
+  この設計の性質ではない。**AC-11 が代わりに設計の性質を検定する。**
+- **AC-11 — 閉じた世界であること、および hash されていない環境入力が無いこと（新設、案 B）。**
+  (a) replay の VM に **非 builtin の ambient program が0本**であることを、
+  `Tokenkeg…` を呼ぶ transaction が **pin 無しでは実行に失敗する**ことで示す
+  （`with_default_programs()` を呼んでいれば成功してしまうので、この test は構成を検定している）。
+  (b) **feature set を1ビット変えると `runtime_profile_hash` が動く**。
+  (c) **`replace_spl_token_with_p_token` を無効にした feature set は、有効な場合と
+  *異なる* image を要求する** —— 同じ pin 集合が両方で通ったら、pin は実行を縛っていない。
+  *空虚な実装*: `LiteSVM::new()` のまま feature set を hash に足すだけ。→ **(a) と (c) が落とす。**
+- **AC-12 — funded なフィールドが verdict を縛る（新設、INV-8）。** 同一の transaction・同一の
+  delta に対し、述語の **`mint` だけ**を別の pubkey にした case、**`owner` だけ**を変えた case、
+  **`decimals` だけ**を committed mint と違う値にした case の3本が、いずれも `Failed` になる。
+  **正の case と同じ test 関数の中に置く**（delta が範囲内であることまで同じ入力で示す）。
+  *空虚な実装*: フィールドを読むだけで比較しない。→ **M-10 / M-11 が落とす。**
+- **AC-9 — 変異検出。** §8.2 の mutant **11本**すべてが、**どの test に検出されたかを名指しで**
   記録される。**総数の等式ではなく、要求する mutant id の集合が実在し全部検出されたこと**を
   assert する（`AGENTS.md` の兄弟 gate の教訓）。
 - **AC-10 — 兄弟を赤くしない。** `cargo test -p reexec-svm` と `cargo test -p reckn-escrow-svm`
@@ -388,11 +486,15 @@ TokenAmountDelta {
 | M-2 | 長さ比較を `==` から `>=` に弱める | AC-3 |
 | M-3 | `post` を committed prestate から読む | AC-4 |
 | M-4 | `saturating_sub` を `wrapping_sub` にする | AC-4 / AC-7 |
-| M-5 | authority == owner 検査を削る | AC-1 の負側（delegate case） |
+| M-5 | authority == owner 検査を削る | **§8.3 の delegate case**（2026-09-12 訂正。旧文は「AC-1 の負側（delegate case）」と書いていたが、**AC-1 の負例は ATA / Clock / 無関係 token account の3本で delegate は無く**、§8.3 の6本も multisig であって素の delegate ではない。**帰属先が存在しなかった**ので §8.3 に vector を足した） |
 | M-6 | 命令数 1 の検査を「1本目だけ見る」に弱める | AC-1 |
 | M-7 | pin 集合を `runtime_profile_hash` から外す | AC-8 |
 | M-8 | `is_native` / state の検査を削る | §8.3 の layout case |
+| **M-9** | **pin した ELF を、挙動の違う ELF に差し替える**（`amount - 1` を送る／常に失敗する） | **AC-11(a)**。**これだけが「pin したバイトが実行されている」を単独で検定する。** 差し替えても verdict が動かなければ、走っているのは pin した image ではない |
+| **M-10** | INV-8 の `mint` / `owner` 比較を削る | **AC-12** |
+| **M-11** | INV-8 の `decimals` 比較を削る（または committed mint でなく命令の byte を読む） | **AC-12**。§4.0 のレイアウト前提も同時に観測する |
 
+**mutant は 11 本ある**（2026-09-12 に M-9 / M-10 / M-11 を追加）。
 **mutant は repository のファイルを書き換えずに適用する**（009 part 4 と同じ規律: sandbox に
 複製して適用する）。**「手で走らせて報告書に貼る」自己申告にしない** —— runner が
 mutant id → 検出した test 名の表を stdout に出し、AC-9 はその表を読む。
@@ -402,6 +504,12 @@ mutant id → 検出した test 名の表を stdout に出し、AC-9 はその�
 frozen source / frozen destination / wrapped SOL destination / multisig authority /
 mint 83 bytes / token account 166 bytes。**すべて `OperationalError`**（verdict ではない）
 であることまで assert する。
+
+**7本目（2026-09-12 追加、レビュー r1 MAJOR）: delegate 経路。** prestate で approve 済みの
+**delegate が signer である** `TransferChecked`。§6.2 の **A-3** が名指しする攻撃で、
+**旧仕様はこの vector をどこにも持っていなかった**（M-5 の帰属先が存在しなかった理由）。
+`OperationalError::UnsupportedAuthority` であることまで assert する ——
+**authority は source token account の owner フィールドと一致する signer でなければならない**（§4.1）。
 
 ### 8.4 書かないテスト
 
@@ -419,7 +527,7 @@ mint 83 bytes / token account 166 bytes。**すべて `OperationalError`**（ver
 | | 内容 | 完了定義（**tier を跨がない**） |
 |---|---|---|
 | **P0** | 既存 Token-2022 vault の devnet 実演 | **前提が満たされて初めて着手可能**（§10）。完了 = 「devnet 上の deploy 済み program id」「Token-2022 mint」「fund → resolve(Reproduced) → seller 着金」の3つの **explorer で追える tx signature**。**この時点でも resolver 経路である**ことを、デモの台本と README に**同じ画面で**書く。§2 の extension 未検査（L-3）と A-9 を**穴として併記する**。**「proof で決済した」と書かない。** |
-| **P1** | pin された legacy SPL Token image の replay | `cargo test -p reexec-svm` が §8.1 の4本と §8.3 の6本で緑。**LiteSVM tier**。 |
+| **P1** | pin された legacy SPL Token image の replay（**案 B: 閉じた世界**） | **先に4時間の spike**: seed した legacy-loader の program account が `add_program_preverified` 無しで compile・実行されるか。落ちたら**案 C を開示付きで採る**（決定メモ §5）。完了 = `cargo test -p reexec-svm` が §8.1 の4本と §8.3 の**7本**で緑、かつ **AC-11 と M-9 が緑**（＝pin したバイトが実行されている証拠）。**LiteSVM tier**。 |
 | **P2** | `TokenAmountDelta` | AC-1〜AC-8 が緑。 |
 | **P3** | mutant gate | AC-9 / AC-10 が緑。**ここまでが 010 の範囲。** |
 | **P4** | extension 無し Token-2022 mint | 別仕様（011）。upgradeable loader 経路と `account_type` byte を閉じる。**transfer hook は入らない。** |

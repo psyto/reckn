@@ -459,6 +459,17 @@ founder が許可したときだけ。`reckn-codex-review` は `stage=spec` 専�
 
 ## 010 spec review r1（2026-09-12）— **CHANGES**（**仕様レビューはこれで hard stop**）
 
+**裁定（2026-09-12、founder）: 案 B を採択**——世界を閉じ、pin したバイトを実行されるバイトにする。
+未知は4時間の time-box、落ちたら案 C を開示付き。**仕様は 3件を畳み込んで FROZEN**
+（`docs/specs/010-svm-token-replay.md` §0.1）。**ヘッダの旧ゲート「r1 が APPROVE になるまで実装禁止」は
+永久に満たせないので、時計によるゲート（9/14 20:00 JST）へ置き換えた。**
+新設したもの: **INV-8**（funded な mint / owner / decimals が verdict を縛る）、
+**AC-11**（閉じた世界であること＋hash されていない環境入力が無いこと）、**AC-12**（INV-8）、
+**M-9 / M-10 / M-11**（mutant は 8→**11本**）、§8.3 に **delegate vector**（A-3。M-5 の帰属先が
+存在しなかった）。訂正したもの: **AC-2 の repro は到達不能だった**、**AC-8 は返らないエラー名を
+名指ししていた上に `Sha256` の性質を検定していた**、**INV-5 / INV-6**（未 hash の環境入力は CU ではなく
+**feature set** が本体）。
+
 **BLOCKER 1 は設計判断なので founder に上げた**: [`docs/decisions/010-A-which-elf-executes.md`](docs/decisions/010-A-which-elf-executes.md)。3案（A 環境を宣言してハッシュする / B 世界を閉じて snapshot の ELF を実際に走らせる / C 一枚目の対象を preload 実装に変える）を実測で比較し、**推奨は B**、**4時間の time-box で未知（seed した legacy-loader の program account が `add_program_preverified` 無しで実行されるか）を潰し、落ちなければ C を開示付きで出す**。全案に共通する前提が2つ: **feature set を profile に入れてハッシュする**（どの token 実装が存在するかを選ぶのはこれ）と、**M-9**（pin した ELF を挙動の違う ELF に差し替えたら verdict が動くことを要求する mutant。これだけが BLOCKER 1 を単独で捕まえられる）。
 
 記録: `docs/reviews/010-spec-r1.md`（payload `/tmp/reckn-payload-010-spec-r1.md` /

@@ -1,6 +1,20 @@
 # 010-A — which ELF actually executes, and therefore what a pin can mean
 
-**Founder decision required.** Raised by [`docs/reviews/010-spec-r1.md`](../reviews/010-spec-r1.md)
+> ## RULING — 2026-09-12, founder: **take B.**
+>
+> Close the world: construct without `with_default_programs()`, seed the snapshot's program account,
+> and make the pinned bytes the executing bytes. **Time-box the single unknown to four hours** —
+> *does a seeded legacy-loader program account get compiled and executed without
+> `add_program_preverified`?* — and if it does not land, **ship C for slice one with the disclosure**
+> and keep B as the P4 path. Both common prerequisites are adopted: **the feature set is hashed into
+> the profile**, and **mutant M-9** (replace the pinned ELF with a behaviourally different one and
+> require the verdict to move) is required.
+>
+> **The spike is implementation and is gated to 2026-09-14 20:00 JST** (§0 of the spec). The spec is
+> revised to B and frozen before then; C, if it is needed, is a documented fallback rather than a
+> second review round.
+
+**Founder decision required (now ruled — see above).** Raised by [`docs/reviews/010-spec-r1.md`](../reviews/010-spec-r1.md)
 finding 1 (BLOCKER), re-verified against the tree on **2026-09-12**. It changes the wording of
 D-1 in [`docs/specs/010-svm-token-replay.md`](../specs/010-svm-token-replay.md) §1, which is why it
 is a decision and not a fix.
