@@ -48,6 +48,19 @@ cd escrow-svm && cargo test                 -> 10 passed（tests/e2e.rs、LiteSV
 solana-cli 4.1.2 / cargo-build-sbf 4.1.0 / anchor-cli 0.32.1 / spl-token-cli 5.6.1（導入済み）
 ```
 
+**ポジショニング（2026-09-12、founder 裁定）**: CWF 向けに **RDK × Tempo × Solana** を言えるように
+した。**言えること/言ってはいけないこと**は [`docs/messaging.md` の
+"RDK lineage and the Tempo complement"](docs/messaging.md) に登録済みで、150 語の提出用
+description は [`docs/cwf-2026/PITCH.md`](docs/cwf-2026/PITCH.md)。**RDK は設計知見の由来であって
+コードの由来ではない**（Reckn は `revm 38` + `alloy`、`reth` 依存は無い）。**Tempo とは
+相互補完であって統合ではない**（評価結果は escrow に一切届かない）。
+**この作業でチェーン・契約・テスト証跡は1バイトも触っていない。**
+
+**副産物で1つ、偽になっていた文を直した**: `messaging.md` §2 と `chain-fit.md` が
+「30日返金はどのイベントの内側でも実演できない」と書いていた。**窓の内側で funded した deal の話
+としては正しいが**、Tempo の `mismatch` deal は 09-08 funded なので 10-08 に満了し、CWF の窓に入る。
+いまは「呼ばれるまでは *scheduled*、実演ではない」と書いてある。
+
 **9/12 に入れた commit**: Tempo ライブページの "Why Tempo?" と `tempo-run.json` の ignore 化 /
 `docs/cwf-2026/` 2枚と `scripts/cwf-baseline.sh` / spec 010 の §0 Amendments と CLAUDE.md の
 大会節 / spec 010 §4.0 の一次資料 pin。

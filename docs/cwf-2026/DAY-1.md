@@ -31,6 +31,8 @@ Writes `docs/cwf-2026/baseline.json`: the HEAD the window opened on. At submissi
 
 Registration opens at kickoff. Two fields matter more than the rest:
 
+- **the description.** [`PITCH.md`](PITCH.md) — 150 words, already audited clause by clause.
+  Do not improvise a shorter one at the keyboard; that is where the forbidden sentences appear.
 - **the past-work disclosure.** Paste the table in [`PREFLIGHT.md`](PREFLIGHT.md) §3. The rule is
   *"teams must disclose all relevant past development work in the submission form"* — a file in
   this repository does not discharge it, and the Tempo slice belongs in it.

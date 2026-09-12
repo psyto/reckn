@@ -107,6 +107,22 @@ blacklist, which froze one named address and left the timeout open.
 **Reckn removes a protocol-level judge. It does not erase issuer policy.** Anyone who tells you
 otherwise is selling something.
 
+**What Tempo's own tooling is for, and why Reckn does not duplicate it.** Tempo's developer
+material is aimed at agents *building and operating* payment integrations — *"Give coding agents
+Tempo docs, source context, MCP tools, and agent workflow plugins"*
+([docs](https://tempo.xyz/developers/docs/guide/using-tempo-with-ai)) — and its Machine Payments
+Protocol is how an agent gets paid
+([docs](https://tempo.xyz/developers/docs/guide/machine-payments)). That is the layer *before* a
+dispute exists. Reckn is the layer after it:
+
+> **Tempo helps verify that agents can build and operate payment integrations correctly. Reckn
+> complements that layer by making the payment itself conditional on a verifiable result.**
+
+**Complementary, not integrated.** Reckn is an ordinary EVM contract on Tempo; it reads nothing
+from that tooling, and no evaluation result of any kind reaches the escrow. The wording limits
+are in [`messaging.md`](messaging.md#rdk-lineage-and-the-tempo-complement--approved-wording), and
+the layer map is [`positioning.md`](positioning.md#where-the-execution-engineering-came-from).
+
 **Not claimed.** Tempo **mainnet** is not deployed. Nothing here is offered as ETHOnline event
 work — that submission stands on Arc, and the boundary is
 [`docs/ethonline-2026/PREFLIGHT.md`](ethonline-2026/PREFLIGHT.md) §2.
@@ -126,8 +142,11 @@ Two limits belong to **Reckn**, not to a chain, and they do not become true late
   fragmented liquidity.
 
 And one that belongs to **time**: the thirty-day `refundAfterDeadline` has never been
-demonstrated on a public chain and cannot be inside any event, because a public chain cannot be
-fast-forwarded. Every refund you will see demonstrated is the **proof-driven** one, which is
+demonstrated on a public chain, because a public chain cannot be fast-forwarded. For a deal
+funded *inside* an event window it cannot be — but the Tempo `mismatch` deal was funded on
+**2026-09-08 02:59:56 UTC**, so its thirty days elapse on **2026-10-08**, which falls inside
+CWF's 09-14 → 10-12 window. Until someone actually calls it, that is **scheduled, not
+demonstrated**, and every refund you have seen demonstrated is the **proof-driven** one, which is
 immediate and is a different thing.
 
 ---

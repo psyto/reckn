@@ -428,6 +428,20 @@ EIP-3009** payments (EVM escrow — a buyer agent's x402 authorization *is* the 
 funding; see [`docs/x402-payments.md`](docs/x402-payments.md)) · **Circle Arc** as one
 settlement target · Chainlink CRE / MCP as swappable orchestration.
 
+**Where the execution engineering came from.** Re-execution is unforgiving in a specific way —
+the same inputs must produce the same bytes, on another machine, inside a zkVM, a month later.
+That discipline grew out of our work on **RDK**: deterministic state transitions, replayable
+scenarios, pinned execution environments, and treating a revert as a result rather than a crash.
+It was **developed here into a mechanism for deciding payments**, which is a different problem.
+To be exact about what that is *not*: Reckn does not reuse RDK's re-execution code, and Reckn is
+not built on Reth — its EVM stack is `revm 38` + `alloy`, and `reth-trie` was declined on purpose
+so an offline verifier would not acquire a node's database layer. The habits that did carry over,
+and the file that checks each one, are in
+[`docs/positioning.md` § Where the execution engineering came from](docs/positioning.md#where-the-execution-engineering-came-from).
+
+**The 150-word version of all of this**, with every clause traced to the file that carries it and
+an audit of what the words may not mean: [`docs/cwf-2026/PITCH.md`](docs/cwf-2026/PITCH.md).
+
 ## ETHOnline 2026 — where the boundary is
 
 Reckn is entered in **ETHOnline 2026** (9/4–16, async) under **Continuity — Ship a
@@ -559,6 +573,18 @@ The Arc architecture diagram — what calls what, and the two edges that carry t
 Arc is a stablecoin-native rail where a conditional payment settles without bridging the asset.
 On Tempo the escrow **and the fee that releases it** are the same stablecoin, because Tempo has
 no native gas token. Receipts for both, and the limits neither of them fixes, are on that page.
+
+**And what Tempo's own tooling is for.** Tempo's developer material is aimed at agents *building
+and operating* payment integrations; the Machine Payments Protocol is how one gets paid. That is
+the layer before a dispute exists — Reckn is the layer after it.
+
+> **Tempo helps verify that agents can build and operate payment integrations correctly. Reckn
+> complements that layer by making the payment itself conditional on a verifiable result.**
+
+**Complementary layers, not an integration.** Reckn is an ordinary EVM contract on Tempo: it reads
+nothing from that tooling, and no evaluation result reaches the escrow. Tempo runs no Solana VM,
+and the absence of a bridge is a statement about *who may authorise the payment* — **not** about
+Solana provenance, which remains unproven either way.
 
 ## What crosses, and what does not
 

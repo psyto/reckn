@@ -20,6 +20,7 @@ inconveniences.
 |---|---|---|---|
 | **AI agent / LLM** | planner, negotiator, summariser, anomaly detector | *what to buy, from whom, at what price, and what "good" would look like* — and how to explain it afterwards | Reckn adds **nothing to this layer and takes nothing from it**. It never asks a model to judge. It takes the one step the parties agreed to fix in advance and settles on whether that step reproduced |
 | **Agent payment protocol** | x402 (HTTP `402` + EIP-3009) | *how an authorisation reaches the chain* — gasless, pull-style, relayed by a facilitator | Reckn's optimistic escrow consumes the **same** EIP-3009 authorisation as its funding leg, so paying and opening a disputable escrow are one signature. **See the limitation below: this is on the optimistic path, not the keyless one** |
+| **Agent build & operate tooling** | Tempo's developer material for coding agents — *"Give coding agents Tempo docs, source context, MCP tools, and agent workflow plugins"* ([docs](https://tempo.xyz/developers/docs/guide/using-tempo-with-ai)), and the Machine Payments Protocol ([docs](https://tempo.xyz/developers/docs/guide/machine-payments)) | *whether an agent can integrate with the rail and operate a payment correctly* — a development and evaluation concern, before any dispute exists | Reckn adds the layer **after** that: it makes the payment itself **conditional on a verifiable result**. **Complementary, not integrated** — Reckn is an ordinary EVM contract on Tempo and reads nothing from that tooling. *Tempo helps verify that agents can build and operate payment integrations correctly; Reckn verifies whether an agent earned the payment* ([wording limits](messaging.md#rdk-lineage-and-the-tempo-complement--approved-wording)) |
 | **Payment chain — Tempo** | TIP-20 stablecoins; **no native gas token**, so fees are paid in a USD-denominated TIP-20 ([docs](https://tempo.xyz/developers/docs/protocol/tip20/spec)); receipts name `feeToken` and `feePayer` | *that the transfer is authorised and paid for, under the token's own policy* | Reckn puts the **release condition** on top: the same stablecoin funds the escrow and pays the fee that releases it. Measured on Moderato testnet — a settlement's fee was **0.155307 PathUSD** to release 1.000000 |
 | **Payment chain — Arc** | Circle's USDC as the native gas token, with a 6-decimal ERC-20 face at a predeploy | *the same* | The escrow needs **no change** to hold either: a deal names its token at funding. The same escrow **source** is byte-identical on both chains, gated by `zk-verdict/scripts/tempo-arc-parity.sh` |
 | **Wallet / access key / spending policy** | session keys, spend limits, allow-lists, AA policies | *whether this agent may spend, up to how much, on what* | Orthogonal and complementary. A policy decides **that a payment may happen**; Reckn decides **whether it is earned**. A spending limit cannot tell you the work was done |
@@ -135,6 +136,39 @@ The design that works is not "AI or proof". It is:
 The honest consequence: **Reckn only settles the part you were willing to fix in advance.** If
 the valuable part of the job cannot be reduced to such a step, Reckn is not the answer for
 that job, and saying so is more useful than stretching the predicate until it means nothing.
+
+---
+
+## Where the execution engineering came from
+
+Reckn's adjudicator is a re-execution engine, and re-execution is unforgiving in a specific way:
+the same inputs must produce the same bytes, on a different machine, a month later, inside a
+zkVM. **That discipline came from RDK** — deterministic state transitions, replayable scenarios,
+pinned execution environments, and the handling of reverts and state consistency — and it was
+**developed here into a mechanism for deciding payments**, which is a different problem from
+running or testing a chain.
+
+**What that sentence does not say.** Reckn does **not** reuse RDK's re-execution code, and Reckn
+is **not built on Reth**. Its EVM stack is `revm 38` + `alloy` (`reexec-evm/Cargo.toml`,
+`zk-verdict/program-revm/Cargo.toml`); `reth-trie` was declined on purpose, so that an offline
+verifier would not acquire a node's database layer
+([`reexec-evm-mpt-verification.md`](reexec-evm-mpt-verification.md) § Decision). The MPT witness
+path, the closed-world SVM replay, the zkVM guests and the Solana backend are Reckn's own.
+
+**What the lineage bought, inside this repository:**
+
+| the habit | where it shows up |
+|---|---|
+| the execution environment is **pinned and checked**, not assumed | the hardfork and block environment are committed and verified against the guest — [`specs/008`](specs/008-verdict-domain-soundness.md), 13 engine-identity vectors |
+| the prestate is **verified**, not supplied | account and storage proofs are checked against the committed `state_root` in-guest — [`reexec-evm-mpt-verification.md`](reexec-evm-mpt-verification.md) |
+| a scenario is **replayable** rather than recorded | the witness is built from `eth_createAccessList` → `eth_getProof` and then replayed offline, with no RPC on the adjudication path — `keeper/` |
+| a **revert is a result**, not a crash | the verdict domain is closed: `Reproduced` / `Failed` with a named reason, and an operational error is *not* a verdict — [`specs/008`](specs/008-verdict-domain-soundness.md), `escrow-svm/README.md` |
+| the same question is asked **twice, by different code** | the guest and the off-chain engine judge the same committed bytes and are required to agree — [`specs/008`](specs/008-verdict-domain-soundness.md) |
+
+The limit of that lineage is worth stating too, because it is already disclosed elsewhere:
+the guest and the off-chain engine run **different implementations of the same precompiles**, and
+their equivalence is **unverified** (`AGENTS.md` §5). Deterministic is not the same as
+double-checked.
 
 ---
 

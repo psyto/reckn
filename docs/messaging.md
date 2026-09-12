@@ -178,6 +178,55 @@ can be paused or policy-gated. One source is the claim. One behaviour is not.
 **Still not claimable:** anything on Tempo *mainnet*; provenance; that bridges are
 unnecessary; and the thirty-day timeout, which is not demonstrated on any chain.
 
+### RDK lineage and the Tempo complement — approved wording
+
+**Founder ruling 2026-09-12.** For CWF, two things may be said that were not said before: where
+the execution engineering came from, and how Reckn sits next to Tempo's own agent-facing
+tooling. Both are **positioning**, so both live here, and both carry a boundary that is easy to
+cross by accident. The 150-word form that uses them is
+[`cwf-2026/PITCH.md`](cwf-2026/PITCH.md).
+
+**The RDK lineage — the exact sentence.**
+
+> **"The deterministic-execution design behind Reckn grew out of our work on RDK —
+> deterministic state transitions, replayable scenarios, pinned execution environments —
+> developed here into a re-execution mechanism for deciding payments."**
+
+- It is a claim about **design knowledge**, not about code. **Never say Reckn reuses RDK's
+  re-execution code**: the MPT witness path, the closed-world replay, the zkVM guests and the
+  Solana backend are Reckn's own implementation.
+- **Never say "built on Reth."** Reckn's EVM stack is **`revm 38` + `alloy`**
+  (`reexec-evm/Cargo.toml`, `zk-verdict/program-revm/Cargo.toml`), and `reth-trie` was
+  *declined* on purpose so that an offline verifier would not pull in a node's database layer
+  ([`reexec-evm-mpt-verification.md`](reexec-evm-mpt-verification.md) § Decision). Naming RDK's
+  stack as Reckn's dependency list would be false and is checkable in one grep.
+- What backs the design claim inside this repository: the engine is **pinned and checked rather
+  than assumed** — the hardfork and block environment are committed and verified against the
+  guest ([`specs/008`](specs/008-verdict-domain-soundness.md)), and the prestate is
+  MPT-verified rather than supplied ([`reexec-evm-mpt-verification.md`](reexec-evm-mpt-verification.md)).
+
+**The Tempo complement — the two sentences, and which to write.**
+
+> **"Tempo helps verify that agents can build and operate payment integrations correctly. Reckn
+> complements that layer by making the payment itself conditional on a verifiable result."**
+
+> **"Tempo verifies that an agent can operate. Reckn verifies whether an agent earned the
+> payment."**
+
+- The first is the one to **write**. It is grounded in Tempo's own developer material —
+  *"Give coding agents Tempo docs, source context, MCP tools, and agent workflow plugins"*
+  (`/developers/docs/guide/using-tempo-with-ai`) and the Machine Payments Protocol
+  (`/developers/docs/guide/machine-payments`), both read 2026-09-12.
+- The second is the sharper line and is fine **in speech**. A fetch of `tempo.xyz/developers/docs`
+  on 2026-09-12 found no page named *agent evaluation* or *agent verification*, so in written
+  copy it asserts a product surface this project cannot cite. Use the long form, or cite the page
+  once one exists.
+- **Never say the two are integrated**, and never say Reckn consumes Tempo's evaluation results
+  on chain. Reckn deploys to Tempo as an ordinary EVM contract and reads **nothing** from
+  Tempo's developer tooling. "Complementary layers" is the claim; "integrated" is not.
+- **Never say "Tempo verifies Solana."** Tempo runs no Solana VM and inspects no Solana state.
+  What settles on Tempo is a **local** TIP-20 payment, decided by a proof.
+
 ---
 
 ## Founder ruling 2026-09-09 — the door line stays as it is
@@ -261,12 +310,15 @@ Nothing here is claimed on the strength of a file appearing.*
 | Reckn removes the need for bridges | it removes the bridge from the **trust root that authorises payment** — *no bridge and no relayer has the authority to permit the payment*. Moving funds to where you pay is a separate problem and it remains |
 | Reckn fixes fragmented balances or cross-chain liquidity | **it does not.** The buyer must already hold the settlement asset on the payment chain |
 | It can prove arbitrary Solana mainnet state | it proves **consistency over the account set the deal named** — not provenance. It does not establish that those inputs came from mainnet |
+| Reckn **reuses RDK's** re-execution code | **it does not.** *The deterministic-execution **design** grew out of that work*; the MPT witness, the closed-world replay, the zkVM guests and the Solana backend are Reckn's own. And Reckn is **not built on Reth** — `revm 38` + `alloy`, with `reth-trie` declined on purpose |
+| Reckn is **integrated with** Tempo's agent tooling, or settles on Tempo's evaluation results | **it is not.** They are **complementary layers**: one helps an agent build and operate a payment integration, the other decides whether a payment was earned. Reckn is an ordinary EVM contract on Tempo and reads nothing from that tooling |
+| **Tempo verifies Solana**, or: there is no bridge, therefore the Solana state is proven | **both false, and the second is two unrelated facts glued together.** Tempo runs no Solana VM. The absence of a bridge is about *who may authorise the payment*; provenance is a separate question and it is **not** answered — see the row above |
 | The Arc × Solana demonstration also runs on Tempo | **it is a different demonstration, not the same one relocated.** Tempo settled its *own* deals — 1.000000 PathUSD each, its own hashes (`docs/specs/011` §10) — while the four Arc settlements stayed on Arc. What is shared, and gated, is the **escrow source**: byte-identical on both chains (`tempo-arc-parity.sh`). "Same source, two chains" is the claim; "the same demo, twice" is not. *(This row read "Tempo is not deployed" until 2026-09-09 — true when written, false after the deployment on 09-08.)* |
 | "like a bank's daily netting" | do not use it. There is no netting and no clearing here |
 | A proof moves assets between chains | a proof **decides a local payment**. Nothing is transferred across a boundary |
 | "verifying a proof is expensive on that chain" — about Tempo or any chain, now or after any unlock | **false, and it will stay false.** BN254 arithmetic costs the same on Tempo as on Ethereum; what Tempo charges more for is STATE. A cost sentence must be about state or it is wrong |
 | "the two chains adjudicate identically", or any wording that slides from *one source* to *one behaviour* | **false.** What is measured and gated is that the **escrow source is unmodified across both**. The adjudicator is named per deal by the funder, the fee models differ, and a TIP-20 can be paused or policy-gated where Arc's USDC cannot be in the same way. "Same source, two chains" is the claim; "same adjudication" is not, and the gap between them is exactly where an over-claim would live |
-| any sentence that mixes the 30-day timeout with the demonstrated refund | **they are different refunds.** `refundAfterDeadline` waits thirty days, so on a public chain it can never be shown inside an event — on Arc it is *scheduled*, not demonstrated. **The refund on screen is always the proof-driven one** (`Failed` → buyer), which is immediate. Conflating them survives no scrutiny and must not be written even after §3 unlocks |
+| any sentence that mixes the 30-day timeout with the demonstrated refund | **they are different refunds.** `refundAfterDeadline` waits thirty days; **the refund on screen is always the proof-driven one** (`Failed` → buyer), which is immediate. Conflating them survives no scrutiny. *(This row read "on a public chain it can never be shown inside an event" until 2026-09-12 — true for a deal funded inside an event, false for the Tempo `mismatch` deal, which was funded 09-08 and therefore unlocks 2026-10-08, inside CWF's window. Until someone calls it, it is still **scheduled**, not demonstrated.)* |
 
 ### Design non-claims vs status limits — do not put them in the same list
 

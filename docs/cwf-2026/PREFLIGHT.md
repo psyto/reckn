@@ -145,6 +145,12 @@ nearest, and neither is a market case. This is the gap most likely to decide the
 is not a gap an agent can close by writing a document: *traction* means someone outside this
 repository used the thing.
 
+**Partly closed 2026-09-12, and only the two that words can close.** [`PITCH.md`](PITCH.md) is
+the 150-word description, and it argues *Insight* and *Founder + Market Fit* with something
+checkable behind each clause — including where the re-execution engineering came from. **It does
+not touch market size, viability or traction**, and it must not be read as having: those still
+need something from outside this repository.
+
 ## 7. What must not be said, carried over unchanged
 
 The claims discipline does not get a fresh start for a new event. `docs/messaging.md` §2 is the
