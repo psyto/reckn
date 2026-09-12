@@ -61,7 +61,9 @@ what is still unpublished; [`PREFLIGHT.md`](cwf-2026/PREFLIGHT.md) is the checkl
 and one date per open line; [`DAY-1.md`](cwf-2026/DAY-1.md) is what happens in the first hour of
 the window, in order;
 [`PITCH.md`](cwf-2026/PITCH.md) is the 150-word description for the submission form, with every
-clause traced to a file and an audit of what the words may not mean. The rule everything there turns on is that **only work completed inside
+clause traced to a file and an audit of what the words may not mean.
+[`ECONOMICS.md`](cwf-2026/ECONOMICS.md) costs one adjudication from the receipts and derives the
+deal size below which deciding a payment is not worth buying. The rule everything there turns on is that **only work completed inside
 the window is judged** — which makes the Tempo slice pre-existing work for this event, and says
 so in the submission rather than around it.
 

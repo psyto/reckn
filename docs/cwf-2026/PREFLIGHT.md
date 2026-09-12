@@ -145,6 +145,27 @@ nearest, and neither is a market case. This is the gap most likely to decide the
 is not a gap an agent can close by writing a document: *traction* means someone outside this
 repository used the thing.
 
+**Two of the four now have a number behind them, 2026-09-12.**
+[`ECONOMICS.md`](ECONOMICS.md) computes the cost of one adjudication from the settlement receipts
+— **310,242 gas / 0.155307 PathUSD** to release 1.000000, and **0.151762** to refund it, a **2.3 %**
+difference — and turns *high-stakes* into a threshold: at a dollar per proof and a 1 % tolerance,
+the floor is in the **low hundreds of dollars per payment**. It answers **Viability** with unit
+economics and the *lower bound* side of **Potential Market Size**, and it names the one external
+unknown (the price of a proof) rather than guessing it. It also states the thing a pitch would
+rather not: the keyless escrow has **no mutual-release path**, so that cost applies to every
+settlement and not to a disputed minority.
+
+**Still open: market size proper and traction.** Sizing needs sources from outside this
+repository — the honest form is bottom-up (payment volume × dispute rate × value per dispute) with
+the comparables that already price a human judge, not a top-down agent-economy TAM. **Traction
+cannot be closed by writing anything at all**, and three of the five instruments that would close
+it need `AGENTS.md` §8 relaxed for this lane, because they require contacting people outside this
+repository: an outside developer reproducing `zk-verdict/scripts/zk-e2e.sh` from a fresh clone; a
+**stranger** calling the permissionless `refundAfterDeadline` on 2026-10-08; and the six-point
+checklist in [`../tokyo-partner-pilot.md`](../tokyo-partner-pilot.md) §1, which is the only one
+that produces a transaction hash with somebody else's address in the `buyer` field. **Founder
+decision, and it is the decision that decides this row.**
+
 **Partly closed 2026-09-12, and only the two that words can close.** [`PITCH.md`](PITCH.md) is
 the 150-word description, and it argues *Insight* and *Founder + Market Fit* with something
 checkable behind each clause — including where the re-execution engineering came from. **It does
