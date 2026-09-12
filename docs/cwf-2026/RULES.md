@@ -86,6 +86,9 @@ product. Named as item 6 in `PREFLIGHT.md`.
   ecosystems"*.
 - **The submission form's own fields**, including the wording of the past-work disclosure
   field. Available at kickoff.
+- **The weekly check-ins.** The event runs them during the window; their cadence, format, and
+  whether a video is required are not on the pages read here. **They are a different artefact from
+  the two submission videos** (`PREFLIGHT.md` §5) and must not be planned as one.
 - **Team size limit.** Not on the page. Solo is explicitly allowed.
 - **Whether the eligibility bar (*"a new product that hasn't raised significant funding"*)
   has a definition of "significant"**. Not on the page.

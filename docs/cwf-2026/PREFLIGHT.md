@@ -142,9 +142,17 @@ against 3:00 — and **both files are stale**, predating the slide-timing fix, s
 re-recorded rather than trimmed. `dashboard/video/check.sh` takes its duration band from the
 filename, so it fails them rather than passing them.
 
-Not started here on purpose: the cuts should be recorded **after** the window's work exists, or
-they will show the pre-existing product. The narration is a human voice by rule and belongs to
-the founder either way.
+**Not started, and not "not started yet" — these are submission artefacts and they are made at
+submission time.** Recording them now would film the pre-existing product, which is the one thing
+this lane is organised to avoid, and every re-record between now and 10-12 would be thrown away.
+The narration is a human voice by rule and belongs to the founder either way.
+
+**Do not confuse them with the weekly check-ins** (founder, 2026-09-12). A check-in is a recurring
+progress update *during* the window; the submission pair is a 2–3 minute presentation and a ≤3
+minute demo, made once, at the end. Different audience, different length, different moment — and a
+check-in cut from the final film would be reporting the past as progress. Their cadence, format,
+and whether a video is required at all are **[unknown] until kickoff**
+([`RULES.md`](RULES.md) §4).
 
 ## 6. Four of the seven judging criteria have no artefact — ⚠️ OPEN, founder
 
