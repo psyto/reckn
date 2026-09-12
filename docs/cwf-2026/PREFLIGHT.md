@@ -155,9 +155,16 @@ unknown (the price of a proof) rather than guessing it. It also states the thing
 rather not: the keyless escrow has **no mutual-release path**, so that cost applies to every
 settlement and not to a disputed minority.
 
-**Still open: market size proper and traction.** Sizing needs sources from outside this
-repository — the honest form is bottom-up (payment volume × dispute rate × value per dispute) with
-the comparables that already price a human judge, not a top-down agent-economy TAM. **Traction
+**Market size is now sized, and the number argues against us first.** [`MARKET.md`](MARKET.md)
+does it bottom-up with sources: the average agent payment measured today is **$0.20** (CoinDesk on
+a Feb 2026 snapshot; ~half the traffic is artificial), against Reckn's **$115.53** floor — about
+**578×**, and **15.5×** even at the most generous corner. So the honest answer is a *segment*, not
+a bigger market: Reckn is for payments where a human is already paid to decide, and the floor is
+the segmentation. The counter-trend is measured too — payments of $1+ went from 49 % to 95 % of
+transferred volume in about a year (Chainalysis). The one next measurement that needs no
+permission is named there: count on-chain agent payments above $100.
+
+**Still open: traction.** **It
 cannot be closed by writing anything at all**, and three of the five instruments that would close
 it need `AGENTS.md` §8 relaxed for this lane, because they require contacting people outside this
 repository: an outside developer reproducing `zk-verdict/scripts/zk-e2e.sh` from a fresh clone; a
