@@ -49,10 +49,23 @@ work goes on a branch.**
   commit on `master`; the only instrument is that the work is happening somewhere else. Said
   plainly because a rule with no observer that pretends to have one is worse than a rule.
 
-**OPEN — founder, one question this repository cannot answer:** whether ETHGlobal's rules
-restrict entering a project that is also entered elsewhere. Colosseum's own constraint is only
-*"one product, one team"* per builder within CWF (`RULES.md` §1). The ETHGlobal side is
-**[unknown]** and is not assumed in either direction here.
+**Narrowed by reading the rules, 2026-09-12 — not closed.** ETHGlobal's canonical rules page
+(<https://ethglobal.com/rules>) was fetched and searched for it. **There is no rule there about
+entering a project that is also entered in another competition.** What the page does state is the
+obligation Reckn already met: *"In all cases, you must disclose any pre-existing work in writing to
+the ETHGlobal team and include full details in your submission"* — and the penalty clause is aimed
+at something else, *"a submission [that] contains undisclosed pre-existing work or materially
+misrepresents what was built during the hackathon"*, for which *"the project may be disqualified,
+prizes revoked, and the team may be banned from future events"*.
+
+**"Not on the page" is weaker than "permitted", and the difference is kept.** Event-specific terms
+(the ETHOnline 2026 event page, the organisers' Discord) are not covered by that fetch. **OPEN —
+founder:** if a ruling is wanted rather than an absence, ask the organisers directly. What can be
+said today is that the published rule this project could have tripped over is a *disclosure*
+requirement, and the disclosure was filed in full.
+
+Colosseum's own constraint remains only *"one product, one team"* per builder within CWF
+(`RULES.md` §1).
 
 ## 3. What is pre-existing for CWF — ✅ MEASURED 2026-09-12
 
