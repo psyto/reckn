@@ -241,6 +241,16 @@ Mainnet* の2本）。**両方とも "working frontend and backend + architectur
 ## 8. 禁止
 
 - mainnet デプロイ、実資金の投入、外部ユーザーへの連絡、外部サービス契約
+  - **【2026-09-12 founder 裁定、CWF レーンに限る例外2つ】** 「外部ユーザーへの連絡」を
+    **次の2つに限って解除**する。①**公開済みのコマンドを走らせて出力を報告してもらう**依頼
+    ②**誰でも送れる transaction を1人に送ってもらう**依頼（permissionless な
+    `refundAfterDeadline`）。詳細・依頼文・台帳は
+    [`docs/cwf-2026/TRACTION.md`](docs/cwf-2026/TRACTION.md)。
+    **連絡するのは founder であって、エージェントは誰にも連絡しない**（この repo に
+    メッセージを送る経路は無い）。**mainnet / 実資金 / 外部サービス契約は解除されていない。**
+    **`@reckn/partner-kit` の npm 公開は裁定の対象外なので、依然禁止**
+    （ほぼ不可逆で、かつ `scripts/no-unpublished-cli.sh` の現在の PASS は
+    「これらの名前が解決しない」という記述に依存している）。
 - `docs/ethonline-2026/PLAN.md` と `DISCLOSURE.md` の**エージェントによる書き換え**（founder の文書）
 - 既存の optimistic 経路の"改善"（差別化に寄与せず、当日作業の境界を濁す）
 - scope の拡大。迷ったら広げず `docs/specs/` の OPEN QUESTION に書いて進む

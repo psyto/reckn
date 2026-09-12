@@ -65,7 +65,9 @@ clause traced to a file and an audit of what the words may not mean.
 [`ECONOMICS.md`](cwf-2026/ECONOMICS.md) costs one adjudication from the receipts and derives the
 deal size below which deciding a payment is not worth buying.
 [`MARKET.md`](cwf-2026/MARKET.md) sizes the market bottom-up from cited sources, and leads with the
-measurement that argues against the product rather than burying it. The rule everything there turns on is that **only work completed inside
+measurement that argues against the product rather than burying it.
+[`TRACTION.md`](cwf-2026/TRACTION.md) holds the two instruments that can produce evidence from
+outside this repository, their asks, and the two ledgers — both currently empty, and saying so. The rule everything there turns on is that **only work completed inside
 the window is judged** — which makes the Tempo slice pre-existing work for this event, and says
 so in the submission rather than around it.
 

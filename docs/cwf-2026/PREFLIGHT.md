@@ -164,7 +164,13 @@ the segmentation. The counter-trend is measured too — payments of $1+ went fro
 transferred volume in about a year (Chainalysis). The one next measurement that needs no
 permission is named there: count on-chain agent payments above $100.
 
-**Still open: traction.** **It
+**Traction — unblocked 2026-09-12, and still at zero.** `AGENTS.md` §8 was relaxed for exactly two
+instruments and the asks are written and ready to send: [`TRACTION.md`](TRACTION.md). Both ledgers
+there are **empty and say so**, and instrument B cannot even be attempted before **2026-10-08**.
+**Only the founder sends the asks; the agent contacts nobody.** npm publication of the partner kit
+was deliberately **not** ruled on and stays forbidden.
+
+**Still open: traction itself.** **It
 cannot be closed by writing anything at all**, and three of the five instruments that would close
 it need `AGENTS.md` §8 relaxed for this lane, because they require contacting people outside this
 repository: an outside developer reproducing `zk-verdict/scripts/zk-e2e.sh` from a fresh clone; a
