@@ -21,6 +21,11 @@ CWF の作業は **`cwf-2026` ブランチ**に積み、Finale 後に日付を�
 ETHOnline の審査員が見る `master` を、提出後に動かさないため。**9/13 までの commit は窓の内側**
 なので `master` に入れてよい。**これを強制する検査は無い。枝が離れていることだけが機構である。**
 
+**凍結中に `ac008.sh --all` / `ac009.sh --all` を始めない。** 21 個の mutation patch を
+**追跡下のソースに当てては戻す**走行で、約75分かかる。途中で落ちれば**凍結しているはずのツリーが
+変異したまま残る**——公開 repo が審査中に、当てたままの patch を晒す形になりうる。
+同じ理由で、走行中は `zk-verdict/` 配下の検査結果を採用しない（下の節）。
+
 **② CWF は「窓の内側で完成した作業だけ」を審査する**
 （*"products are judged only on the work completed between the competition's start and end
 dates"* — `docs/cwf-2026/RULES.md` §1）。主催者は「今すぐ始めてよい」と言っているが、
