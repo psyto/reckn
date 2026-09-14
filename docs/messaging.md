@@ -6,7 +6,13 @@ submission form, while the file was 199 — three hand-written numbers for one a
 matching it and none matching each other. Positioning drifts the same way and is harder to
 measure, so it is written down once here and quoted elsewhere.
 
-**Scope.** ETHOnline 2026 (submitted) and Crypto World's Fair (2026-09-14 → 10-12). Nothing
+**Scope (2026-09-14).** ETHOnline 2026 — **submitted, and it ended at Round 1**; partner prizes
+remain live to the 09-17 finale. ~~Crypto World's Fair~~ — **Reckn does not enter it**
+([retraction](cwf-2026/RETRACTED-2026-09-14.md)); the sections below headed *CWF* are kept because
+the **wording** in them was never event-specific — *who decides the work was done* is the same
+sentence wherever it is told — but **no submission will use them as written**. The live lane is
+**ETHGlobal Tokyo, 2026-09-25 → 09-27** ([`specs/012`](specs/012-uniswap-reexecution-slice.md)).
+Nothing
 here is a new claim: every sentence below is traceable to §1, and §2 is the list of things
 that must never be said.
 
@@ -180,7 +186,11 @@ unnecessary; and the thirty-day timeout, which is not demonstrated on any chain.
 
 ### RDK lineage and the Tempo complement — approved wording
 
-**Founder ruling 2026-09-12.** For CWF, two things may be said that were not said before: where
+**Founder ruling 2026-09-12; the occasion was retracted 2026-09-14, the wording was not.**
+The two sentences below were approved for an event Reckn no longer enters. **They remain the
+approved wording** — where the execution engineering came from, and how Reckn sits next to another
+layer, are facts about Reckn, not about a competition. What is retracted is only the sentence
+*"for CWF"*. Two things may be said that were not said before: where
 the execution engineering came from, and how Reckn sits next to Tempo's own agent-facing
 tooling. Both are **positioning**, so both live here, and both carry a boundary that is easy to
 cross by accident. The 150-word form that uses them is

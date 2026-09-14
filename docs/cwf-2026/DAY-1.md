@@ -1,5 +1,7 @@
 # CWF day one — the first hour, in order
 
+> **⚠ RETRACTED 2026-09-14 — Reckn does not enter this event** ([why](RETRACTED-2026-09-14.md)). Kept as a record; **do not act on anything below.**
+
 **Kickoff: 2026-09-14 20:00 JST.** Written 2026-09-12 so that nothing on this list has to be
 worked out while the clock is running. Each step says who does it and what proves it happened.
 The rules behind it are in [`RULES.md`](RULES.md); the standing checklist is

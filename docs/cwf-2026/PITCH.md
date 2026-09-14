@@ -1,5 +1,7 @@
 # CWF pitch — the 150 words, and what each clause is allowed to mean
 
+> **⚠ RETRACTED 2026-09-14 — Reckn does not enter this event** ([why](RETRACTED-2026-09-14.md)). Kept as a record; **do not act on anything below.**
+
 One pitch, **150 words**, written to be pasted into the submission form's description and to
 sit in the repository README without either copy drifting. Every clause in it is traceable to a
 file in this repository or to a cited external page, and the table below says which. The audit

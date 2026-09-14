@@ -55,7 +55,13 @@ disclosure, the preflight checklist, and the live-judging plan.
 
 ## The Crypto World's Fair entry
 
-**[cwf-2026/](cwf-2026/)** is the second event, 2026-09-14 → 10-12.
+**[cwf-2026/](cwf-2026/)** — **retracted 2026-09-14: Reckn does not enter that event**
+([the retraction](cwf-2026/RETRACTED-2026-09-14.md)). Three pages survive it because they were
+measurements about Reckn rather than about a competition: [`ECONOMICS.md`](cwf-2026/ECONOMICS.md),
+[`MARKET.md`](cwf-2026/MARKET.md), [`TRACTION.md`](cwf-2026/TRACTION.md). The rest is kept,
+banner-marked, as the record of a plan that was reversed. *What follows described that plan:*
+
+**[cwf-2026/](cwf-2026/)** was the second event, 2026-09-14 → 10-12.
 [`RULES.md`](cwf-2026/RULES.md) is the rules as read, with the provenance of each quotation and
 what is still unpublished; [`PREFLIGHT.md`](cwf-2026/PREFLIGHT.md) is the checklist, one owner
 and one date per open line; [`DAY-1.md`](cwf-2026/DAY-1.md) is what happens in the first hour of

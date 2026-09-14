@@ -1,5 +1,7 @@
 # CWF 2026 — the rules, as read, with their provenance
 
+> **⚠ RETRACTED 2026-09-14 — Reckn does not enter this event** ([why](RETRACTED-2026-09-14.md)). Kept as a record; **do not act on anything below.**
+
 **Read 2026-09-12** from the pages named below. This file exists because the decision that
 matters most for this event — *what may be counted as the work* — is a rule, not a technical
 fact, and the project has already learned once that a stale note about a rule costs more than

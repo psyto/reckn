@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # cwf-baseline -- record, once, the commit the Crypto World's Fair window opens on.
 #
+# RETRACTED 2026-09-14: Reckn does not enter that event (docs/cwf-2026/RETRACTED-2026-09-14.md).
+# There is no kickoff for this to record, so --write will refuse forever and that is correct.
+# Kept rather than deleted because several documents reference it, and a dangling reference is a
+# worse artefact than a script that says why it is inert.
+#
 # CWF's rule is that "products are judged only on the work completed between the competition's
 # start and end dates" (docs/cwf-2026/RULES.md §1). That makes one fact load-bearing: which
 # commit was HEAD at kickoff. A date cannot answer it -- ETHOnline's own preflight records

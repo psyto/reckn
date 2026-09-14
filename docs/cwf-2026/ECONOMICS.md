@@ -1,5 +1,7 @@
 # What it costs to decide a payment — and the deal size below which it is not worth deciding
 
+> **⚠ The event framing below was retracted 2026-09-14** ([why](RETRACTED-2026-09-14.md)) — Reckn does not enter that competition. **The measurements on this page are unaffected**: they are about Reckn, and the event was only the occasion for writing them down.
+
 **Written 2026-09-12.** Every number here is either measured on a public chain by this
 repository, or an explicitly named unknown. Nothing is a projection, and there is no revenue
 model on this page — the question is narrower and answerable: *what does one adjudication cost,

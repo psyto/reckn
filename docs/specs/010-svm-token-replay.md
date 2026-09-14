@@ -67,6 +67,29 @@ completed between the competition's start and end dates."*（`RULES.md` §1、20
 **同日に測った現状（P1 の出発点）**: `cd reexec-svm && cargo test` → **30 passed**、
 `cd escrow-svm && cargo test` → **10 passed**（`tests/e2e.rs`、LiteSVM）。
 
+### 0.2 第三次裁定（2026-09-14）— **CWF 参加の裁定は取り消された**
+
+**founder 裁定: Reckn はあの大会に参加しない。** 参加するのは別レーンであり、
+**この文書はそれを記述しない**（§11 の「文書の一方向性」は計画が変わっても停止しない）。
+取り消しの全文は
+[`docs/cwf-2026/RETRACTED-2026-09-14.md`](../cwf-2026/RETRACTED-2026-09-14.md)。
+
+**§0 の何が無効になったか（旧文は消さずに残す）**
+
+| 旧文（§0、2026-09-12） | 2026-09-14 の状態 |
+|---|---|
+| 「**裁定**: Reckn は Crypto World's Fair に Tempo × Solana で参加する」 | **無効。** Reckn は参加しない |
+| 「**P1 の1行目を 2026-09-14 20:00 JST より前に書かない。**」 | **無効。** 早く書くと当日作業が事前作業に変わる、という理由が消えたので、**この時計のゲートは存在しない**。実装はいつ着手してもよい |
+| 「窓が開いたら `bash scripts/cwf-baseline.sh --write` で境界の commit を記録してから着手する」 | **無効。** 記録すべき窓が無い |
+
+**無効にならなかったもの**: §0.1 の3件の finding の畳み込み、**裁定 B**（世界を閉じる）、
+INV-8 / AC-11 / AC-12 / M-9〜M-11、§10 item 1 の toolchain 測定、そして **Status: FROZEN**。
+**これらは大会と無関係に、仕様として正しいから残る。**
+
+**では 010 はいつやるのか。** Reckn の生きているレーンは **ETHGlobal Tokyo（2026-09-25 → 09-27、
+Uniswap Foundation Continuity）**であり、それは [`012`](012-uniswap-reexecution-slice.md) の仕事で
+010 ではない。**010 は event の無い R&D に戻る**——優先度は founder が決める。
+
 ### 0.1 第二次裁定（2026-09-12）— レビュー r1 を畳み込み、ここで凍結する
 
 [`docs/reviews/010-spec-r1.md`](../reviews/010-spec-r1.md) が **CHANGES**（BLOCKER 2 / MAJOR 1）。

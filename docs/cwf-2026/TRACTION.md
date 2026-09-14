@@ -1,5 +1,7 @@
 # Traction — the two instruments, their asks, and the ledgers that stay empty until they are not
 
+> **⚠ The event framing below was retracted 2026-09-14** ([why](RETRACTED-2026-09-14.md)) — Reckn does not enter that competition. **The measurements on this page are unaffected**: they are about Reckn, and the event was only the occasion for writing them down.
+
 **Nothing on this page has happened yet.** Every table below is currently empty and says so. This
 file exists so that the evidence lands somewhere that cannot be quietly rounded up, and so the word
 *adoption* stays unusable until [`../tokyo-partner-pilot.md`](../tokyo-partner-pilot.md) §1 has real

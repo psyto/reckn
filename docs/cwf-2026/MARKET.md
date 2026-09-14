@@ -1,5 +1,7 @@
 # The market, sized from the bottom up — including the number that argues against us
 
+> **⚠ The event framing below was retracted 2026-09-14** ([why](RETRACTED-2026-09-14.md)) — Reckn does not enter that competition. **The measurements on this page are unaffected**: they are about Reckn, and the event was only the occasion for writing them down.
+
 **Read 2026-09-12.** This page sizes the market Reckn is actually in. It does **not** contain a
 top-down figure for "the AI agent economy", because that number would not be about Reckn: a
 payment rail's total volume is not an adjudicator's market, and quoting one is the cheap version

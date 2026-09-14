@@ -1,5 +1,7 @@
 # CWF 2026 — what has to be true before 09-14, and who owns each line
 
+> **⚠ RETRACTED 2026-09-14 — Reckn does not enter this event** ([why](RETRACTED-2026-09-14.md)). Kept as a record; **do not act on anything below.**
+
 **Written 2026-09-12, 51 hours before kickoff.** Every item is **DONE** with the command that
 shows it, or **OPEN** with the name of the person or the date that closes it. Nothing is marked
 done because it was written down. The rules this file obeys are quoted in
