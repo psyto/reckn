@@ -1,5 +1,10 @@
 # Live judging — 4 minutes of demo, 3 minutes of questions
 
+> **⚠ 2026-09-14: この台本は ETHOnline に対しては発動しなかった。** Round 1 の非同期審査を通過せず、
+> 9/15 のライブ審査には進んでいない（`STATUS.md`）。**パートナー賞は対象のまま**で finale は 9/17。
+> 以下は **CWF の door** として、および次回のライブ審査の素材として残す —— *過去形で読むこと*。
+
+
 > **"4 minutes for the demo, followed by 3 minutes for Q&A with the judges."**
 > — ETHOnline 2026. Monday 2026-09-14, 12:00 EDT = **01:00 JST on the 15th**.
 
