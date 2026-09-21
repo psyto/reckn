@@ -1,0 +1,9 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["../../zk-verdict/contracts/lib"]
+fs_permissions = [{ access = "read", path = "../../zk-verdict/contracts" }]
+evm_version = "cancun"
+
+[rpc_endpoints]
+sepolia = "https://ethereum-sepolia-rpc.publicnode.com"

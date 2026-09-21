@@ -1,0 +1,7 @@
+forge-std/=../../zk-verdict/contracts/lib/forge-std/src/
+v4-core/=lib/v4-core/
+@ens/=lib/ens-v2/contracts/
+@openzeppelin/contracts/=lib/oz/contracts/
+@zk/=../../zk-verdict/contracts/src/
+@sp1-contracts/=../../zk-verdict/contracts/lib/sp1-contracts/contracts/src/
+@zktest/=../../zk-verdict/contracts/test/
