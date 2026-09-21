@@ -319,6 +319,40 @@ bash docs/tokyo-2026/check-description.sh --record   # after pasting, say so
 red and the commit is refused; restoring it turns them green. A check never seen to fail is not
 a check — which is exactly what §5.1 says about `zk-e2e.sh`.
 
+## ★ 7. Day 1 — the eight hours before hacking starts
+
+**Hacking begins at 21:00, not in the morning.** The published schedule (Toranomon Hills Forum):
+
+| | |
+|---|---|
+| **13:00** | registration opens — **22:00 it closes.** Do it first |
+| **15:00** | **ENSv2 — Identity for Apps, Agents & Beyond** (ENS, Kevin Krone) |
+| 15:30 | Sui · 16:00 Curvegrid |
+| **16:30** | **How to Navigate the Uniswap Stack** (Uniswap) |
+| 17:00 | 1inch · 17:30 World (IDP vs IDKit) |
+| 18:30 | dinner · 20:00 opening ceremony |
+| **21:00** | **hacking begins.** Team formation runs in parallel — not needed, this is solo |
+
+**These eight hours are the stated top priority of entering at all**, which was never the prize
+money: it was meeting the people who build this. **The 15:00 and 16:30 talks are the two sponsors
+this submission applies to**, and the ENS one is about identity for agents, which is the
+submission's subject.
+
+**Go with something to give, not something to ask.** `spikes/tokyo-2026/FINDINGS.md` has four
+things the ENS team would want and that almost nobody else in the room will have measured:
+
+- the **deployed Sepolia beta's ABI is not the main branch's** — `initialize` and `setText` differ
+- `grantSetterRoles` takes **the setter's calldata**; a name reverts `UnsupportedResolverProfile`
+  with the name's first four bytes read as a selector
+- the resolver is **UUPS**, so an EIP-1167 clone dies in `onlyProxy` with 210 gas and no data
+- a name is an **ERC-1155**, so a contract owner without a receiver hook cannot register one
+
+Same for Uniswap: the **ERC-7751 `WrappedError`** wrapping, which makes a hook test that asserts
+the outer selector prove nothing.
+
+**None of this is a pitch.** It is the part of the work that helps the person you are talking to,
+and it is already written down.
+
 ## 6. Done-check — updated 2026-09-22, three days out
 
 | | |
@@ -332,6 +366,6 @@ a check — which is exactly what §5.1 says about `zk-e2e.sh`.
 | **the disclosure, in full, in the form's description** | ✅ **done 2026-09-22**, and no longer something to remember: `check-description.sh` compares the live field's recorded hash against the file, and a pre-commit hook refuses to commit a disclosure change that leaves `DESCRIPTION.txt` behind. **done 2026-09-22.** `DESCRIPTION.txt` pasted whole, so the narrative and the entire disclosure are in the one field the rules leave for it. **Re-run `build-description.py` and re-paste after any edit to either half** — what is in the form is a snapshot |
 | the form's final paragraph | ✅ carried in by the same paste; the counted number is gone from it |
 | Alchemy key rotated | **OPEN** |
-| **event start time confirmed** | **OPEN** — the repository says 09-25 09:00, the founder recalls an afternoon start. 36 hours and 48 hours are different plans |
+| **event start time confirmed** | ✅ **hacking begins 09-25 at 21:00 JST.** The repository said 09:00 and was wrong by twelve hours. The window is **36 hours, 21:00 Fri → 09:00 Sun**, and it crosses two nights. See §7 |
 | **slept** | 36 hours solo, and the last six are the submission |
 

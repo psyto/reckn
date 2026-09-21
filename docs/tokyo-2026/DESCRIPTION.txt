@@ -152,7 +152,11 @@ claim, and the event work sits outside it.
 
 - The repository is public and every commit is dated. A pre-event commit cannot later be
   presented as event work, and the history is as checkable against us as for us.
-- Event work is defined by date: only commits dated 2026-09-25 or later are event work.
+- Event work is defined by the clock, not the calendar day: hacking begins 2026-09-25 at
+  21:00 JST, and only commits at or after that moment are event work. The 25th is not a
+  boundary — registration opens at 13:00 and the sponsor workshops, dinner and opening ceremony
+  fill the eight hours before hacking starts. Anything committed in that window is pre-event work
+  and is disclosed as such.
   A commit hash is recorded as EVENT_START before the first of them.
 - Continuous commits during the event. The rules treat a single large final commit as
   unqualified by default, and this repository's practice is small commits per task.

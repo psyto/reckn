@@ -404,7 +404,11 @@ an exit status — `forge test --match-test` exits 0 on zero matches (`CLAUDE.md
 
 Unchanged from `012` §6 and restated as rules for ourselves:
 
-1. **§4 is not to be built before 2026-09-25.** Building it now and re-committing it during the
+1. **§4 is not to be built before 2026-09-25 at 21:00 JST** — the moment hacking begins, not the
+   start of the calendar day. **The published schedule corrects an assumption this repository
+   carried**: registration opens 13:00, the sponsor workshops run 15:00–17:50, dinner 18:30,
+   opening ceremony 20:00, and **hacking begins at 21:00**. A commit dated 2026-09-25 is not
+   automatically event work. Building it now and re-committing it during the
    event is exactly the practice the rules exist to prevent (`AGENTS.md` §4).
 2. **The repository is public and every commit is dated** — the boundary is checkable by anyone,
    including against us.
@@ -435,7 +439,8 @@ Infrastructure and reading are not the submission.
 6. **Rewrite the opening 60 seconds.** ETHOnline Round 1 was lost on the entry, not the claim —
    the video was a verification checklist for an already-interested judge. Script only.
 
-**Fallback decision point: 2026-09-26, 09:00 JST.**
+**Fallback decision point: 2026-09-26, 09:00 JST** — twelve hours into a thirty-six hour window
+(21:00 on the 25th to 09:00 on the 27th), not a whole day in as the earlier reading assumed.
 
 **★ r1 M3 — the first draft was timestamped but not decidable.** "§3.6 is unresolved" and
 "§4-1/§4-2 are not standing" named no artifact, so under pressure a partial deployment could be
