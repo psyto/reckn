@@ -5,6 +5,12 @@
 > **How to read this file.** Everything inside a `~~~text` block is **the copy — paste it
 > verbatim**. Everything outside one is a note to you and must not go into the form.
 >
+> **★ No counted number goes in the copy.** "310 commits before the event" was pasted into the
+> form on 09-21 and was false by 09-22, because fourteen more pre-event commits landed — the same
+> trap `DISCLOSURE.md` §0 was rewritten to avoid, left standing here because only one of the two
+> files was fixed. **State the boundary, not the tally.** Anything that must be counted is counted
+> by `git log`, by whoever is reading.
+>
 > **The copy is plain text on purpose.** The form's fields do not render Markdown: the description
 > actually filed at ETHOnline is prose with no `**`, no backticks, and capitals where a sentence
 > has to carry weight. Asterisks pasted into that field arrive as asterisks. Two earlier versions
@@ -103,10 +109,12 @@ The job that is proven runs on v3 SwapRouter02, which is the execution we have m
 through the zk guest. The pass is spent on v4. Earning and spending are different acts and
 deliberately use different venues.
 
-PRE-EXISTING WORK IS DISCLOSED IN FULL BELOW. In short: this repository began on 2026-07-26,
-has 310 commits before the event, and was submitted to ETHOnline 2026, where it did not pass
-Round 1. The escrow, the guests and the proving pipeline are old. The ENS record surface, the
-v4 hook, and everything that joins them are the event's work. The full disclosure follows.
+PRE-EXISTING WORK IS DISCLOSED IN FULL BELOW. In short: this repository began on 2026-07-26;
+its product history runs to 501cbde on 2026-09-14, and everything dated after that is the
+pre-event design and measurement the disclosure describes. It was submitted to ETHOnline 2026,
+where it did not pass Round 1. The escrow, the guests and the proving pipeline are old. The ENS
+record surface, the v4 hook, and everything that joins them are the event's work. The full
+disclosure follows.
 ~~~
 
 *(then the `<!--DISCLOSURE:BEGIN-->` block.)*
