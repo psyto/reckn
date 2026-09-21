@@ -306,8 +306,8 @@ git push origin master
 | the 09-14 work public on `master` | ✅ fast-forwarded from `freeze-window` and pushed. `RETRACTED-2026-09-14.md` is now where the disclosure says it is |
 | pre-event work committed with pre-event dates | ✅ 09-21 and 09-22, pushed. **This is what makes the disclosure true rather than merely written** |
 | no key material in the tree; `--account reckn-arc` everywhere | ✅ |
-| **the disclosure, in full, in the form's description** | **OPEN — and the narrative already pasted ends with "The full disclosure follows."** If it does not, the form currently promises something it does not deliver. **The only omission that is a disqualification rather than a lost point** |
-| the form's corrected final paragraph re-pasted | **OPEN** — "310 commits before the event" was true for one day |
+| **the disclosure, in full, in the form's description** | ✅ **done 2026-09-22.** `DESCRIPTION.txt` pasted whole, so the narrative and the entire disclosure are in the one field the rules leave for it. **Re-run `build-description.py` and re-paste after any edit to either half** — what is in the form is a snapshot |
+| the form's final paragraph | ✅ carried in by the same paste; the counted number is gone from it |
 | Alchemy key rotated | **OPEN** |
 | **event start time confirmed** | **OPEN** — the repository says 09-25 09:00, the founder recalls an afternoon start. 36 hours and 48 hours are different plans |
 | **slept** | 36 hours solo, and the last six are the submission |
