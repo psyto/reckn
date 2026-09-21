@@ -31,7 +31,8 @@ No owner, no resolver, no admin, no upgrade path. **Reproduce, or refund.**
 | run it in ten minutes | [Try it (one command)](#try-it-one-command) |
 | see what is *not* done | [`docs/status.md`](docs/status.md) — `Known gaps (not closed)` |
 | find any other document | [`docs/README.md`](docs/README.md) — what each page is *for* |
-| judge the ETHOnline entry | [Where the boundary is](#ethonline-2026--where-the-boundary-is) · [`docs/ethonline-2026/`](docs/ethonline-2026/) |
+| judge the Tokyo entry | [The current entry](#ethglobal-tokyo-2026--the-entry-this-repository-is-currently-preparing) · [`docs/tokyo-2026/`](docs/tokyo-2026/) |
+| judge the ETHOnline entry (concluded) | [Where the boundary was](#ethonline-2026--where-the-boundary-was) · [`docs/ethonline-2026/`](docs/ethonline-2026/) |
 
 ---
 
@@ -442,12 +443,27 @@ and the file that checks each one, are in
 **The 150-word version of all of this**, with every clause traced to the file that carries it and
 an audit of what the words may not mean: [`docs/cwf-2026/PITCH.md`](docs/cwf-2026/PITCH.md).
 
-## ETHOnline 2026 — where the boundary is
+## ETHGlobal Tokyo 2026 — the entry this repository is currently preparing
 
-Reckn is entered in **ETHOnline 2026** (9/4–16, async) under **Continuity — Ship a
-Feature**: an existing project shipping a new feature during the event. That track
-lives or dies on an honest boundary between what already existed and what is built
-during the event, so the boundary is stated here rather than reconstructed later.
+**2026-09-25 → 09-27, Continuity track**, applying for the **ENS** and **Uniswap
+Foundation** partner prizes and for Top 10 Finalist judging.
+
+| | |
+|---|---|
+| The lane | [`docs/specs/013-settlement-granted-record-rights.md`](docs/specs/013-settlement-granted-record-rights.md), at r4 — it supersedes `012` and absorbs its Uniswap half |
+| **Event work** | **commits dated 2026-09-25 or later — the date is primary, not the hash** |
+| Pre-existing work | [`docs/tokyo-2026/DISCLOSURE.md`](docs/tokyo-2026/DISCLOSURE.md). Everything in this README is pre-event work and is disclosed as such |
+| What was measured before building | [`spikes/tokyo-2026/FINDINGS.md`](spikes/tokyo-2026/FINDINGS.md) — including two places the design was wrong |
+
+**Nothing of the Tokyo submission exists yet.** `013` §4 lists what will be built, and
+the disclosure says the same thing in the form a judge can check commit by commit.
+
+## ETHOnline 2026 — where the boundary was
+
+Reckn **was** entered in **ETHOnline 2026** (9/4–16, async) under **Continuity — Ship a
+Feature**. **It did not pass the Round 1 asynchronous judging**; partner-prize judging
+ran to 9/17. The boundary is left stated here rather than reconstructed later, and is
+pre-existing work for Tokyo.
 
 | | |
 |---|---|

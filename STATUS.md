@@ -16,7 +16,11 @@
 
 ## ETHGlobal Tokyo は Reckn × Uniswap で確定（2026-09-14、founder）
 
-**Reckn の生きているレーンは [`docs/specs/012`](docs/specs/012-uniswap-reexecution-slice.md) 一本。**
+**Reckn の生きているレーンは [`docs/specs/013`](docs/specs/013-settlement-granted-record-rights.md) 一本**
+（2026-09-21 に 012 を置換。012 の Uniswap 半分はここに吸収され、**ENS 側が加わった**）。
+独立レビュー2周とも `CHANGES`、BLOCKER 4件は機構で解決。**スパイク 20 passed / 0 failed** で
+未解決の問いはゼロ、デモの全拍が一度は実物の上で走っている（`spikes/tokyo-2026/FINDINGS.md`）。
+**以下 012 についての記述は、置換前の記録として残す。**
 2026-09-25 → 09-27、Uniswap Foundation Continuity。
 
 **founder が同日に述べた判断基準を、Reckn に効く一般形で記録する**

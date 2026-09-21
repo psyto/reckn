@@ -7,6 +7,7 @@
     "chainId": 5042002,
     "rpc": "https://rpc.testnet.arc.io",
     "explorer": "https://testnet.arcscan.app",
+    "explorerNote": "2026-09-21: testnet.arcscan.app now 301-redirects to explorer.testnet.arc.io. The links in this repository still resolve through that redirect, and a redirect is not a guarantee. Arc is not part of the ETHGlobal Tokyo submission.",
     "faucet": "https://faucet.circle.com",
     "nativeGasToken": "USDC (18 decimals as native)",
     "usdcErc20": "0x3600000000000000000000000000000000000000",
