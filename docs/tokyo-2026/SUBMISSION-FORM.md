@@ -1,0 +1,186 @@
+# ETHGlobal Tokyo 2026 — submission form copy
+
+**Drafted 2026-09-21 from measured results (`spikes/tokyo-2026/FINDINGS.md`).**
+The form can be edited until the deadline, so this is written as the submission **will** be —
+with §9 below listing exactly which sentences become false if a piece does not land, so that
+nothing in here quietly turns into a claim we did not earn.
+
+---
+
+## 1. Project name
+
+`Reckn`
+
+## 2. Category / emoji
+
+Wallet/Payments · ⚖
+
+## 3. Short description (≤100 characters)
+
+> An agent earns a record it cannot write itself, and that record is its pass to a v4 pool.
+
+*(89 characters.)*
+
+## 4. Description
+
+> **★ This field must also carry the pre-existing-work disclosure, reproduced in full.**
+> ETHGlobal's rules require the disclosure *"in writing to the ETHGlobal team"* and **name no
+> channel**; the same rules require full details *"in your submission (repo history, video, and
+> description)"*. This repository settled the question at ETHOnline
+> (`docs/ethonline-2026/SUBMISSION-FORM.md:66`): **"There is no other place to file it."**
+>
+> So the field is: **the narrative below, then the whole of `docs/tokyo-2026/DISCLOSURE.md`**,
+> pasted between markers so the two can be diffed later:
+>
+> ```
+> <!--DISCLOSURE:BEGIN-->
+> …the full text of docs/tokyo-2026/DISCLOSURE.md…
+> <!--DISCLOSURE:END-->
+> ```
+>
+> **If the disclosure is edited after the form is filled, the field must be re-pasted.** Two
+> documents a judge reads that disagree about the same number is a defect ETHOnline's own
+> post-mortem lists.
+
+> Reckn is an escrow for agent-to-agent payments where the arbiter is **deterministic
+> re-execution**. A buyer funds a deal with a floor; an agent does the work; the fee is released
+> only if replaying that work reproduces the agreed outcome. **There is no key that can decide
+> otherwise** — the escrow has no owner, resolver, admin, pause or upgrade, `settleWithProof` is
+> permissionless, and a build-time check enforces that rather than promising it.
+>
+> ERC-8004 reached Ethereum mainnet in January 2026 and gives agents identity and reputation. It
+> does not stop an agent from being **the source of its own history**. That is what we built here.
+>
+> A completed job becomes a record under the agent's **ENSv2** subname, and the right to write it
+> is an **Enhanced Access Control** role that the settlement creates and then destroys. The agent
+> cannot write it. Its client can, once, for that one record. Attempting otherwise reverts with
+> `EACUnauthorizedAccountRoles`. The agent owns its name and still cannot repoint it: the subname
+> is issued without `ROLE_SET_RESOLVER`.
+>
+> Then the record is **spent**. A **Uniswap v4 `beforeSwap` hook** reads it on chain and refuses a
+> swap from an agent with no settled record. The same swap passes once the record exists, and is
+> refused again if the record is cleared. **Deliver → earn a record → the record is the pass.**
+>
+> The job that is proven runs on **v3 `SwapRouter02`**, which is the execution we have measured
+> through the zk guest. The pass is spent on **v4**. Earning and spending are different acts and
+> deliberately use different venues.
+>
+> **Pre-existing work is disclosed in full below.** In short: this repository began on 2026-07-26,
+> has 310 commits before the event, and was submitted to ETHOnline 2026, where it did not pass
+> Round 1. The escrow, the guests and the proving pipeline are old. **The ENS record surface, the
+> v4 hook, and everything that joins them are the event's work.** The full disclosure follows.
+
+*(then the `<!--DISCLOSURE:BEGIN-->` block.)*
+
+## 5. How it's made
+
+> **The verdict.** An SP1 zkVM guest runs real `revm` **in-guest** over a prestate **MPT-verified
+> against the block `state_root`** — account proofs plus storage proofs — so the guest cannot be
+> fed a state that never existed. Measured against Ethereum mainnet on 2026-09-08: a real
+> `SwapRouter02.exactInputSingle`, witness of 7 accounts / 12 storage slots / 141 MPT nodes,
+> **13,006,200 cycles**, Groth16 end-to-end in **497.40 s** on a laptop. **That measurement
+> predates the event and is disclosed as pre-existing.** A Groth16 verifier checks the proof on
+> chain and `settleWithProof` moves the money. The deal is bound to one execution — the token
+> checked, the storage slot read (which is *whose* balance) and the calldata are all inside the
+> binding, so a real proof of a *different* swap reverts with `BindingMismatch()` and nothing moves.
+>
+> **Deriving the verdict without being told it.** The escrow's `Deal` has no outcome field, and
+> the outcome exists only in an event, which contracts cannot read — and settlement is
+> permissionless, so a third party may settle first. The record contract therefore **re-verifies
+> the proof itself** through the verifier the *funder* named (pinned by codehash), and takes the
+> outcome from `verifyVerdict`, never from its caller. It also refuses anything outside
+> `fundedAt + REFUND_AFTER`, because a timeout refund writes the **same** terminal state as a real
+> settlement and would otherwise be recordable as one.
+>
+> **The ENS side.** Each agent is a subname under a parent `PermissionedRegistry` we deploy, and
+> its job records live on a **Permissioned Resolver**, which is itself an access-control surface.
+> Writes are granted per record, not per name: `grantSetterRoles` takes **the setter's calldata**,
+> and `decodeSetter` returns the resource to revoke. Records resolve through
+> **`UniversalResolverV2`**, not by calling our resolver directly.
+>
+> **The Uniswap side.** A `beforeSwap`-only hook, its address CREATE2-mined so
+> `uint160(hook) & ALL_HOOK_MASK == BEFORE_SWAP_FLAG`, reads the record inside `beforeSwap` —
+> synchronously, no CCIP-Read — and reverts `NoSettledRecord`. The PoolManager wraps that in
+> ERC-7751 `WrappedError`, so our tests assert the **wrapped target and reason**, not the outer
+> selector. `beforeAddLiquidity` is deliberately unflagged: **the gate is on trading, not on
+> providing liquidity.**
+>
+> **Hacky and worth mentioning.** Before writing any of it we spent a day measuring against forked
+> Sepolia, and the design was wrong twice. The deployed ENSv2 beta's ABI is **not** the main
+> branch's (`initialize` and `setText` both differ); `grantSetterRoles` rejects a name with
+> `UnsupportedResolverProfile` because its first argument is calldata; the resolver is UUPS, so an
+> EIP-1167 clone dies inside `onlyProxy` with 210 gas and no revert data; and a name is an
+> ERC-1155, so a contract owner without a receiver hook cannot register one. All of it is in
+> `FEEDBACK.md` and `spikes/tokyo-2026/FINDINGS.md`.
+
+## 6. Partner prize — Uniswap Foundation
+
+> The agent's job is a real Uniswap swap, and **what we built is the hook that consumes the result**.
+>
+> A new **v4 `beforeSwap` hook** gates a pool on an agent's on-chain reputation record: no settled
+> record, no swap. Measured against the **real Sepolia PoolManager** with liquidity provided —
+> refused first (`target` and `reason` both asserted to be ours), then executed: **1.000000000000000000
+> token0 out, 0.987158034397061298 token1 in**. Clearing the record closes the pool to that agent
+> again, so it is the record doing the gating and not something incidental.
+>
+> The swap that is *proven* stays on **v3 `SwapRouter02`** — re-executed inside an unmodified zk
+> guest, 13,006,200 cycles, measured on 2026-09-08 and disclosed as pre-existing. We do not put the
+> Universal Router on the proving path: Permit2's signature step uses `ecrecover`, which is on our
+> guest's divergent-precompile list with equivalence unverified, and we will not claim soundness we
+> have not established.
+>
+> `FEEDBACK.md` is in the repository root and the README points at the exact contracts and lines.
+> We make no claim about Uniswap's pricing, safety or quality — the protocol is the workload being
+> verified and the venue being gated, not the subject of a critique.
+
+## 7. Partner prize — ENS
+
+> ERC-8004 gives agents identity and reputation but nothing stops an agent from being the source of
+> its own history. **ENSv2 is what closes that, and it is the mechanism rather than a lookup.**
+>
+> Each agent is a subname under a parent `PermissionedRegistry` we deploy on Sepolia. Its job
+> records sit on a **Permissioned Resolver**, and the right to write one is an **Enhanced Access
+> Control** role that the escrow grants **on settlement** and revokes after the write. Measured:
+> the agent's own write reverts `EACUnauthorizedAccountRoles`; a grant for `job:1` does **not**
+> authorise `other:key`, and the two resources differ — **granularity is per record, not per name**;
+> the second write by the same party after revocation is refused.
+>
+> The authority boundary is closed at the registry too. `register` lets the issuer choose the roles
+> that ride on the token, so the agent's subname carries **no** `ROLE_SET_RESOLVER` — it owns its
+> name and still cannot repoint its own record surface. **With a control arm**: the same call on a
+> name registered *with* the role succeeds, so the refusal is attributable. Root roles on the parent
+> registry are renounced after setup, because while they are held that power can be handed over at
+> any time.
+>
+> Everything resolves through **`UniversalResolverV2`** against a name really registered on the
+> Sepolia `ETHRegistrar` — not hard-coded, and not a direct call to our own resolver.
+>
+> **Remove ENSv2 and the claim disappears**: a flat registry with a shared public resolver cannot
+> express "this name's records are writable by a contract and not by their subject".
+
+## 8. AI tools
+
+> Claude Code and the Codex CLI were both used, under a rule of **author independence**: whoever
+> writes a spec does not implement it, and whoever implements does not review. The design was
+> drafted by Claude and reviewed adversarially by Codex; both rounds returned `CHANGES`, and the
+> four blockers and their fixes are in `docs/reviews/013-spec-r1.md` and `-r2.md` along with the
+> exact prompts the reviewer was given. AI did not produce the measurements or the on-chain
+> results — those come from running the code.
+
+## 9. ★ Sentences that become false if a piece does not land
+
+**Check this list before submitting. Do not let a draft survive into a claim.**
+
+| if this does not land | these must change |
+|---|---|
+| the ENS record surface | §3 short description entirely; §4 paragraphs 3–4; §7 |
+| the v4 hook | §3 "pass to a v4 pool"; §4 paragraph 4; §6 paragraph 2 |
+| liquidity in the demo pool | the token figures in §6 — **a no-op swap on an empty pool is not what those numbers say** |
+| `RecknZkEscrow` on Sepolia | the ENS Continuity claim that we target an existing project's testnet deployment |
+| a live demo link | **both** ENS tracks' qualification |
+| `FEEDBACK.md` + the feedback form | **both** Uniswap tracks' qualification |
+| the disclosure pasted into §4 | **the whole submission** — omission is a disqualification, not a lost point |
+
+**Everything quoted as a measurement above was run on a fork of Sepolia on 2026-09-21, not on
+Sepolia itself.** When the event's deployments exist, re-check each number against the deployed
+run and correct it here rather than leaving the fork figure standing.
