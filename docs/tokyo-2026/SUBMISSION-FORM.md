@@ -16,6 +16,21 @@ nothing in here quietly turns into a claim we did not earn.
 
 ---
 
+## 0. State of the form — 2026-09-21
+
+| field | state |
+|---|---|
+| project name, emoji, **category (Artificial Intelligence)** | **entered** |
+| track (Continuity), submission type (Top 10 Finalist + Partner) | **entered** |
+| partner prizes: ENS, Uniswap Foundation | **entered** |
+| GitHub repository | **entered** — `psyto/reckn` |
+| tech stack pages | **entered** |
+| AI tools | **entered** — the form's own placeholder was false here and was replaced. **One sentence to add at the event**: implementation written by Codex, diffs read back by Claude. It cannot be written yet because no implementation exists |
+| short description, description, how it's made, both partner explanations | **drafted here, not yet pasted.** They quote measurements taken on a fork; re-check each number against the deployed run before pasting (§9) |
+| **the disclosure, in full, inside the description** | **not pasted.** The only omission that is a disqualification rather than a lost point |
+| demo link, images (logo, cover, ≥3 screenshots), video | **event work.** The Arc/ETHOnline images must not be reused |
+| Future Opportunities | **not answered** — grants/accelerator interest |
+
 ## 1. Project name
 
 `Reckn`
