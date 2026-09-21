@@ -296,6 +296,29 @@ gh auth switch -u psyto       # first, every session
 git push origin master
 ```
 
+## ★ 5.6 The description cannot go stale silently
+
+**A note saying "remember to re-paste" is an admonition.** This repository's own rule is that
+what works is a structure that forces the choice, which is why `no-keys.sh` fails the build
+rather than asking nicely. Same shape here:
+
+```bash
+bash docs/tokyo-2026/check-description.sh            # is the live field current?
+bash docs/tokyo-2026/check-description.sh --record   # after pasting, say so
+```
+
+- **Row 1** regenerates `DESCRIPTION.txt` and diffs it — catches an edit to the disclosure or the
+  narrative that was never rendered.
+- **Row 2** compares the hash recorded in `PASTED` against the file — **catches the half the
+  repository cannot see**, which is whether the text in the live form is this text.
+- **`scripts/hooks/pre-commit`** (installed with `git config core.hooksPath scripts/hooks`)
+  **refuses the commit** if the sources moved and `DESCRIPTION.txt` did not, and warns — without
+  blocking, because it would be circular — that the form is now behind.
+
+**Both were run against a negative control**: one word changed in the disclosure turns both rows
+red and the commit is refused; restoring it turns them green. A check never seen to fail is not
+a check — which is exactly what §5.1 says about `zk-e2e.sh`.
+
 ## 6. Done-check — updated 2026-09-22, three days out
 
 | | |
@@ -306,7 +329,7 @@ git push origin master
 | the 09-14 work public on `master` | ✅ fast-forwarded from `freeze-window` and pushed. `RETRACTED-2026-09-14.md` is now where the disclosure says it is |
 | pre-event work committed with pre-event dates | ✅ 09-21 and 09-22, pushed. **This is what makes the disclosure true rather than merely written** |
 | no key material in the tree; `--account reckn-arc` everywhere | ✅ |
-| **the disclosure, in full, in the form's description** | ✅ **done 2026-09-22.** `DESCRIPTION.txt` pasted whole, so the narrative and the entire disclosure are in the one field the rules leave for it. **Re-run `build-description.py` and re-paste after any edit to either half** — what is in the form is a snapshot |
+| **the disclosure, in full, in the form's description** | ✅ **done 2026-09-22**, and no longer something to remember: `check-description.sh` compares the live field's recorded hash against the file, and a pre-commit hook refuses to commit a disclosure change that leaves `DESCRIPTION.txt` behind. **done 2026-09-22.** `DESCRIPTION.txt` pasted whole, so the narrative and the entire disclosure are in the one field the rules leave for it. **Re-run `build-description.py` and re-paste after any edit to either half** — what is in the form is a snapshot |
 | the form's final paragraph | ✅ carried in by the same paste; the counted number is gone from it |
 | Alchemy key rotated | **OPEN** |
 | **event start time confirmed** | **OPEN** — the repository says 09-25 09:00, the founder recalls an afternoon start. 36 hours and 48 hours are different plans |

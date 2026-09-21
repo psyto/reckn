@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# If the submission's description sources move, DESCRIPTION.txt moves with them — or the
+# commit does not happen.
+#
+# It deliberately does NOT check whether the form was re-pasted: you cannot paste text you
+# have not generated yet, so requiring it here would be circular. What it does is make the
+# staleness impossible to commit, and say out loud that the form is now behind.
+#
+# Installed by: git config core.hooksPath scripts/hooks
+# Removed by:   git config --unset core.hooksPath
+set -uo pipefail
+repo=$(git rev-parse --show-toplevel)
+staged=$(git diff --cached --name-only)
+
+echo "$staged" | grep -qE 'docs/tokyo-2026/(DISCLOSURE\.md|SUBMISSION-FORM\.md|DESCRIPTION\.txt|build-description\.py)' || exit 0
+
+before=$(shasum -a 256 "$repo/docs/tokyo-2026/DESCRIPTION.txt" 2>/dev/null | cut -c1-16)
+python3 "$repo/docs/tokyo-2026/build-description.py" >/dev/null || {
+  echo "pre-commit: build-description.py failed"; exit 1; }
+after=$(shasum -a 256 "$repo/docs/tokyo-2026/DESCRIPTION.txt" | cut -c1-16)
+
+if [[ "$before" != "$after" ]]; then
+  cat <<MSG
+
+  ✗ DESCRIPTION.txt was stale and has been regenerated ($before -> $after).
+
+    git add docs/tokyo-2026/DESCRIPTION.txt
+
+  and commit again. The description field in the live form is now behind: paste the new
+  DESCRIPTION.txt and then
+
+    bash docs/tokyo-2026/check-description.sh --record
+
+MSG
+  exit 1
+fi
+
+recorded=$(awk '/^sha256-16:/{print $2}' "$repo/docs/tokyo-2026/PASTED" 2>/dev/null)
+[[ "$recorded" == "$after" ]] || cat <<MSG
+
+  ! The form's description field does not hold this text (recorded: ${recorded:-none}, now: $after).
+    Not blocking the commit — but the submission is not current until you paste and --record.
+
+MSG
+exit 0
