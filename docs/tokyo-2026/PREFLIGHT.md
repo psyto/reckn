@@ -257,7 +257,26 @@ git checkout -- zk-verdict/contracts/src/fixtures/reexec-groth16-fixture.json
 
 Verified restored on 2026-09-21: **55 passed, 0 failed.**
 
-### 5.3 The good news — a fresh clone works
+### 5.3 `pages/builds/latest` says "errored" for builds that were merely cancelled
+
+Two Pages builds reported `status: errored`, `duration: 0` and the message *"Page build failed."*,
+and the live site stayed stale. **Nothing had failed.** Pushing twice within two minutes makes
+GitHub cancel the superseded build, and the Pages API reports that cancellation as an error with
+no way to tell the difference. The API kept saying `errored` for the commit **after** the build
+that deployed it had succeeded.
+
+**The truth is in the workflow, not the Pages API:**
+
+```bash
+gh run list --limit 5     # "pages build and deployment" — success / cancelled / failure
+```
+
+This cost a wrong diagnosis and a commit whose message blames Jekyll for something Jekyll did not
+do (`docs/.nojekyll`, kept because a four-page hand-written site has no use for the pipeline
+either way). **On the day: push once, then check `gh run list` — not the Pages API — before
+concluding the site is broken.**
+
+### 5.4 The good news — a fresh clone works
 
 `git clone` of the **public** repo, then `bash zk-verdict/scripts/zk-e2e.sh`: dependencies are
 fetched by the script (there is no `.gitmodules`), **55 tests pass, exit 0**. A judge can run the
