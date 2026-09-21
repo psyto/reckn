@@ -13,7 +13,18 @@ nothing in here quietly turns into a claim we did not earn.
 
 ## 2. Category / emoji
 
-Wallet/Payments · ⚖
+**Artificial Intelligence** · ⚖
+
+> **Changed from Wallet/Payments on 2026-09-21.** That was the right label for the ETHOnline
+> submission, which was the escrow. `013` moved the centre of gravity: of the three surfaces, only
+> one is payments — the record surface is identity, and the hook is access control — and the
+> subject from end to end is **an agent**. ERC-8004 is the standard in question; ENS's own prize
+> text gives bonus consideration to *"agents as namespaces, each with their own identity and
+> permissions"*; and this same form asks *"Are you building an AI-powered or agentic project?"*,
+> which is answered **yes**. Leaving the category at Payments would have made the submission
+> disagree with itself two fields apart.
+>
+> The emoji stays ⚖ — it points at the verdict, which is unchanged.
 
 ## 3. Short description (≤100 characters)
 
