@@ -1,0 +1,174 @@
+Reckn is an escrow for agent-to-agent payments where the arbiter is deterministic
+re-execution. A buyer funds a deal with a floor; an agent does the work; the fee is released
+only if replaying that work reproduces the agreed outcome. THERE IS NO KEY THAT CAN DECIDE
+OTHERWISE — the escrow has no owner, resolver, admin, pause or upgrade, settleWithProof is
+permissionless, and a build-time check enforces that rather than promising it.
+
+ERC-8004 reached Ethereum mainnet in January 2026 and gives agents identity and reputation. It
+does not stop an agent from being THE SOURCE OF ITS OWN HISTORY. That is what we built here.
+
+A completed job becomes a record under the agent's ENSv2 subname, and the right to write it
+is an Enhanced Access Control role that the settlement creates and then destroys. The agent
+cannot write it. Its client can, once, for that one record. Attempting otherwise reverts with
+EACUnauthorizedAccountRoles. The agent owns its name and still cannot repoint it: the subname
+is issued without ROLE_SET_RESOLVER.
+
+Then the record is spent. A Uniswap v4 beforeSwap hook reads it on chain and refuses a
+swap from an agent with no settled record. The same swap passes once the record exists, and is
+refused again if the record is cleared. DELIVER, EARN A RECORD, AND THE RECORD IS THE PASS.
+
+The job that is proven runs on v3 SwapRouter02, which is the execution we have measured
+through the zk guest. The pass is spent on v4. Earning and spending are different acts and
+deliberately use different venues.
+
+PRE-EXISTING WORK IS DISCLOSED IN FULL BELOW. In short: this repository began on 2026-07-26;
+its product history runs to 501cbde on 2026-09-14, and everything dated after that is the
+pre-event design and measurement the disclosure describes. It was submitted to ETHOnline 2026,
+where it did not pass Round 1. The escrow, the guests and the proving pipeline are old. The ENS
+record surface, the v4 hook, and everything that joins them are the event's work. The full
+disclosure follows.
+
+==============================================================================
+PRE-EXISTING WORK DISCLOSURE - reproduced in full, as the rules require
+==============================================================================
+
+PRE-EXISTING WORK DISCLOSURE — RECKN, ETHGLOBAL TOKYO 2026
+
+Event: ETHGlobal Tokyo 2026, 2026-09-25 -> 09-27, Toranomon Hills Forum.
+Track: Continuity. Submission type: Top 10 Finalist + Partner prizes.
+Partner prizes applied for: ENS, Uniswap Foundation. (Not 1inch.)
+Repository: https://github.com/psyto/reckn — public, and public since 2026-09-04.
+Prepared: 2026-09-21, from the repository, not from memory.
+
+How this document is filed. ETHGlobal's rules say "In all cases, you must disclose any
+pre-existing work in writing to the ETHGlobal team" and name no channel for doing so. This
+text is therefore reproduced in full in the submission form's description field, which is
+where the same rules put the other half of the requirement — "include full details in your
+submission (repo history, video, and description)". It also lives at this path in the public
+repository so the history and the disclosure are checkable side by side.
+
+ETHGlobal's rules require pre-existing work to be disclosed in writing, and name code, designs
+and assets. This document lists what exists before the event and states what will be written
+during it. Every count below was taken by running a command against the repository on
+2026-09-21, and every one of them is checkable against the public history by anyone, including
+against us.
+
+Dates are not written here as a boundary either, for the same reason. "Everything dated
+2026-09-21" was true for one day. The boundary is a commit: 501cbde, 2026-09-14. Everything
+after it is §3.
+
+A total is not written here on purpose. It was, twice, and each time the commit that
+corrected it moved it again — 310 -> 313 -> 314. A number that its own commit falsifies is worse
+than no number, so what is stated instead is the boundary: 310 through 501cbde on
+2026-09-14, and everything after it is §3. git log answers the rest.
+
+0. THE SHORT VERSION
+
+  This project is not new. First commit - b8388f4, 2026-07-26
+  Commits before the event - 310 of product history through 501cbde, 2026-09-14, all public on master. Everything after it is the pre-event design, measurement and documents of §3 — including the commits that carry this file.
+  It has been submitted to another hackathon - ETHOnline 2026 (async, 09-04 -> 09-16) — see §2
+  Pre-existing implementation - substantial: 26 Solidity files, 136 Rust files tracked
+  Written for Tokyo before the event - design and measurement only — 2 specs, 2 reviews, 10 throwaway spike tests
+  Submission code written for Tokyo - zero lines. Nothing in §4 exists
+
+We are not claiming to start from scratch, and the Continuity track is the reason we do not
+have to. What follows is the boundary, drawn where the rules draw it.
+
+1. WHAT RECKN ALREADY IS (PRE-EXISTING, AND THE BULK OF THE REPOSITORY)
+
+An escrow for agent-to-agent payments whose arbiter is deterministic re-execution. A buyer
+funds a deal; the fee is released only if replaying the work reproduces the agreed outcome.
+
+  component - state before the event
+  zk-verdict/contracts/src/RecknZkEscrow.sol - complete. No owner / resolver / admin / pause / upgrade; settleWithProof is permissionless; refundAfterDeadline returns funds after 30 days to anyone who calls it, paying the caller nothing
+  zk-verdict/contracts/src/RecknVerdictVerifier.sol - complete. verifyVerdict is public view
+  zk-verdict/program-revm - complete. Real revm run in-guest over a prestate MPT-verified against the block state_root
+  zk-verdict/program-svm - complete. Not used by this submission
+  contracts/ (optimistic path) - complete. Not the submission's path
+  ERC-8004 reputation surface, x402 payment surface - complete
+  scripts/no-keys.sh - complete. A build-time check that the escrow has no key
+  Arc testnet deployment - escrow deployed, 4 real settlements. Pre-existing, and not part of this submission
+  dashboard/media/* (5 images) - ETHOnline/Arc assets. They will not be reused as Tokyo screenshots
+
+2. PRIOR HACKATHON USE — DISCLOSED BECAUSE IT IS MATERIAL
+
+The same repository was submitted to ETHOnline 2026 (async, 2026-09-04 -> 09-16) on the
+Continuity "Ship a Feature" track, with its own written disclosure
+(docs/ethonline-2026/DISCLOSURE.md). It did not pass Round 1; partner-prize judging there ran to
+2026-09-17. 179 commits fall inside that window and all of them are pre-existing work for Tokyo.
+
+The project was also prepared for Crypto World's Fair and withdrawn on 2026-09-14
+(docs/cwf-2026/RETRACTED-2026-09-14.md). Reckn is not concurrently entered in any other
+competition during 2026-09-25 -> 09-27.
+
+3. WRITTEN FOR TOKYO BEFORE THE EVENT — DESIGN AND MEASUREMENT ONLY
+
+ETHGlobal permits planning, design and research before an event and forbids building the
+submission. Everything in this section is design or measurement. None of it is submission code.
+
+  what - when - detail
+  docs/specs/012-uniswap-reexecution-slice.md - 2026-09-08 - design for a Uniswap re-execution slice. Superseded by 013, kept as the fallback
+  docs/specs/013-settlement-granted-record-rights.md - from 2026-09-21 - the submission's design, at revision r4
+  docs/reviews/013-spec-r1.md, -r2.md - 2026-09-21 - two independent adversarial reviews of that design, each ending in a verdict. Both returned CHANGES; four blockers are recorded with the fixes
+  spikes/tokyo-2026/ - 2026-09-21 - 10 throwaway test files, 1,506 lines. Fork tests against Sepolia and against the repository's own fixtures
+  spikes/tokyo-2026/FINDINGS.md - 2026-09-21 - what the spikes measured, including two places where the design was wrong and was corrected
+
+3.1 A MEASUREMENT TAKEN BEFORE THE EVENT, WHICH THE SUBMISSION WILL CITE
+
+On 2026-09-08, against Ethereum mainnet: a real SwapRouter02.exactInputSingle re-executed
+inside an unmodified guest — witness of 7 accounts / 12 storage slots / 141 MPT nodes,
+13,006,200 cycles, Groth16 end-to-end 497.40 s.
+
+This is a pre-event measurement and will be presented as one. It is not event work.
+
+3.2 WHAT THE SPIKES ARE, AND WHAT THEY ARE NOT
+
+They are instruments: they use cheatcodes, forked state and deliberately-failing control arms
+to answer whether a mechanism is possible. They are not the submission and will not be ported
+into it. Their dependencies (v4-core, contracts-v2, openzeppelin-contracts) are shallow
+clones under spikes/tokyo-2026/lib/, which is gitignored, as is the build output.
+
+They are disclosed in full, including the two findings that say the design was wrong, so that
+the record shows nothing unfavourable was withheld.
+
+4. WHAT WILL BE WRITTEN DURING THE EVENT (2026-09-25 -> 09-27)
+
+None of this exists. It is the "substantive new features developed during the event" the
+Continuity track requires, and it is the list a judge should be able to check commit by commit.
+
+  # - to build
+  1 - A parent ENSv2 registry on Sepolia, and agent subnames issued under it
+  2 - The record contract: a settlement opens a one-record write window for the deal's buyer, then closes it
+  3 - A Uniswap v4 beforeSwap hook that gates a pool on that record
+  4 - Buyer-side deal binding, settlement wiring, and RecknZkEscrow deployed to Sepolia
+  5 - The acceptance-criteria test matrix
+  6 - FEEDBACK.md, the Uniswap Developer Feedback Form, and a README section pointing at the contracts and line numbers
+  7 - A live demo, new screenshots, and the video
+
+RecknZkEscrow itself will not be modified. Its function surface is the project's central
+claim, and the event work sits outside it.
+
+5. HOW THE BOUNDARY IS CHECKABLE RATHER THAN PROMISED
+
+- The repository is public and every commit is dated. A pre-event commit cannot later be
+  presented as event work, and the history is as checkable against us as for us.
+- Event work is defined by date: only commits dated 2026-09-25 or later are event work.
+  A commit hash is recorded as EVENT_START before the first of them.
+- Continuous commits during the event. The rules treat a single large final commit as
+  unqualified by default, and this repository's practice is small commits per task.
+
+6. HONEST NOTES
+
+- This project has a large pre-existing implementation, and the rules note that projects
+  relying mostly on pre-existing work do not historically score as high. We are not hiding the
+  ratio: the escrow, the guests and the proving pipeline are old; the ENS record surface, the
+  v4 hook and everything that joins them are new.
+- The design in 013 has been through two independent review rounds that both returned
+  CHANGES, and the spikes then showed two further places where its reasoning was wrong.
+  Those corrections are in the document rather than removed from it.
+- docs/ethonline-2026/ describes a different event. It is kept, not deleted, and its claims
+  are not this submission's claims.
+
+Contact: @psyto69 (Telegram) · psyto (GitHub) · Discord psyto7835.
+If any part of this disclosure is insufficient, we would rather be told before the event than
+judged on it afterwards.

@@ -19,10 +19,14 @@ during it. **Every count below was taken by running a command against the reposi
 2026-09-21**, and every one of them is checkable against the public history by anyone, including
 against us.
 
+> **Dates are not written here as a boundary either, for the same reason.** "Everything dated
+> 2026-09-21" was true for one day. The boundary is a commit: `501cbde`, 2026-09-14. Everything
+> after it is §3.
+>
 > **A total is not written here on purpose.** It was, twice, and each time the commit that
 > corrected it moved it again — 310 → 313 → 314. A number that its own commit falsifies is worse
 > than no number, so what is stated instead is the **boundary**: 310 through `501cbde` on
-> 2026-09-14, and everything dated 2026-09-21 is §3. `git log` answers the rest.
+> 2026-09-14, and everything after it is §3. `git log` answers the rest.
 
 ---
 
@@ -31,7 +35,7 @@ against us.
 | | |
 |---|---|
 | **This project is not new.** First commit | `b8388f4`, **2026-07-26** |
-| Commits before the event | **310 of product history through `501cbde`, 2026-09-14**, all public on `master`. **Everything dated 2026-09-21 is the pre-event design, measurement and documents of §3** — including the commits that carry this file. |
+| Commits before the event | **310 of product history through `501cbde`, 2026-09-14**, all public on `master`. **Everything after it is the pre-event design, measurement and documents of §3** — including the commits that carry this file. |
 | **It has been submitted to another hackathon** | **ETHOnline 2026** (async, 09-04 → 09-16) — see §2 |
 | Pre-existing implementation | **substantial**: 26 Solidity files, 136 Rust files tracked |
 | Written for Tokyo before the event | **design and measurement only** — 2 specs, 2 reviews, 10 throwaway spike tests |
@@ -78,7 +82,7 @@ submission. **Everything in this section is design or measurement. None of it is
 | what | when | detail |
 |---|---|---|
 | `docs/specs/012-uniswap-reexecution-slice.md` | **2026-09-08** | design for a Uniswap re-execution slice. Superseded by 013, kept as the fallback |
-| `docs/specs/013-settlement-granted-record-rights.md` | **2026-09-21** | the submission's design, at revision **r4** |
+| `docs/specs/013-settlement-granted-record-rights.md` | **from 2026-09-21** | the submission's design, at revision **r4** |
 | `docs/reviews/013-spec-r1.md`, `-r2.md` | **2026-09-21** | two independent adversarial reviews of that design, each ending in a verdict. **Both returned `CHANGES`; four blockers are recorded with the fixes** |
 | `spikes/tokyo-2026/` | **2026-09-21** | **10 throwaway test files, 1,506 lines.** Fork tests against Sepolia and against the repository's own fixtures |
 | `spikes/tokyo-2026/FINDINGS.md` | **2026-09-21** | what the spikes measured, including two places where the design was **wrong** and was corrected |

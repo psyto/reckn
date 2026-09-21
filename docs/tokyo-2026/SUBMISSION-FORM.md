@@ -72,18 +72,20 @@ An agent earns a record it cannot write itself, and that record is its pass to a
 > description)"*. This repository settled the question at ETHOnline
 > (`docs/ethonline-2026/SUBMISSION-FORM.md:66`): **"There is no other place to file it."**
 >
-> So the field is: **the narrative below, then the whole of `docs/tokyo-2026/DISCLOSURE.md`**,
-> pasted between markers so the two can be diffed later:
+> **Do not paste from this section, and do not paste `DISCLOSURE.md` — it is Markdown.**
+> Run:
 >
-> ```
-> <!--DISCLOSURE:BEGIN-->
-> …the full text of docs/tokyo-2026/DISCLOSURE.md…
-> <!--DISCLOSURE:END-->
+> ```bash
+> python3 docs/tokyo-2026/build-description.py
 > ```
 >
-> **If the disclosure is edited after the form is filled, the field must be re-pasted.** Two
-> documents a judge reads that disagree about the same number is a defect ETHOnline's own
-> post-mortem lists.
+> and paste **the whole of `docs/tokyo-2026/DESCRIPTION.txt`**, in one go. It is the narrative
+> below followed by the entire disclosure, rendered to the plain prose the field actually stores —
+> headings as capitals, tables as lines, no asterisks and no backticks.
+>
+> **Neither half is retyped**, so the form and the repository cannot silently disagree — the
+> failure ETHOnline's own post-mortem lists is two documents a judge reads disagreeing about the
+> same number. **Re-run it and re-paste after any edit to the disclosure or to the narrative.**
 
 ~~~text
 Reckn is an escrow for agent-to-agent payments where the arbiter is deterministic
