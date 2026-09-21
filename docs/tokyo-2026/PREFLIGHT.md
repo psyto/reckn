@@ -285,16 +285,30 @@ clone rather than the working tree.
 
 ---
 
-## 6. Done-check, 2026-09-24 evening
+## ★ 5.5 `gh` reverts to the other account between sessions
+
+`gh auth status` showed `psyto` active on 09-21; on 09-22 a push failed
+**403 — "Permission to psyto/reckn.git denied to r3saito"**. Not a 404, which is what an older
+note in this repository predicted, and not a git problem.
+
+```bash
+gh auth switch -u psyto       # first, every session
+git push origin master
+```
+
+## 6. Done-check — updated 2026-09-22, three days out
 
 | | |
 |---|---|
-| `cast balance` ≥ 0.1 ETH (0.05 already suffices at 1 gwei) | **0.0499** — enough; one more claim for margin |
-| MockUSDC balance > 0 | ✅ **1,000.000000** |
-| archive RPC passes §3 step 2 | **open** |
-| disclosure **pasted in full into the form's description field** (not "sent" — see §4) | **open — the only omission that is a disqualification rather than a lost point** |
-| no key material in the repo; `--account reckn-arc` used everywhere | |
-| Alchemy key rotated (it was pasted into a chat log) | **open** |
-| the four 09-14 commits pushed; public count matches the disclosure | **open** |
-| today's pre-event work committed **with 09-2x dates**, before the event begins | **open — the one item whose omission makes the disclosure false** |
+| Sepolia ETH | ✅ **0.0499** — enough for the ~25–30M gas of a full run at 1 gwei. One more claim only if you want margin against a spike |
+| MockUSDC | ✅ **1,000.000000** |
+| archive RPC | ✅ Alchemy verified: `eth_getProof` at −100k on Sepolia and at **−15,000,000 on mainnet**, plus `eth_createAccessList`. **The key still needs rotating** |
+| the 09-14 work public on `master` | ✅ fast-forwarded from `freeze-window` and pushed. `RETRACTED-2026-09-14.md` is now where the disclosure says it is |
+| pre-event work committed with pre-event dates | ✅ 09-21 and 09-22, pushed. **This is what makes the disclosure true rather than merely written** |
+| no key material in the tree; `--account reckn-arc` everywhere | ✅ |
+| **the disclosure, in full, in the form's description** | **OPEN — and the narrative already pasted ends with "The full disclosure follows."** If it does not, the form currently promises something it does not deliver. **The only omission that is a disqualification rather than a lost point** |
+| the form's corrected final paragraph re-pasted | **OPEN** — "310 commits before the event" was true for one day |
+| Alchemy key rotated | **OPEN** |
+| **event start time confirmed** | **OPEN** — the repository says 09-25 09:00, the founder recalls an afternoon start. 36 hours and 48 hours are different plans |
 | **slept** | 36 hours solo, and the last six are the submission |
+
