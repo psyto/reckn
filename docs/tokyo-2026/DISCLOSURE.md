@@ -19,6 +19,9 @@ during it. **Every count below was taken by running a command against the reposi
 2026-09-21**, and every one of them is checkable against the public history by anyone, including
 against us.
 
+> **Re-check the counts when the form is filled.** They move whenever a pre-event commit lands —
+> this table was already invalidated once by the commit that published it.
+
 ---
 
 ## 0. The short version
@@ -26,7 +29,7 @@ against us.
 | | |
 |---|---|
 | **This project is not new.** First commit | `b8388f4`, **2026-07-26** |
-| Commits before the event | **310**, the most recent `501cbde` on **2026-09-14**. *(Verified against `origin` before filing: four 09-14 commits were local-only on 09-21 and were pushed; a clone made before that showed 306.)* |
+| Commits before the event | **313** on `master`, all public. **310** of them are product history through **2026-09-14**; the last **three**, dated **2026-09-21**, are this document, the spec, and the spikes — i.e. the pre-event work §3 describes. |
 | **It has been submitted to another hackathon** | **ETHOnline 2026** (async, 09-04 → 09-16) — see §2 |
 | Pre-existing implementation | **substantial**: 26 Solidity files, 136 Rust files tracked |
 | Written for Tokyo before the event | **design and measurement only** — 2 specs, 2 reviews, 10 throwaway spike tests |
