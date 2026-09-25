@@ -1,0 +1,102 @@
+{
+  "note": "Sepolia receipts for ETHGlobal Tokyo 2026. Every field was fetched from the chain, not typed. CLAUDE.md: an unchecked receipt is worth less than no receipt, because it looks like evidence.",
+  "generatedFromChain": "eth_getTransactionReceipt / eth_getTransactionByHash / eth_getBlockByNumber, 2026-09-25",
+  "checkedBy": "zk-verdict/scripts/sepolia-receipts.sh",
+  "network": {
+    "name": "Ethereum Sepolia",
+    "chainId": 11155111,
+    "explorer": "https://sepolia.etherscan.io"
+  },
+  "accounts": {
+    "agentOwner": {
+      "address": "0xfa2582ecAD1186A171CB9626d1FcFDC0f7995321",
+      "keystore": "reckn-arc",
+      "role": "owns agentId 10518; its own write is refused"
+    },
+    "secondAddress": {
+      "address": "0xF81dFf68aE2581CfCb62D68D824403Ae9F4d68d4",
+      "keystore": "reckn-agent2",
+      "role": "not owner, not an approved operator; its write is accepted",
+      "constraint": "MUST NOT be approved on the agent token. isAuthorizedOrOwner is ERC-721's standard check, so one approve() would make this address refused too and the second shot would stop existing."
+    }
+  },
+  "erc8004": {
+    "identityRegistry": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
+    "reputationRegistry": "0x8004B663056A597Dffe9eCcC1965A193B7388713",
+    "provenance": "erc-8004/erc-8004-contracts, deployed by the 8004 team, used unmodified",
+    "getVersion": "2.0.0 on both, read from chain 2026-09-25",
+    "agentId": 10518,
+    "guard": "require(!isAuthorizedOrOwner(msg.sender, agentId), \"Self-feedback not allowed\") -- ReputationRegistryUpgradeable.sol:108",
+    "andTheSpec": "erc-8004.md:217 requires it. The ChaosChain reference implementation does NOT enforce it; we use the official contracts and show their check working first."
+  },
+  "eventWork": {
+    "register": {
+      "tx": "0xfb32482311af79c9aedffc915c1b5f6b0bec48027216a64926e436c7168b029e",
+      "block": 11779151,
+      "timestamp": 1790338488,
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0x8004a818bfb912233c491871b3d84c89a494bd9e",
+      "status": 1,
+      "gasUsed": 106883,
+      "note": "reckn-arc registers the agent. agentId 10518, minted to the EOA that is refused below."
+    },
+    "selfWriteRefused": {
+      "tx": "0x87f5a04b4a044d7426eecec0ce45e6d3c830234c2b81a2b0ecbd39222b250fb8",
+      "block": 11779188,
+      "timestamp": 1790338932,
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0x8004b663056a597dffe9eccc1965a193b7388713",
+      "status": 0,
+      "gasUsed": 42322,
+      "note": "the agent's OWN address calls giveFeedback for its own agentId. Mined and reverted: Self-feedback not allowed. Sent with an explicit gas limit so estimation could not swallow it -- a refusal nobody can click is weaker than one they can."
+    },
+    "secondAddressAccepted": {
+      "tx": "0xe8a44a1a0e81d4e7109a76a2c66def4d17339a444bbce98f840f78d9bfd3f226",
+      "block": 11779191,
+      "timestamp": 1790338968,
+      "from": "0xf81dff68ae2581cfcb62d68d824403ae9f4d68d4",
+      "to": "0x8004b663056a597dffe9eccc1965a193b7388713",
+      "status": 1,
+      "gasUsed": 190352,
+      "note": "a second address the same operator controls makes the identical call, and it succeeds. The check asks who you are; a second address answers it."
+    }
+  },
+  "preEvent": {
+    "deployRehearsal": {
+      "tx": "0xb78889ce66645a11e759650cd5745fbcbeee3ed7a45773bf0cd8d94864c6671a",
+      "block": 11777027,
+      "timestamp": 1790312976,
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": null,
+      "status": 1,
+      "gasUsed": 75238,
+      "note": "throwaway CREATE, pre-event, to prove the keystore/RPC/gas/explorer path before the window. WARNING: its address equals arc.json's RecknVerdictVerifier, because both are reckn-arc nonce 1 on their own chain. It is NOT a verifier.",
+      "contractAddress": "0xc5f45b9dec0f0b00a1493c63c0204c8c920197b7"
+    },
+    "fundSecondAddress": {
+      "tx": "0x9765c2f765ab3f0c9d1428ce8ad5e51752818771de1cd5506c57cfdd13bcb1b6",
+      "block": 11777053,
+      "timestamp": 1790313288,
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0xf81dff68ae2581cfcb62d68d824403ae9f4d68d4",
+      "status": 1,
+      "gasUsed": 21000,
+      "note": "0.005 ETH to the second address. Pre-event infrastructure."
+    }
+  },
+  "stateReadBack": {
+    "getClients(10518)": [
+      "0xf81dff68ae2581cfcb62d68d824403ae9f4d68d4"
+    ],
+    "getLastIndex(10518, agentOwner)": 0,
+    "getLastIndex(10518, secondAddress)": 1,
+    "readFeedback(10518, secondAddress, 1)": {
+      "value": 100,
+      "valueDecimals": 0,
+      "tag1": "quality",
+      "tag2": "",
+      "isRevoked": false
+    },
+    "why": "the owner wrote nothing and a second address wrote one record. This is state, not transactions, and it is what beat 1 claims."
+  }
+}
