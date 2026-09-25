@@ -192,7 +192,7 @@
     "RecknZkEscrow": "0x6d6a9deb67d785BC131a5d732617EABE751098C5",
     "RecknVerdictVerifier": "0xe0dE264D76f0664C4e943fc02e3D9FB46CD27608",
     "PermissionedRegistry": "0x1Ad360D93ccD6230FB14D213134107BF89a428cf",
-    "PermissionedResolverProxy": "0x740e02cE9fb52629FEf861ca02DF7091f416BBF8",
+    "PermissionedResolverProxy": "0x740e02cE9FB52629feF861CA02DF7091f416BBF8",
     "note": "bytecode of the two Reckn contracts was compared against `forge inspect`, not against out/ (a stale artifact there produced a false mismatch once tonight). The verifier differs from its artifact only where its two immutables are substituted, and those hold the intended values."
   },
   "ens": {

@@ -3,3 +3,4 @@ forge-std/=../zk-verdict/contracts/lib/forge-std/src/
 @openzeppelin/contracts/=../spikes/tokyo-2026/lib/oz/contracts/
 @zk/=../zk-verdict/contracts/src/
 @sp1-contracts/=../zk-verdict/contracts/lib/sp1-contracts/contracts/src/
+@zktest/=../zk-verdict/contracts/test/

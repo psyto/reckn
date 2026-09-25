@@ -58,7 +58,7 @@ settlement.
 | `RecknZkEscrow` | [`0x6d6a9deb67d785BC131a5d732617EABE751098C5`](https://sepolia.etherscan.io/address/0x6d6a9deb67d785BC131a5d732617EABE751098C5) |
 | `RecknVerdictVerifier` | [`0xe0dE264D76f0664C4e943fc02e3D9FB46CD27608`](https://sepolia.etherscan.io/address/0xe0dE264D76f0664C4e943fc02e3D9FB46CD27608) |
 | our `PermissionedRegistry` | [`0x1Ad360D93ccD6230FB14D213134107BF89a428cf`](https://sepolia.etherscan.io/address/0x1Ad360D93ccD6230FB14D213134107BF89a428cf) |
-| our resolver (UUPS proxy) | [`0x740e02cE9fb52629FEf861ca02DF7091f416BBF8`](https://sepolia.etherscan.io/address/0x740e02cE9fb52629FEf861ca02DF7091f416BBF8) |
+| our resolver (UUPS proxy) | [`0x740e02cE9FB52629feF861CA02DF7091f416BBF8`](https://sepolia.etherscan.io/address/0x740e02cE9FB52629feF861CA02DF7091f416BBF8) |
 
 | | transaction | result | gas |
 |---|---|---|---|

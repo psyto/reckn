@@ -6,3 +6,10 @@ libs = []
 # The libraries live elsewhere in this repository (see README) and solc refuses to read
 # outside the project root without being told.
 allow_paths = ["../spikes/tokyo-2026/lib", "../zk-verdict/contracts"]
+# The Groth16 fixtures live with the guest that produced them, and the acceptance tests read
+# them rather than regenerating (ZK_FRESH=1 overwrites a fixture crafted so that AC10 means
+# something — PREFLIGHT §5.2).
+fs_permissions = [{ access = "read", path = "../zk-verdict/contracts/src/fixtures" }]
+
+[rpc_endpoints]
+sepolia = "https://ethereum-sepolia-rpc.publicnode.com"
