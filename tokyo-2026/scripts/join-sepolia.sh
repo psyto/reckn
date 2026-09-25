@@ -8,7 +8,7 @@
 # and a terminal that wraps a long argument inserts spaces into it. That has already cost this
 # repository two failed transactions tonight.
 #
-# Needs: SEPOLIA_RPC, and the keystores reckn-buyer and reckn-arc. Four password prompts,
+# Needs: SEPOLIA_RPC, and the keystores reckn-buyer and reckn-agent. Four password prompts,
 # batched so the same key is used twice in a row.
 set -euo pipefail
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
@@ -20,7 +20,7 @@ READ_RPC=${READ_RPC:-https://ethereum-sepolia-rpc.publicnode.com}
 ESCROW=0x6d6a9deb67d785BC131a5d732617EABE751098C5
 VERIFIER=0xe0dE264D76f0664C4e943fc02e3D9FB46CD27608
 RESOLVER=0x740e02cE9FB52629feF861CA02DF7091f416BBF8
-ADAPTER=0x6691283d8B77E1e22D08836c55E3f952c304Ccc1
+ADAPTER=0xA6966f9f5E72a1841b2d2A22Ec62a23D703202b8
 UR=0x5d25C1D6aCBb71B7a28AA7899618a3412a8303e3
 USDC=0x16f95D91DBa7dA3Aca778Ec053dF0FF6C6A8aA8e
 BUYER=0x4b55f9e4d87505F3347c7CAFcB8C7eb589970eE3
@@ -75,14 +75,14 @@ send "$ESCROW" "fund(bytes32,address,address,uint256,address,bytes32,bytes32)" \
   "$DEAL" "$AGENT" "$USDC" "$AMOUNT" "$VERIFIER" "$CODEHASH" "$BINDING" \
   --account reckn-buyer
 
-say "3. somebody who is not the buyer settles it, on the proof  [reckn-arc]"
-send "$ESCROW" "settleWithProof(bytes32,bytes,bytes)" "$DEAL" "$PUB" "$PRF" --account reckn-arc
+say "3. somebody who is not the buyer settles it, on the proof  [reckn-agent]"
+send "$ESCROW" "settleWithProof(bytes32,bytes,bytes)" "$DEAL" "$PUB" "$PRF" --account reckn-agent
 
 # No name argument. The adapter serves exactly one name, fixed at construction, because the
 # resolver's resource is a function of the KEY alone -- a caller who could name the target
 # could aim this grant at somebody else's name. See src/SettlementRecord.sol and Grief.t.sol.
-say "4. the adapter opens the window — for the buyer, chosen by nobody  [reckn-arc]"
-send "$ADAPTER" "open(bytes32,bytes,bytes)" "$DEAL" "$PUB" "$PRF" --account reckn-arc
+say "4. the adapter opens the window — for the buyer, chosen by nobody  [reckn-agent]"
+send "$ADAPTER" "open(bytes32,bytes,bytes)" "$DEAL" "$PUB" "$PRF" --account reckn-agent
 KEY=$(cast call "$ADAPTER" "recordKey(bytes32)(string)" "$DEAL" --rpc-url "$READ_RPC" | tr -d '"')
 WRITER=$(cast call "$ADAPTER" "writerOf(bytes32)(address)" "$DEAL" --rpc-url "$READ_RPC")
 printf '   key       %s\n   writer    %s\n' "$KEY" "$WRITER"

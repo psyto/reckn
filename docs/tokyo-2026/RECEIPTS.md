@@ -130,7 +130,7 @@ and anyone can call `getLastIndex` and get the same two numbers.
 ![UniversalResolverV2 returns: ENS says "reproduced block=11779671 verifier=0xe0de264d...".](media/beat3-04-ens-resolves-the-record.png)
 
 **Beat 2 is missing on purpose.** It is the agent's ENS write being refused, and it cannot be
-photographed honestly yet: `reckn-arc` still holds root, so today that write succeeds. It is
+photographed honestly yet: `reckn-agent` still holds root, so today that write succeeds. It is
 taken immediately after the renounce, and the renounce's own verification is the shot.
 
 ## The join, on the real chain
@@ -173,7 +173,7 @@ transaction hashes, invites the reader to think the chain produced the words. It
 | a third party | reverts |
 | **the agent itself** | **still succeeds** |
 
-**The last row is the residue, and it is the same one as before.** `reckn-arc` is both the agent
+**The last row is the residue, and it is the same one as before.** `reckn-agent` is both the agent
 and the account still holding **root** on the resolver and the registry, and root overrides
 per-record roles. `013` §1.1 discloses it in advance. Renouncing is what closes it, and it has
 not been done yet because redeploying the adapter would then be impossible.
@@ -193,7 +193,7 @@ failure this file exists to prevent.
 That last one is worth a sentence. Two funding transactions moved the nonce between predicting
 the adapter's address and deploying it, so the role was granted to
 `0xF3Ef66B7…` — where nothing is, and where nothing can ever be, because that CREATE address
-needs `reckn-arc` at nonce 13 and nonce 13 was spent on a transfer. It was revoked anyway.
+needs `reckn-agent` at nonce 13 and nonce 13 was spent on a transfer. It was revoked anyway.
 `013` R-6 asks whether a second admin can appear later, and an unexplained root grant sitting in
 the state is not an answer to that question.
 
@@ -211,5 +211,5 @@ receipt is the failure this file exists to prevent.
 | fund the second address | [`0x9765c2f7…`](https://sepolia.etherscan.io/tx/0x9765c2f765ab3f0c9d1428ce8ad5e51752818771de1cd5506c57cfdd13bcb1b6) | success | 21,000 | 11,777,053 |
 
 > **The rehearsal's contract address equals `arc.json`'s `RecknVerdictVerifier`.** Both are
-> `reckn-arc` at nonce 1 on their own chain, and CREATE addresses do not depend on the chain.
+> `reckn-agent` at nonce 1 on their own chain, and CREATE addresses do not depend on the chain.
 > The Sepolia one writes `1` to slot 0 and returns empty code. **It is not a verifier.**

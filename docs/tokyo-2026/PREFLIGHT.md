@@ -10,7 +10,7 @@ Everything here is infrastructure, not the submission. It is disclosed in
 
 ## 0. The deploy key — **it already exists, do not make a new one**
 
-`~/.foundry/keystores/` already holds **`reckn-arc`**, the key that deployed `RecknZkEscrow` to
+`~/.foundry/keystores/` already holds **`reckn-agent`**, the key that deployed `RecknZkEscrow` to
 Arc testnet. Use it.
 
 ```
@@ -18,7 +18,7 @@ Arc testnet. Use it.
 ```
 
 **That is the address the faucets fund.** Recovered 2026-09-21 with
-`cast wallet address --account reckn-arc` (it prompts for the keystore password, so it needs a
+`cast wallet address --account reckn-agent` (it prompts for the keystore password, so it needs a
 real terminal — through a non-interactive shell it fails with `Device not configured`).
 
 State when recorded:
@@ -32,13 +32,13 @@ State when recorded:
 > **This supersedes the first draft of this section**, which said to run `cast wallet new` and
 > keep a plaintext private key in `~/.reckn/tokyo.env`. The keystore is **encrypted**, it is
 > already the project's deployer identity — so Arc and Sepolia share it, visible from the chain —
-> and `--account reckn-arc` means **the key never appears in a command, in shell history, or in a
+> and `--account reckn-agent` means **the key never appears in a command, in shell history, or in a
 > process list**. The env-file version was worse on every axis.
 
 `reckn-arc-seller` and `reckn-tempo` are the Arc demo's counterparty and the Tempo slice. **Only
-`reckn-arc` needs funding.**
+`reckn-agent` needs funding.**
 
-Every command below uses `--account reckn-arc`. Keep `SEPOLIA_RPC` (from §3) in the shell:
+Every command below uses `--account reckn-agent`. Keep `SEPOLIA_RPC` (from §3) in the shell:
 
 ```bash
 export SEPOLIA_RPC=...
@@ -110,7 +110,7 @@ symbol    USDC
 ```bash
 cast send 0x16f95D91DBa7dA3Aca778Ec053dF0FF6C6A8aA8e \
   "mint(address,uint256)" $DEPLOYER 1000000000 \
-  --account reckn-arc --rpc-url $SEPOLIA_RPC
+  --account reckn-agent --rpc-url $SEPOLIA_RPC
 
 cast call 0x16f95D91DBa7dA3Aca778Ec053dF0FF6C6A8aA8e \
   "balanceOf(address)(uint256)" $DEPLOYER --rpc-url $SEPOLIA_RPC
@@ -523,7 +523,7 @@ both exist to avoid handing anybody a pitch.
 | archive RPC | ✅ Alchemy verified: `eth_getProof` at −100k on Sepolia and at **−15,000,000 on mainnet**, plus `eth_createAccessList`. **The key still needs rotating** |
 | the 09-14 work public on `master` | ✅ fast-forwarded from `freeze-window` and pushed. `RETRACTED-2026-09-14.md` is now where the disclosure says it is |
 | pre-event work committed with pre-event dates | ✅ 09-21 and 09-22, pushed. **This is what makes the disclosure true rather than merely written** |
-| no key material in the tree; `--account reckn-arc` everywhere | ✅ |
+| no key material in the tree; `--account reckn-agent` everywhere | ✅ |
 | **the disclosure, in full, in the form's description** | ✅ **done 2026-09-22**, and no longer something to remember: `check-description.sh` compares the live field's recorded hash against the file, and a pre-commit hook refuses to commit a disclosure change that leaves `DESCRIPTION.txt` behind. **done 2026-09-22.** `DESCRIPTION.txt` pasted whole, so the narrative and the entire disclosure are in the one field the rules leave for it. **Re-run `build-description.py` and re-paste after any edit to either half** — what is in the form is a snapshot |
 | the form's final paragraph | ✅ carried in by the same paste; the counted number is gone from it |
 | Alchemy key rotated | **DEFERRED to after the event — founder decision 2026-09-25.** Swapping the RPC the demo depends on, hours before a 36-hour window, risks more than it protects. **No reason for the rotation was ever recorded and no key material is in the tree** (`:44` is a placeholder), so this was hygiene, not a leak response. **The one live consequence is §5.7: the key must not appear on camera.** Rotate on 09-28 |

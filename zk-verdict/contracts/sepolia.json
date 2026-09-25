@@ -10,7 +10,7 @@
   "accounts": {
     "agentOwner": {
       "address": "0xfa2582ecAD1186A171CB9626d1FcFDC0f7995321",
-      "keystore": "reckn-arc",
+      "keystore": "reckn-agent",
       "role": "owns agentId 10518; its own write is refused"
     },
     "secondAddress": {
@@ -43,7 +43,7 @@
       "to": "0x8004a818bfb912233c491871b3d84c89a494bd9e",
       "status": 1,
       "gasUsed": 106883,
-      "note": "reckn-arc registers the agent. agentId 10518, minted to the EOA that is refused below."
+      "note": "reckn-agent registers the agent. agentId 10518, minted to the EOA that is refused below."
     },
     "selfWriteRefused": {
       "tx": "0x87f5a04b4a044d7426eecec0ce45e6d3c830234c2b81a2b0ecbd39222b250fb8",
@@ -177,7 +177,7 @@
       "to": "0x740e02ce9fb52629fef861ca02df7091f416bbf8",
       "status": 1,
       "gasUsed": 41125,
-      "note": "an earlier grant went to 0xF3Ef66B7, the address the adapter was PREDICTED to land on before two funding transactions moved the nonce. Nothing is there and nothing can ever be: that CREATE address needs reckn-arc nonce 13, which was spent on a transfer. Revoked anyway -- 013 R-6 asks whether a second admin can appear later, and an unexplained root grant in the state is not an answer."
+      "note": "an earlier grant went to 0xF3Ef66B7, the address the adapter was PREDICTED to land on before two funding transactions moved the nonce. Nothing is there and nothing can ever be: that CREATE address needs reckn-agent nonce 13, which was spent on a transfer. Revoked anyway -- 013 R-6 asks whether a second admin can appear later, and an unexplained root grant in the state is not an answer."
     },
     "fundBuyerGas": {
       "tx": "0x21f8706062f6e7c48b988aa6c7b69a4f19055887f6337acf254f8ef23a150e72",
@@ -269,7 +269,7 @@
       "to": null,
       "status": 1,
       "gasUsed": 75238,
-      "note": "throwaway CREATE, pre-event, to prove the keystore/RPC/gas/explorer path before the window. WARNING: its address equals arc.json's RecknVerdictVerifier, because both are reckn-arc nonce 1 on their own chain. It is NOT a verifier.",
+      "note": "throwaway CREATE, pre-event, to prove the keystore/RPC/gas/explorer path before the window. WARNING: its address equals arc.json's RecknVerdictVerifier, because both are reckn-agent nonce 1 on their own chain. It is NOT a verifier.",
       "contractAddress": "0xc5f45b9dec0f0b00a1493c63c0204c8c920197b7"
     },
     "fundSecondAddress": {
@@ -336,7 +336,7 @@
     "afterwards": {
       "buyer writes again": "reverts EACUnauthorizedAccountRoles -- the window closed",
       "a third party writes": "reverts",
-      "THE AGENT writes": "STILL SUCCEEDS. reckn-arc is both the agent and the account still holding root on the resolver and the registry. 013 section 1.1 discloses this residue; renouncing is what closes it, and it has not been done because redeploying the adapter would then be impossible. It MUST be done before filming, or beat 2's refusal is not true on chain."
+      "THE AGENT writes": "STILL SUCCEEDS. reckn-agent is both the agent and the account still holding root on the resolver and the registry. 013 section 1.1 discloses this residue; renouncing is what closes it, and it has not been done because redeploying the adapter would then be impossible. It MUST be done before filming, or beat 2's refusal is not true on chain."
     }
   }
 }
