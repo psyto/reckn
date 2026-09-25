@@ -362,6 +362,7 @@ Continuity Track requires, and it is the list a judge should be able to check co
 | **13** | **README section pointing at the contracts and line numbers** |
 | **15** | **The GitHub About.** The Arc sentence was dropped on 09-21 because the disclosure disclaims Arc. Still to do **once the work exists, not before**: add the `ens` / `uniswap` / `uniswap-v4` / `erc-8004` topics, and replace *"Building the standard for proof-driven settlement"* — an ambition, not a measurement, and it does not contain the word *agent* for a project that is an agent payment escrow |
 | **14** | **Make `zk-verdict/scripts/zk-e2e.sh` able to fail** — `:85` pipes `forge test` into `grep … \|\| true`, so the advertised one-command demo exits 0 and prints its success paragraph with tests failing. Measured 2026-09-21 (`PREFLIGHT` §5.1). **A demo that cannot fail is not a demo** | **★ was missing.** Uniswap: *"Make sure your README clearly points to the relevant contracts and lines of code so we can verify your integration"* |
+| **16** | **ERC-8004 on Sepolia, and the agent writing its own record.** Deploy the reference registries, register our agent, and have the agent post itself a glowing entry — **which succeeds**. **★ Added 2026-09-25.** The demo's first twenty seconds, the shot the whole submission opens on, had **no task on this list and nothing in the repository behind it**: what exists is an *8004-style* projection inside our own `RecknEscrow` (`:452`) and `escrow-svm` (`:913`), **not the standard's registries**. **Sepolia, labelled on screen** — `AGENTS.md` §8 forbids a mainnet deployment and `DEMO.md` §4 forbids the claim | **★ was missing.** `DEMO.md` §1 |
 | 8 | **New screenshots and the demo video** | the existing `dashboard/media/*` are Arc/ETHOnline assets and **must not be reused** |
 
 ---
@@ -438,6 +439,12 @@ Infrastructure and reading are not the submission.
 5. **The Tokyo disclosure**, and the form fields that do not depend on the build.
 6. **Rewrite the opening 60 seconds.** ETHOnline Round 1 was lost on the entry, not the claim —
    the video was a verification checklist for an already-interested judge. Script only.
+7. **★ Added 2026-09-25. Read the ERC-8004 reference implementation and settle one question:
+   does it actually let an agent write its own entry?** §4-16 and the demo's first twenty seconds
+   both assume it does. **If it gates the self-write, the opening shot does not exist** and the
+   script changes — and that is a thing to learn from the source **today**, not at 23:00 on the
+   26th with the camera on. Reading is not building (§7 preamble); **deploying it is §4-16 and
+   waits for 21:00.**
 
 **Fallback decision point: 2026-09-26, 09:00 JST** — twelve hours into a thirty-six hour window
 (21:00 on the 25th to 09:00 on the 27th), not a whole day in as the earlier reading assumed.

@@ -24,6 +24,8 @@ dated before the 21:00 boundary, and the `EVENT_START` hash recorded at 21:00 si
 | **the spoken lines were shortened and de-jargoned** | they are said out loud, to a panel that may not share our vocabulary. "Report card" survives a noisy room; "ERC-8004 reputation entry" does not |
 | **§3 gained two questions** | *"why does Uniswap appear twice?"* and *"why should anyone outside crypto care?"* |
 | **§4 gained the liquidity line as a spoken beat** | it was a bullet we intended to be found rather than said. Now it is in the take |
+| **★ later on 09-25 — §1 beat 1 got an owner** | asked whether the three-day schedule actually serves this script, the answer was no: **the opening twenty seconds had no build task anywhere.** Now `013` §4-16, on Sepolia, with the self-write question settled by reading (`013` §7-7) before the window opens |
+| **★ later on 09-25 — §5 gained the rushes rule** | the schedule had **one** recording block, at 23:00 on the second night, 26 hours in and after 3.5 hours of sleep. One failure there and the submission has no video at all |
 
 ### ★ A framing that was considered and rejected on 2026-09-25 — kept so it does not come back
 
@@ -60,10 +62,11 @@ panel answer (§3), never the spine.
 
 ### 0:00–0:20 — the problem, performed, not described
 
-Screen: an agent's on-chain reputation entry (ERC-8004).
+Screen: an agent's entry in the ERC-8004 registries — **on Sepolia, and labelled as such on
+screen** (`013` §4-16).
 
-> "This is an AI agent's report card, on chain. It went live on Ethereum mainnet in January.
-> **Watch me give myself a perfect score.**"
+> "This is an AI agent's report card, on chain. **The standard went live on Ethereum mainnet in
+> January.** **Watch me give myself a perfect score.**"
 
 Write a glowing record for our own agent. It succeeds.
 
@@ -71,6 +74,17 @@ Write a glowing record for our own agent. It succeeds.
 
 **This is the whole pitch and it takes twenty seconds.** No slide, no diagram, no "in today's
 agent economy".
+
+> **★ 2026-09-25 — this beat had no owner until today, and it is the most important shot in the
+> submission.** `013` §4 listed fifteen things to build and **none of them was this one**; the
+> repository's own "ERC-8004" is an *8004-style* projection inside `RecknEscrow` (`:452`), not the
+> standard's registries. It is now **§4-16**. Two things have to hold:
+> **(a)** the deployment is **Sepolia**, said out loud and on screen — `AGENTS.md` §8 forbids a
+> mainnet deployment and §4 below forbids the claim; the sentence that stays true is *"the
+> standard went to mainnet in January"*, which is about the standard, not about us.
+> **(b) the reference implementation has to actually permit the self-write.** If it gates that,
+> **this opening does not exist.** `013` §7-7 settles it by reading the source **on 09-25** —
+> before the window opens, and not at 23:00 on the 26th with the camera running.
 
 ### 0:20–0:40 — the sentence, and the refusal
 
@@ -223,3 +237,10 @@ passing, here it is refusing again", then stop and let them ask.
 7. **New screenshots.** `dashboard/media/*` are Arc/ETHOnline assets and must not be reused.
 8. **★ Both Uniswap appearances are in the take.** A cut that keeps the gate and loses the
    re-executed swap turns the Uniswap prize submission into a claim the video does not support.
+9. **★ Shoot each beat the moment it stands — do not save the camera for the end.** Beats 1–3
+   are standing when night 1 closes; beat 5 when the funded pool runs; beat 4 while the 497-second
+   proof is generating. **Take rushes then**, ten minutes each. The 23:00 block on the 26th is
+   then the **real take and the edit**, against footage that already exists, rather than the only
+   attempt — which is what it was until this rule was written. **One rehearsal out loud, un-recorded,
+   before the real take.** The rig in item 1 is what makes a rush honest: if a load-bearing line is
+   missing, it refuses, and nothing gets filmed that the code does not support.
