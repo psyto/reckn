@@ -132,7 +132,7 @@ is evidence.
 
 ### Beat 4 · 1:00–1:30 — Uniswap, first appearance: **the job that was proven**
 
-Screen: the settlement transaction on Sepolia, with `proof generated earlier — 497 s` on screen.
+Screen: the settlement transaction on Sepolia, with `proof generated earlier — [event duration]` on screen.
 
 > "The job we asked for is **a real Uniswap swap**. We re-execute the whole thing and check that
 > it lands on the same result. **A program checks it, not a person.**
@@ -181,14 +181,15 @@ Full list in §4. **These are said in the take, not left in the README to be fou
 
 The repository, the live demo link, and the pre-existing-work disclosure.
 
-### Beat 4's other problem — the 497-second question
+### Beat 4's other problem — the proof-duration question
 
-**A Groth16 proof takes 497 seconds. It cannot be generated inside a three-minute video.**
-The proof is generated **before recording**, during the event, and the video shows the
-**settlement transaction** consuming it.
+**The pre-event measurement was 497.40 seconds, so a proof cannot be generated inside a
+three-minute video.** The proof is generated **before recording**, during the event, and the
+video shows the **settlement transaction** consuming it.
 
-**Say so on screen**: *"proof generated earlier — 497 s"*. Do not cut away and imply it was
-instant.
+**Say the recorded run's actual duration on screen**: *"proof generated earlier — [event
+duration]"*. Do not cut away and imply it was instant, and do not carry the 497.40-second
+pre-event figure into the take unless that is the duration of the proof the settlement consumed.
 
 ### Beat 5 — the numbers must be the run's own
 

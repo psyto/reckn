@@ -4,8 +4,9 @@ only if replaying that work reproduces the agreed outcome. THERE IS NO KEY THAT 
 OTHERWISE — the escrow has no owner, resolver, admin, pause or upgrade, settleWithProof is
 permissionless, and a build-time check enforces that rather than promising it.
 
-ERC-8004 reached Ethereum mainnet in January 2026 and gives agents identity and reputation. It
-does not stop an agent from being THE SOURCE OF ITS OWN HISTORY. That is what we built here.
+ERC-8004 reached Ethereum mainnet in January 2026 and gives agents identity and reputation. A
+second address can submit feedback without establishing that any work happened. We build the
+narrower condition here: a record's write right comes from a settlement.
 
 A completed job becomes a record under the agent's ENSv2 subname, and the right to write it
 is an Enhanced Access Control role that the settlement creates and then destroys. The agent
@@ -23,7 +24,7 @@ deliberately use different venues.
 
 PRE-EXISTING WORK IS DISCLOSED IN FULL BELOW. In short: this repository began on 2026-07-26;
 its product history runs to 501cbde on 2026-09-14, and everything dated after that is the
-pre-event design and measurement the disclosure describes. It was submitted to ETHOnline 2026,
+pre-event design, measurement, and materials the disclosure describes. It was submitted to ETHOnline 2026,
 where it did not pass Round 1. The escrow, the guests and the proving pipeline are old. The ENS
 record surface, the v4 hook, and everything that joins them are the event's work. The full
 disclosure follows.
@@ -112,6 +113,7 @@ submission. Everything in this section is design or measurement. None of it is s
   docs/reviews/013-spec-r1.md, -r2.md - 2026-09-21 - two independent adversarial reviews of that design, each ending in a verdict. Both returned CHANGES; four blockers are recorded with the fixes
   spikes/tokyo-2026/ - 2026-09-21 - 10 throwaway test files, 1,506 lines. Fork tests against Sepolia and against the repository's own fixtures
   spikes/tokyo-2026/FINDINGS.md - 2026-09-21 - what the spikes measured, including two places where the design was wrong and was corrected
+  docs/tokyo-2026/DEMO.md, VIDEO-RUNBOOK.md, SPEAKER-CARD.md, SPONSOR-CARDS.md - 2026-09-25, before 21:00 JST - script, capture plan, speaking aid, and in-person question cards. Preparation only: no submission UI, deployment, fixture, screenshot, or video exists in them
 
 3.1 A MEASUREMENT TAKEN BEFORE THE EVENT, WHICH THE SUBMISSION WILL CITE
 

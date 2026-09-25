@@ -86,6 +86,7 @@ submission. **Everything in this section is design or measurement. None of it is
 | `docs/reviews/013-spec-r1.md`, `-r2.md` | **2026-09-21** | two independent adversarial reviews of that design, each ending in a verdict. **Both returned `CHANGES`; four blockers are recorded with the fixes** |
 | `spikes/tokyo-2026/` | **2026-09-21** | **10 throwaway test files, 1,506 lines.** Fork tests against Sepolia and against the repository's own fixtures |
 | `spikes/tokyo-2026/FINDINGS.md` | **2026-09-21** | what the spikes measured, including two places where the design was **wrong** and was corrected |
+| `docs/tokyo-2026/DEMO.md`, `VIDEO-RUNBOOK.md`, `SPEAKER-CARD.md`, `SPONSOR-CARDS.md` | **2026-09-25, before 21:00 JST** | script, capture plan, speaking aid, and in-person question cards. **Preparation only**: no submission UI, deployment, fixture, screenshot, or video exists in them |
 
 ### 3.1 A measurement taken before the event, which the submission will cite
 

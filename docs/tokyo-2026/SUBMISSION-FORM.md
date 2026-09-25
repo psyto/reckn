@@ -94,8 +94,9 @@ only if replaying that work reproduces the agreed outcome. THERE IS NO KEY THAT 
 OTHERWISE — the escrow has no owner, resolver, admin, pause or upgrade, settleWithProof is
 permissionless, and a build-time check enforces that rather than promising it.
 
-ERC-8004 reached Ethereum mainnet in January 2026 and gives agents identity and reputation. It
-does not stop an agent from being THE SOURCE OF ITS OWN HISTORY. That is what we built here.
+ERC-8004 reached Ethereum mainnet in January 2026 and gives agents identity and reputation. A
+second address can submit feedback without establishing that any work happened. We build the
+narrower condition here: a record's write right comes from a settlement.
 
 A completed job becomes a record under the agent's ENSv2 subname, and the right to write it
 is an Enhanced Access Control role that the settlement creates and then destroys. The agent
@@ -113,7 +114,7 @@ deliberately use different venues.
 
 PRE-EXISTING WORK IS DISCLOSED IN FULL BELOW. In short: this repository began on 2026-07-26;
 its product history runs to 501cbde on 2026-09-14, and everything dated after that is the
-pre-event design and measurement the disclosure describes. It was submitted to ETHOnline 2026,
+pre-event design, measurement, and materials the disclosure describes. It was submitted to ETHOnline 2026,
 where it did not pass Round 1. The escrow, the guests and the proving pipeline are old. The ENS
 record surface, the v4 hook, and everything that joins them are the event's work. The full
 disclosure follows.
