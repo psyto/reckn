@@ -2,10 +2,10 @@
 src = "src"
 test = "test"
 out = "out"
-libs = []
-# The libraries live elsewhere in this repository (see README) and solc refuses to read
-# outside the project root without being told.
-allow_paths = ["../spikes/tokyo-2026/lib", "../zk-verdict/contracts"]
+libs = ["lib"]
+# Only @zk/ and its test mocks live outside this project; everything else is in lib/,
+# fetched and pinned by scripts/deps.sh.
+allow_paths = ["../zk-verdict/contracts"]
 # The Groth16 fixtures live with the guest that produced them, and the acceptance tests read
 # them rather than regenerating (ZK_FRESH=1 overwrites a fixture crafted so that AC10 means
 # something — PREFLIGHT §5.2).

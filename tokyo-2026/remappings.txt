@@ -1,6 +1,6 @@
-forge-std/=../zk-verdict/contracts/lib/forge-std/src/
-@ens/=../spikes/tokyo-2026/lib/ens-v2/contracts/
-@openzeppelin/contracts/=../spikes/tokyo-2026/lib/oz/contracts/
+forge-std/=lib/forge-std/src/
+@ens/=lib/ens-v2/contracts/
+@openzeppelin/contracts/=lib/oz/contracts/
+@sp1-contracts/=lib/sp1-contracts/contracts/src/
 @zk/=../zk-verdict/contracts/src/
-@sp1-contracts/=../zk-verdict/contracts/lib/sp1-contracts/contracts/src/
 @zktest/=../zk-verdict/contracts/test/
