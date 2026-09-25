@@ -24,7 +24,7 @@ dated before the 21:00 boundary, and the `EVENT_START` hash recorded at 21:00 si
 | **the spoken lines were shortened and de-jargoned** | they are said out loud, to a panel that may not share our vocabulary. "Report card" survives a noisy room; "ERC-8004 reputation entry" does not |
 | **§3 gained two questions** | *"why does Uniswap appear twice?"* and *"why should anyone outside crypto care?"* |
 | **§4 gained the liquidity line as a spoken beat** | it was a bullet we intended to be found rather than said. Now it is in the take |
-| **★ later on 09-25 — §1 beat 1 got an owner** | asked whether the three-day schedule actually serves this script, the answer was no: **the opening twenty seconds had no build task anywhere.** Now `013` §4-16, on Sepolia, with the self-write question settled by reading (`013` §7-7) before the window opens |
+| **★ later on 09-25 — §1 beat 1 got an owner, then got rewritten** | asked whether the three-day schedule actually serves this script, the answer was no: **the opening twenty seconds had no build task anywhere.** It became `013` §4-16 — and then `013` §7-7 read the source and found the shot **did not work**: the official registry refuses a self-write. **Two shots now, and the second one is the real hole.** The reading cost twenty minutes and would have cost the opening at 23:00 on the 26th |
 | **★ later on 09-25 — §5 gained the rushes rule** | the schedule had **one** recording block, at 23:00 on the second night, 26 hours in and after 3.5 hours of sleep. One failure there and the submission has no video at all |
 
 ### ★ A framing that was considered and rejected on 2026-09-25 — kept so it does not come back
@@ -60,41 +60,59 @@ panel answer (§3), never the spine.
 
 **Rule for this minute: do not explain the architecture. Show the hole, then close it.**
 
-### 0:00–0:20 — the problem, performed, not described
+### 0:00–0:25 — the problem, performed, not described. **Two shots, not one.**
 
-Screen: an agent's entry in the ERC-8004 registries — **on Sepolia, and labelled as such on
-screen** (`013` §4-16).
+Screen: the **official** ERC-8004 `ReputationRegistry`, **on Sepolia**
+(`0x8004B663056A597Dffe9eCcC1965A193B7388713`), labelled as Sepolia on screen.
 
-> "This is an AI agent's report card, on chain. **The standard went live on Ethereum mainnet in
-> January.** **Watch me give myself a perfect score.**"
+> "This is an AI agent's report card, on chain. The standard went live on Ethereum mainnet in
+> January. **Watch me give myself a perfect score.**"
 
-Write a glowing record for our own agent. It succeeds.
+**Shot A** — call `giveFeedback` from the agent's own address. **It reverts:
+`Self-feedback not allowed`.**
 
-> "Nothing stopped me. I am the agent, and I am the one writing my own record."
+> "The standard thought of this. The deployed contract stops it."
 
-**This is the whole pitch and it takes twenty seconds.** No slide, no diagram, no "in today's
+**Shot B** — call it again from a second address the same agent controls. **It succeeds. Perfect
+score.**
+
+> "That check asks whether I am the owner. **I used a different address.**
+> **It never asked whether any work was done.**"
+
+**This is the whole pitch and it takes twenty-five seconds.** No slide, no diagram, no "in today's
 agent economy".
 
-> **★ 2026-09-25 — this beat had no owner until today, and it is the most important shot in the
-> submission.** `013` §4 listed fifteen things to build and **none of them was this one**; the
-> repository's own "ERC-8004" is an *8004-style* projection inside `RecknEscrow` (`:452`), not the
-> standard's registries. It is now **§4-16**. Two things have to hold:
-> **(a)** the deployment is **Sepolia**, said out loud and on screen — `AGENTS.md` §8 forbids a
-> mainnet deployment and §4 below forbids the claim; the sentence that stays true is *"the
-> standard went to mainnet in January"*, which is about the standard, not about us.
-> **(b) the reference implementation has to actually permit the self-write.** If it gates that,
-> **this opening does not exist.** `013` §7-7 settles it by reading the source **on 09-25** —
-> before the window opens, and not at 23:00 on the 26th with the camera running.
+> **★ 2026-09-25 — rewritten from one shot to two, because the one shot did not work.**
+> This beat had no owner at all until today (`013` §4 listed fifteen things to build and none of
+> them was the opening shot), and the first version of §4-16 assumed the naive self-write would
+> succeed. **`013` §7-7 read the source before the window opened and found it would not.**
+>
+> | | |
+> |---|---|
+> | **EIP-8004** `erc-8004.md:217` | *"The feedback submitter **MUST NOT be the agent owner or an approved operator** for agentId."* |
+> | **the reference implementation** (ChaosChain, `src/ReputationRegistry.sol`) | enforces **two of that paragraph's three sentences** and not this one — **no owner comparison anywhere in 509 lines.** The Jan 2026 update deliberately removed `feedbackAuth` and signature checks: *"anyone can submit"* |
+> | **the official contracts** (`erc-8004/erc-8004-contracts`, `ReputationRegistryUpgradeable.sol:108`) | **enforce it**: `require(!isAuthorizedOrOwner(msg.sender, agentId), "Self-feedback not allowed")` — deployed on 30+ chains, mainnet `0x8004BAa1…`, Sepolia `0x8004B663…` (bytecode present, verified 09-25) |
+>
+> **We use the official one, and we show its check working first.** Deploying the reference
+> implementation instead would make the shot work by **picking the implementation without the
+> check** — at an event where the standard's authors are from the EF and MetaMask, that would be
+> noticed, and noticing it would be fair.
+>
+> **Not verified**: that the Sepolia proxy's implementation is byte-for-byte that source (the
+> revert string on the day settles it), and what the official `IdentityRegistry` requires at
+> registration.
 
-### 0:20–0:40 — the sentence, and the refusal
+### 0:25–0:42 — the sentence, and the refusal
 
-> "So we made a record you cannot write yourself. Same agent. Same call."
+> "**So we stopped asking who you are, and started asking whether a settlement happened.**
+> Here is the record we built. Same agent. Same call."
 
 Screen: the write reverts — `EACUnauthorizedAccountRoles`.
 
-> "That is ENSv2's access control. This agent does not hold the role."
+> "That is ENSv2's access control. This agent does not hold the role — **and a second address
+> does not get it either, because the role comes from a settlement, not from who is asking.**"
 
-### 0:40–1:00 — where the right comes from
+### 0:42–1:00 — where the right comes from
 
 > "So who does? An escrow. It releases the agent's fee only when the work is **re-run and
 > reproduces the same result**. Nobody can decide otherwise — **there is no key that could**.
@@ -199,6 +217,8 @@ passing, here it is refusing again", then stop and let them ask.
 | "Can't the agent just make a second address and pay itself?" | **"Yes, and we say so in the docs."** A settlement can be self-dealt; identity is not something we solve. What is closed is narrower: **a record cannot exist without a settlement** |
 | "Isn't the parent registry your key?" | **"While root roles are held, yes."** They are renounced after setup, and that is a tested criterion — because until it happens, the power can be handed over silently |
 | "Why not put the Universal Router on the proving path?" | Permit2's signature step uses `ecrecover`, which is on the guest's divergent-precompile list with equivalence unverified. **We are not claiming soundness we have not established** |
+| **★ "Isn't refusing a self-write a straw man? / why not just enforce the owner check?"** | **"It is enforced. We show it working."** Shot A is the official contract refusing. The point is shot B: **the check asks whether I am the owner, and a second address answers it.** It is an identity question, and identity is not what we are claiming to solve either — ours asks whether a settlement happened, which costs real money and work that reproduced |
+| **★ "Which ERC-8004 implementation did you use?"** | **The official one** (`erc-8004/erc-8004-contracts`), already deployed on Sepolia at `0x8004B663…`, unmodified — **not** the ChaosChain reference implementation, which has no self-feedback check at all. Using that one would have made the opening work by picking the implementation without the check |
 | "Is this just ERC-8004 with extra steps?" | 8004 stores the record. It does not decide **who may write it**. That is the whole contribution |
 | "What did you build during the event?" | The disclosure answers it commit by commit: the ENS record surface, the v4 hook, and the join. The escrow and the guests are older and are disclosed as such |
 | **"Is this cross-chain?"** | **"Not in the sense you mean."** No value crosses a chain. What 009 shows is that **a payment on one chain can be decided by a proof of work done on another, with no bridge and no light client on the adjudication path** — and that is **pre-existing work from ETHOnline**, not this weekend's |
@@ -215,6 +235,10 @@ passing, here it is refusing again", then stop and let them ask.
   trading**. Now said in beat 7, rather than left for a judge to find.
 - **Not a word against Uniswap or ENS.** One is the workload and the venue; the other is the
   permission system, used as designed.
+- **★ Not a word against ERC-8004 or its authors.** Its check is real, we show it working, and
+  the gap between `erc-8004.md:217` and the reference implementation is a **draft standard being
+  drafted**, not a failure to point at. What we demonstrate is a property of **identity checks in
+  general** — a second address answers them — and we say the same thing about ourselves in §3.
 - **No claim that anything ran on mainnet.** Sepolia, and the 09-08 mainnet measurement is
   pre-existing and labelled.
 - **No bridge claim, no chain-abstraction claim, and no "bridges are risky" claim.** See the

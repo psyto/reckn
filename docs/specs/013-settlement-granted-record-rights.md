@@ -362,7 +362,7 @@ Continuity Track requires, and it is the list a judge should be able to check co
 | **13** | **README section pointing at the contracts and line numbers** |
 | **15** | **The GitHub About.** The Arc sentence was dropped on 09-21 because the disclosure disclaims Arc. Still to do **once the work exists, not before**: add the `ens` / `uniswap` / `uniswap-v4` / `erc-8004` topics, and replace *"Building the standard for proof-driven settlement"* — an ambition, not a measurement, and it does not contain the word *agent* for a project that is an agent payment escrow |
 | **14** | **Make `zk-verdict/scripts/zk-e2e.sh` able to fail** — `:85` pipes `forge test` into `grep … \|\| true`, so the advertised one-command demo exits 0 and prints its success paragraph with tests failing. Measured 2026-09-21 (`PREFLIGHT` §5.1). **A demo that cannot fail is not a demo** | **★ was missing.** Uniswap: *"Make sure your README clearly points to the relevant contracts and lines of code so we can verify your integration"* |
-| **16** | **ERC-8004 on Sepolia, and the agent writing its own record.** Deploy the reference registries, register our agent, and have the agent post itself a glowing entry — **which succeeds**. **★ Added 2026-09-25.** The demo's first twenty seconds, the shot the whole submission opens on, had **no task on this list and nothing in the repository behind it**: what exists is an *8004-style* projection inside our own `RecknEscrow` (`:452`) and `escrow-svm` (`:913`), **not the standard's registries**. **Sepolia, labelled on screen** — `AGENTS.md` §8 forbids a mainnet deployment and `DEMO.md` §4 forbids the claim | **★ was missing.** `DEMO.md` §1 |
+| **16** | **The opening shot, against the official ERC-8004 registries already on Sepolia.** Register our agent in `IdentityRegistry` `0x8004A818…`, then call `giveFeedback` on `ReputationRegistry` `0x8004B663…` **twice**: from the agent's own address, which **reverts `Self-feedback not allowed`**, and from a second address the same agent controls, which **succeeds**. **★ Added 2026-09-25, rewritten the same day by §7-7.** The first version said "deploy the reference registries and write to yourself, which succeeds" — **measurement says it does not.** Nothing is deployed for this item: the official contracts are live on 30+ chains and we use them unmodified. **Sepolia, labelled on screen**; `AGENTS.md` §8 forbids a mainnet deployment and `DEMO.md` §4 forbids the claim. **Do not substitute the ChaosChain reference implementation to make shot A succeed** — that is choosing the implementation without the check | **★ was missing.** `DEMO.md` §1 |
 | 8 | **New screenshots and the demo video** | the existing `dashboard/media/*` are Arc/ETHOnline assets and **must not be reused** |
 
 ---
@@ -439,12 +439,27 @@ Infrastructure and reading are not the submission.
 5. **The Tokyo disclosure**, and the form fields that do not depend on the build.
 6. **Rewrite the opening 60 seconds.** ETHOnline Round 1 was lost on the entry, not the claim —
    the video was a verification checklist for an already-interested judge. Script only.
-7. **★ Added 2026-09-25. Read the ERC-8004 reference implementation and settle one question:
-   does it actually let an agent write its own entry?** §4-16 and the demo's first twenty seconds
-   both assume it does. **If it gates the self-write, the opening shot does not exist** and the
-   script changes — and that is a thing to learn from the source **today**, not at 23:00 on the
-   26th with the camera on. Reading is not building (§7 preamble); **deploying it is §4-16 and
-   waits for 21:00.**
+7. **★ Added and ANSWERED 2026-09-25. "Does ERC-8004 actually let an agent write its own
+   entry?"** §4-16 and the demo's opening both assumed yes. **The answer is no on the contract
+   that matters, and the question was worth twenty minutes.**
+
+   | source | the rule about a self-write |
+   |---|---|
+   | **EIP-8004**, `erc-8004.md:217` | *"The feedback submitter **MUST NOT be the agent owner or an approved operator** for agentId."* |
+   | **ChaosChain reference implementation**, `src/ReputationRegistry.sol` | **absent.** `giveFeedback` carries two requires — `valueDecimals <= 18` and `agentExists` — which are the paragraph's other two sentences. **No owner comparison exists anywhere in the 509-line file.** The Jan 2026 update removed `feedbackAuth` and signature verification on purpose: *"Direct feedback submission (anyone can submit)"* |
+   | **official contracts**, `erc-8004/erc-8004-contracts`, `ReputationRegistryUpgradeable.sol:108` | **enforced**: `require(!isAuthorizedOrOwner(msg.sender, agentId), "Self-feedback not allowed")`. Deployed on 30+ chains — mainnet `0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`, **Sepolia `0x8004B663056A597Dffe9eCcC1965A193B7388713`**, both carrying bytecode (checked 09-25 by `eth_getCode`) |
+
+   **Consequence**: §4-16 became two shots, the second one a **different address**, and the
+   opening is stronger for it — the hole is not that nobody checks, it is that **the check asks
+   who you are, and a second address answers it.** `DEMO.md` §1 carries the script.
+
+   **★ And the rule this produced, which is the repository's own doctrine arriving from outside:
+   two of that paragraph's three sentences became `require`s and the third did not.** A `MUST NOT`
+   in a document is not a mechanism — `R-7`, met in the wild.
+
+   **Not verified, and recorded as such**: that the Sepolia proxy's implementation is
+   byte-for-byte that source (the revert string settles it on the day), and what
+   `IdentityRegistry` requires at registration time.
 
 **Fallback decision point: 2026-09-26, 09:00 JST** — twelve hours into a thirty-six hour window
 (21:00 on the 25th to 09:00 on the 27th), not a whole day in as the earlier reading assumed.
