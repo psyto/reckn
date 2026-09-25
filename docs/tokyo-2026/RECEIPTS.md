@@ -106,6 +106,66 @@ must be renounced"*. The order is: deploy the adapter, grant it, renounce root, 
 resolver admin, **then re-run this check**. Until that last step runs, the claim is that the agent
 holds no such role — not that nobody does.
 
+
+## The join, on the real chain
+
+`bash tokyo-2026/scripts/join-sepolia.sh` — one path, seven steps, no fork.
+Adapter [`0x6691283d8B77E1e22D08836c55E3f952c304Ccc1`](https://sepolia.etherscan.io/address/0x6691283d8B77E1e22D08836c55E3f952c304Ccc1).
+
+| | transaction | result | gas |
+|---|---|---|---|
+| deploy the adapter | [`0x07b1fdf0…`](https://sepolia.etherscan.io/tx/0x07b1fdf08c6a65adff0b7b190f78b08da87ea6cc95ba2f02866a2044b6953acd) | success | 1,953,465 |
+| give it the role it needs | [`0xb4c7d8b7…`](https://sepolia.etherscan.io/tx/0xb4c7d8b71c40ed6ab9b23d617a12fc9785dc1fdcec4aff3aee970739b8e7b6dc) | success | 63,098 |
+| the buyer funds 250 USDC and names the verifier | [`0xf93c1c53…`](https://sepolia.etherscan.io/tx/0xf93c1c53484150aa04c5910a55f43ac0a2fdf69488f1029bcd142f46577b8d1f) | success | 244,611 |
+| **a stranger settles it, on a real proof** | [`0x51d7c9ce…`](https://sepolia.etherscan.io/tx/0x51d7c9ce802133a7793a2a29c7d3be6ee01585ea2eb8059dcc0022b363f14592) | success | 293,917 |
+| **the adapter opens one window, for the buyer** | [`0xd14d7978…`](https://sepolia.etherscan.io/tx/0xd14d797802a88d88c06a8542372f1cf3672fc71c847009775651b168c6c54602) | success | 504,363 |
+| **the buyer writes the record** | [`0xbf2ca290…`](https://sepolia.etherscan.io/tx/0xbf2ca29051e842867b44d2b43c19812b42c24c4529acd964aa8ed730fe1276aa) | success | 183,719 |
+| the window closes | [`0x6b2081b8…`](https://sepolia.etherscan.io/tx/0x6b2081b844dacdbe04612a8f1dc13990e5e4061a9200f948c7f4bed7a29d1e20) | success | 74,956 |
+
+ENS returns, through `UniversalResolverV2` and not by calling our resolver directly:
+
+```
+"reproduced block=11779671 verifier=0xe0de264d76f0664c4e943fc02e3d9fb46cd27608"
+```
+
+and names our resolver as the one that answered. The agent's balance moved by 250 USDC, because
+the escrow paid it — this is a settlement, not a simulation of one.
+
+### Who can write now
+
+| | |
+|---|---|
+| the buyer, again | reverts — **the window closed** |
+| a third party | reverts |
+| **the agent itself** | **still succeeds** |
+
+**The last row is the residue, and it is the same one as before.** `reckn-arc` is both the agent
+and the account still holding **root** on the resolver and the registry, and root overrides
+per-record roles. `013` §1.1 discloses it in advance. Renouncing is what closes it, and it has
+not been done yet because redeploying the adapter would then be impossible.
+
+### Supporting transactions
+
+Not part of the claim, listed because the record holds them and an unlinked receipt is the
+failure this file exists to prevent.
+
+| | transaction | gas |
+|---|---|---|
+| the buyer approves the escrow | [`0xe2237ae6…`](https://sepolia.etherscan.io/tx/0xe2237ae614dd6a8a367c5913e774a5b5ef10c79bf1c11c6600d51ab62b00fe27) | 26,466 |
+| gas for the buyer | [`0x21f87060…`](https://sepolia.etherscan.io/tx/0x21f8706062f6e7c48b988aa6c7b69a4f19055887f6337acf254f8ef23a150e72) | 21,000 |
+| MockUSDC for the buyer — its mint has no owner guard | [`0x93d0e7a1…`](https://sepolia.etherscan.io/tx/0x93d0e7a111767fef27d530aea9e3f295a021f2a4dbe86190047150f5f3d8fbbc) | 51,369 |
+| **revoke a grant that went to a predicted address** | [`0x4154fe16…`](https://sepolia.etherscan.io/tx/0x4154fe162abfe109f86fa6d42d66fe1590a5a5975dfa3c9d022016286e3aea2d) | 41,125 |
+
+That last one is worth a sentence. Two funding transactions moved the nonce between predicting
+the adapter's address and deploying it, so the role was granted to
+`0xF3Ef66B7…` — where nothing is, and where nothing can ever be, because that CREATE address
+needs `reckn-arc` at nonce 13 and nonce 13 was spent on a transfer. It was revoked anyway.
+`013` R-6 asks whether a second admin can appear later, and an unexplained root grant sitting in
+the state is not an answer to that question.
+
+> **It must be done before anything is filmed.** Until root is renounced, beat 2's refusal is
+> true in the acceptance tests and false on the chain, and the video would show the wrong thing.
+
 ## Pre-event, disclosed as such
 
 Neither is submission work; both are here because the record holds them and an unlinked

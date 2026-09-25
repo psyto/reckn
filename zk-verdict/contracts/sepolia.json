@@ -18,6 +18,11 @@
       "keystore": "reckn-agent2",
       "role": "not owner, not an approved operator; its write is accepted",
       "constraint": "MUST NOT be approved on the agent token. isAuthorizedOrOwner is ERC-721's standard check, so one approve() would make this address refused too and the second shot would stop existing."
+    },
+    "buyer": {
+      "address": "0x4b55f9e4d87505F3347c7CAFcB8C7eb589970eE3",
+      "keystore": "reckn-buyer",
+      "role": "the client. A third account on purpose: reusing the second address from beat 1 would have made the demo's happy path the self-dealing case the project says it cannot prevent."
     }
   },
   "erc8004": {
@@ -142,6 +147,117 @@
       "status": 1,
       "gasUsed": 143627,
       "note": "agent.reckn.eth issued to the agent with roleBitmap 65536 = ROLE_RENEW ONLY. No ROLE_SET_RESOLVER: the agent owns its name and is not given the power to repoint its own record surface."
+    },
+    "deployAdapter": {
+      "tx": "0x07b1fdf08c6a65adff0b7b190f78b08da87ea6cc95ba2f02866a2044b6953acd",
+      "block": 11779608,
+      "timestamp": 1790343996,
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": null,
+      "status": 1,
+      "gasUsed": 1953465,
+      "note": "SettlementRecord. No owner, no admin, no pause, no upgrade; open() and close() are callable by anyone and neither can choose an outcome.",
+      "contractAddress": "0x6691283d8b77e1e22d08836c55e3f952c304ccc1"
+    },
+    "grantAdapterOnResolver": {
+      "tx": "0xb4c7d8b71c40ed6ab9b23d617a12fc9785dc1fdcec4aff3aee970739b8e7b6dc",
+      "block": 11779625,
+      "timestamp": 1790344200,
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0x740e02ce9fb52629fef861ca02df7091f416bbf8",
+      "status": 1,
+      "gasUsed": 63098,
+      "note": "the adapter is given the resolver role it needs to open and close windows."
+    },
+    "revokeGhostGrant": {
+      "tx": "0x4154fe162abfe109f86fa6d42d66fe1590a5a5975dfa3c9d022016286e3aea2d",
+      "block": 11779635,
+      "timestamp": 1790344320,
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0x740e02ce9fb52629fef861ca02df7091f416bbf8",
+      "status": 1,
+      "gasUsed": 41125,
+      "note": "an earlier grant went to 0xF3Ef66B7, the address the adapter was PREDICTED to land on before two funding transactions moved the nonce. Nothing is there and nothing can ever be: that CREATE address needs reckn-arc nonce 13, which was spent on a transfer. Revoked anyway -- 013 R-6 asks whether a second admin can appear later, and an unexplained root grant in the state is not an answer."
+    },
+    "fundBuyerGas": {
+      "tx": "0x21f8706062f6e7c48b988aa6c7b69a4f19055887f6337acf254f8ef23a150e72",
+      "block": 11779603,
+      "timestamp": 1790343936,
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0x4b55f9e4d87505f3347c7cafcb8c7eb589970ee3",
+      "status": 1,
+      "gasUsed": 21000,
+      "note": "gas for the buyer."
+    },
+    "mintBuyerUsdc": {
+      "tx": "0x93d0e7a111767fef27d530aea9e3f295a021f2a4dbe86190047150f5f3d8fbbc",
+      "block": 11779606,
+      "timestamp": 1790343972,
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0x16f95d91dba7da3aca778ec053df0ff6c6a8aa8e",
+      "status": 1,
+      "gasUsed": 51369,
+      "note": "MockUSDC for the buyer; its mint has no owner guard."
+    },
+    "joinApprove": {
+      "tx": "0xe2237ae614dd6a8a367c5913e774a5b5ef10c79bf1c11c6600d51ab62b00fe27",
+      "block": 11779667,
+      "timestamp": 1790344704,
+      "from": "0x4b55f9e4d87505f3347c7cafcb8c7eb589970ee3",
+      "to": "0x16f95d91dba7da3aca778ec053df0ff6c6a8aa8e",
+      "status": 1,
+      "gasUsed": 26466,
+      "note": "the buyer approves the escrow."
+    },
+    "joinFund": {
+      "tx": "0xf93c1c53484150aa04c5910a55f43ac0a2fdf69488f1029bcd142f46577b8d1f",
+      "block": 11779668,
+      "timestamp": 1790344716,
+      "from": "0x4b55f9e4d87505f3347c7cafcb8c7eb589970ee3",
+      "to": "0x6d6a9deb67d785bc131a5d732617eabe751098c5",
+      "status": 1,
+      "gasUsed": 244611,
+      "note": "the buyer funds 250 USDC and names the verifier, pinned by codehash."
+    },
+    "joinSettle": {
+      "tx": "0x51d7c9ce802133a7793a2a29c7d3be6ee01585ea2eb8059dcc0022b363f14592",
+      "block": 11779670,
+      "timestamp": 1790344740,
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0x6d6a9deb67d785bc131a5d732617eabe751098c5",
+      "status": 1,
+      "gasUsed": 293917,
+      "note": "somebody who is NOT the buyer settles it on a real Groth16 proof. settleWithProof is permissionless."
+    },
+    "joinOpen": {
+      "tx": "0xd14d797802a88d88c06a8542372f1cf3672fc71c847009775651b168c6c54602",
+      "block": 11779671,
+      "timestamp": 1790344752,
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0x6691283d8b77e1e22d08836c55e3f952c304ccc1",
+      "status": 1,
+      "gasUsed": 504363,
+      "note": "the adapter opens the one window this deal will ever have, for the buyer fixed at funding. The caller chose nothing."
+    },
+    "joinWrite": {
+      "tx": "0xbf2ca29051e842867b44d2b43c19812b42c24c4529acd964aa8ed730fe1276aa",
+      "block": 11779672,
+      "timestamp": 1790344764,
+      "from": "0x4b55f9e4d87505f3347c7cafcb8c7eb589970ee3",
+      "to": "0x740e02ce9fb52629fef861ca02df7091f416bbf8",
+      "status": 1,
+      "gasUsed": 183719,
+      "note": "the BUYER writes the record. The agent never held this right."
+    },
+    "joinClose": {
+      "tx": "0x6b2081b844dacdbe04612a8f1dc13990e5e4061a9200f948c7f4bed7a29d1e20",
+      "block": 11779674,
+      "timestamp": 1790344788,
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0x6691283d8b77e1e22d08836c55e3f952c304ccc1",
+      "status": 1,
+      "gasUsed": 74956,
+      "note": "the window closes. The buyer's second write now reverts too."
     }
   },
   "preEvent": {
@@ -193,7 +309,8 @@
     "RecknVerdictVerifier": "0xe0dE264D76f0664C4e943fc02e3D9FB46CD27608",
     "PermissionedRegistry": "0x1Ad360D93ccD6230FB14D213134107BF89a428cf",
     "PermissionedResolverProxy": "0x740e02cE9FB52629feF861CA02DF7091f416BBF8",
-    "note": "bytecode of the two Reckn contracts was compared against `forge inspect`, not against out/ (a stale artifact there produced a false mismatch once tonight). The verifier differs from its artifact only where its two immutables are substituted, and those hold the intended values."
+    "note": "bytecode of the two Reckn contracts was compared against `forge inspect`, not against out/ (a stale artifact there produced a false mismatch once tonight). The verifier differs from its artifact only where its two immutables are substituted, and those hold the intended values.",
+    "SettlementRecord": "0x6691283d8B77E1e22D08836c55E3f952c304Ccc1"
   },
   "ens": {
     "family": "the deployment family the spikes measured against; three live ENSv2 families exist on Sepolia and mixing them silently produces a name nobody can resolve",
@@ -208,5 +325,18 @@
     "subname": "agent.reckn.eth",
     "subnameTokenId": "0x314c1dfbbccab41a44cf9fefc21e632eb8e01bc0346d4414114d4c3d00000000",
     "parentExpiry": 1792760532
+  },
+  "join": {
+    "dealId": "0x753a957692c858c419ce0ba38615e4e605e101616788266c936e5badefb6c511",
+    "binding": "0x85ac262cbf7f0bdc2a0bda399b6c748a894825885424e361d0e107dcbcafa1ef",
+    "amount": "250.000000 MockUSDC",
+    "script": "tokyo-2026/scripts/join-sepolia.sh",
+    "resolvedThroughENS": "reproduced block=11779671 verifier=0xe0de264d76f0664c4e943fc02e3d9fb46cd27608",
+    "resolverReturnedBy UniversalResolverV2": "0x740e02cE9FB52629feF861CA02DF7091f416BBF8",
+    "afterwards": {
+      "buyer writes again": "reverts EACUnauthorizedAccountRoles -- the window closed",
+      "a third party writes": "reverts",
+      "THE AGENT writes": "STILL SUCCEEDS. reckn-arc is both the agent and the account still holding root on the resolver and the registry. 013 section 1.1 discloses this residue; renouncing is what closes it, and it has not been done because redeploying the adapter would then be impossible. It MUST be done before filming, or beat 2's refusal is not true on chain."
+    }
   }
 }
