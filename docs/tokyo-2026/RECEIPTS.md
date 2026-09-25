@@ -107,6 +107,32 @@ resolver admin, **then re-run this check**. Until that last step runs, the claim
 holds no such role — not that nobody does.
 
 
+## What it looks like
+
+Five stills, taken 2026-09-25 from the live chain. Nothing is mocked and nothing is staged;
+each is a page or a call anyone can reproduce from the hashes above.
+
+**Beat 1 — the agent cannot write its own record, and a second address can.**
+
+![The agent's own giveFeedback, mined and failed: "Fail with error 'Self-feedback not allowed'".](media/beat1-00-self-write-refused.png)
+
+![Read back from the registry: the agent that owns the agentId has 0 records, a second address has 1.](media/beat1-01-state-contrast.png)
+
+That second image is the claim. The transactions are what happened; **this is what is true now**,
+and anyone can call `getLastIndex` and get the same two numbers.
+
+**Beat 3 — a settlement creates the right to write, for somebody else.**
+
+![The adapter opening the one window this deal will ever have.](media/beat3-02-window-opened.png)
+
+![Etherscan decodes it: "Set Text" on our resolver, sent by the buyer -- not by the agent.](media/beat3-03-buyer-writes.png)
+
+![UniversalResolverV2 returns: ENS says "reproduced block=11779671 verifier=0xe0de264d...".](media/beat3-04-ens-resolves-the-record.png)
+
+**Beat 2 is missing on purpose.** It is the agent's ENS write being refused, and it cannot be
+photographed honestly yet: `reckn-arc` still holds root, so today that write succeeds. It is
+taken immediately after the renounce, and the renounce's own verification is the shot.
+
 ## The join, on the real chain
 
 `bash tokyo-2026/scripts/join-sepolia.sh` — one path, seven steps, no fork.
