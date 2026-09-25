@@ -285,16 +285,28 @@ clone rather than the working tree.
 
 ---
 
-## ★ 5.5 `gh` reverts to the other account between sessions
+## ★ 5.5 `gh` reverted to the other account once — and that is a loud failure, not a checklist item
 
-`gh auth status` showed `psyto` active on 09-21; on 09-22 a push failed
-**403 — "Permission to psyto/reckn.git denied to r3saito"**. Not a 404, which is what an older
-note in this repository predicted, and not a git problem.
+**The measurement stands and is not deleted**: `gh auth status` showed `psyto` active on 09-21;
+on 09-22 a push failed **403 — "Permission to psyto/reckn.git denied to r3saito"**. Not a 404,
+which is what an older note in this repository predicted, and not a git problem. Push identity
+here comes from `gh`'s *active account*, which changed without anyone changing it.
+
+> **★ Founder decision 2026-09-25: the per-session `gh auth switch` is dropped from the preflight
+> list.** Only `psyto` is used during the event, and **the cost of being wrong is a 403 on push** —
+> it stops, loudly, and nothing is lost. A checklist earns its place by catching what fails
+> *silently*; this one does not qualify. **If the 403 appears, this is the cause and this is the
+> fix:**
 
 ```bash
-gh auth switch -u psyto       # first, every session
+gh auth switch -u psyto
 git push origin master
 ```
+
+**What would close it by property rather than by memory** — and is *not* done: make the push
+identity independent of `gh`'s mutable state (an SSH remote, or a pinned credential). **That means
+changing `origin`'s URL, which `AGENTS.md` §6 forbids outright.** So it stays a founder call for
+after the event, not something to improvise at 03:00.
 
 ## ★ 5.7 The RPC key is not in the tree — but it is in the terminal, and the terminal is on camera
 
