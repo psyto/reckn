@@ -96,7 +96,9 @@ NODE=$(cast namehash agent.reckn.eth)
 INNER=$(cast calldata "text(bytes32,string)" "$NODE" "$KEY")
 cast call "$UR" "resolve(bytes,bytes)(bytes,address)" "$DNS" "$INNER" --rpc-url "$READ_RPC"
 
-say "7. the window closes  [reckn-arc]"
-send "$ADAPTER" "close(bytes32)" "$DEAL" --account reckn-arc
+# The buyer closes, not the agent. Anybody MAY close, but only after WRITE_WINDOW; before
+# that only the writer can, because otherwise `close` is a weapon -- see test/Grief.t.sol.
+say "7. the window closes  [reckn-buyer]"
+send "$ADAPTER" "close(bytes32)" "$DEAL" --account reckn-buyer
 
 say "done. the record exists, the agent never held the right to write it."

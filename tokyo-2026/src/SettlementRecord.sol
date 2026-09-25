@@ -65,6 +65,14 @@ contract SettlementRecord {
     mapping(bytes32 => uint256) public resourceOf;
     mapping(bytes32 => uint256) public roleOf;
     mapping(bytes32 => bool) public closed;
+    /// @notice When the window opened, so `close` can be permissionless without being a weapon.
+    mapping(bytes32 => uint64) public openedAt;
+
+    /// @dev How long the writer has before anyone may close the window on their behalf.
+    ///      Both directions matter: a stranger must not be able to close a window before the
+    ///      writer has used it, and a writer who never appears must not leave a role granted
+    ///      forever. `013` §3.3 asks for a right that ENDS, not a standing one.
+    uint64 public constant WRITE_WINDOW = 1 days;
 
     event WindowOpened(bytes32 indexed dealId, address indexed writer, uint256 resource, uint8 outcome);
     event WindowClosed(bytes32 indexed dealId, address indexed writer, uint256 resource);
@@ -76,6 +84,8 @@ contract SettlementRecord {
     error BindingMismatch();
     error NotOpened();
     error AlreadyClosed();
+    error NotYoursToCloseYet();
+    error ResourceIsRoot();
 
     constructor(RecknZkEscrow _escrow, IPermissionedResolver _resolver) {
         escrow = _escrow;
@@ -161,6 +171,10 @@ contract SettlementRecord {
         bytes memory setter = setterFor(dnsName, dealId);
         uint256 roleBitmap;
         (, resource, roleBitmap) = resolver.decodeSetter(setter);
+        // A root resource cannot be revoked (`EACRootResourceNotAllowed`), so a window opened
+        // on one could never close. Measured non-zero for a text record; asserted rather than
+        // assumed, because the failure would be silent and permanent.
+        if (resource == 0) revert ResourceIsRoot();
         resourceOf[dealId] = resource;
         roleOf[dealId] = roleBitmap;
         resolver.grantSetterRoles(setter, buyer);
@@ -177,16 +191,27 @@ contract SettlementRecord {
 
         (address buyer, uint8 outcome) = _authorise(dealId, publicValues, proofBytes);
         writerOf[dealId] = buyer;
+        openedAt[dealId] = uint64(block.timestamp);
         emit WindowOpened(dealId, buyer, _grant(dealId, dnsName, buyer), outcome);
         return (buyer, outcome);
     }
 
-    /// @notice Close it again. Anyone may call; the writer and the resource are read from
-    ///         storage rather than taken as arguments, so a caller cannot close someone
-    ///         else's window by naming it.
+    /// @notice Close it again.
+    ///
+    /// **The writer may close at once; anybody else must wait `WRITE_WINDOW`.** Without that
+    /// wait, `close` was a weapon: `open` is permissionless and the proof is public in the
+    /// settling transaction's calldata, so a stranger could open a window and close it in the
+    /// same block, and `opened[dealId]` never resets — the record could then never be created
+    /// by anyone. Demonstrated in test/Grief.t.sol before this guard existed.
+    ///
+    /// The wait is bounded on purpose in the other direction too: a writer who never appears
+    /// does not get to leave a role granted forever.
     function close(bytes32 dealId) external {
         if (!opened[dealId]) revert NotOpened();
         if (closed[dealId]) revert AlreadyClosed();
+        if (msg.sender != writerOf[dealId] && block.timestamp < openedAt[dealId] + WRITE_WINDOW) {
+            revert NotYoursToCloseYet();
+        }
         closed[dealId] = true;
 
         address writer = writerOf[dealId];

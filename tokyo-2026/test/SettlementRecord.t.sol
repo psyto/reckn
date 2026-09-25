@@ -224,6 +224,9 @@ contract SettlementRecordTest is Test {
         vm.prank(buyer);
         IPermissionedResolver(RESOLVER).setText(_dns(), key, "reproduced");
 
+        // the writer closes their own window at once; a stranger would have to wait
+        // WRITE_WINDOW, which is what stops `close` being a griefing weapon (Grief.t.sol).
+        vm.prank(buyer);
         rec.close(dealId);
 
         vm.prank(buyer);
