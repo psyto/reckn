@@ -451,7 +451,8 @@ Foundation** partner prizes and for Top 10 Finalist judging.
 | | |
 |---|---|
 | The lane | [`docs/specs/013-settlement-granted-record-rights.md`](docs/specs/013-settlement-granted-record-rights.md), at r4 — it supersedes `012` and absorbs its Uniswap half |
-| **Event work** | **commits dated 2026-09-25 or later — the date is primary, not the hash** |
+| **Event work** | **commits after 2026-09-25 21:00 JST, when hacking began.** A commit merely dated 09-25 is not event work — five landed that day before the boundary. Check it yourself: `git log --oneline eddac8d..HEAD` |
+| Boundary commit | `eddac8d` (2026-09-25 19:31 +0900), recorded in [`STATUS.md`](STATUS.md) before the window opened |
 | Pre-existing work | [`docs/tokyo-2026/DISCLOSURE.md`](docs/tokyo-2026/DISCLOSURE.md). Everything in this README is pre-event work and is disclosed as such |
 | What was measured before building | [`spikes/tokyo-2026/FINDINGS.md`](spikes/tokyo-2026/FINDINGS.md) — including two places the design was wrong |
 

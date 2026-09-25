@@ -14,6 +14,19 @@
 | 凍結予定 | **9/12**（9/13–15 は R[3]sidency 締切 9/15 に明け渡す） |
 | 撤退可能点 | **9/9** — **`008` と `009` の両方が緑**でなければ founder 判断（`AGENTS.md` §7、2026-09-04 の応募提出に合わせて `003` → `009` に差し替え。`003` は撤退判定の対象外だが **9/12 の凍結までに着地させる対象**。旧文言「001/002 が緑」「008 と 003 が緑」は使わない） |
 
+## ★ ETHGlobal Tokyo 2026 — 当日作業の起点（2026-09-25 21:04 JST に記録）
+
+| | |
+|---|---|
+| イベント | ETHGlobal Tokyo 2026（**9/25 21:00 → 9/27 09:00 JST**）、Continuity。パートナー賞 **ENS / Uniswap Foundation** |
+| **`EVENT_START`（Tokyo）** | **`eddac8ddad95825be51b0a89ab0765f5a68c890b`**（2026-09-25 19:31:28 +0900 = ハッキング開始前の最後の commit）。**これ以降が当日作業** |
+| 当日作業の定義 | **2026-09-25 21:00 JST 以降の commit のみ。** **9/25 付でも 21:00 より前は事前作業**（`013` §6-1。実際この日、境界の前に5本ある） |
+| 判事が確認する方法 | `git log --oneline eddac8d..HEAD` |
+| 提出締切 | **2026-09-27 09:00 JST**（09-25 の登録時に窓口で確認）。ライブ審査 **14:30** |
+| 中心主張 | 判定する鍵が存在しない — `bash scripts/no-keys.sh` **PASS** |
+
+**Tokyo の `EVENT_START` は ETHOnline のもの（`121194c`）とは別物。混同しない。**
+
 ## ETHGlobal Tokyo は Reckn × Uniswap で確定（2026-09-14、founder）
 
 **Reckn の生きているレーンは [`docs/specs/013`](docs/specs/013-settlement-granted-record-rights.md) 一本**
