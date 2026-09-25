@@ -380,6 +380,71 @@ the outer selector prove nothing.
 **None of this is a pitch.** It is the part of the work that helps the person you are talking to,
 and it is already written down.
 
+### ★ 7.1 The ENS talk — the second gift, and the one that can be said badly
+
+**Added 2026-09-25.** The four findings above are for a protocol engineer. The 15:00 talk is
+*Identity for Apps, Agents & Beyond*, so there is a second thing to bring, for whoever is thinking
+about **agent identity** rather than about the beta's ABI. It came out of reading ERC-8004 this
+morning (`013` §7-7 has the evidence and the file:line citations).
+
+> **★ Read this before the observation: it is NOT a hole, and saying that it is will be the worst
+> sentence of the conversation.** The standard says so itself, twice — `erc-8004.md:325`
+> (*"results without filtering by clientAddresses are subject to Sybil/spam attacks"*) and
+> Security Considerations (*"Sybil attacks are possible… We expect many players to build
+> reputation systems"*). **ERC-8004 deliberately defers "who may write" to a layer above it.**
+> What we bring is not a correction; it is **a report from the layer they deferred it to.**
+
+**The first twenty seconds, as spoken:**
+
+> *"The 8004 spec leaves **who may write a record** to a layer above it — it says so in Security
+> Considerations. **ENSv2's EAC is the only on-chain answer I have found that doesn't work by
+> asking who you are.** It's a capability on a resource, so a second address doesn't help. I'm
+> using it as the mechanism, not as a lookup."*
+
+**If they pull on it:**
+
+> *"I read the reputation registry this morning because my demo depended on it. The spec says the
+> submitter must not be the agent owner, and the deployed contract does enforce it —
+> `Self-feedback not allowed`. But it is a **negative identity check**: a second address answers
+> it. So in mine, the right to write one record is **a role a settlement grants and then
+> revokes**."*
+
+**The comparison, which is the whole content:**
+
+| | the question it asks | defeated by a second address? |
+|---|---|---|
+| **ERC-8004** | *are you the subject?* — a negative identity check | **yes** |
+| **ENSv2 EAC** | *were you granted this?* — a capability on a resource | **no** |
+
+**Cheap identities defeat negative identity checks. They do not defeat capabilities.** That is an
+observation about ENSv2's design with a measurement behind it, which is why it is not flattery.
+
+**Four questions only they can answer, and each one is load-bearing for this submission:**
+
+1. **Is per-record granularity an intended use?** `grantSetterRoles` takes the setter's calldata,
+   so a grant for `job:1` does not authorise `other:key`. Is that a property to build on?
+2. **Can root roles on a `PermissionedRegistry` actually be renounced on the beta?** **If not,
+   `013` §1.1's claim narrows and `R-6b` fails** — this is the single answer that most changes
+   what we may say.
+3. **Is the Sepolia beta's ABI converging with `main`?** `initialize` and `setText` differ. Which
+   should something that must still work in a month be built against?
+4. **Agents as namespaces — what does the ENS team want that to look like?** Open, and it is the
+   question that makes them talk rather than listen.
+
+**Three things not to say:**
+
+- **"ERC-8004 has a hole."** They know, and they wrote it down. Saying it marks you as someone who
+  did not read the spec.
+- **Do not pitch Reckn, and do not mention the prize.** Lead with the observation; the product
+  comes up only if they ask.
+- **Do not volunteer that the ChaosChain reference implementation omits the check the official
+  contracts enforce.** It is another team's repository and it sounds like telling tales. If asked
+  which implementation we used, answer plainly: the official one, unmodified.
+
+**On ordering, decided in the room:** leading with question 4 makes them talk and lets the
+observation land inside their own answer. Leading with the observation makes them listen.
+**Read which one they want. The observation keeps.**
+
 ## 6. Done-check — updated 2026-09-22, three days out
 
 | | |

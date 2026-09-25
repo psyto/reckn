@@ -461,6 +461,14 @@ Infrastructure and reading are not the submission.
    byte-for-byte that source (the revert string settles it on the day), and what
    `IdentityRegistry` requires at registration time.
 
+   **★ This entry is the evidence. It is not what to say to a person.** The same finding, shaped
+   for the 15:00 ENS talk — the spoken opening, the identity-versus-capability comparison, the
+   four questions and the three things not to say — is **`docs/tokyo-2026/PREFLIGHT.md` §7.1**,
+   beside the other things being carried to the two talks. **Read §7.1 and not this entry before
+   talking to anybody**: this one records that the reference implementation omits a check, and
+   **omits that the standard defers it deliberately and says so twice.** Someone who reads only
+   this and then speaks to the spec's authors will say the one wrong sentence.
+
 **Fallback decision point: 2026-09-26, 09:00 JST** — twelve hours into a thirty-six hour window
 (21:00 on the 25th to 09:00 on the 27th), not a whole day in as the earlier reading assumed.
 
