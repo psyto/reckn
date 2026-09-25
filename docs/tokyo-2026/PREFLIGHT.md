@@ -423,9 +423,11 @@ observation about ENSv2's design with a measurement behind it, which is why it i
 
 1. **Is per-record granularity an intended use?** `grantSetterRoles` takes the setter's calldata,
    so a grant for `job:1` does not authorise `other:key`. Is that a property to build on?
-2. **Can root roles on a `PermissionedRegistry` actually be renounced on the beta?** **If not,
-   `013` §1.1's claim narrows and `R-6b` fails** — this is the single answer that most changes
-   what we may say.
+2. **Root roles on a `PermissionedRegistry`: is renouncing them intended, and will it stay?**
+   **★ Corrected 2026-09-25 — the first draft of this line said the answer decides whether `013`
+   §1.1 narrows and `R-6b` fails. It does not: `FINDINGS.md:234` already measured
+   `root roles can be renounced ✓` on 09-21.** What is still worth asking is whether that is a
+   property they intend to keep or something incidental to the beta — we hang a claim on it.
 3. **Is the Sepolia beta's ABI converging with `main`?** `initialize` and `setText` differ. Which
    should something that must still work in a month be built against?
 4. **Agents as namespaces — what does the ENS team want that to look like?** Open, and it is the
@@ -444,6 +446,73 @@ observation about ENSv2's design with a measurement behind it, which is why it i
 **On ordering, decided in the room:** leading with question 4 makes them talk and lets the
 observation land inside their own answer. Leading with the observation makes them listen.
 **Read which one they want. The observation keeps.**
+
+### ★ 7.2 The Uniswap talk — 16:30
+
+**Added 2026-09-25.** §7 carried one line for Uniswap. There is more, and the strongest piece is
+something almost nobody else in the room can say: **we ran a real mainnet Uniswap swap inside a
+zkVM and can tell them what made it hard.**
+
+**Open with the provability finding, not with the hook.** Everyone at that booth is building a
+hook.
+
+> *"We re-execute Uniswap swaps inside a zk guest to settle an escrow — a real mainnet
+> `SwapRouter02.exactInputSingle`, 13 million cycles, measured on the 8th. **The reason we are on
+> v3 and not the Universal Router is one precompile: Permit2's signature step uses `ecrecover`,
+> which is on our guest's divergent-precompile list and we have not verified equivalence.** So the
+> router is the part of your stack we could not put on a proving path."*
+
+**That is a report on the provability of the Uniswap stack from inside a zkVM.** It is a use they
+almost certainly do not get feedback about, it costs them nothing to hear, and **it is not a
+complaint** — the limitation is in our guest, and the sentence says so.
+
+**Then the DX traps, which are the engineer's gift** (all from `spikes/tokyo-2026/FINDINGS.md`
+S2/S3/S6, measured against the real Sepolia `PoolManager`
+`0xE03A1074c86CFeDd5C142C4F04F1a1536e203543`):
+
+| trap | what it actually does |
+|---|---|
+| **ERC-7751 `WrappedError(address,bytes4,bytes,bytes)`** | the PoolManager does **not** bubble a hook's error. **The `bytes4` is the hook function being called** (`beforeSwap` = `0x575e24b4`), **not the error selector** — the error is in `reason`. **A test that asserts the outer selector proves nothing**, and our first attempt at that test asserted the wrong field |
+| **hook address mining** | `uint160(hook) & ALL_HOOK_MASK` must equal `BEFORE_SWAP_FLAG` **exactly**. Brute force found salt **8653** inside the test, sub-second, no miner library. **The salt is invalidated by any change to the hook's code or constructor args** — mine, then edit, and the address is silently wrong |
+| **types moved** | `SwapParams` / `ModifyLiquidityParams` are in `src/types/PoolOperation.sol`, not on `IPoolManager`; `afterSwap` returns `int128`; liquidity hooks take `BalanceDelta`. Compile errors, not silent ones — cheap, but it costs an hour of a first-timer's day |
+| **v4-core needs no submodules** | for interfaces + types + `Hooks`, a shallow clone is enough and `lib/` can stay empty |
+
+**And the design choice, offered because it shows we thought about where a gate belongs:**
+`beforeAddLiquidity` is deliberately **unflagged**. **The gate is on trading, not on providing
+liquidity.** Say it before they ask.
+
+**Four questions:**
+
+1. **Is the flag encoding / `ALL_HOOK_MASK` stable?** A mined address is baked into every
+   deployment and re-mined on every code change; we would like to know what we are committing to.
+2. **ERC-7751's `bytes4`** — is "the hook function, not the error" the intended reading? If so, is
+   there guidance anywhere, because **the natural test asserts the wrong field**.
+3. **Permit2 and `ecrecover` on a proving path** — is a router path that avoids it of any interest,
+   or is that firmly out of scope? *(the one whose answer could change what we build next)*
+4. **Where do you think hooks should NOT be used?** Open, and we have a real answer of our own to
+   trade — we left liquidity provision ungated on purpose.
+
+**Three things not to say:**
+
+- **Not one word against Uniswap's pricing, safety or quality.** It is the workload being verified
+  and the venue being gated, not the subject of a critique (`DEMO.md` §4).
+- **Do not say we proved a v4 swap.** The proven execution is **v3 `SwapRouter02`**. Earning is on
+  v3, spending is on v4, and conflating them is the one factual error available here.
+- **Do not quote the fork numbers as deployed numbers.** `1.000000000000000000 → 0.987158034397061298`
+  was measured on a **fork** of Sepolia on 09-21.
+
+> **★ Talking to them at the booth is NOT the prize requirement.** `U-Q3` is a submission to the
+> **Uniswap Developer Feedback Form**, a separate action from the ETHGlobal form and from any
+> conversation (`013` §9). It is scheduled in the 16:00–19:00 block on the 26th. **A good
+> conversation on Friday does not tick it.**
+
+### ★ 7.3 The leave-behind is already public — do not build a new one
+
+If either team wants it in writing, the honest artifact exists and is public:
+**`spikes/tokyo-2026/FINDINGS.md`** on `github.com/psyto/reckn`. It is the measurements, with the
+addresses, the salts, the revert selectors and the limits stated — including the ones that did not
+work. **Send that, not a deck.** A page built to be handed over becomes a pitch, and §7.1 and §7.2
+both exist to avoid handing anybody a pitch.
 
 ## 6. Done-check — updated 2026-09-22, three days out
 
