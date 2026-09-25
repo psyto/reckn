@@ -59,6 +59,89 @@
       "status": 1,
       "gasUsed": 190352,
       "note": "a second address the same operator controls makes the identical call, and it succeeds. The check asks who you are; a second address answers it."
+    },
+    "deployEscrow": {
+      "tx": "0x43c3c7e30f3f61c79b3937c1b8cf33e9e332fd737c474d28603817eb667226c6",
+      "block": 11779240,
+      "timestamp": 1790339556,
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": null,
+      "status": 1,
+      "gasUsed": 1252808,
+      "note": "RecknZkEscrow on Sepolia. No constructor, so the deployment carries no parameters. ENS Continuity asks the integration to target an existing project's testnet deployment; before tonight the escrow was on Arc only.",
+      "contractAddress": "0x6d6a9deb67d785bc131a5d732617eabe751098c5"
+    },
+    "deployVerdictVerifier": {
+      "tx": "0xefd497fc27f448f239821058ccd6605c0011896ec655d2ff3370fe66cb638536",
+      "block": 11779285,
+      "timestamp": 1790340096,
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": null,
+      "status": 1,
+      "gasUsed": 476388,
+      "note": "RecknVerdictVerifier, pointing at SP1 v6.1.0 Groth16 0xb69f2584, which has NO owner. Not the SP1VerifierGateway: the gateway has an owner and its route for our selector is unfrozen, and a project whose claim is that no key decides should not put an owner in the adjudication path.",
+      "contractAddress": "0xe0de264d76f0664c4e943fc02e3d9fb46cd27608"
+    },
+    "deployParentRegistry": {
+      "tx": "0x6219190438d0b63cce4895ed8c67e02613d07968c9c36eb7be699be215631b24",
+      "block": 11779321,
+      "timestamp": 1790340528,
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": null,
+      "status": 1,
+      "gasUsed": 5273028,
+      "note": "our PermissionedRegistry, with ENS's own LabelStore 0x375c0820 (reached by ETHRegistrar -> ETH_REGISTRY -> LABEL_STORE, not guessed). Root roles held by the deployer FOR NOW; they are renounced after the adapter is granted.",
+      "contractAddress": "0x1ad360d93ccd6230fb14d213134107bf89a428cf"
+    },
+    "deployResolverProxy": {
+      "tx": "0xd7900814c322aca1b5eb41ee7c7e9e64ddbd395237c6be4492c8189631f69085",
+      "block": 11779356,
+      "timestamp": 1790340948,
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0x118bc31a50d559f7015a8da26d54b3b030cdb70f",
+      "status": 1,
+      "gasUsed": 177868,
+      "note": "a UUPS proxy of ENS's PermissionedResolver implementation, created through ENS's own VerifiableFactory rather than a proxy of ours. The implementation is UUPS, so an EIP-1167 clone dies inside onlyProxy with 210 gas and no revert data."
+    },
+    "approveRegistrar": {
+      "tx": "0x3069906c378c5125729bf3773fed2f5c61e58ebe5e89e4f0e288ed5afd43f61b",
+      "block": 11779370,
+      "timestamp": 1790341116,
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0x16f95d91dba7da3aca778ec053df0ff6c6a8aa8e",
+      "status": 1,
+      "gasUsed": 46354,
+      "note": "MockUSDC allowance for the ETHRegistrar; ENSv2 registration fees are paid in MockUSDC on Sepolia."
+    },
+    "commitName": {
+      "tx": "0xa43ffa3aef645c43d1e3ca1f246c7856ff533d1fadc9190e90edc7170a264fe5",
+      "block": 11779377,
+      "timestamp": 1790341200,
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0xabe76f6c8dfced81aa5a2bb8034202a7136b94ca",
+      "status": 1,
+      "gasUsed": 45438,
+      "note": "commit-then-register: the commitment for reckn. MIN_COMMITMENT_AGE is 60 seconds, read from the registrar."
+    },
+    "registerName": {
+      "tx": "0x1a66082b77cffdb95490fc65f6d361eb09b3e3569907299961ac2a20c22a9d5f",
+      "block": 11779388,
+      "timestamp": 1790341332,
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0xabe76f6c8dfced81aa5a2bb8034202a7136b94ca",
+      "status": 1,
+      "gasUsed": 241718,
+      "note": "reckn registered on the REAL Sepolia ETHRegistrar for 0.613701 MockUSDC, with our PermissionedRegistry as its subregistry and our proxy as its resolver."
+    },
+    "issueAgentSubname": {
+      "tx": "0x5643607ddf2e06e9b8d609f49316d893784e43bfbe9d2c9ac558e972fba2a6f3",
+      "block": 11779402,
+      "timestamp": 1790341500,
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0x1ad360d93ccd6230fb14d213134107bf89a428cf",
+      "status": 1,
+      "gasUsed": 143627,
+      "note": "agent.reckn.eth issued to the agent with roleBitmap 65536 = ROLE_RENEW ONLY. No ROLE_SET_RESOLVER: the agent owns its name and is not given the power to repoint its own record surface."
     }
   },
   "preEvent": {
@@ -97,6 +180,33 @@
       "tag2": "",
       "isRevoked": false
     },
-    "why": "the owner wrote nothing and a second address wrote one record. This is state, not transactions, and it is what beat 1 claims."
+    "why": "the owner wrote nothing and a second address wrote one record. This is state, not transactions, and it is what beat 1 claims.",
+    "ETHRegistry.getSubregistry(reckn)": "0x1ad360d93ccd6230fb14d213134107bf89a428cf",
+    "ETHRegistry.getResolver(reckn)": "0x740e02ce9fb52629fef861ca02df7091f416bbf8",
+    "ourRegistry.roles(agent.reckn.eth, agent)": "0x10000 = ROLE_RENEW only",
+    "UniversalResolverV2.resolve(agent.reckn.eth, text)": "routes to 0x740e02ce…, our resolver — E-Q3 satisfied on the real resolution path",
+    "setResolver by a third party": "reverts EACUnauthorizedAccountRoles (0x4b27a133)",
+    "setResolver by the agent itself": "STILL SUCCEEDS, because the deployer holds ROOT roles on the parent registry. S4's claim closes only after those are renounced, which happens after the adapter is granted. 013 section 1.1 discloses exactly this residue; it is not yet closed and is not claimed to be."
+  },
+  "deployed": {
+    "RecknZkEscrow": "0x6d6a9deb67d785BC131a5d732617EABE751098C5",
+    "RecknVerdictVerifier": "0xe0dE264D76f0664C4e943fc02e3D9FB46CD27608",
+    "PermissionedRegistry": "0x1Ad360D93ccD6230FB14D213134107BF89a428cf",
+    "PermissionedResolverProxy": "0x740e02cE9fb52629FEf861ca02DF7091f416BBF8",
+    "note": "bytecode of the two Reckn contracts was compared against `forge inspect`, not against out/ (a stale artifact there produced a false mismatch once tonight). The verifier differs from its artifact only where its two immutables are substituted, and those hold the intended values."
+  },
+  "ens": {
+    "family": "the deployment family the spikes measured against; three live ENSv2 families exist on Sepolia and mixing them silently produces a name nobody can resolve",
+    "ETHRegistrar": "0xAbe76F6C8DFcEd81AA5A2bB8034202A7136b94ca",
+    "ETHRegistry": "0x657ea849311d3d5823348dded7c2aaafb3ede09e",
+    "LabelStore": "0x375c082021e677a40ea2ae094d050602dba90992",
+    "UniversalResolverV2": "0x5d25C1D6aCBb71B7a28AA7899618a3412a8303e3",
+    "PermissionedResolverImpl": "0x14F09Fd05d4585759e54844DC9B00147131Cf243",
+    "VerifiableFactory": "0x118bc31a50d559f7015a8da26d54b3b030cdb70f",
+    "MockUSDC": "0x16f95D91DBa7dA3Aca778Ec053dF0FF6C6A8aA8e",
+    "name": "reckn.eth",
+    "subname": "agent.reckn.eth",
+    "subnameTokenId": "0x314c1dfbbccab41a44cf9fefc21e632eb8e01bc0346d4414114d4c3d00000000",
+    "parentExpiry": 1792760532
   }
 }
