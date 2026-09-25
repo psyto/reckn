@@ -261,7 +261,12 @@ passing, here it is refusing again", then stop and let them ask.
 7. **New screenshots.** `dashboard/media/*` are Arc/ETHOnline assets and must not be reused.
 8. **★ Both Uniswap appearances are in the take.** A cut that keeps the gate and loses the
    re-executed swap turns the Uniswap prize submission into a claim the video does not support.
-9. **★ Shoot each beat the moment it stands — do not save the camera for the end.** Beats 1–3
+9. **★ No secret in the frame.** `SEPOLIA_RPC` carries the Alchemy key inside the URL, and
+   rotation is deferred until after the event (`PREFLIGHT` §5.7). Commands on screen use
+   `$SEPOLIA_RPC`, never the expanded URL, and the scrollback is checked **in the frame** before
+   the take — a repository guard does not guard a video. Same rule for the live screen-share on
+   the 27th.
+10. **★ Shoot each beat the moment it stands — do not save the camera for the end.** Beats 1–3
    are standing when night 1 closes; beat 5 when the funded pool runs; beat 4 while the 497-second
    proof is generating. **Take rushes then**, ten minutes each. The 23:00 block on the 26th is
    then the **real take and the edit**, against footage that already exists, rather than the only

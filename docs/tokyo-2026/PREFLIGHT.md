@@ -296,6 +296,21 @@ gh auth switch -u psyto       # first, every session
 git push origin master
 ```
 
+## ★ 5.7 The RPC key is not in the tree — but it is in the terminal, and the terminal is on camera
+
+**Added 2026-09-25, when rotation was deferred to after the event.** `no-keys.sh`, `.gitignore`
+and the rule against `git add -A` all guard **the repository**. None of them guards **a
+screenshot**. The demo records terminal sessions against Sepolia, and `SEPOLIA_RPC` carries the
+key inside the URL.
+
+- **A key published in a video is published.** Deleting the video afterwards does not unpublish it.
+- Before recording: `export SEPOLIA_RPC` stays out of the visible scrollback, and any `cast`
+  invocation on screen uses the variable, **never the expanded URL**. Check the frame, not the
+  intent — `--rpc-url $SEPOLIA_RPC` is fine, the same line after a shell that echoes it is not.
+- The same applies to a live screen-share at judging on 09-27.
+- **If it does get into a frame, rotate immediately and re-cut** — that is the one case where the
+  deferral is cancelled.
+
 ## ★ 5.6 The description cannot go stale silently
 
 **A note saying "remember to re-paste" is an admonition.** This repository's own rule is that
@@ -365,7 +380,7 @@ and it is already written down.
 | no key material in the tree; `--account reckn-arc` everywhere | ✅ |
 | **the disclosure, in full, in the form's description** | ✅ **done 2026-09-22**, and no longer something to remember: `check-description.sh` compares the live field's recorded hash against the file, and a pre-commit hook refuses to commit a disclosure change that leaves `DESCRIPTION.txt` behind. **done 2026-09-22.** `DESCRIPTION.txt` pasted whole, so the narrative and the entire disclosure are in the one field the rules leave for it. **Re-run `build-description.py` and re-paste after any edit to either half** — what is in the form is a snapshot |
 | the form's final paragraph | ✅ carried in by the same paste; the counted number is gone from it |
-| Alchemy key rotated | **OPEN** |
+| Alchemy key rotated | **DEFERRED to after the event — founder decision 2026-09-25.** Swapping the RPC the demo depends on, hours before a 36-hour window, risks more than it protects. **No reason for the rotation was ever recorded and no key material is in the tree** (`:44` is a placeholder), so this was hygiene, not a leak response. **The one live consequence is §5.7: the key must not appear on camera.** Rotate on 09-28 |
 | **event start time confirmed** | ✅ **hacking begins 09-25 at 21:00 JST.** The repository said 09:00 and was wrong by twelve hours. The window is **36 hours, 21:00 Fri → 09:00 Sun**, and it crosses two nights. See §7 |
 | **slept** | 36 hours solo, and the last six are the submission |
 
