@@ -41,7 +41,7 @@ contract GriefTest is Test {
     bytes32 binding;
 
     function setUp() public {
-        rec = new SettlementRecord(ESCROW, IPermissionedResolver(RESOLVER));
+        rec = new SettlementRecord(ESCROW, IPermissionedResolver(RESOLVER), _dns());
         usdc = new MockUSDC();
         usdc.mint(buyer, 10_000_000000);
         vm.prank(DEPLOYER);
@@ -67,7 +67,7 @@ contract GriefTest is Test {
         vm.prank(address(0xDEAD));
         ESCROW.settleWithProof(id, pub, prf);
         vm.prank(attacker);
-        rec.open(id, _dns(), pub, prf);
+        rec.open(id, pub, prf);
     }
 
     // ---------------------------------------------------------------- L-1
@@ -104,6 +104,60 @@ contract GriefTest is Test {
 
     // ---------------------------------------------------------------- L-3
 
+    // ---------------------------------------------------------------- L-4, L-5
+
+    /// L-4 — **the scope of the grant, measured rather than claimed.** The submission used to
+    /// say writes were "granted per record, not per name". They are not: the deployed resolver
+    /// derives the resource from the KEY alone, so the buyer's role works on every name the
+    /// resolver serves. This row asserts the uncomfortable half out loud, so nobody has to
+    /// rediscover it, and L-5 asserts the half that makes it survivable.
+    function test_L4_the_grant_is_NOT_scoped_to_the_name() public {
+        bytes32 id = _settledAndOpenedByAStranger("scope");
+        string memory key = rec.recordKey(id);
+        bytes memory foreign = abi.encodePacked(uint8(6), "victim", uint8(5), "reckn", uint8(3), "eth", uint8(0));
+        vm.prank(buyer);
+        // not expectRevert: this SUCCEEDS, and that is the finding
+        IPermissionedResolver(RESOLVER).setText(foreign, key, "reproduced");
+    }
+
+    /// L-5 — and why L-4 cannot be used to forge somebody else's history. The key the buyer
+    /// holds names THIS adapter's name, and the adapter's name is fixed at construction rather
+    /// than taken from the caller. So the bytes land on the foreign name under a key that says
+    /// whose record it is, and the canonical lookup for the foreign name finds nothing.
+    function test_L5_a_foreign_name_lookup_does_not_find_the_planted_record() public {
+        bytes32 id = _settledAndOpenedByAStranger("scope-2");
+        bytes memory foreign = abi.encodePacked(uint8(6), "victim", uint8(5), "reckn", uint8(3), "eth", uint8(0));
+        // the key into a local FIRST: an external call in argument position becomes "the next
+        // call" and eats the prank. That is not hypothetical here -- it failed this way once.
+        string memory ourKey = rec.recordKey(id);
+        vm.prank(buyer);
+        IPermissionedResolver(RESOLVER).setText(foreign, ourKey, "reproduced");
+
+        // what a reader of victim.reckn.eth would actually ask for
+        string memory theirKey = string.concat("reckn:job:victim.reckn.eth:", _hex(id));
+        assertTrue(
+            keccak256(bytes(ourKey)) != keccak256(bytes(theirKey)),
+            "the planted key is the victim's own key -- the name is not in the key"
+        );
+
+        // and the buyer cannot reach the victim's own key, because no adapter granted it
+        vm.prank(buyer);
+        vm.expectPartialRevert(bytes4(0x4b27a133));
+        IPermissionedResolver(RESOLVER).setText(foreign, theirKey, "reproduced");
+    }
+
+    function _hex(bytes32 v) internal pure returns (string memory) {
+        bytes memory s = new bytes(64);
+        for (uint256 i; i < 32; ++i) {
+            uint8 b = uint8(v[i]);
+            s[i * 2] = bytes1((b >> 4) < 10 ? 48 + (b >> 4) : 87 + (b >> 4));
+            s[i * 2 + 1] = bytes1((b & 15) < 10 ? 48 + (b & 15) : 87 + (b & 15));
+        }
+        return string(s);
+    }
+
+    // ---------------------------------------------------------------- L-3
+
     /// L-3 — the other direction. `013` §3.3 wants a right that ENDS. A buyer who never appears
     /// must not leave a role standing forever, so after `WRITE_WINDOW` anybody may clean up.
     /// The control arm is L-1: one second earlier, the same call from the same address reverts.
@@ -124,7 +178,7 @@ contract GriefTest is Test {
         string memory key = rec.recordKey(id);
         bytes memory name = _dns();
         vm.prank(buyer);
-        vm.expectRevert();
+        vm.expectPartialRevert(bytes4(0x4b27a133));
         IPermissionedResolver(RESOLVER).setText(name, key, "too late");
     }
 }

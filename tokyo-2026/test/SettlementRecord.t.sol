@@ -30,6 +30,10 @@ contract SettlementRecordTest is Test {
     address constant UNIVERSAL_RESOLVER = 0x5d25C1D6aCBb71B7a28AA7899618a3412a8303e3;
     address constant DEPLOYER = 0xfa2582ecAD1186A171CB9626d1FcFDC0f7995321; // holds root today
     uint256 constant ALL_ROLES = 0x1111111111111111111111111111111111111111111111111111111111111111;
+    /// EACUnauthorizedAccountRoles(uint256,uint256,address) -- read off a real revert. A bare
+    /// `vm.expectRevert()` would also be satisfied by the call reverting for the wrong reason,
+    /// which is how a row passes while proving nothing.
+    bytes4 constant EAC_UNAUTHORIZED = 0x4b27a133;
 
     string constant DIR = "../zk-verdict/contracts/";
     string constant PROOF_REPRODUCED = "src/fixtures/reexec-groth16-fixture.json";
@@ -50,7 +54,7 @@ contract SettlementRecordTest is Test {
     }
 
     function setUp() public {
-        rec = new SettlementRecord(ESCROW, IPermissionedResolver(RESOLVER));
+        rec = new SettlementRecord(ESCROW, IPermissionedResolver(RESOLVER), _dns());
         usdc = new MockUSDC();
         usdc.mint(buyer, 10_000_000000);
         // The adapter needs the resolver's admin role. Today the deployer still holds root and
@@ -94,7 +98,7 @@ contract SettlementRecordTest is Test {
         bytes32 dealId = _fund(p, "join");
         _settleByAStranger(dealId, p);
 
-        (address writer, uint8 outcome) = rec.open(dealId, _dns(), p.publicValues, p.proof);
+        (address writer, uint8 outcome) = rec.open(dealId, p.publicValues, p.proof);
         assertEq(writer, buyer, "the window opened for somebody other than the funder's buyer");
         assertEq(outcome, uint8(p.outcome), "the outcome did not come from the proof");
 
@@ -117,14 +121,14 @@ contract SettlementRecordTest is Test {
         Proof memory p = _proof(PROOF_REPRODUCED);
         bytes32 dealId = _fund(p, "r2");
         _settleByAStranger(dealId, p);
-        rec.open(dealId, _dns(), p.publicValues, p.proof);
+        rec.open(dealId, p.publicValues, p.proof);
 
         // recordKey() first: an external call evaluated as an argument becomes "the next
         // call", eats the prank and the expectRevert, and the row passes for nothing.
         string memory key = rec.recordKey(dealId);
         bytes memory name = _dns();
         vm.prank(agent);
-        vm.expectRevert();
+        vm.expectPartialRevert(EAC_UNAUTHORIZED);
         IPermissionedResolver(RESOLVER).setText(name, key, "reproduced");
     }
 
@@ -138,13 +142,13 @@ contract SettlementRecordTest is Test {
         _settleByAStranger(dealId, p);
 
         vm.prank(agent);
-        (address writer,) = rec.open(dealId, _dns(), p.publicValues, p.proof);
+        (address writer,) = rec.open(dealId, p.publicValues, p.proof);
         assertEq(writer, buyer, "calling open chose the writer");
 
         string memory key = rec.recordKey(dealId);
         bytes memory name = _dns();
         vm.prank(agent);
-        vm.expectRevert();
+        vm.expectPartialRevert(EAC_UNAUTHORIZED);
         IPermissionedResolver(RESOLVER).setText(name, key, "reproduced");
     }
 
@@ -153,10 +157,10 @@ contract SettlementRecordTest is Test {
         Proof memory p = _proof(PROOF_REPRODUCED);
         bytes32 dealId = _fund(p, "r12b");
         _settleByAStranger(dealId, p);
-        rec.open(dealId, _dns(), p.publicValues, p.proof);
+        rec.open(dealId, p.publicValues, p.proof);
 
         vm.expectRevert(SettlementRecord.AlreadyOpened.selector);
-        rec.open(dealId, _dns(), p.publicValues, p.proof);
+        rec.open(dealId, p.publicValues, p.proof);
     }
 
     // ---------------------------------------------------------------- R-10
@@ -173,7 +177,7 @@ contract SettlementRecordTest is Test {
         // the other fixture is a real, verifying proof -- of a DIFFERENT deal
         vm.prank(address(0xBAD));
         vm.expectRevert(SettlementRecord.BindingMismatch.selector);
-        rec.open(dealId, _dns(), bad.publicValues, bad.proof);
+        rec.open(dealId, bad.publicValues, bad.proof);
     }
 
     // ---------------------------------------------------------------- R-7
@@ -184,7 +188,7 @@ contract SettlementRecordTest is Test {
         bytes32 dealId = _fund(p, "r7");
         _settleByAStranger(dealId, p);
 
-        (, uint8 outcome) = rec.open(dealId, _dns(), p.publicValues, p.proof);
+        (, uint8 outcome) = rec.open(dealId, p.publicValues, p.proof);
         assertEq(outcome, 1, "a failed verdict did not come back as failed");
         string memory value = rec.recordValue(outcome, uint64(block.number), VERIFIER);
         assertEq(_slice(value, 6), "failed", "the record does not say failed");
@@ -200,7 +204,7 @@ contract SettlementRecordTest is Test {
         // control arm: inside the window, the same proof DOES open
         bytes32 ok = _fund(p, "r13-control");
         _settleByAStranger(ok, p);
-        rec.open(ok, _dns(), p.publicValues, p.proof);
+        rec.open(ok, p.publicValues, p.proof);
 
         // the row: fund, let the clock pass, refund, then try the same valid proof
         bytes32 late = _fund(p, "r13-late");
@@ -208,7 +212,7 @@ contract SettlementRecordTest is Test {
         ESCROW.refundAfterDeadline(late);
 
         vm.expectRevert(SettlementRecord.RefundWindowPassed.selector);
-        rec.open(late, _dns(), p.publicValues, p.proof);
+        rec.open(late, p.publicValues, p.proof);
     }
 
     // ---------------------------------------------------------------- R-4
@@ -218,7 +222,7 @@ contract SettlementRecordTest is Test {
         Proof memory p = _proof(PROOF_REPRODUCED);
         bytes32 dealId = _fund(p, "r4");
         _settleByAStranger(dealId, p);
-        rec.open(dealId, _dns(), p.publicValues, p.proof);
+        rec.open(dealId, p.publicValues, p.proof);
 
         string memory key = rec.recordKey(dealId);
         vm.prank(buyer);
@@ -230,7 +234,7 @@ contract SettlementRecordTest is Test {
         rec.close(dealId);
 
         vm.prank(buyer);
-        vm.expectRevert();
+        vm.expectPartialRevert(EAC_UNAUTHORIZED);
         IPermissionedResolver(RESOLVER).setText(_dns(), key, "reproduced twice");
     }
 
@@ -242,7 +246,7 @@ contract SettlementRecordTest is Test {
         Proof memory p = _proof(PROOF_REPRODUCED);
         bytes32 dealId = _fund(p, "r8"); // funded, never settled
         vm.expectRevert(SettlementRecord.NotSettled.selector);
-        rec.open(dealId, _dns(), p.publicValues, p.proof);
+        rec.open(dealId, p.publicValues, p.proof);
     }
 
     // ---------------------------------------------------------------- helpers

@@ -78,8 +78,11 @@ send "$ESCROW" "fund(bytes32,address,address,uint256,address,bytes32,bytes32)" \
 say "3. somebody who is not the buyer settles it, on the proof  [reckn-arc]"
 send "$ESCROW" "settleWithProof(bytes32,bytes,bytes)" "$DEAL" "$PUB" "$PRF" --account reckn-arc
 
+# No name argument. The adapter serves exactly one name, fixed at construction, because the
+# resolver's resource is a function of the KEY alone -- a caller who could name the target
+# could aim this grant at somebody else's name. See src/SettlementRecord.sol and Grief.t.sol.
 say "4. the adapter opens the window — for the buyer, chosen by nobody  [reckn-arc]"
-send "$ADAPTER" "open(bytes32,bytes,bytes,bytes)" "$DEAL" "$DNS" "$PUB" "$PRF" --account reckn-arc
+send "$ADAPTER" "open(bytes32,bytes,bytes)" "$DEAL" "$PUB" "$PRF" --account reckn-arc
 KEY=$(cast call "$ADAPTER" "recordKey(bytes32)(string)" "$DEAL" --rpc-url "$READ_RPC" | tr -d '"')
 WRITER=$(cast call "$ADAPTER" "writerOf(bytes32)(address)" "$DEAL" --rpc-url "$READ_RPC")
 printf '   key       %s\n   writer    %s\n' "$KEY" "$WRITER"

@@ -145,9 +145,15 @@ settlement and would otherwise be recordable as one.
 
 THE ENS SIDE. Each agent is a subname under a parent PermissionedRegistry we deploy, and
 its job records live on a Permissioned Resolver, which is itself an access-control surface.
-Writes are granted per record, not per name: grantSetterRoles takes the setter's calldata,
-and decodeSetter returns the resource to revoke. Records resolve through
-UniversalResolverV2, not by calling our resolver directly.
+grantSetterRoles takes the setter's CALLDATA rather than a name, and decodeSetter returns
+the resource to revoke. We measured what that resource is derived from: the key alone. The
+same key under agent.reckn.eth and under victim.reckn.eth is one identical resource, so a
+setter role is never scoped to a single name. We handle it rather than claim otherwise --
+the adapter's name is fixed at construction instead of taken from the caller, and the name
+is written inside the record key, so bytes placed on a foreign name sit under a key that
+names whose record it is and the canonical lookup for that name does not find them. The
+write onto a foreign name is not prevented; it is made unattributable. Records resolve
+through UniversalResolverV2, not by calling our resolver directly.
 
 THE UNISWAP SIDE. A beforeSwap-only hook, its address CREATE2-mined so
 uint160(hook) & ALL_HOOK_MASK == BEFORE_SWAP_FLAG, reads the record inside beforeSwap —

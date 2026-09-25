@@ -161,7 +161,8 @@ compute what to revoke**. The implementation is **UUPS**; an EIP-1167 clone dies
 |---|---|
 | a **contract** holds the resolver's admin role, grants, and revokes | ✓ |
 | the agent's own write is refused — `EACUnauthorizedAccountRoles`, roleBitmap `0x10` = `ROLE_SET_TEXT` | ✓ |
-| **granularity is per-record**: a grant for `job:1` does not authorise `other:key`, and the resources differ | ✓ |
+| **granularity is per-key**: a grant for `job:1` does not authorise `other:key`, and the resources differ | ✓ |
+| **granularity is NOT per-name** — the resource is a function of the key alone, so one grant reaches every name the resolver serves. Measured 2026-09-26, three names, one resource. Handled by fixing the adapter's name at construction and putting the name inside the key: the foreign write is not refused, it is unattributable (`Grief.t.sol` L-4, L-5) | ✗ by design of ENSv2 |
 | the window closes — the same client's second write is refused | ✓ |
 | **root roles can be renounced** (`revokeRootRoles` from the holder → `roles(ROOT) == 0`) | ✓ |
 | the record is readable **on chain, synchronously**, by a contract; **no CCIP-Read on this path** | ✓ |

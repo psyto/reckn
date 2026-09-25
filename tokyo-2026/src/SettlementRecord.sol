@@ -33,6 +33,23 @@ interface IPermissionedResolver {
 /// `settleWithProof` is. What is fixed is not *who calls* but *who may write*: the buyer
 /// named at funding, and nobody else.
 ///
+/// **What the ENSv2 role model does NOT give us, stated before anyone finds it.** A setter role
+/// is scoped to a RESOURCE, and the deployed resolver derives that resource from the setter
+/// calldata's KEY alone — measured, three names, one resource. There is no way to say "this
+/// name only". Two things follow. First, the name is fixed at construction rather than taken
+/// from the caller, so nobody can point this adapter's grant at a name of their choosing; one
+/// adapter serves one name. Second, the name is written inside the key, so bytes placed on some
+/// other name sit under a key that names this one, and a reader looking up that other name's
+/// records does not find them. Neither of these is the resolver refusing the write. **The write
+/// onto a foreign name is not prevented; it is made unattributable.** Saying otherwise —
+/// "granted per record, not per name" — was false along the axis that matters.
+///
+/// **And the value is not proof-derived.** `recordValue` computes what a truthful record says,
+/// but the grant authorises the key, not the bytes: a buyer may write anything under it,
+/// including "reproduced" for a deal the proof failed. What a settlement creates is the RIGHT
+/// to write one record — which is what `013` is named for — not the record's contents. The
+/// contents are checkable by anyone against the escrow and the proof; they are not enforced.
+///
 /// **Why the outcome is re-derived and never passed in.** `RecknZkEscrow.Deal` has no outcome
 /// field and `State` is only `None | Funded | Settled`; the verdict exists solely in an event,
 /// which contracts cannot read. Settlement is permissionless, so a third party may have
@@ -53,6 +70,15 @@ interface IPermissionedResolver {
 contract SettlementRecord {
     RecknZkEscrow public immutable escrow;
     IPermissionedResolver public immutable resolver;
+
+    /// @notice The one name this adapter serves, in DNS wire form, fixed at construction.
+    ///         **It is not an argument to `open`, and that is the whole point.** See the
+    ///         contract comment: a caller who can name the target can aim a grant at somebody
+    ///         else's name, because the resolver's resource is a function of the key alone.
+    bytes public dnsName;
+    /// @notice The same name in dotted form, derived from `dnsName` in the constructor so the
+    ///         two cannot drift apart. It goes inside every record key.
+    string public nameDotted;
 
     /// @notice One window per deal, ever. Set before any external call.
     mapping(bytes32 => bool) public opened;
@@ -87,15 +113,44 @@ contract SettlementRecord {
     error NotYoursToCloseYet();
     error ResourceIsRoot();
 
-    constructor(RecknZkEscrow _escrow, IPermissionedResolver _resolver) {
+    constructor(RecknZkEscrow _escrow, IPermissionedResolver _resolver, bytes memory _dnsName) {
         escrow = _escrow;
         resolver = _resolver;
+        dnsName = _dnsName;
+        nameDotted = _dotted(_dnsName);
+    }
+
+    /// @dev DNS wire form to dotted form, so the human-readable name in the key is DERIVED from
+    ///      the wire name the resolver is actually called with. Passing both as constructor
+    ///      arguments would let them disagree, and a key naming the wrong name is exactly the
+    ///      defect this is here to close.
+    function _dotted(bytes memory w) private pure returns (string memory) {
+        bytes memory out = new bytes(w.length);
+        uint256 o;
+        uint256 i;
+        while (i < w.length && uint8(w[i]) != 0) {
+            uint256 len = uint8(w[i]);
+            if (o != 0) out[o++] = ".";
+            for (uint256 k; k < len; ++k) out[o++] = w[i + 1 + k];
+            i += len + 1;
+        }
+        bytes memory trimmed = new bytes(o);
+        for (uint256 k; k < o; ++k) trimmed[k] = out[k];
+        return string(trimmed);
     }
 
     /// @notice The key a settled deal's record lives under. Deterministic, so a reader does
     ///         not have to be told where to look.
-    function recordKey(bytes32 dealId) public pure returns (string memory) {
-        return string.concat("reckn:job:", _hex(dealId));
+    ///
+    /// @dev **The name is in the key on purpose.** Measured on the deployed resolver: the
+    ///      resource `decodeSetter` returns is a function of the KEY ALONE — `agent.reckn.eth`
+    ///      and `victim.reckn.eth` with the same key give the identical resource. So a role is
+    ///      never scoped to one name, and a grant issued for one name is technically usable on
+    ///      every name the resolver serves. Naming the name inside the key means a record
+    ///      written onto somebody else's name is written under a key that says whose it is, and
+    ///      the canonical lookup for that other name does not find it.
+    function recordKey(bytes32 dealId) public view returns (string memory) {
+        return string.concat("reckn:job:", nameDotted, ":", _hex(dealId));
     }
 
     /// @notice The value a truthful record carries. `Failed` is recorded, not omitted — a
@@ -117,7 +172,7 @@ contract SettlementRecord {
     /// @notice The exact calldata the buyer is authorised to send, and nothing else. The
     ///         resolver grants against the write itself, so the grant is per record rather
     ///         than per name: a grant for this key does not authorise any other key.
-    function setterFor(bytes calldata dnsName, bytes32 dealId) public pure returns (bytes memory) {
+    function setterFor(bytes32 dealId) public view returns (bytes memory) {
         return abi.encodeWithSelector(IPermissionedResolver.setText.selector, dnsName, recordKey(dealId), "");
     }
 
@@ -167,8 +222,8 @@ contract SettlementRecord {
     /// @dev The grant, in its own frame for the same stack reason as `_authorise`. The
     ///      resource AND the role bitmap both come back from the resolver; neither is a
     ///      constant of ours that could drift away from the deployment.
-    function _grant(bytes32 dealId, bytes calldata dnsName, address buyer) private returns (uint256 resource) {
-        bytes memory setter = setterFor(dnsName, dealId);
+    function _grant(bytes32 dealId, address buyer) private returns (uint256 resource) {
+        bytes memory setter = setterFor(dealId);
         uint256 roleBitmap;
         (, resource, roleBitmap) = resolver.decodeSetter(setter);
         // A root resource cannot be revoked (`EACRootResourceNotAllowed`), so a window opened
@@ -182,7 +237,7 @@ contract SettlementRecord {
 
     /// @notice Open the one window this deal will ever have. Anyone may call.
     /// @dev The outcome is read out of the proof, never off the caller.
-    function open(bytes32 dealId, bytes calldata dnsName, bytes calldata publicValues, bytes calldata proofBytes)
+    function open(bytes32 dealId, bytes calldata publicValues, bytes calldata proofBytes)
         external
         returns (address, uint8)
     {
@@ -192,7 +247,7 @@ contract SettlementRecord {
         (address buyer, uint8 outcome) = _authorise(dealId, publicValues, proofBytes);
         writerOf[dealId] = buyer;
         openedAt[dealId] = uint64(block.timestamp);
-        emit WindowOpened(dealId, buyer, _grant(dealId, dnsName, buyer), outcome);
+        emit WindowOpened(dealId, buyer, _grant(dealId, buyer), outcome);
         return (buyer, outcome);
     }
 

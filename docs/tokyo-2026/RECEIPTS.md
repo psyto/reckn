@@ -157,6 +157,14 @@ ENS returns, through `UniversalResolverV2` and not by calling our resolver direc
 and names our resolver as the one that answered. The agent's balance moved by 250 USDC, because
 the escrow paid it — this is a settlement, not a simulation of one.
 
+**What that string is, exactly.** The buyer typed it. The grant authorises the KEY, not the
+bytes, so nothing on chain forced those words: a buyer could write `reproduced` under a deal
+whose proof said `failed`. What the settlement created is the RIGHT to write one record — which
+is what `013` is named for — not the record's contents. The contents are *checkable*: anyone can
+re-derive `recordValue(outcome, block, verifier)` from the escrow and the proof and compare. They
+are not *enforced*. This paragraph exists because the block above, sitting under a row of green
+transaction hashes, invites the reader to think the chain produced the words. It did not.
+
 ### Who can write now
 
 | | |
