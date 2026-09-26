@@ -253,16 +253,18 @@ else's name. That is visible in the frame rather than asserted in a caption.
 estimated, so they were sent with an explicit limit; what lands is a transaction anybody can
 open and read, the same way beat 1's refusal does.
 
-**And they were refused by us.** `status 0` on its own means only that something went wrong.
-Re-simulated at its own block, the first refusal returns the PoolManager's ERC-7751
-`WrappedError`, and inside it:
+**And they were refused by us — both of them.** `status 0` on its own means only that something
+went wrong. Each refusal was re-simulated at its own block, and each returns the PoolManager's
+ERC-7751 `WrappedError` carrying the same two things:
 
 ```
 target : 0x68116b8086283E51227c61FD791b6Da1A4230080   <- our hook
 reason : 0x43a7f347                                    <- NoSettledRecord(address)
 ```
 
-Asserting the outer selector would have passed for any hook failing for any reason.
+Asserting the outer selector would have passed for any hook failing for any reason. Checking
+only the first refusal would have left the one that closes the argument — the pool shutting
+again after the record went away — resting on `status 0`.
 
 ### Standing the pool up
 

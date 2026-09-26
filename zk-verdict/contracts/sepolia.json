@@ -619,7 +619,7 @@
       "to": "0x25cc9656151acfd74e1cb4bd31f0e6e42bcb9525",
       "status": "FAILED",
       "gasUsed": 81680,
-      "note": "BEAT 5, shot three. The same swap, refused again. This is what stops the gate passing for an unrelated reason."
+      "note": "BEAT 5, shot five. The same swap, refused again after the record was cleared. This is what stops the gate passing for an unrelated reason. Re-simulated at its own block like the first refusal: ERC-7751 WrappedError with target = the hook and reason = 0x43a7f347 NoSettledRecord(address). Both refusals were checked, not just the first."
     },
     "windowClosed": {
       "tx": "0x2a6bf895e4fbe9187a976882275fbd066e323b7f1b0abf921e69a7068e2e03df",
