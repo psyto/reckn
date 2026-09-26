@@ -436,5 +436,200 @@
       "note": "the window closes. The buyer's second write now reverts too."
     },
     "note": "the 09-25 run, against adapter 0x6691283d. Superseded on 09-26, not deleted: it happened, the links to it are in this repository, and a record that drops what it now finds inconvenient is not a record. That adapter no longer holds root, so its window can never be opened again."
+  },
+  "hookOnChain": {
+    "what": "013 §4-9 on the real chain, 2026-09-26. Until this run the hook existed only on a fork, which would have made it the one part of this submission with no receipt.",
+    "hook": "0x68116b8086283E51227c61FD791b6Da1A4230080",
+    "hookFlags": "0x80 = BEFORE_SWAP_FLAG, mined with CREATE2 salt 20541",
+    "poolManager": "0xE03A1074c86CFeDd5C142C4F04F1a1536e203543",
+    "router": "0x25cc9656151acFD74e1Cb4bd31f0E6E42bcb9525",
+    "token0": "0x8B8F41C6976c9510576983530152fFda22b9e013",
+    "token1": "0xbd42480732Bb66630c93A8eDd0C0E0722a928A24",
+    "dealId": "0x214524e398487f5197cc7a80411dc37f9f8dfe7f2d8dbd6b656598f11ea45f87",
+    "recordKey": "reckn:job:agent.reckn.eth:214524e398487f5197cc7a80411dc37f9f8dfe7f2d8dbd6b656598f11ea45f87",
+    "approveForHookDeal": {
+      "tx": "0x282ce902fa565a76060faed717dacc0bf1cb51e49bfdfa9193ed0feb7dd1e1fc",
+      "block": 11782686,
+      "timestamp": "2026-09-26T00:23:24Z",
+      "from": "0x4b55f9e4d87505f3347c7cafcb8c7eb589970ee3",
+      "to": "0x6d6a9deb67d785bc131a5d732617eabe751098c5",
+      "status": "success",
+      "gasUsed": 244611,
+      "note": ""
+    },
+    "fundHookDeal": {
+      "tx": "0x78118df6140eeb3838543853e21234b5dcb2b08d19a9a97e155c690fe76c7ff5",
+      "block": 11782686,
+      "timestamp": "2026-09-26T00:23:24Z",
+      "from": "0x4b55f9e4d87505f3347c7cafcb8c7eb589970ee3",
+      "to": "0x16f95d91dba7da3aca778ec053df0ff6c6a8aa8e",
+      "status": "success",
+      "gasUsed": 46366,
+      "note": "the deal whose record opens the pool. Funded on the same escrow as every other deal here."
+    },
+    "settleHookDeal": {
+      "tx": "0x1111d485dd3520708ce02f29727420aa47918d5d5f20173fff6a1f78feb25fb6",
+      "block": 11782687,
+      "timestamp": "2026-09-26T00:23:36Z",
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0x6d6a9deb67d785bc131a5d732617eabe751098c5",
+      "status": "success",
+      "gasUsed": 293917,
+      "note": "settled on the repository's committed Groth16 proof, by the agent -- settlement is permissionless."
+    },
+    "openHookWindow": {
+      "tx": "0x7a8e4345109d35a205aef83f8ebe2d4f517322893b6625826becf26e1365823b",
+      "block": 11782687,
+      "timestamp": "2026-09-26T00:23:36Z",
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0xa6966f9f5e72a1841b2d2a22ec62a23d703202b8",
+      "status": "success",
+      "gasUsed": 530391,
+      "note": "the window is opened and DELIBERATELY left unwritten, so the pool can be filmed refusing before it is filmed passing."
+    },
+    "deployDemoToken0": {
+      "tx": "0x7320c2eedf5487e845da0ab15a9c8fd8630ab59212352f0e89fa2dc50b0c7e2f",
+      "block": 11782687,
+      "timestamp": "2026-09-26T00:23:36Z",
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": null,
+      "status": "success",
+      "gasUsed": 804857,
+      "note": "demo scaffolding: the pool needs two tokens.",
+      "contractAddress": "0x8B8F41C6976c9510576983530152fFda22b9e013"
+    },
+    "deployDemoToken1": {
+      "tx": "0xdbd77c621d5161375ce791ba8887dedab7042366536e717364aa9a7ff4b44517",
+      "block": 11782687,
+      "timestamp": "2026-09-26T00:23:36Z",
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": null,
+      "status": "success",
+      "gasUsed": 804857,
+      "note": "",
+      "contractAddress": "0xbd42480732Bb66630c93A8eDd0C0E0722a928A24"
+    },
+    "deployHook": {
+      "tx": "0xb3578c58f25cda04b4cfcdf99fc1d4609dc54a1c84a0f9f74cb4a2b3a25ecff9",
+      "block": 11782687,
+      "timestamp": "2026-09-26T00:23:36Z",
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0xbd42480732bb66630c93a8edd0c0e0722a928a24",
+      "status": "success",
+      "gasUsed": 68928,
+      "note": "CREATE2 through the deterministic factory 0x4e59b448, salt 20541, so that uint160(hook) & ALL_HOOK_MASK == BEFORE_SWAP_FLAG. Low 14 bits are 0x80.",
+      "contractAddress": "0x68116b8086283E51227c61FD791b6Da1A4230080"
+    },
+    "deployPoolRouter": {
+      "tx": "0x880b42a4b71a69175f3cd0e172caeafab2943ac9e6aa0dc95fd917dc1b8d8f79",
+      "block": 11782687,
+      "timestamp": "2026-09-26T00:23:36Z",
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0x8b8f41c6976c9510576983530152ffda22b9e013",
+      "status": "success",
+      "gasUsed": 68928,
+      "note": "does the unlock dance so a swap is one transaction.",
+      "contractAddress": "0x25cc9656151acFD74e1Cb4bd31f0E6E42bcb9525"
+    },
+    "mintToken0": {
+      "tx": "0x297b270736dcfc3176d34b59b7777c63e05a0074ef3ee14063b3dafabc60c128",
+      "block": 11782687,
+      "timestamp": "2026-09-26T00:23:36Z",
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0x25cc9656151acfd74e1cb4bd31f0e6e42bcb9525",
+      "status": "success",
+      "gasUsed": 288284,
+      "note": ""
+    },
+    "mintToken1": {
+      "tx": "0xeb87fc2c199bd1e2d93d64c329c6f6393e702d03fda0479791e00d205acb2647",
+      "block": 11782687,
+      "timestamp": "2026-09-26T00:23:36Z",
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0x4e59b44847b379578588920ca78fbf26c0b4956c",
+      "status": "success",
+      "gasUsed": 1422199,
+      "note": ""
+    },
+    "initializePool": {
+      "tx": "0xd7b40b081665cbc9a4a25758938c8407f2e495723c9472543a123fb6caeb154c",
+      "block": 11782687,
+      "timestamp": "2026-09-26T00:23:36Z",
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": null,
+      "status": "success",
+      "gasUsed": 1322523,
+      "note": "on the REAL Sepolia PoolManager 0xE03A1074, fee 3000, tickSpacing 60, hooks = our hook."
+    },
+    "addLiquidity": {
+      "tx": "0x7102a2437a489d2e587ee241b6a48301e0417c4a751e1d75538d81e05fa7c16e",
+      "block": 11782687,
+      "timestamp": "2026-09-26T00:23:36Z",
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0xe03a1074c86cfedd5c142c4f04f1a1536e203543",
+      "status": "success",
+      "gasUsed": 51751,
+      "note": "100e18 of liquidity over [-600, 600]. beforeAddLiquidity is unflagged, so the hook is NOT consulted here -- the gate is on trading."
+    },
+    "swapRefused": {
+      "tx": "0xda60d7df7940bf25fd01466444573d0b364a8865641e97dc061096ad1f1f94be",
+      "block": 11782689,
+      "timestamp": "2026-09-26T00:24:00Z",
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0x25cc9656151acfd74e1cb4bd31f0e6e42bcb9525",
+      "status": "FAILED",
+      "gasUsed": 81680,
+      "note": "BEAT 5, shot one. A swap with no record. FAILED on chain, and refused by US: simulated at this same block, the ERC-7751 WrappedError carries target = the hook and reason = 0x43a7f347 NoSettledRecord(address). Sent with an explicit gas limit because a reverting call cannot be estimated."
+    },
+    "recordWritten": {
+      "tx": "0xd561043323073bc9b704a35aab59d147be4ad97c4735ddfe41b5993eabb619e8",
+      "block": 11782690,
+      "timestamp": "2026-09-26T00:24:12Z",
+      "from": "0x4b55f9e4d87505f3347c7cafcb8c7eb589970ee3",
+      "to": "0x740e02ce9fb52629fef861ca02df7091f416bbf8",
+      "status": "success",
+      "gasUsed": 139131,
+      "note": "the buyer writes, using the role the settlement granted. No root."
+    },
+    "swapExecuted": {
+      "tx": "0xa40bb3162ed17e084155277cd2d0a9605c1fea510ddef6df62dbf502831f5698",
+      "block": 11782692,
+      "timestamp": "2026-09-26T00:24:36Z",
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0x25cc9656151acfd74e1cb4bd31f0e6e42bcb9525",
+      "status": "success",
+      "gasUsed": 180432,
+      "note": "BEAT 5, shot two. The SAME swap, now executed: 1.000000000000000000 token0 out."
+    },
+    "recordCleared": {
+      "tx": "0x427ee98a7a117c91604fed12f6e16bb5eb0473967f0a9e054e1ce75a1fe073a4",
+      "block": 11782693,
+      "timestamp": "2026-09-26T00:24:48Z",
+      "from": "0x4b55f9e4d87505f3347c7cafcb8c7eb589970ee3",
+      "to": "0x740e02ce9fb52629fef861ca02df7091f416bbf8",
+      "status": "success",
+      "gasUsed": 54876,
+      "note": "the buyer clears the record while the window is still open."
+    },
+    "swapRefusedAgain": {
+      "tx": "0xce00489eb9f2ebca202643c28841360737b35bc30e81a276e47fab64e2f1fa79",
+      "block": 11782695,
+      "timestamp": "2026-09-26T00:25:12Z",
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0x25cc9656151acfd74e1cb4bd31f0e6e42bcb9525",
+      "status": "FAILED",
+      "gasUsed": 81680,
+      "note": "BEAT 5, shot three. The same swap, refused again. This is what stops the gate passing for an unrelated reason."
+    },
+    "windowClosed": {
+      "tx": "0x2a6bf895e4fbe9187a976882275fbd066e323b7f1b0abf921e69a7068e2e03df",
+      "block": 11782696,
+      "timestamp": "2026-09-26T00:25:24Z",
+      "from": "0x4b55f9e4d87505f3347c7cafcb8c7eb589970ee3",
+      "to": "0xa6966f9f5e72a1841b2d2a22ec62a23d703202b8",
+      "status": "success",
+      "gasUsed": 75228,
+      "note": "the one window this deal will ever have."
+    }
   }
 }

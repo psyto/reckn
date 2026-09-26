@@ -1,0 +1,10 @@
+{
+  "dealId": "0x214524e398487f5197cc7a80411dc37f9f8dfe7f2d8dbd6b656598f11ea45f87",
+  "fee": 3000,
+  "hook": "0x68116b8086283E51227c61FD791b6Da1A4230080",
+  "recordKey": "reckn:job:agent.reckn.eth:214524e398487f5197cc7a80411dc37f9f8dfe7f2d8dbd6b656598f11ea45f87",
+  "router": "0x25cc9656151acFD74e1Cb4bd31f0E6E42bcb9525",
+  "salt": 20541,
+  "token0": "0x8B8F41C6976c9510576983530152fFda22b9e013",
+  "token1": "0xbd42480732Bb66630c93A8eDd0C0E0722a928A24"
+}

@@ -9,7 +9,7 @@ allow_paths = ["../zk-verdict/contracts"]
 # The Groth16 fixtures live with the guest that produced them, and the acceptance tests read
 # them rather than regenerating (ZK_FRESH=1 overwrites a fixture crafted so that AC10 means
 # something — PREFLIGHT §5.2).
-fs_permissions = [{ access = "read", path = "../zk-verdict/contracts/src/fixtures" }]
+fs_permissions = [{ access = "read", path = "../zk-verdict/contracts/src/fixtures" }, { access = "write", path = "./hook-onchain.json" }]
 
 [rpc_endpoints]
 sepolia = "https://ethereum-sepolia-rpc.publicnode.com"

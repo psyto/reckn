@@ -196,6 +196,64 @@ re-derive `recordValue(outcome, block, verifier)` from the escrow and the proof 
 are not *enforced*. This paragraph exists because the block above, sitting under a row of green
 transaction hashes, invites the reader to think the chain produced the words. It did not.
 
+## The gate, on the real chain
+
+Until 2026-09-26 the v4 hook existed only on a fork. Everything else here has a receipt, so the
+hook was the one part a judge could not click, and that asymmetry is worth more than the feature.
+It is on Sepolia now.
+
+**Hook [`0x68116b8086283E51227c61FD791b6Da1A4230080`](https://sepolia.etherscan.io/address/0x68116b8086283E51227c61FD791b6Da1A4230080)** — the low 14 bits are
+`0x80`, `BEFORE_SWAP_FLAG` and nothing else, mined with a CREATE2 salt so the PoolManager will
+accept it. Pool on the real PoolManager
+[`0xE03A1074c86CFeDd5C142C4F04F1a1536e203543`](https://sepolia.etherscan.io/address/0xE03A1074c86CFeDd5C142C4F04F1a1536e203543),
+fee 3000, with **100e18 of liquidity actually provided** — a swap through an empty pool is a
+no-op and would prove nothing.
+
+### Beat 5, as three transactions
+
+| | transaction | result | gas |
+|---|---|---|---|
+| **a swap, with no record** — refused | [`0xda60d7df…`](https://sepolia.etherscan.io/tx/0xda60d7df7940bf25fd01466444573d0b364a8865641e97dc061096ad1f1f94be) | FAILED | 81,680 |
+| the buyer writes the record | [`0xd5610433…`](https://sepolia.etherscan.io/tx/0xd561043323073bc9b704a35aab59d147be4ad97c4735ddfe41b5993eabb619e8) | success | 139,131 |
+| **the SAME swap** — executes, 1.0 token0 out | [`0xa40bb316…`](https://sepolia.etherscan.io/tx/0xa40bb3162ed17e084155277cd2d0a9605c1fea510ddef6df62dbf502831f5698) | success | 180,432 |
+| the buyer clears the record | [`0x427ee98a…`](https://sepolia.etherscan.io/tx/0x427ee98a7a117c91604fed12f6e16bb5eb0473967f0a9e054e1ce75a1fe073a4) | success | 54,876 |
+| **the same swap again** — refused | [`0xce00489e…`](https://sepolia.etherscan.io/tx/0xce00489eb9f2ebca202643c28841360737b35bc30e81a276e47fab64e2f1fa79) | FAILED | 81,680 |
+| the window closes | [`0x2a6bf895…`](https://sepolia.etherscan.io/tx/0x2a6bf895e4fbe9187a976882275fbd066e323b7f1b0abf921e69a7068e2e03df) | success | 75,228 |
+
+**The two refusals are failed transactions on purpose.** A reverting call cannot be gas
+estimated, so they were sent with an explicit limit; what lands is a transaction anybody can
+open and read, the same way beat 1's refusal does.
+
+**And they were refused by us.** `status 0` on its own means only that something went wrong.
+Re-simulated at its own block, the first refusal returns the PoolManager's ERC-7751
+`WrappedError`, and inside it:
+
+```
+target : 0x68116b8086283E51227c61FD791b6Da1A4230080   <- our hook
+reason : 0x43a7f347                                    <- NoSettledRecord(address)
+```
+
+Asserting the outer selector would have passed for any hook failing for any reason.
+
+### Standing the pool up
+
+| | transaction | result | gas |
+|---|---|---|---|
+| the buyer funds the deal | [`0x78118df6…`](https://sepolia.etherscan.io/tx/0x78118df6140eeb3838543853e21234b5dcb2b08d19a9a97e155c690fe76c7ff5) | success | 46,366 |
+| the approval it needed | [`0x282ce902…`](https://sepolia.etherscan.io/tx/0x282ce902fa565a76060faed717dacc0bf1cb51e49bfdfa9193ed0feb7dd1e1fc) | success | 244,611 |
+| settled on a real proof | [`0x1111d485…`](https://sepolia.etherscan.io/tx/0x1111d485dd3520708ce02f29727420aa47918d5d5f20173fff6a1f78feb25fb6) | success | 293,917 |
+| the window opens — **and is left unwritten** | [`0x7a8e4345…`](https://sepolia.etherscan.io/tx/0x7a8e4345109d35a205aef83f8ebe2d4f517322893b6625826becf26e1365823b) | success | 530,391 |
+| the hook, CREATE2 at a mined address | [`0xb3578c58…`](https://sepolia.etherscan.io/tx/0xb3578c58f25cda04b4cfcdf99fc1d4609dc54a1c84a0f9f74cb4a2b3a25ecff9) | success | 68,928 |
+| the router that does the unlock dance | [`0x880b42a4…`](https://sepolia.etherscan.io/tx/0x880b42a4b71a69175f3cd0e172caeafab2943ac9e6aa0dc95fd917dc1b8d8f79) | success | 68,928 |
+| a demo token | [`0x7320c2ee…`](https://sepolia.etherscan.io/tx/0x7320c2eedf5487e845da0ab15a9c8fd8630ab59212352f0e89fa2dc50b0c7e2f) | success | 804,857 |
+| the other demo token | [`0xdbd77c62…`](https://sepolia.etherscan.io/tx/0xdbd77c621d5161375ce791ba8887dedab7042366536e717364aa9a7ff4b44517) | success | 804,857 |
+| mint | [`0x297b2707…`](https://sepolia.etherscan.io/tx/0x297b270736dcfc3176d34b59b7777c63e05a0074ef3ee14063b3dafabc60c128) | success | 288,284 |
+| mint | [`0xeb87fc2c…`](https://sepolia.etherscan.io/tx/0xeb87fc2c199bd1e2d93d64c329c6f6393e702d03fda0479791e00d205acb2647) | success | 1,422,199 |
+| initialise the pool on the real PoolManager | [`0xd7b40b08…`](https://sepolia.etherscan.io/tx/0xd7b40b081665cbc9a4a25758938c8407f2e495723c9472543a123fb6caeb154c) | success | 1,322,523 |
+| provide liquidity — the hook is **not** consulted here | [`0x7102a243…`](https://sepolia.etherscan.io/tx/0x7102a2437a489d2e587ee241b6a48301e0417c4a751e1d75538d81e05fa7c16e) | success | 51,751 |
+
+The window was left unwritten on purpose. A pool that is already open cannot be filmed opening.
+
 ### Who can write now
 
 | | |

@@ -168,9 +168,15 @@ compute what to revoke**. The implementation is **UUPS**; an EIP-1167 clone dies
 | the record is readable **on chain, synchronously**, by a contract; **no CCIP-Read on this path** | ✓ |
 | **a v4 hook on the real Sepolia PoolManager refuses a swap without the record and passes it after** | ✓ |
 
-**Honest limits of the last row: no liquidity was provided**, so the post-record swap is a no-op
-against an empty pool. What is measured is that **`beforeSwap` stopped refusing** — not that a
-swap moved tokens. The refusal was asserted to come from our hook and to be our error, after
+**★ 2026-09-26: the last row's limits are gone, and the hook is no longer on a fork.** It is
+deployed at `0x68116b8086283E51227c61FD791b6Da1A4230080` with `100e18` of liquidity in the pool,
+and beat 5 is three transactions on Sepolia — refused, executed (`1.0` token0 out), refused
+again. Receipts in `docs/tokyo-2026/RECEIPTS.md`. What follows is the 09-21 text, kept because
+it is what was true when the row was written.
+
+~~**Honest limits of the last row: no liquidity was provided**, so the post-record swap is a
+no-op against an empty pool. What is measured is that **`beforeSwap` stopped refusing** — not
+that a swap moved tokens.~~ The refusal was asserted to come from our hook and to be our error, after
 unwrapping ERC-7751 `WrappedError(target, selector, reason, details)`; **asserting the outer
 selector proves nothing, and the first version of that test asserted the wrong field.**
 
