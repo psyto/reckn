@@ -88,7 +88,7 @@ where the same rules put the other half of the requirement — "include full det
 submission (repo history, video, and description)". It also lives at this path in the public
 repository so the history and the disclosure are checkable side by side.
 
- AMENDMENT — 2026-09-26 13:00 JST
+AMENDMENT — 2026-09-26 13:00 JST
 
 Everything below §4 was written before the event and says "none of this exists". It exists
 now. The original text is left exactly as filed, because it is the declaration we made in
@@ -96,24 +96,24 @@ advance and rewriting it into the past tense would destroy the only thing that m
 pre-event declaration worth anything. This section says what landed, and where a judge can
 check it.
 
-  §4 said would be built - state - check it
-  1. a parent ENSv2 registry on Sepolia and agent subnames - done - 0x1Ad360D9..., agent.reckn.eth
-  2. the record contract — a settlement opens a one-record window and closes it - done - 0xA6966f9f5E72a1841b2d2A22Ec62a23D703202b8
-  3. a Uniswap v4 beforeSwap hook gating a pool on that record - done - 0x68116b8086283E51227c61FD791b6Da1A4230080, 3 swaps on chain
-  4. buyer-side binding, settlement wiring, RecknZkEscrow on Sepolia - done - 0x6d6a9deb..., and a proof generated during the event settled a deal
-  5. the acceptance-criteria test matrix - done - 18 tests against the deployed contracts
-  6. FEEDBACK.md, the Uniswap feedback form, README line numbers - FEEDBACK.md and the README done; the feedback-form submission is a separate action - FEEDBACK.md in the repository root
-  7. live demo, new screenshots, video - demo and screenshots done; video shot last - psyto.github.io/reckn
+§4 said would be built - state - check it
+1. a parent ENSv2 registry on Sepolia and agent subnames - done - 0x1Ad360D9..., agent.reckn.eth
+2. the record contract — a settlement opens a one-record window and closes it - done - 0xA6966f9f5E72a1841b2d2A22Ec62a23D703202b8
+3. a Uniswap v4 beforeSwap hook gating a pool on that record - done - 0x68116b8086283E51227c61FD791b6Da1A4230080, 3 swaps on chain
+4. buyer-side binding, settlement wiring, RecknZkEscrow on Sepolia - done - 0x6d6a9deb..., and a proof generated during the event settled a deal
+5. the acceptance-criteria test matrix - done - 18 tests against the deployed contracts
+6. FEEDBACK.md, the Uniswap feedback form, README line numbers - FEEDBACK.md and the README done; the feedback-form submission is a separate action - FEEDBACK.md in the repository root
+7. live demo, new screenshots, video - demo and screenshots done; video shot last - psyto.github.io/reckn
 
 Two things in the original are now wrong in our favour and are corrected here, not deleted.
 
 - §3.1 cites the pre-event proving measurement of 497.40 s. A fresh proof was generated
-  during the event on 2026-09-26 in 416.56 s, and it settled a deal on Sepolia forty minutes
-  later. The pre-event figure stays disclosed as pre-event; the event figure is event work.
+during the event on 2026-09-26 in 416.56 s, and it settled a deal on Sepolia forty minutes
+later. The pre-event figure stays disclosed as pre-event; the event figure is event work.
 - §1 lists scripts/no-keys.sh as complete pre-existing work. It was extended during the event
-  to read the two new contracts, and a negative control was added that plants five dissimilar
-  keys and requires the check to go red for each. The extension is event work; the original
-  is not.
+to read the two new contracts, and a negative control was added that plants five dissimilar
+keys and requires the check to go red for each. The extension is event work; the original
+is not.
 
 Nothing was removed from the tree to make this look better. The commit history from
 eddac8d (2026-09-25 19:31 JST, recorded before the window opened) is the boundary, and every
@@ -137,12 +137,12 @@ than no number, so what is stated instead is the boundary: 310 through 501cbde o
 
 0. THE SHORT VERSION
 
-  This project is not new. First commit - b8388f4, 2026-07-26
-  Commits before the event - 310 of product history through 501cbde, 2026-09-14, all public on master. Everything after it is the pre-event design, measurement and documents of §3 — including the commits that carry this file.
-  It has been submitted to another hackathon - ETHOnline 2026 (async, 09-04 -> 09-16) — see §2
-  Pre-existing implementation - substantial: 26 Solidity files, 136 Rust files tracked
-  Written for Tokyo before the event - design and measurement only — 2 specs, 2 reviews, 10 throwaway spike tests
-  Submission code written for Tokyo - zero lines. Nothing in §4 exists
+This project is not new. First commit - b8388f4, 2026-07-26
+Commits before the event - 310 of product history through 501cbde, 2026-09-14, all public on master. Everything after it is the pre-event design, measurement and documents of §3 — including the commits that carry this file.
+It has been submitted to another hackathon - ETHOnline 2026 (async, 09-04 -> 09-16) — see §2
+Pre-existing implementation - substantial: 26 Solidity files, 136 Rust files tracked
+Written for Tokyo before the event - design and measurement only — 2 specs, 2 reviews, 10 throwaway spike tests
+Submission code written for Tokyo - zero lines. Nothing in §4 exists
 
 We are not claiming to start from scratch, and the Continuity track is the reason we do not
 have to. What follows is the boundary, drawn where the rules draw it.
@@ -152,16 +152,16 @@ have to. What follows is the boundary, drawn where the rules draw it.
 An escrow for agent-to-agent payments whose arbiter is deterministic re-execution. A buyer
 funds a deal; the fee is released only if replaying the work reproduces the agreed outcome.
 
-  component - state before the event
-  zk-verdict/contracts/src/RecknZkEscrow.sol - complete. No owner / resolver / admin / pause / upgrade; settleWithProof is permissionless; refundAfterDeadline returns funds after 30 days to anyone who calls it, paying the caller nothing
-  zk-verdict/contracts/src/RecknVerdictVerifier.sol - complete. verifyVerdict is public view
-  zk-verdict/program-revm - complete. Real revm run in-guest over a prestate MPT-verified against the block state_root
-  zk-verdict/program-svm - complete. Not used by this submission
-  contracts/ (optimistic path) - complete. Not the submission's path
-  ERC-8004 reputation surface, x402 payment surface - complete
-  scripts/no-keys.sh - complete. A build-time check that the escrow has no key
-  Arc testnet deployment - escrow deployed, 4 real settlements. Pre-existing, and not part of this submission
-  dashboard/media/* (5 images) - ETHOnline/Arc assets. They will not be reused as Tokyo screenshots
+component - state before the event
+zk-verdict/contracts/src/RecknZkEscrow.sol - complete. No owner / resolver / admin / pause / upgrade; settleWithProof is permissionless; refundAfterDeadline returns funds after 30 days to anyone who calls it, paying the caller nothing
+zk-verdict/contracts/src/RecknVerdictVerifier.sol - complete. verifyVerdict is public view
+zk-verdict/program-revm - complete. Real revm run in-guest over a prestate MPT-verified against the block state_root
+zk-verdict/program-svm - complete. Not used by this submission
+contracts/ (optimistic path) - complete. Not the submission's path
+ERC-8004 reputation surface, x402 payment surface - complete
+scripts/no-keys.sh - complete. A build-time check that the escrow has no key
+Arc testnet deployment - escrow deployed, 4 real settlements. Pre-existing, and not part of this submission
+dashboard/media/* (5 images) - ETHOnline/Arc assets. They will not be reused as Tokyo screenshots
 
 2. PRIOR HACKATHON USE — DISCLOSED BECAUSE IT IS MATERIAL
 
@@ -179,13 +179,13 @@ competition during 2026-09-25 -> 09-27.
 ETHGlobal permits planning, design and research before an event and forbids building the
 submission. Everything in this section is design or measurement. None of it is submission code.
 
-  what - when - detail
-  docs/specs/012-uniswap-reexecution-slice.md - 2026-09-08 - design for a Uniswap re-execution slice. Superseded by 013, kept as the fallback
-  docs/specs/013-settlement-granted-record-rights.md - from 2026-09-21 - the submission's design, at revision r4
-  docs/reviews/013-spec-r1.md, -r2.md - 2026-09-21 - two independent adversarial reviews of that design, each ending in a verdict. Both returned CHANGES; four blockers are recorded with the fixes
-  spikes/tokyo-2026/ - 2026-09-21 - 10 throwaway test files, 1,506 lines. Fork tests against Sepolia and against the repository's own fixtures
-  spikes/tokyo-2026/FINDINGS.md - 2026-09-21 - what the spikes measured, including two places where the design was wrong and was corrected
-  docs/tokyo-2026/DEMO.md, VIDEO-RUNBOOK.md, SPEAKER-CARD.md, SPONSOR-CARDS.md - 2026-09-25, before 21:00 JST - script, capture plan, speaking aid, and in-person question cards. Preparation only: no submission UI, deployment, fixture, screenshot, or video exists in them
+what - when - detail
+docs/specs/012-uniswap-reexecution-slice.md - 2026-09-08 - design for a Uniswap re-execution slice. Superseded by 013, kept as the fallback
+docs/specs/013-settlement-granted-record-rights.md - from 2026-09-21 - the submission's design, at revision r4
+docs/reviews/013-spec-r1.md, -r2.md - 2026-09-21 - two independent adversarial reviews of that design, each ending in a verdict. Both returned CHANGES; four blockers are recorded with the fixes
+spikes/tokyo-2026/ - 2026-09-21 - 10 throwaway test files, 1,506 lines. Fork tests against Sepolia and against the repository's own fixtures
+spikes/tokyo-2026/FINDINGS.md - 2026-09-21 - what the spikes measured, including two places where the design was wrong and was corrected
+docs/tokyo-2026/DEMO.md, VIDEO-RUNBOOK.md, SPEAKER-CARD.md, SPONSOR-CARDS.md - 2026-09-25, before 21:00 JST - script, capture plan, speaking aid, and in-person question cards. Preparation only: no submission UI, deployment, fixture, screenshot, or video exists in them
 
 3.1 A MEASUREMENT TAKEN BEFORE THE EVENT, WHICH THE SUBMISSION WILL CITE
 
@@ -210,14 +210,14 @@ the record shows nothing unfavourable was withheld.
 None of this exists. It is the "substantive new features developed during the event" the
 Continuity track requires, and it is the list a judge should be able to check commit by commit.
 
-  # - to build
-  1 - A parent ENSv2 registry on Sepolia, and agent subnames issued under it
-  2 - The record contract: a settlement opens a one-record write window for the deal's buyer, then closes it
-  3 - A Uniswap v4 beforeSwap hook that gates a pool on that record
-  4 - Buyer-side deal binding, settlement wiring, and RecknZkEscrow deployed to Sepolia
-  5 - The acceptance-criteria test matrix
-  6 - FEEDBACK.md, the Uniswap Developer Feedback Form, and a README section pointing at the contracts and line numbers
-  7 - A live demo, new screenshots, and the video
+# - to build
+1 - A parent ENSv2 registry on Sepolia, and agent subnames issued under it
+2 - The record contract: a settlement opens a one-record write window for the deal's buyer, then closes it
+3 - A Uniswap v4 beforeSwap hook that gates a pool on that record
+4 - Buyer-side deal binding, settlement wiring, and RecknZkEscrow deployed to Sepolia
+5 - The acceptance-criteria test matrix
+6 - FEEDBACK.md, the Uniswap Developer Feedback Form, and a README section pointing at the contracts and line numbers
+7 - A live demo, new screenshots, and the video
 
 RecknZkEscrow itself will not be modified. Its function surface is the project's central
 claim, and the event work sits outside it.
@@ -225,27 +225,27 @@ claim, and the event work sits outside it.
 5. HOW THE BOUNDARY IS CHECKABLE RATHER THAN PROMISED
 
 - The repository is public and every commit is dated. A pre-event commit cannot later be
-  presented as event work, and the history is as checkable against us as for us.
+presented as event work, and the history is as checkable against us as for us.
 - Event work is defined by the clock, not the calendar day: hacking begins 2026-09-25 at
-  21:00 JST, and only commits at or after that moment are event work. The 25th is not a
-  boundary — registration opens at 13:00 and the sponsor workshops, dinner and opening ceremony
-  fill the eight hours before hacking starts. Anything committed in that window is pre-event work
-  and is disclosed as such.
-  A commit hash is recorded as EVENT_START before the first of them.
+21:00 JST, and only commits at or after that moment are event work. The 25th is not a
+boundary — registration opens at 13:00 and the sponsor workshops, dinner and opening ceremony
+fill the eight hours before hacking starts. Anything committed in that window is pre-event work
+and is disclosed as such.
+A commit hash is recorded as EVENT_START before the first of them.
 - Continuous commits during the event. The rules treat a single large final commit as
-  unqualified by default, and this repository's practice is small commits per task.
+unqualified by default, and this repository's practice is small commits per task.
 
 6. HONEST NOTES
 
 - This project has a large pre-existing implementation, and the rules note that projects
-  relying mostly on pre-existing work do not historically score as high. We are not hiding the
-  ratio: the escrow, the guests and the proving pipeline are old; the ENS record surface, the
-  v4 hook and everything that joins them are new.
+relying mostly on pre-existing work do not historically score as high. We are not hiding the
+ratio: the escrow, the guests and the proving pipeline are old; the ENS record surface, the
+v4 hook and everything that joins them are new.
 - The design in 013 has been through two independent review rounds that both returned
-  CHANGES, and the spikes then showed two further places where its reasoning was wrong.
-  Those corrections are in the document rather than removed from it.
+CHANGES, and the spikes then showed two further places where its reasoning was wrong.
+Those corrections are in the document rather than removed from it.
 - docs/ethonline-2026/ describes a different event. It is kept, not deleted, and its claims
-  are not this submission's claims.
+are not this submission's claims.
 
 Contact: @psyto69 (Telegram) · psyto (GitHub) · Discord psyto7835.
 If any part of this disclosure is insufficient, we would rather be told before the event than

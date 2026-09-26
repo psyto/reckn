@@ -46,14 +46,16 @@ def plain(md: str) -> str:
                 continue                                   # table rule
             cells = [c for c in cells if c]
             line = " - ".join(cells) if len(cells) > 1 else "".join(cells)
-            line = "  " + line if line else line
         elif line.startswith("#"):
             line = line.lstrip("#").strip().upper()
         elif line.startswith(">"):
             line = line.lstrip(">").strip()
         elif re.fullmatch(r"-{3,}", line.strip()):
             line = ""
-        out.append(line.rstrip())
+        # The submission field is a plain-text textarea. Leading whitespace is rendered as an
+        # accidental indent there (not as Markdown structure), so it must never survive the
+        # conversion — including wrapped prose and rows formerly belonging to a Markdown table.
+        out.append(line.strip())
 
     text = "\n".join(out)
 
@@ -64,6 +66,8 @@ def plain(md: str) -> str:
                  ("\u2013", "-"), ("\u2026", "..."), ("\u2192", "->"),
                  ("\u00a0", " "), ("\u2019", "'"), ("\u201c", '"'), ("\u201d", '"')):
         text = text.replace(a, b)
+    # NBSP is normalized above, after the per-line trim, so trim once more after normalization.
+    text = re.sub(r"(?m)^[ \t]+", "", text)
     text = re.sub(r"[ \t]+\n", "\n", text)
     return re.sub(r"\n{3,}", "\n\n", text).strip()
 
