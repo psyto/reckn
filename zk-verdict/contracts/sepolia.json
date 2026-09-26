@@ -333,7 +333,8 @@
     "ourRegistry.roles(agent.reckn.eth, agent)": "0x10000 = ROLE_RENEW only",
     "UniversalResolverV2.resolve(agent.reckn.eth, text)": "routes to 0x740e02ce…, our resolver — E-Q3 satisfied on the real resolution path",
     "setResolver by a third party": "reverts EACUnauthorizedAccountRoles (0x4b27a133)",
-    "setResolver by the agent itself": "STILL SUCCEEDS, because the deployer holds ROOT roles on the parent registry. S4's claim closes only after those are renounced, which happens after the adapter is granted. 013 section 1.1 discloses exactly this residue; it is not yet closed and is not claimed to be."
+    "setResolver by the agent itself": "REFUSED with EACUnauthorizedAccountRoles (0x4b27a133), re-measured 2026-09-26 after the renounce. It said STILL SUCCEEDS until then, because the deployer held ROOT on the parent registry and root overrides the token's roles. S4's claim -- the agent owns its name and cannot repoint it -- is closed now, and this is R-6b: it was the one assertion in this file that no test could reach, and it took destroying the key to settle.",
+    "setResolver by the agent itself (before the renounce)": "STILL SUCCEEDS, because the deployer holds ROOT roles on the parent registry. S4's claim closes only after those are renounced, which happens after the adapter is granted. 013 section 1.1 discloses exactly this residue; it is not yet closed and is not claimed to be."
   },
   "deployed": {
     "RecknZkEscrow": "0x6d6a9deb67d785BC131a5d732617EABE751098C5",
