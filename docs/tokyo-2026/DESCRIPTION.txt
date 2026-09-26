@@ -103,7 +103,7 @@ check it.
 4. buyer-side binding, settlement wiring, RecknZkEscrow on Sepolia - done - 0x6d6a9deb..., and a proof generated during the event settled a deal
 5. the acceptance-criteria test matrix - done - 18 tests against the deployed contracts
 6. FEEDBACK.md, the Uniswap feedback form, README line numbers - all three done - FEEDBACK.md in the repository root; the feedback form submitted 2026-09-26
-7. live demo, new screenshots, video - demo and screenshots done; video shot last - psyto.github.io/reckn
+7. live demo, new screenshots, video - done. The demo page reads Sepolia in the reader's browser rather than showing a capture of it - psyto.github.io/reckn
 
 Two things in the original are now wrong in our favour and are corrected here, not deleted.
 
