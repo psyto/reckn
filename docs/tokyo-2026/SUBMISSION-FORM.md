@@ -65,10 +65,10 @@ where nothing had been built, and every row of it had stopped being true.)*
 ## 3. Short description (≤100 characters)
 
 ~~~text
-An agent earns a record it cannot write itself, and that record is its pass to a v4 pool.
+Reckn pays for reproduced work; a settled ENS record opens a Uniswap v4 pool.
 ~~~
 
-*(89 characters.)*
+*(77 characters.)*
 
 ## 4. Description
 
