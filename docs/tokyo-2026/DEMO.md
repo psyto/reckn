@@ -2,7 +2,8 @@
 
 **Form requirements**: 2–4 minutes, ≥720p, **a human voice with no music**. The video is
 optional; everything below assumes we make one, because the showcase runs on it.
-**Live judging**: 2026-09-27 **14:30 JST**, in person, panel — a different medium, scripted in §3.
+**Live judging**: 2026-09-27 **09:30-12:30 JST at the 5F partner booths**, in person — a different
+medium, scripted in §3. **Not 14:30; see §3.**
 
 **Why this document is rewritten rather than reused.** ETHOnline 2026 Round 1 was not lost on the
 claim. This repository's own post-mortem says the video was *"a verification checklist"* optimised
@@ -235,7 +236,25 @@ submission text is what changes** (`SUBMISSION-FORM.md` §9).
 
 ---
 
-## 3. Live judging, 09-27 14:30 — a different medium
+## 3. Live judging, 09-27 **09:30-12:30** — a different medium
+
+**★ CORRECTED 2026-09-26 from the official agenda.** The old figure here was **14:30**,
+sourced from `013` G-Q3 as *"founder's calendar, not a file"* — the one scheduling claim the
+repository marked as unverifiable. The published agenda has no 14:30 in it:
+
+| Sun 09-27 | |
+|---|---|
+| 08:00 | breakfast, 5F catering |
+| **09:00** | **PROJECT SUBMISSIONS DUE** |
+| **09:30-12:30** | **Partner Prize Judging — 5F Partner Booths.** ENS and Uniswap Foundation are here. **This is Reckn's live lane** |
+| 09:30-12:30 | Main Finalist Judging — 4F Judging Rooms |
+| 12:30 | lunch |
+| 15:15 | finalists notified |
+| 15:30-17:30 | closing ceremonies, 4F Main Stage |
+
+**Judging starts 09:30, not 14:30, and it is at the partner booths.** Being at the venue by
+09:15 is the binding constraint of the whole Sunday, and it is five hours earlier than planned.
+
 
 **★ The slot is 7 minutes: 4 for the demo, then 3 for Q&A** (ETHGlobal's own description). A
 panel can interrupt, so the script is a **spine plus prepared answers**, not a recitation — but a

@@ -30,7 +30,7 @@ where nothing had been built, and every row of it had stopped being true.)*
 | field | state |
 |---|---|
 | project name, emoji, category (Artificial Intelligence) | **entered** |
-| track (Continuity), submission type (**Top 10 Finalist + Partner**) | **entered.** Live judging 09-27 14:30, 4 min demo + 3 min Q&A |
+| track (Continuity), submission type (**Top 10 Finalist + Partner**) | **entered.** Live judging **09-27 09:30-12:30 at the 5F partner booths** (corrected 09-26 from the agenda; 14:30 was wrong), 4 min demo + 3 min Q&A |
 | partner prizes | **ENS and Uniswap Foundation, and only those two.** The form offers three slots. **Do not take the third** — 1inch appeared in the form and this project does not use it |
 | GitHub repository, tech stack pages | **entered** — `psyto/reckn` |
 | **About: topics, description, homepage** | **done 09-26.** `ens` / `uniswap` / `uniswap-v4` / `erc-8004` added, `arc` gone, description rewritten, homepage points at the Tokyo page |

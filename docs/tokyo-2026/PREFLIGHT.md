@@ -540,6 +540,33 @@ addresses, the salts, the revert selectors and the limits stated — including t
 work. **Send that, not a deck.** A page built to be handed over becomes a pitch, and §7.1 and §7.2
 both exist to avoid handing anybody a pitch.
 
+## ★ 7b. Day 2 — **judging is in the morning, and the plan said afternoon**
+
+**Corrected 2026-09-26 from the published agenda.** Every planning document in this repository
+said **live judging 14:30**. Its source was `013` G-Q3, which wrote its own source down as
+*"founder's calendar, not a file"* — the single scheduling claim with nothing behind it, and the
+single one that was wrong. It was off by **five hours in the dangerous direction**.
+
+| Sun 09-27, Toranomon Hills Forum | |
+|---|---|
+| 08:00-09:00 | breakfast, 5F catering |
+| **09:00** | **PROJECT SUBMISSIONS DUE** |
+| **09:30-12:30** | **Partner Prize Judging — 5F Partner Booths.** ENS and Uniswap Foundation are both here. **This is the lane Reckn is in** |
+| 09:30-12:30 | Main Finalist Judging — 4F Judging Rooms |
+| 12:30-13:30 | lunch, 5F |
+| 15:15 | finalists notified |
+| 15:30-17:30 | closing ceremonies, 4F Main Stage |
+
+- **Be at the venue before 09:30.** Partner judging is a three-hour window at the booths, not an
+  appointment, so arriving at 09:15 means the whole window is usable and arriving at 12:00 means
+  most of it is gone. **ENS and Uniswap are two separate booths** — budget for both.
+- **Submit before leaving home, not at the venue.** The 09:00 deadline lands while travelling.
+  Venue wifi at 08:55 with a 17,534-character paste is not a plan.
+- **The truth pass (§9 of `DEMO.md`) has to finish the night before**, because the morning is
+  breakfast and travel. It cannot sit at 02:00-05:00 on a day that starts with a commute.
+- Closing ceremonies are 15:30-17:30. **Finalists are notified 15:15** — that is the first moment
+  the Top-10 question is answered, and it is after judging, not before.
+
 ## 6. Done-check — updated 2026-09-22, three days out
 
 | | |

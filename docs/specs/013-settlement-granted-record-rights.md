@@ -425,7 +425,8 @@ Unchanged from `012` §6 and restated as rules for ourselves:
 4. **The written disclosure to ETHGlobal is a separate action from the submission form.**
    **This document is pre-existing design and must appear in it**, as must `012` and §2.3.
 5. Track: **Continuity**. Submission type: **Top 10 Finalist & Partner Prizes** (live judging
-   2026-09-27 14:30 JST). Partners applied for: **ENS**, **Uniswap Foundation**. Not 1inch.
+   **2026-09-27 09:30-12:30 JST, 5F partner booths** — corrected 09-26 from the published
+   agenda; this line said 14:30). Partners applied for: **ENS**, **Uniswap Foundation**. Not 1inch.
 
 ---
 
@@ -534,7 +535,7 @@ second one is what gets dropped.
 |---|---|---|
 | G-Q1 | written pre-existing-work disclosure to ETHGlobal, **separate from the submission form** | §6-4 |
 | G-Q2 | version control throughout; **no single large commit** | §6-3 |
-| G-Q3 | Top 10 Finalist ⇒ **live judging 2026-09-27 14:30 JST** | founder's calendar, not a file |
+| G-Q3 | ~~Top 10 Finalist ⇒ **live judging 2026-09-27 14:30 JST**~~ → **CLOSED 2026-09-26, and it was wrong.** Judging is **09:30-12:30 at the 5F partner booths**; submissions are due **09:00**. | ~~founder's calendar, not a file~~ → **the published agenda.** This row named its own weakness and the weakness is what bit: the only scheduling claim with no file behind it was the only one off by five hours |
 
 **★ Everything in §9 is unstarted except what S7 measured.** The technical unknowns are closed;
 these are not technical.
