@@ -101,18 +101,28 @@ state-changing entry point, or a caller-identity gate. The live Tokyo evidence i
 
 ### Every gate, and what each one is able to catch
 
-Eight. **A check nobody has seen fail is not a check**, so each of these has a way of going
-red that has actually been observed — and one of them is red right now, on purpose:
+Eleven. **A check nobody has seen fail is not a check**, so each of these has a way of going
+red that has actually been observed — and one of them is red right now, on purpose.
+
+**The three `forge test` rows were added on 2026-09-27, and adding them is the point.** Until
+then this table had no row that ran the contracts' own tests, so "every gate is green" was true
+and did not mean what it sounded like: renouncing root on 09-26 broke all three event-work
+suites at `setUp()` — they hand the adapter its admin role using the root that no longer exists
+— **and nothing noticed for fifteen hours.** They also ran against whatever the chain happened
+to be at the moment of the run, which is a query rather than a test; they are pinned now.
 
 | run it | it goes red when |
 |---|---|
 | `bash scripts/no-keys.sh` | the escrow gains a key of any kind |
 | `bash scripts/no-keys-control.sh` | **the gate above stops working** — it plants eight dissimilar keys and requires a red for each. 10/10 |
 | `bash scripts/no-unpublished-cli.sh` | a command in the docs does not exist |
-| `bash scripts/partner-kit-check.sh` | the adapter or the hook breaks a property. 95 tests |
+| `bash scripts/partner-kit-check.sh` | **something an adopter is told to run stops running** — the partner package's own 95 tests, the starter's 10 checks, the release gate, and every command the docs name. **It does not test the adapter or the hook**; an earlier version of this line said it did |
 | `bash tokyo-2026/scripts/take-check.sh` | a line the demo says out loud stops being true on chain — it **refuses to record** |
 | `bash zk-verdict/scripts/sepolia-receipts.sh` | a receipt is linked that the chain-generated ledger does not hold, **or** a recorded transaction is linked nowhere. 69/69, both directions |
 | `bash docs/tokyo-2026/check-description.sh` | the submitted description and the repository disagree |
+| `cd tokyo-2026 && forge test` | **the event work breaks** — the ENS adapter, the v4 hook, and the griefing guard. **18 tests, against the real Sepolia deployment, pinned at block 11784630.** Needs an archive RPC in `SEPOLIA_RPC` (`PREFLIGHT` §3) |
+| `cd zk-verdict/contracts && forge test` | the central escrow or the Groth16 verifier breaks. **55 tests** — binding mismatch reverts, the false-release vector refunds, tampered public values are rejected |
+| `cd contracts && forge test` | the optimistic path breaks. **57 tests** |
 | `bash docs/tokyo-2026/check-video.sh` | the submission video would be auto-rejected. **Red as of 2026-09-27, and correctly so.** Rows 1-5 pass on the uploaded cut `…_v21_CAPTIONED.mp4` — 3:02, 1920x1080, 61 speech pauses, 30 scene changes. **Row 6 is not measured by anything**: no OCR runs, so it holds the hash of a cut a person watched frame by frame, and that was `v13`, an earlier export. The founder decided not to re-watch. The row stays red rather than being recorded as watched |
 
 ---

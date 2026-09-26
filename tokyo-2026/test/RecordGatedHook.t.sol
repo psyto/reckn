@@ -133,6 +133,15 @@ contract RecordGatedHookTest is Test {
     }
 
     function setUp() public {
+        // ★ Pinned 2026-09-27. These rows run against the REAL deployment, and until now they
+        // ran against whatever it happened to be at the moment of the run -- which is a query,
+        // not a test. Root was renounced at block 11784631 and setUp needs the deployer's root
+        // to hand the adapter its admin role, so from that block on, every suite here failed at
+        // setUp and nobody noticed: nothing re-ran them after the renounce. 11784630 is the last
+        // block with root alive, and every address these tests name is deployed by 11784603.
+        // The pin needs ARCHIVE state; the public endpoint in foundry.toml prunes it and
+        // answers "historical state is not available". Export SEPOLIA_RPC (PREFLIGHT §3).
+        vm.createSelectFork(vm.envOr("SEPOLIA_RPC", string("sepolia")), 11_784_630);
         rec = new SettlementRecord(ESCROW, IPermissionedResolver(RESOLVER), _dns());
         usdc = new MockUSDC();
         usdc.mint(buyer, 10_000_000000);
