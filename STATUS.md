@@ -35,7 +35,9 @@
 | 動画 | **`Reckn_ETHGlobal_Tokyo_HYBRID_DEMO_v21_CAPTIONED.mp4`**（3:02、肉声、字幕つき）。`check-video.sh` **5/6** ——1〜5 は実測で緑、**§6（フレームへの `SEPOLIA_RPC` 焼き付き）はこのカットでは未実施**。実施したのは別書き出しの `v13` で、founder 判断により繰り返さない。**見ていないものを「見た」と記録せず、赤のまま残す** |
 | description | `DESCRIPTION.txt` @ `34a32830`、`PASTED` に記録 |
 | 当日朝 | **まず 4F でチェックインし judging room を割り当ててもらう**（部屋は固定枠）。**5F のパートナーブースは 09:30–12:30 の窓**なので、部屋を軸に挟む |
-| ゲート | **7/8 緑 ＋ `check-video` が意図的に赤**（`no-keys` / `no-keys-control` 10/10 / `no-unpublished-cli` / `partner-kit` 95/95 / `take-check` / `sepolia-receipts` 69/69 / `check-description` / `check-video` 6/6） |
+| ゲート（2026-09-27 再測） | **10/11 緑、赤は `check-video` の §6 のみ**（意図的）。`no-keys` / `no-keys-control` 10/10 / `no-unpublished-cli` / `partner-kit` / `take-check` / `sepolia-receipts` 69/69 / `check-description` / **`tokyo-2026` forge 18/18** / **`zk-verdict/contracts` forge 55/55** / **`contracts` forge 57/57** |
+| テスト（Solidity 合計） | **130 本、全緑。**~~`partner-kit` 95/95 がアダプタと hook を検査~~ → **偽。**あれは adopter 向けコマンドが動くかの検査で、コントラクトを一切テストしない |
+| ★ 09-27 の発見 | **renounce が tokyo-2026 の3スイートを 15 時間殺していた。**`setUp()` が破棄済みの root を使っていた。**block 11784630 に固定**して復旧（ライブに当てる非固定テストは「問い合わせ」であってテストではない）。**archive RPC が要る**ので `SEPOLIA_RPC` から読む |
 
 **「未提出」と書かない。**
 

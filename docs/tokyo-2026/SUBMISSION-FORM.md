@@ -388,6 +388,9 @@ older draft:
 | every number in this form comes from the deployed run | `bash zk-verdict/scripts/sepolia-receipts.sh` — **69/69, both directions** (09-27 00:0x; it said 54/54 before the renounce, hook and playground transactions landed) |
 | every fact the video shows is true at the moment of recording | `bash tokyo-2026/scripts/take-check.sh` — **refuses to record**. ~~today reports exactly one red row: beat 2, until the renounce~~ → **all green since the renounce landed 09-26 16:05 JST**; beat 2 now reads *the agent refused* |
 | the central claim | `bash scripts/no-keys.sh`, and `no-keys-control.sh` plants **eight** dissimilar keys and requires it to go red for each — **10/10** |
+| **the event work itself** — the ENS adapter, the v4 hook, the griefing guard | `cd tokyo-2026 && forge test` — **18 tests against the real deployment, pinned at block 11784630**. **Added to this table 2026-09-27**: until then no row here ran a forge suite, and all three had been failing at `setUp()` since the renounce fifteen hours earlier, because `setUp` uses the root that renouncing destroyed |
+| the escrow and the Groth16 verifier | `cd zk-verdict/contracts && forge test` — 55 tests |
+| the optimistic path | `cd contracts && forge test` — 57 tests |
 | the form field and the repository cannot disagree | `bash docs/tokyo-2026/check-description.sh` |
 | the submission video clears ETHGlobal's automatic rejections | `bash docs/tokyo-2026/check-video.sh` — **6/6**. Row 6 is not measured: it records the hash of the cut a person watched frame by frame |
 
