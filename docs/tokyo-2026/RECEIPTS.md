@@ -209,7 +209,21 @@ accept it. Pool on the real PoolManager
 fee 3000, with **100e18 of liquidity actually provided** — a swap through an empty pool is a
 no-op and would prove nothing.
 
-### Beat 5, as three transactions
+### Beat 5, as four transactions
+
+![A swap with no record: Fail, execution reverted. Sent by the agent to the router.](media/beat5-01-swap-refused.png)
+
+![The buyer writes the record -- Set Text on our resolver. This is the only thing that changes between the frame above and the frame below.](media/beat5-02-buyer-writes-the-record.png)
+
+![The same swap, now Success, with two ERC-20 transfers: 1 Reckn Demo B out and 0.987158034 Reckn Demo A back.](media/beat5-03-swap-executes.png)
+
+![The record cleared, the same swap again: Fail.](media/beat5-04-refused-again.png)
+
+**The middle frame is the whole argument.** Same sender, same router, same pool, same swap. The
+only thing that changed is whether a record exists — and the record exists only because a job
+was re-executed, reproduced, and settled.
+
+#### The transactions
 
 | | transaction | result | gas |
 |---|---|---|---|
