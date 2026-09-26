@@ -13,6 +13,41 @@
 > submission (repo history, video, and description)"*. It also lives at this path in the public
 > repository so the history and the disclosure are checkable side by side.
 
+## ★ AMENDMENT — 2026-09-26 13:00 JST
+
+**Everything below §4 was written before the event and says "none of this exists". It exists
+now.** The original text is left exactly as filed, because it is the declaration we made in
+advance and rewriting it into the past tense would destroy the only thing that makes a
+pre-event declaration worth anything. This section says what landed, and where a judge can
+check it.
+
+| §4 said would be built | state | check it |
+|---|---|---|
+| 1. a parent ENSv2 registry on Sepolia and agent subnames | **done** | `0x1Ad360D9…`, `agent.reckn.eth` |
+| 2. the record contract — a settlement opens a one-record window and closes it | **done** | `0xA6966f9f5E72a1841b2d2A22Ec62a23D703202b8` |
+| 3. a Uniswap v4 `beforeSwap` hook gating a pool on that record | **done** | `0x68116b8086283E51227c61FD791b6Da1A4230080`, 3 swaps on chain |
+| 4. buyer-side binding, settlement wiring, `RecknZkEscrow` on Sepolia | **done** | `0x6d6a9deb…`, and a proof generated **during** the event settled a deal |
+| 5. the acceptance-criteria test matrix | **done** | 18 tests against the deployed contracts |
+| 6. `FEEDBACK.md`, the Uniswap feedback form, README line numbers | **`FEEDBACK.md` and the README done; the feedback-form submission is a separate action** | `FEEDBACK.md` in the repository root |
+| 7. live demo, new screenshots, video | **demo and screenshots done; video shot last** | `psyto.github.io/reckn` |
+
+**Two things in the original are now wrong in our favour and are corrected here, not deleted.**
+
+- §3.1 cites the pre-event proving measurement of **497.40 s**. A *fresh* proof was generated
+  during the event on 2026-09-26 in **416.56 s**, and it settled a deal on Sepolia forty minutes
+  later. The pre-event figure stays disclosed as pre-event; the event figure is event work.
+- §1 lists `scripts/no-keys.sh` as complete pre-existing work. It was extended during the event
+  to read the two new contracts, and a negative control was added that plants five dissimilar
+  keys and requires the check to go red for each. **The extension is event work; the original
+  is not.**
+
+**Nothing was removed from the tree to make this look better.** The commit history from
+`eddac8d` (2026-09-25 19:31 JST, recorded before the window opened) is the boundary, and every
+event commit is small, dated, and carries the AI co-author line. Attribution per file, including
+what the models got wrong, is in `docs/tokyo-2026/AI-USE.md`.
+
+---
+
 ETHGlobal's rules require pre-existing work to be disclosed in writing, and name **code, designs
 and assets**. This document lists what exists before the event and states what will be written
 during it. **Every count below was taken by running a command against the repository on
