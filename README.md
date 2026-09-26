@@ -33,6 +33,14 @@ swap. It is not a reputation badge: it changes whether the swap can execute.
 3. **The pass.** A Uniswap v4 `beforeSwap` hook reads the settled ENS record synchronously on
    chain. No record, no swap. Clear it, and the same swap closes again.
 
+**Why a pool, and why v4.** A record that only says *this agent did the work* is a badge —
+nobody has to look at it. **In front of a pool it is a key: it decides whether you can trade.**
+That is the difference between **reputation and access**. And the check runs **inside** the
+swap, so it cannot be skipped and cannot be delegated: read the record off-chain and then route
+the trade, and the party enforcing it is whoever operates the router — **a party you have to
+trust, in the one place this project removed one.** v4 is the first version where the pool
+itself carries that rule.
+
 ### The three swap transactions
 
 On **Sepolia**, with the same sender, pool, and swap:
