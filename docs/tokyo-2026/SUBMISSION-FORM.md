@@ -41,7 +41,7 @@ where nothing had been built, and every row of it had stopped being true.)*
 | images (logo, cover, **≥3 screenshots**) | **9 frames exist** in `docs/tokyo-2026/media/`. Arc/ETHOnline images must not be reused |
 | video | **not shot.** Beats 1, 3 and 5 are in the can; **beat 2 needs the renounce first** |
 | Future Opportunities | **not answered** — grants / accelerator interest |
-| **Uniswap Developer Feedback Form (`U-Q3`)** | **not submitted.** A separate action from this form. The URL to give it: `github.com/psyto/reckn/blob/master/FEEDBACK.md` |
+| **Uniswap Developer Feedback Form (`U-Q3`)** | **submitted 2026-09-26**, at https://developers.uniswap.org/hackathon-feedback — the URL the prize names, **not** the `?form=feedback` widget on the docs site. It carries the link to `FEEDBACK.md` in two of its fields, because it has no dedicated one |
 
 ## 1. Project name
 

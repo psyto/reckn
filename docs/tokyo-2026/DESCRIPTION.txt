@@ -102,7 +102,7 @@ check it.
 3. a Uniswap v4 beforeSwap hook gating a pool on that record - done - 0x68116b8086283E51227c61FD791b6Da1A4230080, 3 swaps on chain
 4. buyer-side binding, settlement wiring, RecknZkEscrow on Sepolia - done - 0x6d6a9deb..., and a proof generated during the event settled a deal
 5. the acceptance-criteria test matrix - done - 18 tests against the deployed contracts
-6. FEEDBACK.md, the Uniswap feedback form, README line numbers - FEEDBACK.md and the README done; the feedback-form submission is a separate action - FEEDBACK.md in the repository root
+6. FEEDBACK.md, the Uniswap feedback form, README line numbers - all three done - FEEDBACK.md in the repository root; the feedback form submitted 2026-09-26
 7. live demo, new screenshots, video - demo and screenshots done; video shot last - psyto.github.io/reckn
 
 Two things in the original are now wrong in our favour and are corrected here, not deleted.

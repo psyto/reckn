@@ -514,7 +514,7 @@ second one is what gets dropped.
 |---|---|---|
 | U-Q1 | public GitHub repository, open source | `psyto/reckn` — already public |
 | U-Q2 | **`FEEDBACK.md`** | §4-5 |
-| U-Q3 | **submission to the Uniswap Developer Feedback Form, including the link to `FEEDBACK.md`** | §4-5. *A separate action from the ETHGlobal form* |
+| U-Q3 | **submission to the Uniswap Developer Feedback Form, including the link to `FEEDBACK.md`** — the prize names the URL and this row did not: **https://developers.uniswap.org/hackathon-feedback**. *A separate action from the ETHGlobal form, and not the `?form=feedback` widget on the docs site.* **Submitted 2026-09-26** | §4-5 |
 | U-Q4 | **README points at the relevant contracts and lines of code** | §4-13 |
 
 ### ENS (both tracks)
