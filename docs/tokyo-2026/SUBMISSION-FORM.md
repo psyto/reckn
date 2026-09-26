@@ -356,10 +356,11 @@ older draft:
 
 | | |
 |---|---|
-| every number in this form comes from the deployed run | `bash zk-verdict/scripts/sepolia-receipts.sh` — 54/54, both directions |
-| every fact the video shows is true at the moment of recording | `bash tokyo-2026/scripts/take-check.sh` — **refuses to record**, and today reports exactly one red row: beat 2, until the renounce |
-| the central claim | `bash scripts/no-keys.sh`, and `no-keys-control.sh` plants five dissimilar keys and requires it to go red for each |
+| every number in this form comes from the deployed run | `bash zk-verdict/scripts/sepolia-receipts.sh` — **69/69, both directions** (09-27 00:0x; it said 54/54 before the renounce, hook and playground transactions landed) |
+| every fact the video shows is true at the moment of recording | `bash tokyo-2026/scripts/take-check.sh` — **refuses to record**. ~~today reports exactly one red row: beat 2, until the renounce~~ → **all green since the renounce landed 09-26 16:05 JST**; beat 2 now reads *the agent refused* |
+| the central claim | `bash scripts/no-keys.sh`, and `no-keys-control.sh` plants **eight** dissimilar keys and requires it to go red for each — **10/10** |
 | the form field and the repository cannot disagree | `bash docs/tokyo-2026/check-description.sh` |
+| the submission video clears ETHGlobal's automatic rejections | `bash docs/tokyo-2026/check-video.sh` — **6/6**. Row 6 is not measured: it records the hash of the cut a person watched frame by frame |
 
 **The one thing none of those can check** is whether the description field actually holds
 `DESCRIPTION.txt`. That is a human paste, and `--record` is what closes it.
