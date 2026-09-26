@@ -631,5 +631,44 @@
       "gasUsed": 75228,
       "note": "the one window this deal will ever have."
     }
+  },
+  "eventProof": {
+    "what": "013 §4-4. A proof that did not exist when the event started, verified on chain by the deployed verifier and settling a real deal.",
+    "generated": "2026-09-26 10:15-10:22 JST, 416.56 s wall, SP1_PROVER=cpu",
+    "fixture": "zk-verdict/contracts/src/fixtures/event-reexec-groth16-fixture.json",
+    "vkey": "0x00c2ee9999a00a5987a5b5c5261bee355bbb6e86c145429775d9fe89f496e16d  -- identical to the deployed RecknVerdictVerifier's immutable vkey",
+    "dealBinding": "0xf10273cbf124327a6f6fdc1e95942dfa505be2e0981d08cf74e2d2297605cf2a",
+    "terms": "pre=42, post=142, floor=100 -- reexec's own defaults, NOT the shipped fixture's pre=2^64. Running `reexec --fixture` without --fixture-path would have replaced the committed fixture with a proof of different terms: every field still plausible, deal_binding and trace_hash quietly different. DEMO.md §5-5 warns about the overwrite; this is the sharper half.",
+    "committedFixtureUntouched": true,
+    "eventApprove": {
+      "tx": "0x80276d849784d005354d0c8c526dfb690ea21b96acbcb83ca5037c268c732929",
+      "block": 11783031,
+      "timestamp": "2026-09-26T01:35:12Z",
+      "from": "0x4b55f9e4d87505f3347c7cafcb8c7eb589970ee3",
+      "to": "0x16f95d91dba7da3aca778ec053df0ff6c6a8aa8e",
+      "status": "success",
+      "gasUsed": 46366,
+      "note": ""
+    },
+    "eventFund": {
+      "tx": "0x3d7215a8d1368401cdd9f884d277b4729c6bc3c090700f506bf689643a9e6545",
+      "block": 11783032,
+      "timestamp": "2026-09-26T01:35:24Z",
+      "from": "0x4b55f9e4d87505f3347c7cafcb8c7eb589970ee3",
+      "to": "0x6d6a9deb67d785bc131a5d732617eabe751098c5",
+      "status": "success",
+      "gasUsed": 239799,
+      "note": "the buyer commits to the binding of a proof made 40 minutes earlier."
+    },
+    "eventSettle": {
+      "tx": "0x60ff6e9ed2c4a2f20efa68124f38fa8afa55e03c8823f74def3ebf0c6bae74d6",
+      "block": 11783033,
+      "timestamp": "2026-09-26T01:35:48Z",
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0x6d6a9deb67d785bc131a5d732617eabe751098c5",
+      "status": "success",
+      "gasUsed": 293881,
+      "note": "settled by a Groth16 proof GENERATED DURING THE EVENT -- 2026-09-26, 416.56 s wall on CPU, 15,972,262 constraints. Every other settlement in this record was decided by a proof committed to the tree before the event, which is disclosed and fine, but left one sentence unavailable: that the proving pipeline ran here. The agent was paid 250.000000 MockUSDC."
+    }
   }
 }

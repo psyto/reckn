@@ -196,6 +196,30 @@ re-derive `recordValue(outcome, block, verifier)` from the escrow and the proof 
 are not *enforced*. This paragraph exists because the block above, sitting under a row of green
 transaction hashes, invites the reader to think the chain produced the words. It did not.
 
+## A proof made during the event, settled during the event
+
+Every other settlement here was decided by a Groth16 proof **committed to the tree before the
+event**. That is disclosed and it is fine, but it left one sentence unavailable: that the proving
+pipeline ran here rather than being a file we shipped.
+
+On **2026-09-26, 10:15–10:22 JST**, a fresh proof of the EVM re-execution was generated —
+**416.56 s wall on CPU, 15,972,262 constraints** — and its vkey is byte-identical to the one the
+deployed `RecknVerdictVerifier` pins in an immutable field. Forty minutes later a buyer committed
+to its binding and it paid an agent.
+
+| | transaction | result | gas |
+|---|---|---|---|
+| the buyer commits to the binding | [`0x3d7215a8…`](https://sepolia.etherscan.io/tx/0x3d7215a8d1368401cdd9f884d277b4729c6bc3c090700f506bf689643a9e6545) | success | 239,799 |
+| the approval it needed | [`0x80276d84…`](https://sepolia.etherscan.io/tx/0x80276d849784d005354d0c8c526dfb690ea21b96acbcb83ca5037c268c732929) | success | 46,366 |
+| **settled by this morning's proof** — 250.000000 USDC to the agent | [`0x60ff6e9e…`](https://sepolia.etherscan.io/tx/0x60ff6e9ed2c4a2f20efa68124f38fa8afa55e03c8823f74def3ebf0c6bae74d6) | success | 293,881 |
+
+**The committed fixture was not touched, and nearly was.** `reexec --fixture` defaults to
+`pre=42, post=142`, not the shipped `pre=2⁶⁴`. Without `--fixture-path` it would have replaced the
+shipped fixture with a proof of *different terms* — every field still plausible, `deal_binding`
+and `trace_hash` quietly different, and the property `AC10` checks silently gone. `DEMO.md` §5-5
+warns about the overwrite; the terms changing underneath it is the sharper half, and it is now
+written down in both places.
+
 ## The gate, on the real chain
 
 Until 2026-09-26 the v4 hook existed only on a fork. Everything else here has a receipt, so the

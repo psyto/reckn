@@ -187,9 +187,14 @@ The repository, the live demo link, and the pre-existing-work disclosure.
 three-minute video.** The proof is generated **before recording**, during the event, and the
 video shows the **settlement transaction** consuming it.
 
-**Say the recorded run's actual duration on screen**: *"proof generated earlier — [event
-duration]"*. Do not cut away and imply it was instant, and do not carry the 497.40-second
-pre-event figure into the take unless that is the duration of the proof the settlement consumed.
+**★ 2026-09-26: the number to say is 416.56 seconds.** A fresh proof was generated during the
+event (10:15–10:22 JST, CPU, 15,972,262 constraints) and **that is the proof the settlement
+consumed** — `0x60ff6e9e…` on Sepolia, 250 USDC to the agent. The condition this paragraph set is
+therefore met, and the take says **416.56 s**, not 497.40.
+
+**Say the recorded run's actual duration on screen**: *"proof generated earlier — 416.56 s"*. Do
+not cut away and imply it was instant, and do not carry the 497.40-second pre-event figure into
+the take: it is a different run of a different set of terms.
 
 ### Beat 5 — the numbers must be the run's own
 
@@ -268,7 +273,7 @@ passing, here it is refusing again", then stop and let them ask.
    the take — a repository guard does not guard a video. Same rule for the live screen-share on
    the 27th.
 10. **★ Shoot each beat the moment it stands — do not save the camera for the end.** Beats 1–3
-   are standing when night 1 closes; beat 5 when the funded pool runs; beat 4 while the 497-second
+   are standing when night 1 closes; beat 5 when the funded pool runs; beat 4 while the ~416-second
    proof is generating. **Take rushes then**, ten minutes each. The 23:00 block on the 26th is
    then the **real take and the edit**, against footage that already exists, rather than the only
    attempt — which is what it was until this rule was written. **One rehearsal out loud, un-recorded,
