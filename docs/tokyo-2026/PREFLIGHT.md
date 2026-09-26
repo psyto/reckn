@@ -226,7 +226,12 @@ reason to change anything before the event; all three are reasons not to be surp
 The failure text does survive the `grep` filter, so it is visible **if you read the scrollback**.
 The exit code is not, and the closing paragraph asserts the opposite.
 
-**Fix it during the event**, while writing `FEEDBACK.md` and the README pointers — not now.
+**★ 2026-09-26: fixed.** The output is captured first and the status is forge's own, so a
+failing suite exits non-zero and the closing paragraph is not printed. Negative-controlled with a
+test made to revert on purpose: forge exit 1 with the fix, and 0 with the first attempt at it,
+because `|| true` runs on failure and replaces `PIPESTATUS`.
+
+~~**Fix it during the event**, while writing `FEEDBACK.md` and the README pointers — not now.~~
 Touching it beforehand improves the submission before the window opens; knowing about it now is
 enough to avoid being fooled by it. Added to `013` §4.
 

@@ -263,7 +263,11 @@ passing, here it is refusing again", then stop and let them ask.
 5. **Do not run `ZK_FRESH=1` to make the recording's proof** unless you then restore
    `reexec-groth16-fixture.json` — it overwrites a fixture crafted with `pre = 2⁶⁴` and silently
    removes what AC10 checks (`PREFLIGHT` §5.2).
-6. **Trust the test output, not `zk-e2e.sh`'s exit code**, until §4-14 lands (`PREFLIGHT` §5.1).
+6. ~~**Trust the test output, not `zk-e2e.sh`'s exit code**, until §4-14 lands (`PREFLIGHT` §5.1).~~
+   **★ 2026-09-26: §4-14 landed — the exit code is forge's own now**, and a failing suite stops
+   the script before it prints "what just happened". The first attempt at that fix did not work
+   (`|| true` runs on failure and overwrites `PIPESTATUS`), which is why this line is struck
+   through rather than deleted: it was true for a while longer than it looked.
 7. **New screenshots.** `dashboard/media/*` are Arc/ETHOnline assets and must not be reused.
 8. **★ Both Uniswap appearances are in the take.** A cut that keeps the gate and loses the
    re-executed swap turns the Uniswap prize submission into a claim the video does not support.

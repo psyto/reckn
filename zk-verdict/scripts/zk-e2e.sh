@@ -81,8 +81,30 @@ fi
 # --- 2. on-chain: verify the real proof AND settle -----------------------------
 say "On-chain: the REAL Groth16 proofs verify via one generic verifier, and settle"
 ensure_contracts_deps
-( cd "$contracts" && forge test -vv 2>&1 ) | \
+# The filter is a pipeline, so `$?` would be grep's, and `|| true` discarded even that. This
+# script is advertised in the README as the one-command demo, and until 2026-09-26 it printed
+# "what just happened" and exited 0 **with a failing test suite behind it** -- measured twice,
+# once on a throwaway clone with a test made to revert on purpose. The failure text survived the
+# grep, so it was visible to anyone reading the scrollback; the exit code was not, and the
+# closing paragraph asserted the opposite of what had happened (013 §4-14, PREFLIGHT §5.1).
+#
+# NOT `| grep … || true; ${PIPESTATUS[0]}`. That was the first fix and it did not work: when the
+# pipeline fails, `|| true` RUNS, and PIPESTATUS is then the status of `true`. Measured with a
+# test made to revert on purpose -- forge said FAILED and the variable said 0. A repair that
+# cannot fail is the same defect as the thing it repaired.
+#
+# So the output is captured first and filtered afterwards, and the status is forge's own.
+set +e
+forge_out=$( cd "$contracts" && forge test -vv 2>&1 )
+forge_status=$?
+set -e
+printf '%s\n' "$forge_out" | \
   grep -E 'RecknReexecVerdict|RecknSvmVerdict|RecknZkEscrow|real_.*verifies|reexecution_proof|settles_to_seller|refunds_buyer|Suite result|Ran .* test suites' || true
+if [[ "$forge_status" -ne 0 ]]; then
+  printf '\n\033[31mzk-e2e: the on-chain suite FAILED (forge exit %s).\033[0m\n' "$forge_status"
+  printf 'Nothing below would be true, so it is not printed.\n'
+  exit "$forge_status"
+fi
 
 cat <<'EOF'
 
