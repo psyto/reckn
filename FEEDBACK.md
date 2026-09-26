@@ -31,8 +31,20 @@ router looks identical. The options we could find are `hookData`, which the rout
 willing to forward and which the trader can therefore choose, or trusting a specific router
 address, which is a different trust assumption than the hook looks like it is making.
 
-**Question:** is there an intended pattern for a hook that must know the end user? If the answer
-is "there isn't, and that is deliberate", we would rather read that sentence than infer it.
+**Asked at the event, and answered** — thank you. The pattern is a **trusted router**: the hook
+keeps an allowlist of routers and calls `IMsgSender(sender).msgSender()` on them. The docs are
+admirably direct about the cost — *"verify the contracts are valid before adding them to the
+list of trusted routers"* — and there is no mechanism to check that a router tells the truth.
+
+**We are not going to implement it, and the reason is the whole project.** Reckn exists to take
+the party you have to trust out of a payment decision. A gate that depends on an allowlist
+somebody maintains puts one back, in the last place we had removed it from. Our own build-time
+check would refuse it as well: an allowlist needs an owner, and `scripts/no-keys.sh` fails the
+build on one.
+
+So the limit stays, and it is now a position rather than an omission: **this pool is gated on a
+record existing, not on who is spending it.** If a later version of v4 can hand a hook the end
+user without a trusted intermediary, that is the thing we would build on.
 
 We stated the limit in our own contract rather than let it be found later:
 

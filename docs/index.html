@@ -284,12 +284,19 @@
   proof, and they are not enforced.
   <br><br>
   <b>The hook does not identify the swapper.</b> It asks whether a record exists and says
-  <span class="m">reproduced</span>. Nothing on chain ties an arbitrary address to a name, so a
-  second agent could trade behind the first one's record.
+  <span class="m">reproduced</span>. <span class="m">beforeSwap</span>'s <span class="m">sender</span>
+  is whoever unlocked the PoolManager, so everyone behind one router looks the same to it, and a
+  second agent could trade behind the first one's record. <b>We asked Uniswap and they answered:
+  keep an allowlist of routers and call <span class="m">msgSender()</span> on them.</b> We are
+  declining that. An allowlist is a party you have to trust, in the last place we had removed
+  one — and our own build check fails on the owner it would need.
   <br><br>
   <b>A role is scoped to the key, never to the name.</b> Measured, and it is the resolver's
   behaviour rather than ours. We pin the adapter to one name and put that name inside the key,
   which makes a write onto a foreign name unattributable &mdash; not impossible.
+  <b>We asked ENS and the answer is better than ours:</b> partition names across resolver
+  instances, one per group of writers, because <i>the resolver instance is the trust boundary</i>.
+  This deployment is already that in its smallest form &mdash; one resolver, one name.
   <br><br>
   <b>Nothing here is mainnet, and nothing here is money.</b> Sepolia, test tokens, and an
   escrow holding a mock USDC.

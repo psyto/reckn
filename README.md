@@ -53,8 +53,13 @@ two roles are deliberate: **earn on v3, spend on v4.**
 - It does **not** make a buyer-chosen verifier trustworthy; the buyer names that program.
 - It gates **trading**, not liquidity provision.
 - It is **Sepolia**, test tokens, and a testnet deployment — not mainnet.
-- The hook gates on a settled record, not on the ultimate trader identity; `beforeSwap` sees the
-  PoolManager unlocker/router.
+- The hook gates on a settled record, not on the trader's identity: `beforeSwap` sees whoever
+  unlocked the PoolManager. **We asked Uniswap; the pattern is an allowlist of routers you call
+  `msgSender()` on, and we are declining it** — an allowlist is a party you have to trust, in the
+  last place we had removed one.
+- A setter role is scoped to the key and never to a name. **We asked ENS; the answer is to
+  partition names across resolver instances**, because the resolver instance is the trust
+  boundary. This deployment is already that in its smallest form: one resolver, one name.
 
 The live page reports the one state that must not be taken on faith — whether the deployed agent
 account still holds a root role capable of overriding the per-record rule. **It no longer does**,

@@ -140,9 +140,15 @@ record, not its contents: a buyer can write "reproduced" under a job whose proof
 The contents are checkable by anyone against the escrow and the proof; they are not enforced.
 The hook cannot identify the swapper, because beforeSwap's sender is whoever unlocked the
 PoolManager rather than the trader, so a second agent could trade behind the first one's
-record. An ENSv2 setter role is scoped to the key alone and never to a name, which we measured;
-we handle it by fixing the adapter to one name and putting that name inside the record key, so
-a write onto a foreign name is unattributable rather than impossible. And this is a testnet.
+record. WE ASKED UNISWAP AND THEY ANSWERED: keep an allowlist of routers and call msgSender()
+on them. We are declining it, because an allowlist is a party you have to trust and this project
+exists to take that party out of a payment decision -- our own build check fails on the owner it
+would need. An ENSv2 setter role is scoped to the key alone and never to a name, which we
+measured; we pin the adapter to one name and put that name inside the record key, so a write
+onto a foreign name is unattributable rather than impossible. WE ASKED ENS TOO, AND THE ANSWER
+IS BETTER THAN OURS: partition names across resolver instances, because the resolver instance is
+the trust boundary. This deployment is already that in its smallest form, one resolver serving
+one name. And this is a testnet.
 
 THE RESIDUE, WHICH IS THE ONE THAT MATTERS. The account that is the agent also deployed the
 registry and the resolver, and root roles override every per-key role above. While it holds
@@ -238,9 +244,18 @@ would have passed for any hook failing for any reason, and our first test did ex
 THE THING WE MOST WANT TO ASK YOU. beforeSwap's sender is whoever unlocked the PoolManager,
 not the trader. On our live refusal the error carries our router 0x25cc9656... while the
 transaction came from 0xfa2582ec... So a hook cannot gate on who is trading using sender —
-everyone behind one router is the same address to it. Is there an intended pattern for a hook
-that needs to know the end user? We state the limit in the contract rather than leave it to be
-found: this pool is gated on a record existing, not on who is spending it.
+everyone behind one router is the same address to it. We asked, and the Uniswap team answered:
+the pattern is a trusted router - the hook keeps an allowlist and calls
+IMsgSender(sender).msgSender() on it. The documentation is direct about the cost, "verify the
+contracts are valid before adding them to the list of trusted routers", and nothing checks that
+a router tells the truth.
+
+WE ARE DECLINING THAT, AND THE REASON IS THE WHOLE PROJECT. Reckn exists to take the party you
+have to trust out of a payment decision, and an allowlist somebody maintains puts one back in
+the last place we had removed it from. Our own build-time check would refuse it as well: an
+allowlist needs an owner, and scripts/no-keys.sh fails the build on one. So the limit stands as
+a position rather than an omission - this pool is gated on a record existing, not on who is
+spending it.
 
 The swap that is proven stays on v3 SwapRouter02 — re-executed inside an unmodified zk
 guest, 13,006,200 cycles, measured on 2026-09-08 and disclosed as pre-existing. We do not put the
@@ -275,8 +290,17 @@ a setter role is never scoped to a name. We handle it instead of claiming otherw
 adapter's name is fixed at construction rather than taken from its caller, and the name is
 written inside the record key, so bytes placed on a foreign name sit under a key that says
 whose record it is and the canonical lookup for that name does not find them. THE FOREIGN
-WRITE IS NOT PREVENTED; IT IS MADE UNATTRIBUTABLE. If there is a way to scope a setter role to
-a name, we would like to know it — that is the question we brought to the ENS team.
+WRITE IS NOT PREVENTED; IT IS MADE UNATTRIBUTABLE.
+
+WE ASKED THE ENS TEAM AND THE ANSWER IS BETTER THAN OURS. "For this you need to partition the
+names across resolver instances" - Example 5 of Exploring subnames in ENSv2: group names by who
+is allowed to write to them, give each group its own resolver, and grant roles per instance.
+THE RESOLVER INSTANCE IS THE TRUST BOUNDARY. Our deployment is already the degenerate case of
+that - one resolver instance serving exactly one name - and scaling it to many agents is one
+resolver per agent rather than one resolver and a naming convention. We kept the key-in-the-key
+for this submission because it is what the tests and the measurements were taken against;
+swapping the architecture on the last day to something we had not measured would have been the
+wrong trade. It is written up as a mitigation, not as the answer.
 
 The authority boundary is closed at the registry too. register lets the issuer choose the roles
 that ride on the token, so the agent's subname carries no ROLE_SET_RESOLVER and the agent holds

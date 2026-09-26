@@ -44,9 +44,15 @@ record, not its contents: a buyer can write "reproduced" under a job whose proof
 The contents are checkable by anyone against the escrow and the proof; they are not enforced.
 The hook cannot identify the swapper, because beforeSwap's sender is whoever unlocked the
 PoolManager rather than the trader, so a second agent could trade behind the first one's
-record. An ENSv2 setter role is scoped to the key alone and never to a name, which we measured;
-we handle it by fixing the adapter to one name and putting that name inside the record key, so
-a write onto a foreign name is unattributable rather than impossible. And this is a testnet.
+record. WE ASKED UNISWAP AND THEY ANSWERED: keep an allowlist of routers and call msgSender()
+on them. We are declining it, because an allowlist is a party you have to trust and this project
+exists to take that party out of a payment decision -- our own build check fails on the owner it
+would need. An ENSv2 setter role is scoped to the key alone and never to a name, which we
+measured; we pin the adapter to one name and put that name inside the record key, so a write
+onto a foreign name is unattributable rather than impossible. WE ASKED ENS TOO, AND THE ANSWER
+IS BETTER THAN OURS: partition names across resolver instances, because the resolver instance is
+the trust boundary. This deployment is already that in its smallest form, one resolver serving
+one name. And this is a testnet.
 
 THE RESIDUE, WHICH IS THE ONE THAT MATTERS. The account that is the agent also deployed the
 registry and the resolver, and root roles override every per-key role above. While it holds
