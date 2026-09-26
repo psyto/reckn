@@ -89,6 +89,15 @@ say "0. what we are about to do"
 printf '   deal      %s\n   binding   %s\n     \u21b3 %s\n   codehash  %s\n   buyer     %s\n   agent     %s\n   adapter   %s\n' \
   "$DEAL" "$BINDING" "$BINDING_SOURCE" "$CODEHASH" "$BUYER" "$AGENT" "$ADAPTER"
 
+# The buyer's MockUSDC runs out, because every run of this spends 250 of it. Minting is open to
+# anyone on this mock -- which is also why a stranger can trade in the playground pool -- so top
+# up only when short, rather than minting on every run and muddying the receipts.
+HAVE=$(cast call "$USDC" "balanceOf(address)(uint256)" "$BUYER" --rpc-url "$READ_RPC" | awk '{print $1}')
+if [[ "$HAVE" -lt "$AMOUNT" ]]; then
+  say "0b. the buyer is short on test USDC ($HAVE < $AMOUNT) — minting  [reckn-buyer]"
+  send "$USDC" "mint(address,uint256)" "$BUYER" "$AMOUNT" --account reckn-buyer
+fi
+
 say "1. the buyer approves the escrow  [reckn-buyer]"
 send "$USDC" "approve(address,uint256)" "$ESCROW" "$AMOUNT" --account reckn-buyer
 
