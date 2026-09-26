@@ -19,7 +19,7 @@
 set -euo pipefail
 
 here=$(cd "$(dirname "$0")" && pwd)
-root=$(cd "$here/.." && pwd)
+root=${NOKEYS_ROOT:-$(cd "$here/.." && pwd)}
 target="$root/zk-verdict/contracts/src/RecknZkEscrow.sol"
 
 fail=0
@@ -36,7 +36,7 @@ body=$(awk '/^contract RecknZkEscrow/{f=1} f' "$target" \
 
 # 1. Forbidden privilege vocabulary. Any of these reintroduces an actor with a key.
 say "no privileged role in RecknZkEscrow"
-forbidden='onlyOwner|Ownable|_owner|\badmin\b|Admin|governance|Governance|\bauthority\b|Authority|allowlist|allowList|whitelist|onlyRole|AccessControl|\bpause\b|Pausable|upgrade|Upgradeable|initializer|delegatecall|selfdestruct|ecrecover|isValidSignature'
+forbidden='onlyOwner|Ownable|_owner|\\bowner\\b|\badmin\b|Admin|governance|Governance|\bauthority\b|Authority|allowlist|allowList|whitelist|onlyRole|AccessControl|\bpause\b|Pausable|upgrade|Upgradeable|initializer|delegatecall|selfdestruct|ecrecover|isValidSignature'
 if hits=$(printf '%s\n' "$body" | grep -nE "$forbidden" || true); [[ -n "$hits" ]]; then
   bad "privileged construct found:"; printf '      %s\n' "$hits"
 else
@@ -263,6 +263,72 @@ PIECES
     ok "5f skeleton is exactly the pinned 20 pieces, in order"
   fi
 fi
+
+# 6. The Tokyo surfaces (R-9 / the 013 review's B2: "no-keys.sh never reads the new contracts").
+#
+#    `settleWithProof` stopped being the only thing with authority the moment the event work
+#    landed. `SettlementRecord` decides WHO may write an agent's history, and `RecordGatedHook`
+#    decides whether a pool trades at all. Neither moves money, so neither is covered by the
+#    sentence at the top of this file — but both would be a key if they had one, and until now
+#    this script could not see either.
+#
+#    Set NOKEYS_ROOT to point the whole script at an isolated copy. scripts/no-keys-control.sh
+#    uses it to plant keys in a temp directory and require this check to go red, which is what
+#    R-9 asks for: a criterion nobody has watched fail is not a criterion.
+adapter="$root/tokyo-2026/src/SettlementRecord.sol"
+hook="$root/tokyo-2026/src/RecordGatedHook.sol"
+
+strip() { sed -e 's://.*::' -e 's:/\*.*\*/::' "$1"; }
+# "function name(…) external view returns (…)" up to the body — newlines joined first, because
+# this repository's signatures wrap.
+headers() { printf '%s\n' "$1" | tr '\n' ' ' | grep -oE 'function +[a-zA-Z_][a-zA-Z0-9_]*[^{;]*' || true; }
+
+for spec in "SettlementRecord|$adapter|open close" "RecordGatedHook|$hook|"; do
+  IFS='|' read -r name file allowed <<< "$spec"
+  say "no privileged role in $name"
+  if [[ ! -f "$file" ]]; then
+    bad "6: $file is missing — this check cannot pass by not finding its subject"
+    continue
+  fi
+  src=$(awk -v c="^contract $name" '$0 ~ c {f=1} f' <(strip "$file"))
+  [[ -n "$src" ]] || { bad "6: could not isolate contract $name"; continue; }
+
+  # 6a — the same vocabulary as check 1. A key is a key wherever it is declared.
+  if hits=$(printf '%s\n' "$src" | grep -nE "$forbidden" || true); [[ -n "$hits" ]]; then
+    bad "6a: privileged construct in $name:"; printf '      %s\n' "$hits"
+  else
+    ok "6a $name: no owner / admin / authority / pause / upgrade / delegatecall"
+  fi
+
+  # 6b — fallback and receive carry no `function` keyword, which is how a draining entry point
+  #      hid from check 2 once already.
+  for kw in fallback receive modifier; do
+    n=$( (printf '%s\n' "$src" | grep -ow "$kw" || true) | wc -l | tr -d ' ')
+    [[ "$n" == "0" ]] || bad "6b: $n '$kw' in $name — entry points may only be functions"
+  done
+  ok "6b $name: 0 fallback, 0 receive, 0 modifier"
+
+  # 6c — which functions can write. For the hook the allowed set is EMPTY: everything after the
+  #      constructor is view or pure, so nothing can change what it reads. For the adapter it is
+  #      exactly `open` and `close`. A setter for the name, the key, the resolver or the writer
+  #      would be a key with a different spelling, and lands here.
+  #      A header carrying `view` or `pure` cannot write. Only `external`/`public` ones are
+  #      entry points: a `private` helper is reachable only through one of them, so listing it
+  #      here would say the surface is wider than it is. The name is cut at the paren, because
+  #      `awk '{print $2}'` on a header yields `open(bytes32`.
+  #      `|| true`, because a contract where NOTHING can write is the good case and grep exits
+  #      1 on no match. Without it `set -e` killed the script right there -- after the hook's
+  #      own rows had printed, so the run looked complete and the final verdict never appeared.
+  writers=$(headers "$src" | grep -E '\b(external|public)\b' | grep -vE '\b(view|pure)\b' \
+            | awk '{print $2}' | sed 's/(.*//' | sort -u || true)
+  for fn in $writers; do
+    case " $allowed " in
+      *" $fn "*) ok "6c $name.$fn — may write, and is expected to" ;;
+      *)         bad "6c: $name.$fn can write state and is NOT in the allowed set (${allowed:-none}). If this is intended, the claim changed: say so in AGENTS.md and here in the same commit." ;;
+    esac
+  done
+  [[ -n "$writers" ]] || ok "6c $name: no function can write state after deployment"
+done
 
 echo
 if [[ $fail -eq 0 ]]; then
