@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ENSv2 beta, measured</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  html,body{margin:0;height:100%;background:#0A0E13;overflow:hidden;
+    font-family:'IBM Plex Sans','IBM Plex Sans JP',system-ui,sans-serif;-webkit-text-size-adjust:100%}
+  #deck{position:fixed;inset:0;display:grid;place-items:center}
+  #canvas{width:1920px;height:1080px;transform-origin:center center;position:relative;flex:none}
+  .stage{display:none;width:1920px;height:1080px;position:absolute;inset:0;overflow:hidden}
+  .stage.on{display:block}
+  .stage > section{width:1920px;height:1080px;box-sizing:border-box}
+  #bar{position:fixed;left:0;right:0;bottom:0;display:flex;align-items:center;gap:14px;
+    padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));background:rgba(10,14,19,.92);
+    color:#8B9AA8;font-size:13px;font-variant-numeric:tabular-nums;border-top:1px solid #1C242D}
+  #bar button{appearance:none;border:1px solid #2A3540;background:#141B22;color:#C9D6E2;
+    font:inherit;font-size:13px;padding:6px 14px;border-radius:999px;cursor:pointer}
+  #bar button:hover{border-color:#84A5FF;color:#84A5FF}
+  #pos{margin-left:auto;font-family:'JetBrains Mono',monospace}
+  #note{position:fixed;left:0;right:0;bottom:46px;max-height:42vh;overflow:auto;display:none;
+    padding:18px 20px;background:#111821;color:#C9D6E2;border-top:1px solid #2A3540;
+    font-size:15px;line-height:1.85;white-space:pre-wrap}
+  #note.on{display:block}
+  #note b{color:#F2F5F7}
+</style></head><body>
+<div id="deck"><div id="canvas"><div class="stage" data-note="これを見せて、黙る。/ Q1 = 名前まるごとではなく「記録1本ずつ」に権限を出せた。Reckn はこれに乗っているので、意図した設計か確かめたい。 / Q2 = 我々が建てた台帳の最上位権限を捨てられた（09-21 実測）。捨てられないと「我々も鍵を持っていない」と言えなくなる。 / Q3 = デプロイ済み beta と GitHub の main で関数の形が違う。1ヶ月後に壊れたくない。 / Q4 = ENS 自身が賞の文で agents as namespaces と書いている。何を想定しているかを聞くだけ。知識は要らない。相手が話す。 / 答えが分からなかったら: &quot;Sorry, can you say that again? I want to get it right.&quot; と言って書き取る。分かったふりをしない。"><section id="ens-questions" style="background:#F2F5F7; color:#111821; font-family:'IBM Plex Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; justify-content:center; gap:48px">
+  <h2 style="font-size:56px; font-weight:600; line-height:1.2">I spent a day measuring the ENSv2 Sepolia beta. <span style="color:#1F4FD8">Four things only you can tell me.</span></h2>
+  <ol style="font-size:42px; line-height:1.55; color:#111821; padding:0 0 0 52px">
+    <li>We can give someone permission to write <b>one record</b>, not the whole name. Is that on purpose?</li>
+    <li>We can permanently give up admin power over our registry. Is that supported, and will it stay?</li>
+    <li>The deployed beta and the <span style="font-family:'JetBrains Mono','Courier New',monospace; font-size:38px">main</span> branch do not match. Which should I build against?</li>
+    <li>Agents as namespaces &mdash; what do you want that to look like?</li>
+  </ol>
+  
+</section></div>
+<div class="stage" data-note="質問1の裏付け。/ 言うこと: 「権限は記録1本ずつに出せました。ただ、名前では絞れていないようです。合っていますか？」
+  / grantSetterRoles = 「書く権限をあげる」関数。渡すのは名前ではなく、書き込みそのものの中身（calldata）。だから job:1 への許可は job:2 には効かない。ここは期待どおり。
+  / ところが実測すると、権限の単位（resource）は key だけで決まっていて、名前が違っても同じ値になる。つまり agent.reckn.eth 用に出した許可が victim.reckn.eth にも効く。
+  / 我々の対処: adapter は名前を1つだけ持ち、呼び出し側は名前を選べない。さらに key の中に名前を書いてあるので、他人の名前に置いても「誰の記録か」が key に書いてあり、その名前を普通に引いても出てこない。防いでいるのではなく、なりすませなくしている、と正直に言う。
+  / 聞きたいこと: role を名前で絞る方法はあるか。無いなら、それは意図された設計か。
+  / 分からなかったら: &quot;Sorry, can you say that again? I want to get it right.&quot;"><section id="ens-q1" style="background:#F2F5F7; color:#111821; font-family:'IBM Plex Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; justify-content:center; gap:52px">
+  <p style="font-family:'JetBrains Mono','Courier New',monospace; font-size:30px; font-weight:700; color:#1F4FD8; letter-spacing:3px">QUESTION 1</p>
+  <h2 style="font-size:60px; font-weight:600; line-height:1.2">A setter role is scoped to the key &mdash; never to the name.</h2>
+  <p style="font-family:'JetBrains Mono','Courier New',monospace; font-size:32px; line-height:1.6; color:#111821; background:#FFFFFF; padding:36px; border-radius:16px; border:1px solid #C9D2DA"><b>agent</b>.reckn.eth + <b>job:1</b> &rarr; 8553&hellip;4915<br><b>victim</b>.reckn.eth + <b>job:1</b> &rarr; 8553&hellip;4915<br>agent.reckn.eth + <b>job:2</b> &rarr; 4437&hellip;5864</p>
+  <p style="font-size:38px; line-height:1.4">Measured on your deployed resolver. <span style="font-family:'JetBrains Mono','Courier New',monospace; font-size:34px">decodeSetter</span> derives the resource from the key alone &mdash; <b>is there a way to scope a role to a name?</b></p>
+  
+</section></div>
+<div class="stage" data-note="質問2の裏付け。/ 言うこと: 「我々が建てた台帳の最上位権限を、恒久的に捨てられる。09-21 に実測した」
+  / root roles = 我々がデプロイした registry に対する最上位の権限。持っている限り、いつでも誰かに渡せてしまう。
+  / renounce = 恒久的に手放すこと。
+  / なぜ聞くか: これができないと「我々も鍵を持っていない」と言えなくなり、主張が狭まる。できること自体は確認済みなので、聞くのは「意図した機能か、これからも残るか」。
+  / 分からなかったら: &quot;Sorry, can you say that again? I want to get it right.&quot;"><section id="ens-q2" style="background:#FFFFFF; color:#111821; font-family:'IBM Plex Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; justify-content:center; gap:52px">
+  <p style="font-family:'JetBrains Mono','Courier New',monospace; font-size:30px; font-weight:700; color:#1F4FD8; letter-spacing:3px">QUESTION 2</p>
+  <h2 style="font-size:60px; font-weight:600; line-height:1.2">We can permanently give up admin power over our own registry.</h2>
+  <p style="font-size:44px; line-height:1.4; color:#111821; background:#F2F5F7; padding:36px; border-radius:16px; border:1px solid #C9D2DA">Root roles renounced &mdash; <b>measured 2026-09-21.</b></p>
+  <p style="font-size:38px; line-height:1.4">While we hold them, we could hand that power to anyone, quietly. So we give them up &mdash; and we say so in our own docs.</p>
+  
+</section></div>
+<div class="stage" data-note="質問3の裏付け。/ 言うこと: 「デプロイされている beta と、GitHub の main が一致していない。2つの関数の形が違う」
+  / ABI = 契約の関数の呼び方の定義。これが違うと、正しく書いたつもりのコードが動かない。
+  / 実際に起きたこと: main を読んで仕様を書いたので、2箇所が間違っていた。fork で試して初めて分かった。
+  / なぜ聞くか: 1ヶ月後も動いてほしいものを、どちらに合わせて作るべきか。
+  / 分からなかったら: &quot;Sorry, can you say that again? I want to get it right.&quot;"><section id="ens-q3" style="background:#F2F5F7; color:#111821; font-family:'IBM Plex Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; justify-content:center; gap:52px">
+  <p style="font-family:'JetBrains Mono','Courier New',monospace; font-size:30px; font-weight:700; color:#1F4FD8; letter-spacing:3px">QUESTION 3</p>
+  <h2 style="font-size:60px; font-weight:600; line-height:1.2">The deployed beta and <span style="font-family:'JetBrains Mono','Courier New',monospace">main</span> do not match.</h2>
+  <p style="font-family:'JetBrains Mono','Courier New',monospace; font-size:44px; line-height:1.5; color:#B4531A; background:#FFFFFF; padding:36px; border-radius:16px; border:1px solid #C9D2DA">initialize<br>setText</p>
+  <p style="font-size:38px; line-height:1.4">Both differ. Two signatures in my spec were wrong, because I had read <span style="font-family:'JetBrains Mono','Courier New',monospace; font-size:34px">main</span>.</p>
+  
+</section></div>
+<div class="stage" data-note="Q4 の裏付け その1。/ 言うこと: 「エージェントは自分の記録を書けない。これは強制されている」 / このコードの意味: 呼んだ人がそのエージェントの持ち主（または代理人）なら拒否する、という1行。 / どこの何か: ERC-8004 の公式契約 ReputationRegistryUpgradeable.sol の108行目。メインネット 0x8004BAa1、Sepolia 0x8004B663 に既にデプロイ済み。 / まずチェックが効いているところを見せる。これが報告と苦情の分かれ目。"><section id="ens-check" style="background:#F2F5F7; color:#111821; font-family:'IBM Plex Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; justify-content:center; gap:56px">
+  <p style="font-family:'JetBrains Mono','Courier New',monospace; font-size:28px; font-weight:500; color:#1F4FD8; letter-spacing:3px">QUESTION 4 &middot; 1 OF 3</p>
+  <h2 style="font-size:64px; font-weight:600; line-height:1.2">An agent cannot write its own record. This is enforced.</h2>
+  <p style="font-family:'JetBrains Mono','Courier New',monospace; font-size:38px; line-height:1.5; color:#111821; background:#FFFFFF; padding:40px; border-radius:16px; border:1px solid #C9D2DA">require(!isAuthorizedOrOwner(msg.sender, agentId),<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"Self-feedback not allowed")</p>
+  
+</section></div>
+<div class="stage" data-note="Q4 の裏付け その2。/ 言うこと: 「そして仕様は自分についてこう書いている」 / Sybil攻撃 = 同じ人が複数のアドレスを作って、別人のふりをすること。 / つまり ERC-8004 は「誰が書いてよいか」の残りを、意図的に上のレイヤーに任せている。仕様の325行目にも同じことが書いてある。 / だからこれは「穴を見つけた」話ではない。絶対にそう言わない。"><section id="ens-8004" data-transition="fade" style="background:#111821; color:#F2F5F7; font-family:'IBM Plex Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; justify-content:center; gap:56px">
+  <p style="font-family:'JetBrains Mono','Courier New',monospace; font-size:28px; font-weight:500; color:#8FB0FF; letter-spacing:3px">QUESTION 4 &middot; 2 OF 3</p>
+  <h2 style="font-size:64px; font-weight:600; line-height:1.2">And the spec says this about itself.</h2>
+  <p style="font-size:52px; line-height:1.4; color:#F2F5F7; border-left:5px solid #8FB0FF; padding:0 0 0 40px">&ldquo;Sybil attacks are possible&hellip; We expect many players to build reputation systems.&rdquo;</p>
+  <p style="font-family:'JetBrains Mono','Courier New',monospace; font-size:30px; color:#8FB0FF">erc-8004.md &middot; Security Considerations</p>
+  
+</section></div>
+<div class="stage" data-note="Q4 の裏付け その3。ここが結論。/ 言うこと: 「2つ目のアドレスは『お前は本人か』には答える。『付与されたか』には答えない」 / 8004 のチェックは「あなたは本人ですか」と聞いている。別のアドレスを作れば「本人ではありません」と答えられてしまう。 / ENSv2 の EAC は「あなたは権限を渡されましたか」と聞く。アドレスをいくつ作っても、渡されていなければ渡されていない。 / 我々の場合、その権限は決済が出して、書いたら消える。"><section id="ens-compare" style="background:#FFFFFF; color:#111821; font-family:'IBM Plex Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; justify-content:center; gap:56px">
+  <p style="font-family:'JetBrains Mono','Courier New',monospace; font-size:28px; font-weight:500; color:#1F4FD8; letter-spacing:3px">QUESTION 4 &middot; 3 OF 3</p>
+  <h2 style="font-size:60px; font-weight:600; line-height:1.2">A second address answers &ldquo;are you the subject&rdquo;. It does not answer &ldquo;were you granted this&rdquo;.</h2>
+  <table style="font-family:'IBM Plex Sans', Arial, sans-serif; font-size:42px; color:#111821; border:1px solid #C9D2DA; padding:26px">
+    <tr><td style="width:34%"><b>ERC-8004</b></td><td style="width:66%">are you the subject? &nbsp; <span style="color:#B4531A"><b>defeated</b></span></td></tr>
+    <tr style="background:#F2F5F7"><td><b>ENSv2 EAC</b></td><td>were you granted this? &nbsp; <span style="color:#1F4FD8"><b>not defeated</b></span></td></tr>
+  </table>
+  
+</section></div>
+<div class="stage" data-note="質問ではなく、ただの土産。時間があれば出す。
+  / UUPS = アップグレードできる契約の作り方。その仕組み上、安く複製する EIP-1167 clone は使えない。210 gas で、エラーメッセージも出さずに死ぬ。原因が分からず時間を溶かした。
+  / ERC-1155 = 名前がトークンとして発行される規格。受け取り用の関数を持たない契約は、名前を持てない。だから名前は EOA（普通のウォレット）で持つ。"><section id="ens-extra" style="background:#FFFFFF; color:#111821; font-family:'IBM Plex Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; justify-content:center; gap:48px">
+  <p style="font-family:'JetBrains Mono','Courier New',monospace; font-size:30px; font-weight:500; color:#4C5A67; letter-spacing:3px">NO QUESTION ATTACHED</p>
+  <h2 style="font-size:60px; font-weight:600; line-height:1.2">Two more that cost me hours.</h2>
+  <ul style="font-size:44px; line-height:1.55; color:#111821; padding:0 0 0 48px">
+    <li>The resolver is UUPS &mdash; a 1167 clone dies in <span style="font-family:'JetBrains Mono','Courier New',monospace; font-size:40px">onlyProxy</span></li>
+    <li>A name is an ERC-1155</li>
+  </ul>
+  
+</section></div>
+<div class="stage" data-note="言うこと: 「全部ここに書いてあります。動かなかったものも含めて」 / 書面が欲しいと言われたら、これを送る。新しく資料を作らない。"><section id="evidence" data-transition="fade" style="background:#111821; color:#F2F5F7; font-family:'IBM Plex Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; justify-content:center; gap:52px">
+  <h2 style="font-size:60px; font-weight:600; line-height:1.2">All of it is here, including what did not work.</h2>
+  <p style="font-family:'JetBrains Mono','Courier New',monospace; font-size:52px; font-weight:500; line-height:1.45; color:#8FB0FF">github.com/psyto/reckn<br>spikes/tokyo-2026/FINDINGS.md</p>
+  
+</section></div></div></div>
+<div id="note"></div>
+<div id="bar">
+  <button id="prev">&larr;</button><button id="next">&rarr;</button>
+  <button id="toggle">ノート</button>
+  <span>ENS · 15:00</span>
+  <span id="pos"></span>
+</div>
+<script>
+(function(){
+  var stages=[].slice.call(document.querySelectorAll('.stage'));
+  var i=0, notesOn=false;
+  var canvas=document.getElementById('canvas'), note=document.getElementById('note'), pos=document.getElementById('pos');
+  function fit(){
+    var bottom = 46 + (notesOn ? Math.min(window.innerHeight*0.42, note.scrollHeight+36) : 0);
+    var w=window.innerWidth, h=window.innerHeight-bottom;
+    var s=Math.min(w/1920, h/1080);
+    canvas.style.transform='scale('+s+')';
+    document.getElementById('deck').style.paddingBottom=bottom+'px';
+  }
+  function show(n){
+    i=(n+stages.length)%stages.length;
+    stages.forEach(function(s,k){s.classList.toggle('on',k===i);});
+    note.textContent=stages[i].getAttribute('data-note')||'（ノートなし）';
+    pos.textContent=(i+1)+' / '+stages.length;
+    fit();
+  }
+  document.getElementById('prev').onclick=function(){show(i-1);};
+  document.getElementById('next').onclick=function(){show(i+1);};
+  document.getElementById('toggle').onclick=function(){notesOn=!notesOn;note.classList.toggle('on',notesOn);fit();};
+  document.addEventListener('keydown',function(e){
+    if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();show(i+1);}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();show(i-1);}
+    else if(e.key==='n'||e.key==='N'){notesOn=!notesOn;note.classList.toggle('on',notesOn);fit();}
+  });
+  var x0=null;
+  document.addEventListener('touchstart',function(e){x0=e.changedTouches[0].clientX;},{passive:true});
+  document.addEventListener('touchend',function(e){
+    if(x0===null)return; var dx=e.changedTouches[0].clientX-x0; x0=null;
+    if(Math.abs(dx)>50) show(i+(dx<0?1:-1));
+  },{passive:true});
+  window.addEventListener('resize',fit);
+  show(0);
+})();
+</script></body></html>

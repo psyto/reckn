@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Uniswap inside a zkVM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  html,body{margin:0;height:100%;background:#0A0E13;overflow:hidden;
+    font-family:'IBM Plex Sans','IBM Plex Sans JP',system-ui,sans-serif;-webkit-text-size-adjust:100%}
+  #deck{position:fixed;inset:0;display:grid;place-items:center}
+  #canvas{width:1920px;height:1080px;transform-origin:center center;position:relative;flex:none}
+  .stage{display:none;width:1920px;height:1080px;position:absolute;inset:0;overflow:hidden}
+  .stage.on{display:block}
+  .stage > section{width:1920px;height:1080px;box-sizing:border-box}
+  #bar{position:fixed;left:0;right:0;bottom:0;display:flex;align-items:center;gap:14px;
+    padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));background:rgba(10,14,19,.92);
+    color:#8B9AA8;font-size:13px;font-variant-numeric:tabular-nums;border-top:1px solid #1C242D}
+  #bar button{appearance:none;border:1px solid #2A3540;background:#141B22;color:#C9D6E2;
+    font:inherit;font-size:13px;padding:6px 14px;border-radius:999px;cursor:pointer}
+  #bar button:hover{border-color:#84A5FF;color:#84A5FF}
+  #pos{margin-left:auto;font-family:'JetBrains Mono',monospace}
+  #note{position:fixed;left:0;right:0;bottom:46px;max-height:42vh;overflow:auto;display:none;
+    padding:18px 20px;background:#111821;color:#C9D6E2;border-top:1px solid #2A3540;
+    font-size:15px;line-height:1.85;white-space:pre-wrap}
+  #note.on{display:block}
+  #note b{color:#F2F5F7}
+</style></head><body>
+<div id="deck"><div id="canvas"><div class="stage" data-note="これを見せて、黙る。/ Q1 = Permit2 という署名の仕組みが ecrecover を使う。ecrecover は「署名から署名者を割り出す」EVM の組み込み機能。我々の zkVM の中で本物と同じ結果になるか未確認なので、Universal Router を証明の対象にできない。だから v3 を使っている。 / Q2 = フックが「拒否」と投げても、外に見えるのは PoolManager が包み直したエラー。中の bytes4 はエラーの種類ではなく「呼ばれたフック関数の名前」。素直に書いたテストは何も確かめていない。 / Q3 = v4 はフックのアドレスの下位ビットで「どのフックが有効か」を表す。だから欲しいビットが立つまで総当たりでアドレスを探す。コードを変えると探し直し。 / Q4 = 我々は取引だけ塞いで、流動性の出し入れは塞がなかった。交換できる答えがある。 / 答えが分からなかったら: &quot;Sorry, can you say that again? I want to get it right.&quot; と言って書き取る。"><section id="uni-questions" style="background:#F2F5F7; color:#111821; font-family:'IBM Plex Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; justify-content:center; gap:48px">
+  <h2 style="font-size:56px; font-weight:600; line-height:1.2">I re-executed a mainnet Uniswap swap inside a zk guest. <span style="color:#1F4FD8">Four things I could not answer from the source.</span></h2>
+  <ol style="font-size:42px; line-height:1.55; color:#111821; padding:0 0 0 52px">
+    <li>Would a router path that skips the signature step ever interest you? <b>That step is what we cannot prove.</b></li>
+    <li>When a hook reverts, the error we see is not the hook's. <b>Is that intended, and is it documented?</b></li>
+    <li>A hook's permissions live in its <b>address</b>, so we mine one. Is that scheme going to stay?</li>
+    <li>Where should hooks <b>not</b> be used?</li>
+  </ol>
+  
+</section></div>
+<div class="stage" data-note="Q1 の裏付け その1。/ 言うこと: 「本物のメインネットの Uniswap のスワップを、zk guest の中で再実行している」 / zk guest / zkVM = 計算をやり直して「確かにこの結果になった」という証明を作れる仮想マシン。 / cycles = その中で回した計算の量。1300万は「そこそこ重い」の目安。 / この部屋の全員がフックを作っている。フックの話から入らない。この数字が、質問する資格になる。"><section id="uni-cycles" data-transition="fade" style="background:#111821; color:#F2F5F7; font-family:'IBM Plex Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; justify-content:center; gap:52px">
+  <p style="font-family:'JetBrains Mono','Courier New',monospace; font-size:28px; font-weight:500; color:#8FB0FF; letter-spacing:3px">QUESTION 1 &middot; 1 OF 2</p>
+  <h1 style="font-family:'JetBrains Mono','Courier New',monospace; font-size:168px; font-weight:700; line-height:1; color:#F2F5F7">13,006,200</h1>
+  <h2 style="font-size:56px; font-weight:600; line-height:1.25; color:#F2F5F7">We re-execute a real mainnet Uniswap swap inside a zk guest to settle an escrow.</h2>
+  <p style="font-family:'JetBrains Mono','Courier New',monospace; font-size:30px; color:#8FB0FF">cycles &middot; SwapRouter02.exactInputSingle &middot; measured 2026-09-08</p>
+  
+</section></div>
+<div class="stage" data-note="Q1 の裏付け その2。/ 言うこと: 「v3 に居て Universal Router に居ないのは、precompile 1つのせい」 / precompile = EVM に最初から組み込まれている特別な関数。zkVM の中で同じ結果になるかは、1つずつ確かめる必要がある。 / ecrecover はその1つで、まだ確かめていない。だから「本物と同じ」と言えない。 / 制約はこちら側にある。相手のルーターが悪いという話ではない。文がそう言っている。"><section id="uni-ecrecover" style="background:#F2F5F7; color:#111821; font-family:'IBM Plex Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; justify-content:center; gap:52px">
+  <p style="font-family:'JetBrains Mono','Courier New',monospace; font-size:28px; font-weight:500; color:#1F4FD8; letter-spacing:3px">QUESTION 1 &middot; 2 OF 2</p>
+  <h2 style="font-size:60px; font-weight:600; line-height:1.2">We are on v3 and not the Universal Router because of one precompile.</h2>
+  <p style="font-family:'JetBrains Mono','Courier New',monospace; font-size:88px; font-weight:700; color:#B4531A">ecrecover</p>
+  <p style="font-size:44px; line-height:1.4; color:#111821">Permit2 signs with it. It is on our guest's divergent-precompile list, and we have not verified equivalence.</p>
+  
+</section></div>
+<div class="stage" data-note="Q2 の裏付け。/ 言うこと: 「bytes4 はフック関数であってエラーではない。外側の selector を見るテストは何も証明しない」 / 起きていること: フックが「記録がないので拒否」と投げる。PoolManager はそれをそのまま通さず、WrappedError で包み直す。 / 包みの中の bytes4 は、エラーの種類ではなく「いま呼んでいたフック関数」（beforeSwap = 0x575e24b4）。本当のエラーは reason の中。 / だから「拒否されたこと」を確かめるつもりのテストが、何も確かめていない状態になる。最初に書いたテストが実際そうだった。"><section id="uni-7751" style="background:#FFFFFF; color:#111821; font-family:'IBM Plex Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; justify-content:center; gap:52px">
+  <p style="font-family:'JetBrains Mono','Courier New',monospace; font-size:28px; font-weight:500; color:#1F4FD8; letter-spacing:3px">QUESTION 2</p>
+  <h2 style="font-size:60px; font-weight:600; line-height:1.2">The <span style="font-family:'JetBrains Mono','Courier New',monospace">bytes4</span> is the hook function, not the error. A test on the outer selector proves nothing.</h2>
+  <p style="font-family:'JetBrains Mono','Courier New',monospace; font-size:40px; line-height:1.5; color:#111821; background:#F2F5F7; padding:40px; border-radius:16px; border:1px solid #C9D2DA">WrappedError(address target, <span style="color:#B4531A">bytes4 selector</span>, bytes reason, bytes details)</p>
+  <p style="font-size:38px; color:#4C5A67">Mine asserted the wrong field on the first attempt.</p>
+  
+</section></div>
+<div class="stage" data-note="Q3 の裏付け。/ 1つ目: v4 はフックのアドレスの下位ビットで「どのフックが有効か」を表す。beforeSwap だけ欲しいなら、そのビットだけが立ったアドレスが要る。だから salt（種）を総当たりして探す。8653 回目で見つかった。コードか引数を変えると、アドレスが変わるので探し直し。気づかないと静かに壊れる。 / 2つ目: 引数の型の置き場所が変わった。コンパイルエラーになるので気づけるが、初見だと1時間溶ける。 / 3つ目: v4-core は submodule を取ってこなくても、必要な部分だけなら浅い clone で足りる。"><section id="uni-hook" style="background:#F2F5F7; color:#111821; font-family:'IBM Plex Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; justify-content:center; gap:48px">
+  <p style="font-family:'JetBrains Mono','Courier New',monospace; font-size:28px; font-weight:500; color:#1F4FD8; letter-spacing:3px">QUESTION 3</p>
+  <h2 style="font-size:60px; font-weight:600; line-height:1.2">Three more from the same afternoon.</h2>
+  <ul style="font-size:44px; line-height:1.55; color:#111821; padding:0 0 0 48px">
+    <li>Editing the hook invalidates the mined salt</li>
+    <li>The params types moved off <span style="font-family:'JetBrains Mono','Courier New',monospace; font-size:40px">IPoolManager</span></li>
+    <li>v4-core needs no submodules</li>
+  </ul>
+  
+</section></div>
+<div class="stage" data-note="Q4 の裏付け。/ 言うこと: 「断る → 通る → 消すとまた断る。3行目が効いている行」 / 3行目がないと、「たまたま別の理由で通った」可能性を否定できない。記録を消したらまた閉まる、が「記録が門番だ」の証拠。 / 1.000000 → 0.987158 は手数料0.3%と滑り。空のプールで何も起きていないのではなく、本当に交換が起きている。 / 相手に聞かれる前に言う: 流動性の出し入れは塞いでいない。塞いだのは取引だけ。これは意図的。 / この数字は 09-21 に fork で測ったもの。デプロイ済みの数字として言わない。"><section id="uni-gate" style="background:#FFFFFF; color:#111821; font-family:'IBM Plex Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; justify-content:center; gap:52px">
+  <p style="font-family:'JetBrains Mono','Courier New',monospace; font-size:28px; font-weight:500; color:#1F4FD8; letter-spacing:3px">QUESTION 4</p>
+  <h2 style="font-size:60px; font-weight:600; line-height:1.2">Refused, then executed, then refused again. The third row is the one that matters.</h2>
+  <table style="font-family:'IBM Plex Sans', Arial, sans-serif; font-size:40px; color:#111821; border:1px solid #C9D2DA; padding:24px">
+    <tr><td style="width:46%">no record</td><td style="width:54%; color:#B4531A"><b>refused</b></td></tr>
+    <tr style="background:#F2F5F7"><td>record written</td><td><b><span style="font-family:'JetBrains Mono','Courier New',monospace; font-size:36px">1.000000 &rarr; 0.987158</span></b></td></tr>
+    <tr><td>record cleared</td><td style="color:#B4531A"><b>refused again</b></td></tr>
+  </table>
+  
+</section></div>
+<div class="stage" data-note="言うこと: 「全部ここに書いてあります。動かなかったものも含めて」 / 書面が欲しいと言われたら、これを送る。新しく資料を作らない。"><section id="evidence" data-transition="fade" style="background:#111821; color:#F2F5F7; font-family:'IBM Plex Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; justify-content:center; gap:52px">
+  <h2 style="font-size:60px; font-weight:600; line-height:1.2">All of it is here, including what did not work.</h2>
+  <p style="font-family:'JetBrains Mono','Courier New',monospace; font-size:52px; font-weight:500; line-height:1.45; color:#8FB0FF">github.com/psyto/reckn<br>spikes/tokyo-2026/FINDINGS.md</p>
+  
+</section></div></div></div>
+<div id="note"></div>
+<div id="bar">
+  <button id="prev">&larr;</button><button id="next">&rarr;</button>
+  <button id="toggle">ノート</button>
+  <span>Uniswap · 16:30</span>
+  <span id="pos"></span>
+</div>
+<script>
+(function(){
+  var stages=[].slice.call(document.querySelectorAll('.stage'));
+  var i=0, notesOn=false;
+  var canvas=document.getElementById('canvas'), note=document.getElementById('note'), pos=document.getElementById('pos');
+  function fit(){
+    var bottom = 46 + (notesOn ? Math.min(window.innerHeight*0.42, note.scrollHeight+36) : 0);
+    var w=window.innerWidth, h=window.innerHeight-bottom;
+    var s=Math.min(w/1920, h/1080);
+    canvas.style.transform='scale('+s+')';
+    document.getElementById('deck').style.paddingBottom=bottom+'px';
+  }
+  function show(n){
+    i=(n+stages.length)%stages.length;
+    stages.forEach(function(s,k){s.classList.toggle('on',k===i);});
+    note.textContent=stages[i].getAttribute('data-note')||'（ノートなし）';
+    pos.textContent=(i+1)+' / '+stages.length;
+    fit();
+  }
+  document.getElementById('prev').onclick=function(){show(i-1);};
+  document.getElementById('next').onclick=function(){show(i+1);};
+  document.getElementById('toggle').onclick=function(){notesOn=!notesOn;note.classList.toggle('on',notesOn);fit();};
+  document.addEventListener('keydown',function(e){
+    if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();show(i+1);}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();show(i-1);}
+    else if(e.key==='n'||e.key==='N'){notesOn=!notesOn;note.classList.toggle('on',notesOn);fit();}
+  });
+  var x0=null;
+  document.addEventListener('touchstart',function(e){x0=e.changedTouches[0].clientX;},{passive:true});
+  document.addEventListener('touchend',function(e){
+    if(x0===null)return; var dx=e.changedTouches[0].clientX-x0; x0=null;
+    if(Math.abs(dx)>50) show(i+(dx<0?1:-1));
+  },{passive:true});
+  window.addEventListener('resize',fit);
+  show(0);
+})();
+</script></body></html>
