@@ -66,9 +66,11 @@ answer is worth nothing to a judge.
 - Chose the track, the submission type and the partner prizes, and **refused to apply for a
   partner whose technology this project does not use**.
 
-## What the AI got wrong, in this repository, today
+## What the AI got wrong, in this repository
 
-Included because a disclosure that only lists successes is not a disclosure.
+Included because a disclosure that only lists successes is not a disclosure. **This section is
+itself a thing that can go stale**, so it is appended to rather than summarised: the last four
+entries were added on **2026-09-27, after the section already existed**.
 
 - Named a shell function `head`, which shadowed the coreutil and made a live ENS record read as
   "no answer" inside the very rig written to catch that class of bug.
@@ -81,7 +83,27 @@ Included because a disclosure that only lists successes is not a disclosure.
   see, because all nine were of the form *this must not happen* and none was *this must still
   work*.
 
-All five are in the commit messages, at the point where they happened.
+Added **2026-09-27**, the night before judging:
+
+- **Told the founder the submission video had a music bed and might have to be remade.** It did
+  not. The measurement used `ffmpeg -v error`, which suppresses `silencedetect` — the filter
+  logs at info level — so every threshold from -25 dB to -60 dB reported "0 silent regions". The
+  absence of output printed as a number, and the number looked exactly like the one thing that
+  gets a video auto-rejected. Re-measured: 55 pauses. The narration is the founder's own voice.
+- **Wrote a `--record` that printed `✓ recorded` after the write had failed.** macOS treats
+  `VIDEO` and the existing `video/` directory as the same path, the redirect errored, and the
+  success line ran anyway. Found within a minute, but it is the same defect the repository keeps
+  catching in its own gates: a green row produced by something that never happened.
+- **Marked three rows of the video checklist green and let four more pass unexamined**, then
+  reported the block finished. The founder asked "is this all done?" and it was not: one of the
+  four, *"put 497.40 s on screen"*, was itself wrong — `DEMO.md` forbids that figure by name.
+- **Carried `live judging 14:30` into four documents and built the entire final-day plan on it.**
+  `013`'s own G-Q3 recorded the source as *"founder's calendar, not a file"* — the single
+  scheduling claim in the repository with nothing behind it. Judging is **09:30**. The row named
+  its own weakness and the AI propagated it anyway; the founder caught it by reading the
+  published agenda.
+
+All of them are in the commit messages, at the point where they happened.
 
 ## The spec files, the prompts and the planning artifacts
 
