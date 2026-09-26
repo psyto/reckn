@@ -39,6 +39,15 @@
   .stage{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--bg)}
   .stage b{display:block;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;
         color:var(--dim);margin-bottom:4px}
+  .tri{display:grid;grid-template-columns:1fr;gap:10px;margin:22px 0 6px}
+  @media(min-width:720px){.tri{grid-template-columns:1fr 1.25fr 1fr}}
+  .t{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--card)}
+  .t b{display:block;font-size:.76rem;text-transform:uppercase;letter-spacing:.06em;
+       color:var(--dim);font-weight:600}
+  .t .v{display:block;font-size:1.12rem;font-weight:700;margin:.35rem 0 .3rem;letter-spacing:-.01em}
+  .t a{font-size:.8rem}
+  .t-yes{border-color:var(--ok)}
+  .t-no{border-style:dashed}
   .arrow{text-align:center;color:var(--acc);font-family:var(--mono);font-size:.8rem;
         white-space:nowrap;padding:2px 4px}
   .two{border-collapse:collapse;width:100%;margin-top:10px;font-size:.93rem}
@@ -61,14 +70,7 @@
 <body>
 <main>
 
-<div class="card" style="border-color:var(--acc)">
-  <span class="k">ETHGlobal Tokyo 2026 &middot; Continuity &middot; ENS + Uniswap Foundation</span>
-  <p style="margin:.5rem 0 0">
-  Looking for the Arc work? It is still here and still live:
-  <a href="arc.html">an escrow that no key can open, holding real USDC on Arc</a>.
-  That is a <b>different, earlier</b> submission, and this entry does not claim it.
-  </p>
-</div>
+<span class="k">ETHGlobal Tokyo 2026 &middot; Continuity &middot; ENS + Uniswap Foundation</span>
 
 <h1>An agent cannot write its own history.</h1>
 
@@ -76,7 +78,29 @@
 with a key. Here the <b>right to write one record</b> is created by a settlement &mdash; and the
 settlement only happens because the job was re-executed and reproduced the same result.</p>
 
-<p class="lede" style="margin-top:14px">Nothing below is a screenshot. Your browser is calling
+<!-- The whole argument, as three transactions. Everything after this is how and why. -->
+<div class="tri" aria-label="the same swap, three times">
+  <div class="t t-no">
+    <b>no record</b>
+    <span class="v bad">refused</span>
+    <a class="m" href="https://sepolia.etherscan.io/tx/0xda60d7df7940bf25fd01466444573d0b364a8865641e97dc061096ad1f1f94be">0xda60d7df&hellip;</a>
+  </div>
+  <div class="t t-yes">
+    <b>the buyer writes the record</b>
+    <span class="v ok">1.0 in &rarr; 0.987158034 out</span>
+    <a class="m" href="https://sepolia.etherscan.io/tx/0xa40bb3162ed17e084155277cd2d0a9605c1fea510ddef6df62dbf502831f5698">0xa40bb316&hellip;</a>
+  </div>
+  <div class="t t-no">
+    <b>the record is cleared</b>
+    <span class="v bad">refused</span>
+    <a class="m" href="https://sepolia.etherscan.io/tx/0xce00489eb9f2ebca202643c28841360737b35bc30e81a276e47fab64e2f1fa79">0xce00489e&hellip;</a>
+  </div>
+</div>
+<p class="note" style="margin-top:2px"><b>Same sender, same pool, same swap, on Sepolia.</b> The
+only thing that differs between those three transactions is whether an ENS record exists &mdash;
+and that record could only be written because a job was re-executed and reproduced.</p>
+
+<p class="lede" style="margin-top:22px">Nothing below is a screenshot. Your browser is calling
 <span class="m">Sepolia</span> right now, through the same public RPC anyone can use, and
 reporting what comes back &mdash; including the parts that are not finished.</p>
 
@@ -176,7 +200,7 @@ reporting what comes back &mdash; including the parts that are not finished.</p>
   transaction on its own only says something went wrong.</p>
 </div>
 
-<h2>4. What is still wrong, read live</h2>
+<h2>4. The last key, read live</h2>
 <div class="card">
   <p><span class="st pend" id="s-root">&hellip;</span>
      <span class="big" id="t-root">checking who still holds root&hellip;</span></p>
@@ -208,6 +232,10 @@ reporting what comes back &mdash; including the parts that are not finished.</p>
   <span class="m">reproduced</span>. Nothing on chain ties an arbitrary address to a name, so a
   second agent could trade behind the first one's record.
   <br><br>
+  <b>A role is scoped to the key, never to the name.</b> Measured, and it is the resolver's
+  behaviour rather than ours. We pin the adapter to one name and put that name inside the key,
+  which makes a write onto a foreign name unattributable &mdash; not impossible.
+  <br><br>
   <b>Nothing here is mainnet, and nothing here is money.</b> Sepolia, test tokens, and an
   escrow holding a mock USDC.
   </p>
@@ -228,7 +256,8 @@ reporting what comes back &mdash; including the parts that are not finished.</p>
 
 <p class="note" style="margin-top:28px">
 <a href="https://github.com/psyto/reckn">github.com/psyto/reckn</a> &middot;
-<a href="arc.html">the earlier Arc work</a> &middot;
+<a href="arc.html">the earlier Arc work</a> &mdash; a different, earlier submission, which this
+entry does not claim &middot;
 <a href="money-shot.html">one dispute, judged two ways</a>
 </p>
 
