@@ -247,11 +247,12 @@
   <p><span class="st pend" id="s-root">&hellip;</span>
      <span class="big" id="t-root">checking who still holds root&hellip;</span></p>
   <p class="note">
-  This is the part a demo page normally leaves out. The account that is the agent also still
-  holds <b>root</b> on the resolver we deployed, and root overrides the per&#8209;key roles
-  everything above depends on. <b>Until it is renounced, the agent can write its own record and
-  open its own pool.</b> This page asks the chain rather than telling you, so when it is
-  renounced this section changes by itself.
+  This is the part a demo page normally leaves out. The account that is the agent also deployed
+  this resolver and held <b>root</b> on it, and root overrides the per&#8209;key roles everything
+  above depends on &mdash; so while it held them, it could write its own record and open its own
+  pool. <b>The heading above and the three rows below are not written here.</b> They are read
+  from the chain on every load, which is why this section could contradict the rest of the page
+  if it ever stopped being true.
   </p>
   <div class="wrap"><table>
     <tr><th>can write the gate's record</th><th></th></tr>
