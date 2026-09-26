@@ -339,6 +339,14 @@ key inside the URL.
   `Reckn_ETHGlobal_Tokyo_HYBRID_DEMO_v13.mp4` passes 6/6; the only terminal on screen with a
   command line shows `--rpc-url "$SEPOLIA_RPC"` **unexpanded**.
 
+- **The first 0.8 s of the cut is pure white, and it stays that way — founder decision
+  2026-09-26.** Y=255 for 24 frames, then 27.8: the browser's pre-paint, baked into the
+  recording. It is not a rejection condition, the first 3.1 s carries no speech, and trimming it
+  costs nothing audible — but `video/build-hybrid-demo-v8.sh` reproduces **v13**, and a
+  hand-trimmed v14 is an artifact the build script cannot produce. **A project whose whole claim
+  is "reproduce, or refund" does not ship one.** Do not re-export to fix this: it also turns the
+  §6 record red and costs another frame-by-frame pass.
+
 ## ★ 5.6 The description cannot go stale silently
 
 **A note saying "remember to re-paste" is an admonition.** This repository's own rule is that
