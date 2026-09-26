@@ -765,5 +765,81 @@
       "gasUsed": 180432,
       "note": "THE TRADE. Sent by an address that was never granted anything, is not the buyer, and never funded a deal -- after the only key that could have opened this pool was destroyed. 0.9871580343970613 token1 out."
     }
+  },
+  "joinAfterRenounce": {
+    "what": "The join, run again AFTER the renounce. Until this, what survived the key being destroyed was a POOL. This is the record surface itself: a new deal funded, settled on a proof by somebody who is not the buyer, a window granted by the adapter out of its own root, written by the buyer, and closed -- with no root held over the resolver or the registry by anyone.",
+    "dealId": "0x7759eb6e817967fbd738343053b10861b0d5936a066c5bc8d6250a98d38c6c2a",
+    "recordKey": "reckn:job:agent.reckn.eth:7759eb6e817967fbd738343053b10861b0d5936a066c5bc8d6250a98d38c6c2a",
+    "resolvedThroughENS": "reproduced block=11784852 verifier=0xe0de264d76f0664c4e943fc02e3d9fb46cd27608",
+    "mintBuyerUsdc3": {
+      "tx": "0xb4af8af7713d4f4ee269ab74a739016eb21b45a22da8ce27c2f7df411526935c",
+      "block": 11784846,
+      "timestamp": "2026-09-26T07:48:00Z",
+      "from": "0x4b55f9e4d87505f3347c7cafcb8c7eb589970ee3",
+      "to": "0x16f95d91dba7da3aca778ec053df0ff6c6a8aa8e",
+      "status": "success",
+      "gasUsed": 51381,
+      "note": ""
+    },
+    "approve3": {
+      "tx": "0x8112aebaa3edfe0de9931fddd495b0764bdece99ba2d341ded52f1f3fc47e04c",
+      "block": 11784847,
+      "timestamp": "2026-09-26T07:48:12Z",
+      "from": "0x4b55f9e4d87505f3347c7cafcb8c7eb589970ee3",
+      "to": "0x16f95d91dba7da3aca778ec053df0ff6c6a8aa8e",
+      "status": "success",
+      "gasUsed": 46366,
+      "note": ""
+    },
+    "fund3": {
+      "tx": "0xfe23ffb1caea45cb3ff67f40e7b58592ececb58f87e3dfebcac6206b4fca1ebc",
+      "block": 11784849,
+      "timestamp": "2026-09-26T07:48:36Z",
+      "from": "0x4b55f9e4d87505f3347c7cafcb8c7eb589970ee3",
+      "to": "0x6d6a9deb67d785bc131a5d732617eabe751098c5",
+      "status": "success",
+      "gasUsed": 239811,
+      "note": "the buyer commits to a binding it COMPUTED from the terms; the run printed 'computed from the terms by the buyer, and it matches the proof'."
+    },
+    "settle3": {
+      "tx": "0x0671657e2a9a9ea7e862efaecb6bb4535e238bd825b60623ee543530843639a5",
+      "block": 11784851,
+      "timestamp": "2026-09-26T07:49:00Z",
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0x6d6a9deb67d785bc131a5d732617eabe751098c5",
+      "status": "success",
+      "gasUsed": 293917,
+      "note": ""
+    },
+    "open3": {
+      "tx": "0x82f70786ffd75a3751e980c5e3c3388ebe7069edc145e84aa1249dc70880c908",
+      "block": 11784852,
+      "timestamp": "2026-09-26T07:49:12Z",
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0xa6966f9f5e72a1841b2d2a22ec62a23d703202b8",
+      "status": "success",
+      "gasUsed": 530361,
+      "note": "the adapter grants, using ITS OWN root -- the only root left on the resolver."
+    },
+    "write3": {
+      "tx": "0xca0a854a2e95565d6c24d699b8fadf767f291f7193c0cc30baec1047e0601083",
+      "block": 11784855,
+      "timestamp": "2026-09-26T07:49:48Z",
+      "from": "0x4b55f9e4d87505f3347c7cafcb8c7eb589970ee3",
+      "to": "0x740e02ce9fb52629fef861ca02df7091f416bbf8",
+      "status": "success",
+      "gasUsed": 139131,
+      "note": "THE POINT OF THIS RUN. A new record written with nobody holding root over the resolver or the registry."
+    },
+    "close3": {
+      "tx": "0xcbda83b196e26e28e521d75df0f9309e441a38981ec896ea404e74ba5fac3b32",
+      "block": 11784877,
+      "timestamp": "2026-09-26T07:54:12Z",
+      "from": "0x4b55f9e4d87505f3347c7cafcb8c7eb589970ee3",
+      "to": "0xa6966f9f5e72a1841b2d2a22ec62a23d703202b8",
+      "status": "success",
+      "gasUsed": 75228,
+      "note": ""
+    }
   }
 }

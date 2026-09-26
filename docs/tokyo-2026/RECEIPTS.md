@@ -256,6 +256,34 @@ hand no longer existed.
 It is not that the right is irrevocable. **It is that the record a spent right wrote outlives
 the right, and outlives us.**
 
+### And the record surface still works, with nobody holding root
+
+What survived the key being destroyed, above, was a **pool**. This is the machinery itself. The
+whole join ran again afterwards — a new deal funded, settled on a proof by somebody who is not
+the buyer, a window granted by the adapter out of its own root, written by the buyer, closed.
+**No root over the resolver or the registry, held by anyone, at any point in it.**
+
+| | transaction | result | gas |
+|---|---|---|---|
+| the buyer funds, committing to a binding **it computed itself** | [`0xfe23ffb1…`](https://sepolia.etherscan.io/tx/0xfe23ffb1caea45cb3ff67f40e7b58592ececb58f87e3dfebcac6206b4fca1ebc) | success | 239,811 |
+| the approval it needed | [`0x8112aeba…`](https://sepolia.etherscan.io/tx/0x8112aebaa3edfe0de9931fddd495b0764bdece99ba2d341ded52f1f3fc47e04c) | success | 46,366 |
+| topping up the mock USDC it had spent | [`0xb4af8af7…`](https://sepolia.etherscan.io/tx/0xb4af8af7713d4f4ee269ab74a739016eb21b45a22da8ce27c2f7df411526935c) | success | 51,381 |
+| a stranger settles it on the proof | [`0x0671657e…`](https://sepolia.etherscan.io/tx/0x0671657e2a9a9ea7e862efaecb6bb4535e238bd825b60623ee543530843639a5) | success | 293,917 |
+| the adapter grants — out of **its own** root, the only one left | [`0x82f70786…`](https://sepolia.etherscan.io/tx/0x82f70786ffd75a3751e980c5e3c3388ebe7069edc145e84aa1249dc70880c908) | success | 530,361 |
+| **the buyer writes a new record** | [`0xca0a854a…`](https://sepolia.etherscan.io/tx/0xca0a854a2e95565d6c24d699b8fadf767f291f7193c0cc30baec1047e0601083) | success | 139,131 |
+| and closes its own window | [`0xcbda83b1…`](https://sepolia.etherscan.io/tx/0xcbda83b196e26e28e521d75df0f9309e441a38981ec896ea404e74ba5fac3b32) | success | 75,228 |
+
+ENS returns it:
+
+```
+reckn:job:agent.reckn.eth:7759eb6e817967fbd738343053b10861b0d5936a066c5bc8d6250a98d38c6c2a
+  -> "reproduced block=11784852 verifier=0xe0de264d76f0664c4e943fc02e3d9fb46cd27608"
+```
+
+The binding was **computed from the terms by the buyer** and matched the proof — the run says so
+in its own output, and refuses to continue if the two disagree. That is the direction the escrow
+actually depends on: the buyer commits first, and a proof settles only if it describes that deal.
+
 ## A proof made during the event, settled during the event
 
 Every other settlement here was decided by a Groth16 proof **committed to the tree before the

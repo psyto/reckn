@@ -86,7 +86,7 @@ want_hex32 "$DEAL"
 [[ ${#PUB} -gt 100 && ${#PRF} -gt 100 ]] || { echo "join-sepolia: the fixture did not load" >&2; exit 1; }
 
 say "0. what we are about to do"
-printf '   deal      %s\n   binding   %s\n     \u21b3 %s\n   codehash  %s\n   buyer     %s\n   agent     %s\n   adapter   %s\n' \
+printf '   deal      %s\n   binding   %s\n     -> %s\n   codehash  %s\n   buyer     %s\n   agent     %s\n   adapter   %s\n' \
   "$DEAL" "$BINDING" "$BINDING_SOURCE" "$CODEHASH" "$BUYER" "$AGENT" "$ADAPTER"
 
 # The buyer's MockUSDC runs out, because every run of this spends 250 of it. Minting is open to
