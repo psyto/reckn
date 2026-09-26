@@ -287,6 +287,44 @@ video's.
 | **What tools, and why?** | SP1 because the adjudication has to be re-execution, not opinion. **ENSv2's permissioned resolver because it grants against the setter's calldata** — that is what makes "one record, then the right is gone" expressible at all. Uniswap v4 because a `beforeSwap` hook can read the record synchronously, inside the swap, with no CCIP-Read. |
 | **What did you solve, and how?** | Three, and each is in a commit: `close` was a griefing weapon until a guard was added; an ENSv2 role turned out to be scoped to the key and never to the name, so the name went **inside** the key; and the hook existed only on a fork, which would have made it the one part of the submission with no receipt. |
 
+### ★ "How did you end up at ENS?" — the origin story, and the two overclaims inside it
+
+**This is the answer to give at the ENS booth**, and it is the one the founder reaches for
+naturally, so it is written down with its own failure modes attached. Say it in this order:
+
+> ERC-8004 stops an agent from writing feedback **about itself**. It does not stop **a second
+> address** from writing feedback about it, having done no work at all. So neither self-report
+> nor a certifying authority gets you there.
+>
+> So I changed the question. **Not "who is this agent" but "does this work reproduce".** The
+> first one cannot be answered without trusting somebody. The second one is settled by
+> re-executing it and comparing — a cryptographic proof, and no party.
+>
+> Looking for somewhere to put the answer, I found **ENS could carry it**. ENS reads as name
+> resolution, but **an ENSv2 setter role is granted against the setter's calldata**, so it is
+> scoped to **one key**. That makes ENS usable as **a record surface where one settlement, and
+> nothing else, opens one write.** No owner, no resolver, no admin decides it — and **root is
+> renounced**, so the agent's own account is refused when you ask the chain.
+>
+> The chain is: **a proof settles the escrow and the money moves → that same settlement opens one
+> ENS write window → a Uniswap v4 `beforeSwap` reads that record synchronously, inside the swap.**
+> No record, no swap; clear it and the same swap closes again. Three transactions on Sepolia.
+>
+> And to be straight about it: **this does not solve identity.** An agent can still hire itself
+> and pay itself. What it closes is narrower — **payment happens only against work that
+> reproduced.**
+
+**Two sentences that keep trying to get into this story. Both are false. Do not say either:**
+
+| the sentence that wants to be said | why it is false |
+|---|---|
+| *"ERC-8004 proves an agent's identity, and we prove the agent did the work"* | The proof establishes that **re-executing the job's inputs produced the claimed result**. It establishes **nothing about who performed it**, and §4 already lists `does not solve identity` as a thing this entry disclaims. Worse, the record is written by the **buyer**, not by the agent — so even the writing does not point at the performer |
+| *"the record is a proof you can then use to trigger a payment"* | **The direction is backwards.** The payment is **upstream**: the proof settles the escrow and the seller is paid. What the record gates downstream is a **swap** — access, not money. Saying it the other way round breaks `earn on v3, spend on v4`, and the ENS booth will notice |
+
+**Why the discipline matters more here than anywhere.** Kevin at the ENS booth knows what an
+ENSv2 role is scoped to; we found out by measuring it and being wrong first. An overclaim about
+what the role proves is the one thing that booth is guaranteed to catch.
+
 ### The questions that will come, and the honest answers
 
 | question | answer |
