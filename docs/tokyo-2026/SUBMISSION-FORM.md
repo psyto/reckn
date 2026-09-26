@@ -1,5 +1,27 @@
 # ETHGlobal Tokyo 2026 — submission form copy
 
+## ★ SUBMITTED — 2026-09-27, before the 09:00 deadline
+
+| | |
+|---|---|
+| public showcase | **https://ethglobal.com/showcase/reckn-47t6m** |
+| name / one-liner | ⚖ Reckn — *Reckn pays for reproduced work; a settled ENS record opens a Uniswap v4 pool.* |
+| video | `Reckn_ETHGlobal_Tokyo_HYBRID_DEMO_v13.mp4`, 2:43, uploaded. `check-video.sh` 6/6 |
+| description | `DESCRIPTION.txt` @ `34a32830`, recorded in `PASTED` |
+
+**ETHGlobal's own instruction on submitting was: _"head to level 4F to check-in for Main
+Finalist Judging and get assigned to a judging room."_** So Sunday morning has **two** things at
+09:30, and only one of them is a free-roaming window:
+
+- **4F first.** The judging room is an *assigned slot* — a fixed time somebody else picks. Miss
+  the check-in and the Top-10 lane is gone whatever else is done.
+- **5F partner booths** (ENS, Uniswap Foundation) run 09:30–12:30 as a window, so they fit
+  *around* the assigned room, not the other way round.
+
+**Everything below is the copy as submitted.** Editing it now does not edit the submission; the
+form is the record and this file is the source it was pasted from.
+
+
 **Drafted 2026-09-21 from measured results (`spikes/tokyo-2026/FINDINGS.md`).**
 
 > **How to read this file.** Everything inside a `~~~text` block is **the copy — paste it
