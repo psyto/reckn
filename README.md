@@ -14,6 +14,8 @@ swap. It is not a reputation badge: it changes whether the swap can execute.
 **[Read the 3-minute demo runbook →](docs/tokyo-2026/DEMO.md)** ·
 **[Read every receipt →](docs/tokyo-2026/RECEIPTS.md)**
 
+**Submitted 2026-09-27:** [ethglobal.com/showcase/reckn-47t6m](https://ethglobal.com/showcase/reckn-47t6m)
+
 | What a judge should see | Where to check it |
 |---|---|
 | The official ERC-8004 registry blocks an agent from self-feedback, but a second address can submit feedback without proving work. | [Live page](https://psyto.github.io/reckn/) · [receipt](docs/tokyo-2026/RECEIPTS.md) |
@@ -88,6 +90,22 @@ bash scripts/no-keys.sh
 It fails if `RecknZkEscrow` gains an owner, admin, resolver, pause, upgrade path, an unlisted
 state-changing entry point, or a caller-identity gate. The live Tokyo evidence is documented in
 [`docs/tokyo-2026/RECEIPTS.md`](docs/tokyo-2026/RECEIPTS.md).
+
+### Every gate, and what each one is able to catch
+
+Eight. **A check nobody has seen fail is not a check**, so each of these has a way of going
+red that has actually been observed — and one of them is red right now, on purpose:
+
+| run it | it goes red when |
+|---|---|
+| `bash scripts/no-keys.sh` | the escrow gains a key of any kind |
+| `bash scripts/no-keys-control.sh` | **the gate above stops working** — it plants eight dissimilar keys and requires a red for each. 10/10 |
+| `bash scripts/no-unpublished-cli.sh` | a command in the docs does not exist |
+| `bash scripts/partner-kit-check.sh` | the adapter or the hook breaks a property. 95 tests |
+| `bash tokyo-2026/scripts/take-check.sh` | a line the demo says out loud stops being true on chain — it **refuses to record** |
+| `bash zk-verdict/scripts/sepolia-receipts.sh` | a receipt is linked that the chain-generated ledger does not hold, **or** a recorded transaction is linked nowhere. 69/69, both directions |
+| `bash docs/tokyo-2026/check-description.sh` | the submitted description and the repository disagree |
+| `bash docs/tokyo-2026/check-video.sh` | the submission video would be auto-rejected. **Red as of 2026-09-27, and correctly so.** Rows 1-5 pass on the uploaded cut `…_v21_CAPTIONED.mp4` — 3:02, 1920x1080, 61 speech pauses, 30 scene changes. **Row 6 is not measured by anything**: no OCR runs, so it holds the hash of a cut a person watched frame by frame, and that was `v13`, an earlier export. The founder decided not to re-watch. The row stays red rather than being recorded as watched |
 
 ---
 
@@ -512,8 +530,9 @@ an audit of what the words may not mean: [`docs/cwf-2026/PITCH.md`](docs/cwf-202
 
 ## ETHGlobal Tokyo 2026 — technical reference
 
-**2026-09-25 → 09-27, Continuity track**, applying for the **ENS** and **Uniswap
-Foundation** partner prizes and for Top 10 Finalist judging.
+**2026-09-25 → 09-27, Continuity track.** **Submitted 2026-09-27** —
+[ethglobal.com/showcase/reckn-47t6m](https://ethglobal.com/showcase/reckn-47t6m) — for the
+**ENS** and **Uniswap Foundation** partner prizes and for Top 10 Finalist judging.
 
 | | |
 |---|---|

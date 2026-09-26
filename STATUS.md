@@ -22,10 +22,22 @@
 | **`EVENT_START`（Tokyo）** | **`eddac8ddad95825be51b0a89ab0765f5a68c890b`**（2026-09-25 19:31:28 +0900 = ハッキング開始前の最後の commit）。**これ以降が当日作業** |
 | 当日作業の定義 | **2026-09-25 21:00 JST 以降の commit のみ。** **9/25 付でも 21:00 より前は事前作業**（`013` §6-1。実際この日、境界の前に5本ある） |
 | 判事が確認する方法 | `git log --oneline eddac8d..HEAD` |
-| 提出締切 | **2026-09-27 09:00 JST**（09-25 の登録時に窓口で確認）。ライブ審査 **14:30** |
+| 提出締切 | **2026-09-27 09:00 JST**（09-25 の登録時に窓口で確認）。~~ライブ審査 **14:30**~~ → **誤り。公開アジェンダでは審査は 09:30–12:30**（Main Finalist Judging = 4F 割当部屋 / Partner Prize Judging = 5F ブース）。14:30 の出典は `013` G-Q3 の *"founder's calendar, not a file"* で、**ファイルの裏が無い唯一の記述が唯一ずれていた**。訂正 2026-09-27 |
 | 中心主張 | 判定する鍵が存在しない — `bash scripts/no-keys.sh` **PASS** |
 
 **Tokyo の `EVENT_START` は ETHOnline のもの（`121194c`）とは別物。混同しない。**
+
+### ★ 提出済み — 2026-09-27（締切の8時間以上前）
+
+| | |
+|---|---|
+| 公開ページ | **https://ethglobal.com/showcase/reckn-47t6m** |
+| 動画 | **`Reckn_ETHGlobal_Tokyo_HYBRID_DEMO_v21_CAPTIONED.mp4`**（3:02、肉声、字幕つき）。`check-video.sh` **5/6** ——1〜5 は実測で緑、**§6（フレームへの `SEPOLIA_RPC` 焼き付き）はこのカットでは未実施**。実施したのは別書き出しの `v13` で、founder 判断により繰り返さない。**見ていないものを「見た」と記録せず、赤のまま残す** |
+| description | `DESCRIPTION.txt` @ `34a32830`、`PASTED` に記録 |
+| 当日朝 | **まず 4F でチェックインし judging room を割り当ててもらう**（部屋は固定枠）。**5F のパートナーブースは 09:30–12:30 の窓**なので、部屋を軸に挟む |
+| ゲート | **7/8 緑 ＋ `check-video` が意図的に赤**（`no-keys` / `no-keys-control` 10/10 / `no-unpublished-cli` / `partner-kit` 95/95 / `take-check` / `sepolia-receipts` 69/69 / `check-description` / `check-video` 6/6） |
+
+**「未提出」と書かない。**
 
 ## ETHGlobal Tokyo は Reckn × Uniswap で確定（2026-09-14、founder）
 

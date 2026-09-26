@@ -15,7 +15,7 @@ TEE の LLM 判事でも、自己申告フィードバックでも、監査不�
 |---|---|
 | **ETHOnline 2026** | **Round 1 で終了**（2026-09-14 通知。ライブ審査には進まず）。**パートナー賞（Arc 2枠）は対象のまま**、**Finale 9/17 01:00 JST**。`master` はそこまで凍結 |
 | **Crypto World's Fair** | ~~Tempo × Solana で参加~~ → **2026-09-14 に取り消し。Reckn は参加しない。** 出るのは別レーンで、**この repo はそれを記述しない**（`docs/specs/010` §11）。取り消しの全文 `docs/cwf-2026/RETRACTED-2026-09-14.md` |
-| **次のレーン: ETHGlobal Tokyo** | **2026-09-25 → 09-27、Uniswap Foundation Continuity。** 仕様は **`docs/specs/013-settlement-granted-record-rights.md`（r4）** ——2026-09-21 に 012 を置換し、その Uniswap 半分を吸収して **ENS を加えた**。パートナー賞は **ENS と Uniswap Foundation**。**Reckn の生きているレーンはこれ一本**。事前作業の開示・フォーム文面・デモ台本・準備手順は `docs/tokyo-2026/`、測定は `spikes/tokyo-2026/FINDINGS.md` |
+| **ETHGlobal Tokyo** | **提出済み 2026-09-27**（締切 09:00 の8時間以上前）。公開ページ **https://ethglobal.com/showcase/reckn-47t6m**。仕様は **`docs/specs/013-settlement-granted-record-rights.md`（r4）** ——2026-09-21 に 012 を置換し、その Uniswap 半分を吸収して **ENS を加えた**。パートナー賞は **ENS と Uniswap Foundation**。**Reckn の生きているレーンはこれ一本**。**審査は 09-27 09:30–12:30**（4F 割当部屋 ＋ 5F パートナーブース。**14:30 ではない** ——旧値の出典は `013` G-Q3 の *"founder's calendar, not a file"*）。事前作業の開示・フォーム文面・デモ台本・準備手順は `docs/tokyo-2026/`、測定は `spikes/tokyo-2026/FINDINGS.md` |
 
 **① 9/14 01:00 JST から 9/17 01:00 JST は `master` 凍結**（founder 裁定 2026-09-12）。
 凍結中の作業は **`freeze-window` ブランチ**に積み、Finale 後に日付を保ってマージする
@@ -48,6 +48,21 @@ Tempo の `mismatch` deal は 09-08 02:59:56 UTC から `Funded`（block 3435201
 大会と無関係に成立する事実であり、**Reckn がこれまで一度も公開チェーンで見せられなかったもの**。
 依頼文と台帳は `docs/cwf-2026/TRACTION.md` §2（あのディレクトリで取り消されていない3枚の1つ）。
 **proof 由来の返金（T-2）と混ぜて書かない。**
+
+## Tokyo の成果物を触るときの禁止事項（2026-09-27、提出後）
+
+- **`docs/tokyo-2026/DISCLOSURE.md` と `SUBMISSION-FORM.md` の `~~~text` ブロックを触らない。**
+  `build-description.py` がこの2つから `DESCRIPTION.txt` を組み、**提出済みフォームと hash で
+  照合されている**（`check-description.sh`）。触れば赤になり、貼り直しが発生する。
+  `SUBMISSION-FORM.md` の `~~~text` の**外側**は安全。
+- **提出したカットは `Reckn_ETHGlobal_Tokyo_HYBRID_DEMO_v21_CAPTIONED.mp4`**（3:02、肉声、字幕つき）。
+  **`v13` はもうディスクに無い**ので、v13 を前提にした記述を書かない。
+  **`check-video.sh` は意図的に赤**: 1〜5 は v21 で実測して緑、**§6 の目視は v13 に対して行ったもの**で、
+  v21 では繰り返さないと founder が決めた。**`--record` を走らせて緑にしない**——
+  見ていないものを「見た」と記録した瞬間、このゲートは検査でなくなる。
+- **`check-video.sh` に `-v error` を足さない。** `silencedetect` は info レベルで報告するので、
+  **フィルタの出力ごと捨てられ、不在が「無音0箇所」という数字になる**——音楽ベッドと区別が付かない形で。
+  一度これで「動画に音楽が入っている」と誤報告した。
 
 ## 中心主張（毎回確認する）
 

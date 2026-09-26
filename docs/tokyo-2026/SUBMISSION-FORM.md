@@ -6,7 +6,7 @@
 |---|---|
 | public showcase | **https://ethglobal.com/showcase/reckn-47t6m** |
 | name / one-liner | ⚖ Reckn — *Reckn pays for reproduced work; a settled ENS record opens a Uniswap v4 pool.* |
-| video | `Reckn_ETHGlobal_Tokyo_HYBRID_DEMO_v13.mp4`, 2:43, uploaded. `check-video.sh` 6/6 |
+| video | **`Reckn_ETHGlobal_Tokyo_HYBRID_DEMO_v21_CAPTIONED.mp4`**, 3:02, uploaded. `check-video.sh` **5/6** — rows 1-5 measured green; **row 6 (an expanded `SEPOLIA_RPC` in a frame) was not performed on this cut.** It was performed on `v13`, a different export, and the founder decided not to repeat it. The gate is left red rather than recorded as watched |
 | description | `DESCRIPTION.txt` @ `34a32830`, recorded in `PASTED` |
 
 **ETHGlobal's own instruction on submitting was: _"head to level 4F to check-in for Main

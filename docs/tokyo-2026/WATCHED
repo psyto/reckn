@@ -4,3 +4,18 @@ watched: 2026-09-26 12:25 UTC
 
 The frames of this file were looked at by eye for §6 (an expanded SEPOLIA_RPC
 burnt into a terminal capture). A re-export changes the hash and this goes red.
+
+★ 2026-09-27 — THIS RECORD IS DELIBERATELY STALE, AND THE GATE IS DELIBERATELY RED.
+
+The cut that was uploaded to ETHGlobal is
+media/Reckn_ETHGlobal_Tokyo_HYBRID_DEMO_v21_CAPTIONED.mp4 (3:02, 76accd1d20d93387).
+Its rows 1-5 were measured and pass. Row 6 was NOT performed on it: v13 no longer
+exists on disk, and the founder decided not to repeat the frame-by-frame pass.
+
+Nothing was recorded in its place. Recording an unwatched cut as watched is the one
+move that would turn this file from a record into a decoration -- the same failure
+this repository keeps catching elsewhere. To close it honestly, look at the tiles
+and then run:
+
+    bash docs/tokyo-2026/check-video.sh \
+      docs/tokyo-2026/media/Reckn_ETHGlobal_Tokyo_HYBRID_DEMO_v21_CAPTIONED.mp4 --record
