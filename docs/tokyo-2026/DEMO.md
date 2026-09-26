@@ -129,7 +129,7 @@ is evidence.
 
 ---
 
-## 2. The rest of the video (1:00 → ~3:00)
+## 2. The rest of the video (1:00 → ~3:20)
 
 ### Beat 4 · 1:00–1:30 — Uniswap, first appearance: **the job that was proven**
 
@@ -159,7 +159,35 @@ The bridge sentence, said once, plainly:
 **The third row is not optional.** Without it the gate could be passing for an unrelated reason
 (`013` R-16), and a judge who suspects that and is not answered will assume the worst.
 
-### Beat 6 · 2:15–2:35 — why this matters, said after the mechanism and not before
+### Beat 5b · 2:15–2:35 — ★ and then we threw the key away
+
+**New on 09-26, and it is the strongest twenty seconds in the video.** Beat 5 ends with the gate
+shutting. This is the gate staying open when nobody holds a key to it.
+
+> "Everything you have just seen ran while I still held root on that resolver — and root
+> overrides all of it. So we did it once more, on a second pool. Settled it. The buyer wrote the
+> record. The buyer closed its own window. **And then we destroyed both root roles.** That
+> cannot be undone.
+> This is an address that was never granted anything, trading in that pool **afterwards**."
+
+Screen: the three refusals read back from chain — buyer, stranger, **the agent itself** — then
+`beat5b-04-stranger-swaps`, where `0xF81dFf68…` swaps and two ERC-20 transfers move.
+
+Close it on the line, said once and slowly:
+
+> **"It is not that the right cannot be revoked. It is that the record a spent right wrote
+> outlives the right — and outlives us."**
+
+**Why here and not at the end.** Beat 5 proves the record gates the pool; a viewer's next thought
+is *"and you can write that record whenever you like."* Until 16:30 on 09-26 that was **true**,
+and the demo page said so in red. Answering it in the next breath, with a transaction rather
+than a promise, is worth more than answering it in the Q&A.
+
+**Do not claim the pool is trustless because the right is gone** — the buyer's right ended, and
+the agent's root ended, but the hook still gates on a record whose *contents* nobody enforced.
+That is beat 7's sentence and it stays there.
+
+### Beat 6 · 2:35–2:55 — why this matters, said after the mechanism and not before
 
 > "Banks settle at the end of the day, so the next morning somebody has to **reconcile**.
 > On chain, each transaction settles on its own — **so there is nothing to reconcile.**
@@ -170,7 +198,7 @@ The bridge sentence, said once, plainly:
 anything happens on screen — the shape that lost Round 1. Here, after the viewer has watched a
 refusal and a pass, it is the sentence that makes the mechanism matter outside this room.
 
-### Beat 7 · 2:35–2:50 — the limits, said out loud
+### Beat 7 · 2:55–3:10 — the limits, said out loud
 
 > "We are not claiming this is unforgeable — **an agent can hire itself**. We are not claiming
 > there is no way around the proof — **the buyer names the verifier**. And the gate is on
@@ -178,7 +206,7 @@ refusal and a pass, it is the sentence that makes the mechanism matter outside t
 
 Full list in §4. **These are said in the take, not left in the README to be found.**
 
-### Beat 8 · 2:50–3:00
+### Beat 8 · 3:10–3:20
 
 The repository, the live demo link, and the pre-existing-work disclosure.
 
@@ -221,11 +249,15 @@ video's.
    problem just moved."*
 2. **0:40–1:20** where the right comes from: an escrow that settles on a re-execution proof,
    with no resolver and no owner, and the same settlement granting **the buyer** one ENS record.
-3. **1:20–2:10** the record is a pass: the pool refusing, the record being written, the same
+3. **1:20–2:00** the record is a pass: the pool refusing, the record being written, the same
    swap executing with the tokens moving, the record cleared, refused again.
-4. **2:10–2:40** what is **not** closed, said before they ask — the bytes are not proof-derived,
+4. **2:00–2:20** ★ *"and then we threw the key away."* Both root roles destroyed, the three
+   refusals read from chain, and a second pool — settled, closed, and traded afterwards by an
+   address that was never granted anything. **This is the one to lead with if they interrupt
+   early**: it is the shortest path from "nice mechanism" to "and nobody is holding it up."
+5. **2:20–2:45** what is **not** closed, said before they ask — the bytes are not proof-derived,
    the hook cannot identify the swapper, and this is Sepolia.
-5. **2:40–3:00** stop early on purpose. *"The receipts are all in the repo and the page reads
+6. **2:45–3:00** stop early on purpose. *"The receipts are all in the repo and the page reads
    them off the chain live — ask me anything."*
 
 **The three questions ETHGlobal says every panel asks**, answered short:

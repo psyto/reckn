@@ -136,8 +136,8 @@ for f in beat1-00-self-write-refused beat1-01-state-contrast \
          beat3-02-window-opened beat3-03-buyer-writes beat3-04-ens-resolves-the-record \
          beat5-01-swap-refused beat5-02-buyer-writes-the-record beat5-03-swap-executes \
          beat5-04-record-cleared beat5-05-refused-again \
-         beat6-01-stranger-mints beat6-02-stranger-mints-other-side \
-         beat6-03-stranger-funds-router beat6-04-stranger-swaps; do
+         beat5b-01-stranger-mints beat5b-02-stranger-mints-other-side \
+         beat5b-03-stranger-funds-router beat5b-04-stranger-swaps; do
   [[ -s "$root/docs/tokyo-2026/media/$f.png" ]] && ok "$f.png" || bad "missing frame: $f.png"
 done
 
