@@ -17,6 +17,7 @@ RPC=${TAKE_RPC:-https://ethereum-sepolia-rpc.publicnode.com}
 REPUTATION=0x8004B663056A597Dffe9eCcC1965A193B7388713
 UR=0x5d25C1D6aCBb71B7a28AA7899618a3412a8303e3
 RESOLVER=0x740e02cE9FB52629feF861CA02DF7091f416BBF8
+REGISTRY=0x1Ad360D93ccD6230FB14D213134107BF89a428cf
 ESCROW=0x6d6a9deb67d785BC131a5d732617EABE751098C5
 HOOK=0x68116b8086283E51227c61FD791b6Da1A4230080
 AGENT=0xfa2582ecAD1186A171CB9626d1FcFDC0f7995321
@@ -75,10 +76,31 @@ else
   bad "the write neither succeeded nor reverted our way: ${w:0:80}"
 fi
 
+section "beat 2b — and the agent cannot repoint the name out from under it"
+# take-check never read the REGISTRY. With only the resolver's root renounced, every row below
+# went green and the agent could still call setResolver and serve anything it liked from a
+# resolver of its own. Found by the 2026-09-26 review, by executing it on a fork.
+ROOT_ALL=0x1111111111111111111111111111111111111111111111111111111111111111
+reg=$(rd "$REGISTRY" "hasRootRoles(uint256,address)(bool)" "$ROOT_ALL" "$AGENT")
+case "$reg" in
+  false) ok "the agent holds no root on the registry" ;;
+  true)  bad "the agent STILL holds root on the REGISTRY — it can repoint agent.reckn.eth, so beat 2 is not true no matter what the resolver says" ;;
+  *)     bad "the registry did not answer (got '${reg:-nothing}') — unknown, not closed" ;;
+esac
+
 section "beat 3 — the record resolves through ENS"
 inner=$(cast calldata "text(bytes32,string)" "$(cast namehash agent.reckn.eth)" "$JOINKEY")
-out=$(rd "$UR" "resolve(bytes,bytes)(bytes,address)" "$DNS" "$inner")
-out=$(printf '%s' "$out" | head -1)
+both=$(rd "$UR" "resolve(bytes,bytes)(bytes,address)" "$DNS" "$inner")
+out=$(printf '%s' "$both" | sed -n 1p)
+answered=$(printf '%s' "$both" | sed -n 2p)
+# WHICH resolver answered is the half this row was missing. UniversalResolverV2 follows the
+# registry's pointer, so if the name is repointed the record still "resolves" -- from a
+# resolver the agent controls. Pinning it is what makes beat 3 about OUR surface.
+if [[ -n "$answered" && "$(printf '%s' "$answered" | tr 'A-Z' 'a-z')" != "$(printf '%s' "$RESOLVER" | tr 'A-Z' 'a-z')" ]]; then
+  bad "ENS answered from $answered, not our resolver — the name has been repointed"
+else
+  ok "the answer came from our resolver, not one substituted for it"
+fi
 val=""
 if [[ -n "$out" ]]; then
   val=$(cast abi-decode 'f()(string)' "$out" 2>/dev/null | tr -d '"')

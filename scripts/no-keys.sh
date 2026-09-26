@@ -36,7 +36,7 @@ body=$(awk '/^contract RecknZkEscrow/{f=1} f' "$target" \
 
 # 1. Forbidden privilege vocabulary. Any of these reintroduces an actor with a key.
 say "no privileged role in RecknZkEscrow"
-forbidden='onlyOwner|Ownable|_owner|\\bowner\\b|\badmin\b|Admin|governance|Governance|\bauthority\b|Authority|allowlist|allowList|whitelist|onlyRole|AccessControl|\bpause\b|Pausable|upgrade|Upgradeable|initializer|delegatecall|selfdestruct|ecrecover|isValidSignature'
+forbidden='onlyOwner|Ownable|_owner|\bowner\b|\badmin\b|Admin|governance|Governance|\bauthority\b|Authority|allowlist|allowList|whitelist|onlyRole|AccessControl|\bpause\b|Pausable|upgrade|Upgradeable|initializer|delegatecall|selfdestruct|ecrecover|isValidSignature'
 if hits=$(printf '%s\n' "$body" | grep -nE "$forbidden" || true); [[ -n "$hits" ]]; then
   bad "privileged construct found:"; printf '      %s\n' "$hits"
 else
@@ -293,6 +293,44 @@ for spec in "SettlementRecord|$adapter|open close" "RecordGatedHook|$hook|"; do
   src=$(awk -v c="^contract $name" '$0 ~ c {f=1} f' <(strip "$file"))
   [[ -n "$src" ]] || { bad "6: could not isolate contract $name"; continue; }
 
+  # 6d — FIRST, because 6a-6c read from the `contract NAME` line down and therefore cannot see
+  #      anything declared above it. A base contract with a privileged function, a `modifier` and
+  #      a `fallback()` passed all three and exited 0 — measured. Check 2 was tightened for this
+  #      in 2c; check 6 shipped without the equivalent. The closure is: this file defines exactly
+  #      ONE contract, and that contract inherits from nothing. There is then nothing above the
+  #      line to hide in, and adding a base turns this red rather than turning the others blind.
+  ncontracts=$( (grep -cE '^[[:space:]]*(abstract +)?contract ' <(strip "$file")) || true)
+  [[ "$ncontracts" == "1" ]] \
+    && ok "6d $name: the file defines exactly one contract" \
+    || bad "6d: $file defines $ncontracts contracts — 6a-6c only read one of them, so the others are invisible"
+  # An INTERFACE base carries no code, so it cannot hide a privileged function; a contract,
+  #      abstract contract or library base can, and would sit above the line 6a-6c read from.
+  #      So the property is not "inherits from nothing" — the first version of this said that and
+  #      turned red on `is IHooks`, which proves nothing — it is "every base resolves to an
+  #      `interface` declaration, and none resolves to a contract".
+  hdr=$(printf '%s\n' "$src" | head -1)
+  bases=$(printf '%s' "$hdr" | sed -n 's/.* is \([^{]*\).*/\1/p' | tr ',' ' ')
+  # The sources under test come from $root, which NOKEYS_ROOT may redirect to an isolated copy;
+  # a base's DECLARATION lives in the dependency tree, which that copy does not carry. Resolving
+  # against $root alone made every base read as unresolved and the CLEAN COPY FAIL, which would
+  # have made no-keys-control.sh useless -- it needs the clean copy green to mean anything.
+  decl_roots="$root/tokyo-2026/src $root/zk-verdict/contracts/src $here/../tokyo-2026/lib"
+  for b in $bases; do
+    b=${b%%(*}
+    [[ -n "$b" ]] || continue
+    if grep -rqE "^[[:space:]]*(abstract +)?contract +$b\b" $decl_roots 2>/dev/null; then
+      bad "6d: $name inherits $b, and $b is declared as a CONTRACT somewhere — its members sit above the line 6a-6c read from"
+    elif grep -rqE "^[[:space:]]*interface +$b\b" $decl_roots 2>/dev/null; then
+      ok "6d $name: base $b is an interface — no code to inherit"
+    else
+      bad "6d: $name inherits $b and this check could not find its declaration. Unresolved is not the same as safe."
+    fi
+  done
+  [[ -n "$bases" ]] || ok "6d $name: inherits from nothing"
+  if printf '%s\n' "$src" | grep -qE '\busing +[A-Za-z_]'; then
+    bad "6d: $name has a \`using\` binding — member calls can resolve to a library this check never read"
+  fi
+
   # 6a — the same vocabulary as check 1. A key is a key wherever it is declared.
   if hits=$(printf '%s\n' "$src" | grep -nE "$forbidden" || true); [[ -n "$hits" ]]; then
     bad "6a: privileged construct in $name:"; printf '      %s\n' "$hits"
@@ -307,6 +345,24 @@ for spec in "SettlementRecord|$adapter|open close" "RecordGatedHook|$hook|"; do
     [[ "$n" == "0" ]] || bad "6b: $n '$kw' in $name — entry points may only be functions"
   done
   ok "6b $name: 0 fallback, 0 receive, 0 modifier"
+
+  # 6e — caller-identity gating, which check 6 had no analogue of. A blanket ban like check 3's
+  #      would be wrong here: `close` gates on msg.sender ON PURPOSE, and that guard is what
+  #      stops a stranger closing a window before the writer has used it. The property is
+  #      narrower and is `013` R-8 — THE DEAL IS THE AUTHORITY, NOT THE CALLER — so every
+  #      comparison against msg.sender must be against state derived from the deal, never
+  #      against a constant, an immutable, or a stored address that is not deal-derived.
+  #      `address public immutable boss = msg.sender;` gating `open` passes 6a (no forbidden
+  #      word), 6c (an immutable is not a function that writes) and 6d. It lands here.
+  allowed_cmp='writerOf\[dealId\]'
+  while IFS= read -r line; do
+    [[ -n "$line" ]] || continue
+    if printf '%s' "$line" | grep -qE "msg\.sender *[!=]= *$allowed_cmp|$allowed_cmp *[!=]= *msg\.sender"; then
+      ok "6e $name: msg.sender compared against the deal's own writer"
+    else
+      bad "6e: $name compares msg.sender against something that is not deal-derived — $(printf '%s' "$line" | sed 's/^ *//' | cut -c1-70)"
+    fi
+  done < <(printf '%s\n' "$src" | grep -nE 'msg\.sender *[!=]=|[!=]= *msg\.sender' || true)
 
   # 6c — which functions can write. For the hook the allowed set is EMPTY: everything after the
   #      constructor is view or pure, so nothing can change what it reads. For the adapter it is

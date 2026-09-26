@@ -50,7 +50,7 @@ plant() { # name | file | sed program | which clause should catch it
   fi
 }
 
-printf '\n\033[1mfive dissimilar keys, each planted alone\033[0m\n'
+printf '\n\033[1meight dissimilar keys, each planted alone\033[0m\n'
 # The first version of this planted `address public owner;` and nothing else, and the gate
 # stayed green -- correctly. An unread variable is a NAME, not a key: nothing can move money
 # with it. The mutation has to be an actual key, and then two independent clauses catch it.
@@ -81,6 +81,21 @@ plant "an admin on the verdict verifier" \
       's/(contract RecknVerdictVerifier[^\n]*\{)/$1\n    address public admin;/' \
       "check 5, the file settleWithProof obeys"
 
+plant "a bare owner, with nothing reading it" \
+      "zk-verdict/contracts/src/RecknZkEscrow.sol" \
+      's/(contract RecknZkEscrow[^\n]*\{)/$1\n    address public owner;/' \
+      "check 1, the word alone — the branch that was DEAD until 2026-09-26"
+
+plant "a base contract above the adapter" \
+      "tokyo-2026/src/SettlementRecord.sol" \
+      's/(contract SettlementRecord \{)/abstract contract Steward {\n    address st;\n    modifier onlySt() { require(msg.sender == st); _; }\n    fallback() external {}\n    function sweep(address r, uint256 a) external onlySt {}\n}\n\n$1/; s/contract SettlementRecord \{/contract SettlementRecord is Steward {/' \
+      "check 6d, everything above the contract line was invisible to 6a-6c"
+
+plant "a caller gate that is not deal-derived" \
+      "tokyo-2026/src/SettlementRecord.sol" \
+      's/(function open\(bytes32 dealId)/address public immutable boss = msg.sender;\n\n    $1/; s/(if \(opened\[dealId\]\) revert AlreadyOpened\(\);)/require(msg.sender == boss);\n        $1/' \
+      "check 6e, 013 R-8: the deal is the authority, not the caller"
+
 printf '\n\033[1mthe tracked tree must not have moved\033[0m\n'
 after=$(cd "$root" && git status --porcelain | sort)
 if [[ "$before" == "$after" ]]; then ok "git status is byte-identical before and after"
@@ -88,7 +103,7 @@ else bad "the worktree CHANGED — mutations escaped the isolated copy"; diff <(
 
 printf '\n'
 if [[ $failn -eq 0 ]]; then
-  printf '\033[32m%d/%d — the gate has now been seen to fail, five different ways.\033[0m\n' "$pass" "$((pass+failn))"
+  printf '\033[32m%d/%d — the gate has now been seen to fail, eight different ways.\033[0m\n' "$pass" "$((pass+failn))"
 else
   printf '\033[31m%d of %d checks did not hold.\033[0m\n' "$failn" "$((pass+failn))"
 fi
