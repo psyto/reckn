@@ -462,8 +462,40 @@ Foundation** partner prizes and for Top 10 Finalist judging.
 | Pre-existing work | [`docs/tokyo-2026/DISCLOSURE.md`](docs/tokyo-2026/DISCLOSURE.md). Everything in this README is pre-event work and is disclosed as such |
 | What was measured before building | [`spikes/tokyo-2026/FINDINGS.md`](spikes/tokyo-2026/FINDINGS.md) — including two places the design was wrong |
 
-**Nothing of the Tokyo submission exists yet.** `013` §4 lists what will be built, and
-the disclosure says the same thing in the form a judge can check commit by commit.
+### What was built, and the exact lines
+
+Live, and your browser checks it for you: **[psyto.github.io/reckn](https://psyto.github.io/reckn/)**.
+Every transaction: [`docs/tokyo-2026/RECEIPTS.md`](docs/tokyo-2026/RECEIPTS.md), checked in both
+directions against [a record generated from the chain](zk-verdict/contracts/sepolia.json).
+
+| what | the line | on Sepolia |
+|---|---|---|
+| **a settlement grants the buyer one record** — the ENS role is granted against the setter's *calldata*, so it authorises one key and is revoked after | [`SettlementRecord.sol:225`](https://github.com/psyto/reckn/blob/ab03d86/tokyo-2026/src/SettlementRecord.sol#L225-L236) · [`:264`](https://github.com/psyto/reckn/blob/ab03d86/tokyo-2026/src/SettlementRecord.sol#L264-L276) | [`0xA6966f9f…`](https://sepolia.etherscan.io/address/0xA6966f9f5E72a1841b2d2A22Ec62a23D703202b8) |
+| the outcome is re-derived from the proof, never taken from the caller | [`SettlementRecord.sol:240`](https://github.com/psyto/reckn/blob/ab03d86/tokyo-2026/src/SettlementRecord.sol#L240-L252) | |
+| the record key names the name it belongs to, because an ENSv2 role is scoped to the key alone | [`SettlementRecord.sol:152`](https://github.com/psyto/reckn/blob/ab03d86/tokyo-2026/src/SettlementRecord.sol#L152-L155) | |
+| **a `beforeSwap` hook gates a v4 pool on that record**, read on chain inside the swap, no CCIP-Read | [`RecordGatedHook.sol:71`](https://github.com/psyto/reckn/blob/ab03d86/tokyo-2026/src/RecordGatedHook.sol#L71-L91) | [`0x68116b80…0080`](https://sepolia.etherscan.io/address/0x68116b8086283E51227c61FD791b6Da1A4230080) |
+| the error the PoolManager wraps in ERC-7751 | [`RecordGatedHook.sol:45`](https://github.com/psyto/reckn/blob/ab03d86/tokyo-2026/src/RecordGatedHook.sol#L45) | |
+| settlement is permissionless — a proof, not a key | [`RecknZkEscrow.sol:133`](https://github.com/psyto/reckn/blob/ab03d86/zk-verdict/contracts/src/RecknZkEscrow.sol#L133-L152) | [`0x6d6a9deb…`](https://sepolia.etherscan.io/address/0x6d6a9deb67d785BC131a5d732617EABE751098C5) |
+| the buyer commits to the terms first | [`RecknZkEscrow.sol:101`](https://github.com/psyto/reckn/blob/ab03d86/zk-verdict/contracts/src/RecknZkEscrow.sol#L101-L131) · [`binding.rs`](https://github.com/psyto/reckn/blob/ab03d86/zk-verdict/script/src/bin/binding.rs) | |
+| the only way out that is not a proof, and it pays the caller nothing | [`RecknZkEscrow.sol:176`](https://github.com/psyto/reckn/blob/ab03d86/zk-verdict/contracts/src/RecknZkEscrow.sol#L176-L190) | |
+
+**Beat 5, as five transactions.** Same sender, same pool, same swap; the only thing that changes
+is whether the record exists:
+[refused](https://sepolia.etherscan.io/tx/0xda60d7df7940bf25fd01466444573d0b364a8865641e97dc061096ad1f1f94be) ·
+[the buyer writes](https://sepolia.etherscan.io/tx/0xd561043323073bc9b704a35aab59d147be4ad97c4735ddfe41b5993eabb619e8) ·
+[**executed**, 1.0 in and 0.987158034 out](https://sepolia.etherscan.io/tx/0xa40bb3162ed17e084155277cd2d0a9605c1fea510ddef6df62dbf502831f5698) ·
+[the buyer clears it](https://sepolia.etherscan.io/tx/0x427ee98a7a117c91604fed12f6e16bb5eb0473967f0a9e054e1ce75a1fe073a4) ·
+[refused again](https://sepolia.etherscan.io/tx/0xce00489eb9f2ebca202643c28841360737b35bc30e81a276e47fab64e2f1fa79).
+
+**And one proof that did not exist when the event started**: generated 2026-09-26, 416.56 s,
+[settling a deal on chain forty minutes later](https://sepolia.etherscan.io/tx/0x60ff6e9ed2c4a2f20efa68124f38fa8afa55e03c8823f74def3ebf0c6bae74d6).
+
+**What is still open** is in [`013` §1.1](docs/specs/013-settlement-granted-record-rights.md) and
+on the page itself, which reads it off the chain rather than asserting it: the record's *contents*
+are not proof-derived, the hook cannot identify the swapper (`beforeSwap`'s `sender` is the
+unlocker), and until root is renounced the agent can still write its own record.
+
+Developer feedback for the sponsors: [`FEEDBACK.md`](FEEDBACK.md).
 
 ## ETHOnline 2026 — where the boundary was
 
