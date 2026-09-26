@@ -38,10 +38,10 @@ ever granted the gate's key is that one deal's buyer, once.
 
 ## What does reach the gate
 
-**The root residue.** `reckn-agent` still holds root on the resolver, root overrides per-key
-roles, and the table above shows it: today the agent can write the gate's record and open its
-own pool. This is the same residue `013` §1.1 discloses everywhere else, not a new one, and
-renouncing is what closes it.
+**The root residue — closed 2026-09-26.** `reckn-agent` held root on the resolver, root
+overrides per-key roles, and while it did, the agent could write the gate's record and open its
+own pool. That was the same residue `013` §1.1 discloses everywhere else, not a new one. It was
+renounced, and the table above is the re-measurement: the agent is refused like everybody else.
 
 **That row was added to the renounce gate, and it has now been run.** `renounce.sh` re-reads the
 three calls immediately after destroying the key, and on 2026-09-26 the agent moved from
