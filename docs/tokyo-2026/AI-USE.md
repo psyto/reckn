@@ -103,6 +103,13 @@ Added **2026-09-27**, the night before judging:
   its own weakness and the AI propagated it anyway; the founder caught it by reading the
   published agenda.
 
+- **Wrote a gate table into the README saying `partner-kit-check.sh` catches "the adapter or the
+  hook breaking a property".** It does not and never did — it checks that what an adopter is
+  told to run still runs. The same table had **no row that ran a single `forge` suite**, so the
+  AI reported "every gate is green" while the event work's own 18 tests had not started since
+  the renounce fifteen hours earlier. **The sentence was true and meant less than it sounded
+  like**, which is the failure this repository keeps naming and keeps repeating.
+
 All of them are in the commit messages, at the point where they happened.
 
 ## The spec files, the prompts and the planning artifacts
