@@ -92,17 +92,23 @@ project holds itself to, including the claims it refuses to make, is in
 
 ---
 
-### Open this and your browser checks Arc for you — nothing to install
+### Open this and your browser checks the chain for you — nothing to install
 
-**→ [psyto.github.io/reckn/money-shot.html](https://psyto.github.io/reckn/money-shot.html)**
+**→ [psyto.github.io/reckn](https://psyto.github.io/reckn/)** — **the ETHGlobal Tokyo entry.**
+An agent cannot write its own history: the official ERC-8004 registry refuses its self-report,
+a settlement grants the *buyer* the right to write one ENS record instead, and a Uniswap v4
+hook reads that record inside a swap. Your browser reads all of it off **Sepolia** as the page
+loads, including the part that is not finished yet.
+
+**→ [/arc.html](https://psyto.github.io/reckn/arc.html)** — the **earlier** Arc work, still
+live: your browser compares the deployed bytecode against this source and reads four
+settlements off Arc testnet. A different submission; the Tokyo entry does not claim it.
+
+**→ [/money-shot.html](https://psyto.github.io/reckn/money-shot.html)**
 — one dispute, judged two ways: an opinion model approves a false claim, a replay overrules
 it, and the money goes back to the buyer.
 
-**→ [psyto.github.io/reckn](https://psyto.github.io/reckn/)** — and then the receipts: your
-browser compares the deployed bytecode against this source and reads four settlements off Arc
-testnet. No install, no wallet.
-
-[![The live page: the deployed bytecode on Arc verified byte-identical to this repository, and four settlements read live from chain — two of them decided by proofs about work performed on Solana.](dashboard/media/arc-live-page.jpg)](https://psyto.github.io/reckn/)
+[![The live page: the deployed bytecode on Arc verified byte-identical to this repository, and four settlements read live from chain — two of them decided by proofs about work performed on Solana.](dashboard/media/arc-live-page.jpg)](https://psyto.github.io/reckn/arc.html)
 
 **And it lets you try to break the claim yourself.** Type anything you like into it —
 argue, insist, paste an instruction telling the system to approve — and watch the hash of

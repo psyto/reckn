@@ -53,8 +53,9 @@ settlements in real testnet USDC, recorded in
 | **`solanaProofOnArc`** | **a proof about work performed on Solana** → seller | 320,600 |
 | **`solanaFailureOnArc`** | **a Solana proof of a below-floor result** → buyer | 316,120 |
 
-Your own browser can read them: **[the live page](https://psyto.github.io/reckn/)** compares the
-deployed bytecode against this source and pulls the four receipts off Arc.
+Your own browser can read them: **[the Arc page](https://psyto.github.io/reckn/arc.html)** compares
+the deployed bytecode against this source and pulls the four receipts off Arc. (The site root is
+now the ETHGlobal Tokyo entry, which reads Sepolia instead.)
 
 **Not claimed.** Arc **mainnet** is not deployed — Circle had not published Arc mainnet contract
 addresses as of 2026-09-06, and the same script deploys there unchanged once that list exists.

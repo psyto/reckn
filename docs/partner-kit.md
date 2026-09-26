@@ -24,7 +24,8 @@ The cheapest rung needs **no clone, no npm, no wallet**:
 
 | | |
 |---|---|
-| **[psyto.github.io/reckn](https://psyto.github.io/reckn/)** | your browser fetches the deployed bytecode from Arc and compares it against this source, then reads **four settlements** off the chain — two of them decided by proofs about work performed on Solana |
+| **[psyto.github.io/reckn](https://psyto.github.io/reckn/)** | the ETHGlobal Tokyo entry: your browser reads **Sepolia** and checks that the official ERC-8004 registry refused the agent's self-report, that ENS returns a record a settlement paid for, and that a Uniswap v4 hook gates a pool on it |
+| **[/arc.html](https://psyto.github.io/reckn/arc.html)** | the earlier Arc work: your browser fetches the deployed bytecode from Arc and compares it against this source, then reads **four settlements** off the chain — two of them decided by proofs about work performed on Solana |
 | **[/money-shot.html](https://psyto.github.io/reckn/money-shot.html)** | one dispute, judged two ways: an opinion model approves a false claim, a replay overrules it, the money goes back |
 | **the page's own "Check it without this page"** | the `curl` calls that do the same thing with no page at all |
 
