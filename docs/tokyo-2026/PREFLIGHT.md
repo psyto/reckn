@@ -327,6 +327,17 @@ key inside the URL.
 - The same applies to a live screen-share at judging on 09-27.
 - **If it does get into a frame, rotate immediately and re-cut** — that is the one case where the
   deferral is cancelled.
+- **The frame check now has a script around it**, because "check the frame" is an admonition too:
+
+  ```bash
+  bash docs/tokyo-2026/check-video.sh            # length, resolution, audio, speech, motion
+  bash docs/tokyo-2026/check-video.sh <cut> --record   # after the tiles were looked at
+  ```
+
+  Rows 1-5 are measured. **Row 6 is not** — no OCR runs, so it records the hash of the cut a
+  person actually looked at, and any re-export turns it red. `2026-09-26`: the submission cut
+  `Reckn_ETHGlobal_Tokyo_HYBRID_DEMO_v13.mp4` passes 6/6; the only terminal on screen with a
+  command line shows `--rpc-url "$SEPOLIA_RPC"` **unexpanded**.
 
 ## ★ 5.6 The description cannot go stale silently
 
