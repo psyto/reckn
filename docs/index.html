@@ -236,6 +236,18 @@
         <td><a class="m" href="https://sepolia.etherscan.io/tx/0xce00489eb9f2ebca202643c28841360737b35bc30e81a276e47fab64e2f1fa79">0xce00489e&hellip;</a></td>
         <td><b class="bad">refused</b></td></tr>
   </table></div>
+  <p><span class="st pend" id="s-play">&hellip;</span>
+     <span class="big" id="t-play">asking the second pool&hellip;</span></p>
+  <p class="note"><b>There is a second pool, and you can trade in it.</b>
+  <a href="https://sepolia.etherscan.io/address/0x95A466FEE528923e0061fe61232DB9beD1258080">0x95A466FE&hellip;0080</a>
+  was settled and written by its buyer, the buyer closed its own window, and only then were both
+  root roles destroyed. It has since been
+  <a href="https://sepolia.etherscan.io/tx/0x080f7de0d8eb66b7ad1d45d6c057b28324cdcb50ed4b59d37ecf2eddbe3d61c2">traded
+  by an address that was never granted anything</a>. The demo tokens mint to anyone.
+  <br><br>
+  It is not that the right is irrevocable. <b>It is that the record a spent right wrote outlives
+  the right, and outlives us.</b></p>
+
   <p class="note">Both refusals were re-simulated at their own blocks: the PoolManager's ERC&#8209;7751
   <span class="m">WrappedError</span> carries <span class="m">target</span> = this hook and
   <span class="m">reason</span> = <span class="m">0x43a7f347 NoSettledRecord</span>. A failed
@@ -312,6 +324,7 @@ const REPUTATION = "0x8004B663056A597Dffe9eCcC1965A193B7388713";
 const UR         = "0x5d25C1D6aCBb71B7a28AA7899618a3412a8303e3";
 const RESOLVER   = "0x740e02cE9FB52629feF861CA02DF7091f416BBF8";
 const HOOK       = "0x68116b8086283E51227c61FD791b6Da1A4230080";
+const PLAYGROUND_HOOK = "0x95A466FEE528923e0061fe61232DB9beD1258080";
 const BUYER      = "0x4b55f9e4d87505F3347c7CAFcB8C7eb589970eE3";
 const AGENT      = "0xfa2582ecAD1186A171CB9626d1FcFDC0f7995321";
 const STRANGER   = "0x000000000000000000000000000000000000dEaD";
@@ -419,11 +432,28 @@ function decodeString(hex) {
 
   // 3 -- the gate
   const g = await call(HOOK, CD.isOpen);
-  const open = g.ok && /1$/.test(g.data);
-  set("s-gate", "ok");
-  txt("t-gate", open
-    ? "the pool is OPEN right now \u2014 a record is present"
-    : "the pool is SHUT right now \u2014 the record was cleared after the demo, which is why the last swap above failed");
+  if (!g.ok) {
+    // The tick used to be set unconditionally here, so a call that never answered rendered as
+    // a green "the pool is SHUT" -- an unanswered read presented as a fact. Every other row on
+    // this page branches on the value; this one did not.
+    txt("t-gate", "the hook did not answer \u2014 unknown, not shut");
+  } else if (/1$/.test(g.data)) {
+    set("s-gate", "ok");
+    txt("t-gate", "the pool is OPEN right now \u2014 a record is present");
+  } else {
+    set("s-gate", "ok");
+    txt("t-gate", "the evidence pool is SHUT right now \u2014 its record was cleared as the last step of the demo above, which is why the third swap failed. It can never reopen: the window is one-shot and the hook reads one fixed key.");
+  }
+  // The pool you can actually trade in is a different one, and it is open.
+  const g2 = await call(PLAYGROUND_HOOK, CD.isOpen);
+  if (g2.ok) {
+    txt("t-play", /1$/.test(g2.data)
+      ? "and the playground pool is OPEN \u2014 opened by a settlement, and still open after the key was destroyed"
+      : "the playground pool is shut, which should not be possible \u2014 nobody can write that key any more");
+    if (/1$/.test(g2.data)) set("s-play", "ok"); else set("s-play", "bad");
+  } else {
+    txt("t-play", "the playground pool did not answer");
+  }
 
   // 4 -- who can still write the gate's record
   const rows = [["r-wb", BUYER], ["r-ws", STRANGER], ["r-wa", AGENT]];
