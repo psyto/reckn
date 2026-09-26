@@ -30,12 +30,14 @@ interface IResolverRead {
 /// liquidity, so the hook is never consulted when someone adds to the pool. Said here rather
 /// than left for a judge to notice.
 ///
-/// **What this does NOT do, stated before anyone finds it.** It does not identify the swapper.
-/// The pool is gated on a record existing and saying `reproduced`; it does not check that the
-/// address doing the swap is the agent that record is about, because nothing on chain ties an
-/// arbitrary swapper to a name. A second agent could trade behind the first one's record. What
-/// is demonstrated is that **a settlement, and only a settlement, opens the pool at all** —
-/// which is `013` R-14/R-15/R-16 — not that it opens it for exactly one address.
+/// **What this does NOT do, stated before anyone finds it.** It does not identify the swapper,
+/// and it could not: `beforeSwap`'s `sender` is whoever the PoolManager was **unlocked** for,
+/// which is the router, not the trader. Measured on the refusal at `0xda60d7df…`, where the
+/// error carries `0x25cc9656…` — our router — while the transaction came from
+/// `0xfa2582ec…`. Everyone behind one router looks identical here. So the pool is gated on a
+/// record existing and saying `reproduced`, and a second agent could trade behind the first
+/// one's record. What is demonstrated is that **a settlement, and only a settlement, opens the
+/// pool at all** — `013` R-14/R-15/R-16 — not that it opens it for exactly one address.
 contract RecordGatedHook is IHooks {
     /// @notice Raised inside `beforeSwap`. The PoolManager wraps it in ERC-7751
     ///         `WrappedError(target, selector, reason, details)`, so a test must unwrap and

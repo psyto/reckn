@@ -498,8 +498,10 @@ liquidity.** Say it before they ask.
   and the venue being gated, not the subject of a critique (`DEMO.md` §4).
 - **Do not say we proved a v4 swap.** The proven execution is **v3 `SwapRouter02`**. Earning is on
   v3, spending is on v4, and conflating them is the one factual error available here.
-- **Do not quote the fork numbers as deployed numbers.** `1.000000000000000000 → 0.987158034397061298`
-  was measured on a **fork** of Sepolia on 09-21.
+- ~~**Do not quote the fork numbers as deployed numbers.** `1.000000000000000000 → 0.987158034397061298`
+  was measured on a **fork** of Sepolia on 09-21.~~ → **2026-09-26: they are deployed numbers now.**
+  The same swap ran on Sepolia through the deployed hook and produced the same two figures
+  (`0xa40bb316…`). Quote them freely; the caution is kept so the date it stopped applying is visible.
 
 > **★ Talking to them at the booth is NOT the prize requirement.** `U-Q3` is a submission to the
 > **Uniswap Developer Feedback Form**, a separate action from the ETHGlobal form and from any
