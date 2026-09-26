@@ -325,6 +325,61 @@ naturally, so it is written down with its own failure modes attached. Say it in 
 ENSv2 role is scoped to; we found out by measuring it and being wrong first. An overclaim about
 what the role proves is the one thing that booth is guaranteed to catch.
 
+### ★ The Uniswap booth — what to lead with, and what they will find if you do not
+
+**Lead with the part that is unusual, which is not the hook.** Everyone at that booth has
+written a hook. **Almost nobody has one whose condition was created by a payment.**
+
+> A `beforeSwap` hook reads an ENS text record **synchronously, inside the swap** — a
+> `staticcall` to the resolver, no CCIP-Read, no offchain callback, nothing to come back for.
+> The unusual part is **where the record comes from**: a settlement. A proof re-executes the job,
+> the escrow pays out, and the same settlement grants **one** ENS write. No owner, no allowlist,
+> no admin puts anything in that pool's condition.
+>
+> Uniswap appears **twice, in two different roles**. The work being verified is a real **v3**
+> `SwapRouter02.exactInputSingle`, re-executed inside an SP1 guest against a prestate
+> MPT-verified to the block `state_root`. The place the earned record is spent is a **v4** pool.
+> **Earn on v3, spend on v4.**
+>
+> Three transactions on Sepolia, same sender, same pool, same swap: **refused at 81,680 gas →
+> executes at 180,432, 1.0 in → 0.987158034 out → refused again at 81,680.** The two refusals
+> cost the identical number before and after the record existed, which is what a deterministic
+> read looks like. Both refusals re-simulate at their own blocks: the PoolManager's **ERC-7751
+> `WrappedError`** carries `target` = this hook and `reason` = `NoSettledRecord`.
+
+**Then hand them the gap before they find it**, because it is the first thing a v4 engineer
+checks:
+
+> `beforeSwap`'s `sender` is **whoever unlocked the PoolManager** — the router, not the trader.
+> So a second agent can trade behind the first one's record. **I asked your team and Dayitva
+> answered: keep an allowlist of routers and call `msgSender()` on them.** I am declining it, and
+> the reason is the project's whole point — **an allowlist is a party you have to trust, in the
+> last place I had removed one.** Our own build gate fails on the owner that allowlist would
+> need. The gap stays, disclosed, rather than being closed with the thing we exist to remove.
+
+**★ If they open the source, they will see this before you say it:** the error is declared
+`NoSettledRecord(address swapper)` and is reverted with `sender`
+([`RecordGatedHook.sol:45`](../../tokyo-2026/src/RecordGatedHook.sol#L45),
+[`:89`](../../tokyo-2026/src/RecordGatedHook.sol#L89)). **The parameter name claims more than the
+value holds** — it is the same gap, in the one place we did not write it down. Say it first.
+
+**Answers to have ready:**
+
+| question | answer |
+|---|---|
+| **"Why a hook at all? Check it off-chain and refuse to route."** | Then the condition is enforced by whoever runs the router. **Inside `beforeSwap` it is enforced by the pool**, atomically with the swap, and a refusal is a revert anybody can re-simulate at that block — which is exactly what the two ERC-7751 receipts are |
+| **"How is the address flagged?"** | CREATE2 salt mining until `uint160(hook) & ALL_HOOK_MASK == BEFORE_SWAP_FLAG` — `0x68116b80…0080`. **Only `beforeSwap` is flagged.** Every unflagged callback **reverts** instead of returning a selector: if one is ever reached the address was mined wrong, and a silent success would hide that |
+| **"What is the hook's state?"** | **None.** Everything after the constructor is `view` or `pure`. The condition lives in ENS, not in the hook, so there is nothing in the hook to set |
+| **"Can the pool be reopened?"** | **The evidence pool cannot** — its record was cleared as the last step of the demo, the write window is one-shot, and the hook reads one fixed key. **A second pool, [`0x95A466FE…0080`](https://sepolia.etherscan.io/address/0x95A466FEE528923e0061fe61232DB9beD1258080), is open** — settled and written by its buyer, then traded **after the root key was destroyed**, by an address that was never granted anything. The demo tokens mint to anyone; trade in it at the booth |
+| **"Why not the Universal Router on the proving path?"** | Permit2 signs with `ecrecover`, which is on the guest's divergent-precompile list with **equivalence unverified**. We are not claiming soundness we have not established |
+| **"Does this gate liquidity?"** | **No — trading only.** LPs are unaffected, and we do not claim otherwise |
+| **"What does the hook cost?"** | One `staticcall` to the resolver and a 10-byte prefix compare. **We publish gas rather than a delta**: 81,680 on the refusal path, 180,432 executing. Those are not a clean before/after — the refusal reverts early — so we do not quote an overhead figure we have not isolated |
+
+**One sentence that must not be said at this booth:** *"we proved a Uniswap v4 swap in a zkVM."*
+**The swap inside the guest is v3.** v4 is where the record is spent, and it is never re-executed.
+It is already in §4; it is repeated here because this is the booth where saying it would be
+caught in the same breath.
+
 ### The questions that will come, and the honest answers
 
 | question | answer |
