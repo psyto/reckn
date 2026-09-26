@@ -330,6 +330,20 @@ what the role proves is the one thing that booth is guaranteed to catch.
 **Lead with the part that is unusual, which is not the hook.** Everyone at that booth has
 written a hook. **Almost nobody has one whose condition was created by a payment.**
 
+**★ "Why Uniswap at all?" — the answer is `atomic`, not "many operations in one transaction".**
+v4's flash accounting does let a caller do several pool operations under one lock, and that is
+**not** the property this uses: there is one swap. Two reasons, and the second one is the one
+that was missing from this document until 2026-09-27:
+
+1. **The check runs inside the swap, so it cannot be skipped and cannot be delegated.** Read the
+   record off-chain and then route the trade, and the person operating the router is the one
+   enforcing it — **a party you have to trust, which is the thing this project removes.** Inside
+   `beforeSwap` the pool enforces it, and a failure reverts the trade.
+2. **Uniswap is where the record becomes worth something.** A record that only says *this agent
+   did the work* is a badge; nobody has to look at it. **Put it in front of a pool and it is a
+   key** — it decides whether you can trade. That is the difference between **reputation and
+   access**, and **v4 is the first version where the pool itself can carry that rule.**
+
 > A `beforeSwap` hook reads an ENS text record **synchronously, inside the swap** — a
 > `staticcall` to the resolver, no CCIP-Read, no offchain callback, nothing to come back for.
 > The unusual part is **where the record comes from**: a settlement. A proof re-executes the job,
@@ -379,6 +393,129 @@ value holds** — it is the same gap, in the one place we did not write it down.
 **The swap inside the guest is v3.** v4 is where the record is spent, and it is never re-executed.
 It is already in §4; it is repeated here because this is the booth where saying it would be
 caught in the same breath.
+
+### ★ Plain English — the version to actually say out loud
+
+**The founder is not a native English speaker, and a sentence that cannot be said is not a
+script.** Everything above is the reasoning; this is the wording. Short sentences, common words,
+one idea each. Line breaks are breathing points.
+
+**Why Uniswap**
+
+> A record that only says "this agent did the work" is just a badge.
+> Nobody has to look at it.
+>
+> **We put it in front of a pool. Now it is a key.**
+> It decides if you can trade.
+>
+> **And the check runs inside the swap.**
+> Not before it. Not next to it. Inside it.
+> So nobody can skip it. And nobody has to be trusted to run it.
+>
+> If I check the record off-chain and then send the trade,
+> then the person who runs the router is the one enforcing it.
+> **That is a party you have to trust. This project exists to remove that party.**
+>
+> **v4 is the first version where the pool itself can hold that rule.**
+
+**The spine**
+
+> *0:00-0:40* — This is the official ERC-8004 registry, on Sepolia.
+> The agent tries to write feedback about itself. **It is refused.** Good.
+> Now a second address writes feedback about the same agent. **It is accepted.**
+> That address did no work. It just wrote.
+> **The standard did its job. The problem only moved.**
+>
+> *0:40-1:20* — So here is the idea.
+> A buyer puts money in an escrow.
+> A program **replays the job**. If the result matches, the escrow pays.
+> **There is no owner. There is no resolver. Nobody decides.** A proof decides.
+> And the same payment does one more thing.
+> **It gives the buyer the right to write one ENS record.** One. Then it is gone.
+>
+> *1:20-2:00* — Now the record is a key.
+> Here is a Uniswap v4 pool. **Same sender. Same pool. Same swap. Three times.**
+> No record: **refused.**
+> The buyer writes the record. Same swap: **it works.** The tokens move.
+> We clear the record. Same swap: **refused again.**
+>
+> *2:00-2:20* — And then **we threw the key away.**
+> My account used to hold root on the registry and the resolver.
+> Root beats every other rule. So I destroyed it. Both of them.
+> Now I ask the chain: can the buyer write? **No.** A stranger? **No.** **The agent itself? No.**
+> And there is a second pool. It was opened by a payment, then closed.
+> **After the key was gone, a stranger traded in it.**
+> Nobody is holding this up.
+>
+> *2:20-2:45* — Let me tell you what is **not** solved.
+> **The record's text is not proof-derived.** A buyer can write "reproduced" for a job that
+> failed. Anyone can check it, but nothing enforces it.
+> **The hook cannot see who is trading.** It sees the router.
+> **And this is Sepolia.** Test tokens. Not mainnet.
+>
+> *2:45-3:00* — I will stop here.
+> Every receipt is in the repo. The page reads them **live from the chain**.
+> **Ask me anything.**
+
+**The ENS booth**
+
+> ERC-8004 stops an agent from writing about itself.
+> It does not stop **someone else** from writing about it. With no work at all.
+> So self-reporting does not work. And a certificate authority does not work either.
+>
+> **So I changed the question.**
+> Not "**who is this agent**". But "**does this work reproduce**".
+> You cannot answer the first one without trusting somebody.
+> **You can answer the second one by running it again and comparing.** That is just a proof.
+>
+> Then I found ENS could hold the answer.
+> People think ENS is for names. But in **ENSv2, a setter role is granted against the setter's
+> calldata.** So the role is **scoped to one key**. Not to a name. One key.
+> That makes ENS **a place where one payment, and nothing else, opens one write.**
+> **No owner. No resolver. No admin. And root is gone** — ask the chain, and my own account is
+> refused.
+>
+> So the chain is: **a proof settles the escrow and the money moves → that same payment opens
+> one ENS write → a Uniswap v4 hook reads that record inside the swap.**
+>
+> And to be straight with you: **this does not solve identity.**
+> An agent can still hire itself and pay itself.
+> **What it closes is smaller. Payment only happens for work that reproduced.**
+
+**The Uniswap booth** — open with *Why Uniswap* above, then:
+
+> Uniswap is here **twice**, doing two different jobs.
+> The work we prove is **a real v3 swap**. We replay it inside the zkVM.
+> The place the record is spent is **a v4 pool**.
+> **Earn on v3. Spend on v4.**
+>
+> Three transactions on Sepolia.
+> Refused: 81,680 gas. Works: 180,432 gas, 1.0 in and 0.987158034 out. Refused again: 81,680.
+> **The two refusals cost the same. Before the record, and after.**
+>
+> Now let me give you the problem before you find it.
+> **`beforeSwap` sees whoever unlocked the PoolManager.** That is the router. Not the trader.
+> So a second agent can trade behind the first one's record.
+> **I asked your team. Dayitva answered: keep an allowlist of routers, and call `msgSender()`.**
+> **I am not doing that.** An allowlist is a party you have to trust.
+> **That is the exact thing I removed.** My own build check fails if I add that owner.
+> **So the hole stays. And it is written down.**
+>
+> One more thing, before you see it.
+> The error says `NoSettledRecord(address swapper)`. But we pass `sender`.
+> **The name claims more than the value holds.** Same hole. In the one place I did not write it
+> down.
+
+**★ If the words stop coming, these three sentences always work:**
+
+> **An agent cannot write its own history. A payment writes it.**
+> **The payment only happens if the work reproduced. A proof decides that. No person does.**
+> **And that record opens a Uniswap pool. No record, no trade. Here are three transactions.**
+
+**Two sentences to keep out of the English too**, because they are shorter than the true ones and
+the mouth reaches for them: *"we prove the agent did the work"* (**the proof shows the result
+reproduced, and nothing about who did it**) and *"the record is a proof you use to trigger a
+payment"* (**backwards — the payment comes first; the record opens a swap**).
 
 ### The questions that will come, and the honest answers
 
