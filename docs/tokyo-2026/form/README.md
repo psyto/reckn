@@ -6,14 +6,11 @@
 Scores unchanged: Uniswap **8**, ENS **7**. Source links unchanged and re-checked the same
 morning.
 
-**The description field was NOT re-pasted.** It still holds the 17,534-character text recorded
-in `../PASTED` (`34a32830`), and `../DESCRIPTION.txt` in this tree is the 18,100-character
-version with the *why a pool, and why v4* paragraph added. **`check-description.sh` is red, and
-that is the correct reading** — the form and the tree really do differ by that one paragraph.
+**The description field was re-pasted too**, at 07:57 JST: 18,100 characters, `cf209eb7`,
+carrying the *why a pool, and why v4* paragraph. `check-description.sh` is green again, and
+green because the paste happened, not because anything was recorded around it.
 
-Closing it is one paste: put the whole of `../DESCRIPTION.txt` in the description field, then
-`bash docs/tokyo-2026/check-description.sh --record`. Until then the red row is the truth, and
-nothing should be recorded to make it green.
+So all five fields in the form are the five files beside this one.
 
 **Paste targets, not prose.** Each file is the whole of one ETHGlobal field, so a paste is
 select-all-and-replace and there is nothing to assemble by hand. Written 2026-09-27, after the
