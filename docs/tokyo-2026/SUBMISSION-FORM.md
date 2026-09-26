@@ -22,20 +22,26 @@ nothing in here quietly turns into a claim we did not earn.
 
 ---
 
-## 0. State of the form — 2026-09-21
+## 0. State of the form — **2026-09-26 12:40 JST**
+
+*(The 09-21 version of this table is gone rather than struck through: it described a submission
+where nothing had been built, and every row of it had stopped being true.)*
 
 | field | state |
 |---|---|
-| project name, emoji, **category (Artificial Intelligence)** | **entered** |
-| track (Continuity), submission type (Top 10 Finalist + Partner) | **entered** |
-| partner prizes: ENS, Uniswap Foundation | **entered** |
-| GitHub repository | **entered** — `psyto/reckn` |
-| tech stack pages | **entered** |
-| AI tools | **entered** — the form's own placeholder was false here and was replaced. **One sentence to add at the event**: implementation written by Codex, diffs read back by Claude. It cannot be written yet because no implementation exists |
-| short description, description, how it's made, both partner explanations | **drafted here, not yet pasted.** They quote measurements taken on a fork; re-check each number against the deployed run before pasting (§9) |
-| **the disclosure, in full, inside the description** | **not pasted.** The only omission that is a disqualification rather than a lost point |
-| demo link, images (logo, cover, ≥3 screenshots), video | **event work.** The Arc/ETHOnline images must not be reused |
-| Future Opportunities | **not answered** — grants/accelerator interest |
+| project name, emoji, category (Artificial Intelligence) | **entered** |
+| track (Continuity), submission type (**Top 10 Finalist + Partner**) | **entered.** Live judging 09-27 14:30, 4 min demo + 3 min Q&A |
+| partner prizes | **ENS and Uniswap Foundation, and only those two.** The form offers three slots. **Do not take the third** — 1inch appeared in the form and this project does not use it |
+| GitHub repository, tech stack pages | **entered** — `psyto/reckn` |
+| **About: topics, description, homepage** | **done 09-26.** `ens` / `uniswap` / `uniswap-v4` / `erc-8004` added, `arc` gone, description rewritten, homepage points at the Tokyo page |
+| AI tools | **entered**, and §8 now points at `docs/tokyo-2026/AI-USE.md` — per-file attribution, the spec and prompt locations the rules require, and the five things the models got wrong |
+| **short description, how it's made, both partner explanations** | **drafted here, still not pasted.** Every number in them is now from the deployed run, not a fork |
+| **description + the disclosure in full** | **`DESCRIPTION.txt` is current; the form field is STALE.** Paste the whole file, then `bash docs/tokyo-2026/check-description.sh --record`. The omission that is a disqualification rather than a lost point |
+| demo link | **done** — `psyto.github.io/reckn` reads Sepolia in the judge's browser |
+| images (logo, cover, **≥3 screenshots**) | **9 frames exist** in `docs/tokyo-2026/media/`. Arc/ETHOnline images must not be reused |
+| video | **not shot.** Beats 1, 3 and 5 are in the can; **beat 2 needs the renounce first** |
+| Future Opportunities | **not answered** — grants / accelerator interest |
+| **Uniswap Developer Feedback Form (`U-Q3`)** | **not submitted.** A separate action from this form. The URL to give it: `github.com/psyto/reckn/blob/master/FEEDBACK.md` |
 
 ## 1. Project name
 
@@ -170,7 +176,9 @@ against the block state_root — account proofs plus storage proofs — so the g
 fed a state that never existed. Measured against Ethereum mainnet on 2026-09-08: a real
 SwapRouter02.exactInputSingle, witness of 7 accounts / 12 storage slots / 141 MPT nodes,
 13,006,200 cycles, Groth16 end-to-end in 497.40 s on a laptop. That measurement
-predates the event and is disclosed as pre-existing. A Groth16 verifier checks the proof on
+predates the event and is disclosed as pre-existing. The pipeline also ran DURING the event: a
+fresh proof on 2026-09-26 in 416.56 s over 15,972,262 constraints, which then settled a deal on
+Sepolia and paid an agent 250 USDC forty minutes later. A Groth16 verifier checks the proof on
 chain and settleWithProof moves the money. The deal is bound to one execution — the token
 checked, the storage slot read (which is whose balance) and the calldata are all inside the
 binding, so a real proof of a different swap reverts with BindingMismatch() and nothing moves.
@@ -217,10 +225,22 @@ FEEDBACK.md and spikes/tokyo-2026/FINDINGS.md.
 The agent's job is a real Uniswap swap, and what we built is the hook that consumes the result.
 
 A new v4 beforeSwap hook gates a pool on an agent's on-chain reputation record: no settled
-record, no swap. Measured against the real Sepolia PoolManager with liquidity provided —
-refused first (target and reason both asserted to be ours), then executed: 1.000000000000000000
-token0 out, 0.987158034397061298 token1 in. Clearing the record closes the pool to that agent
-again, so it is the record doing the gating and not something incidental.
+record, no swap. IT IS DEPLOYED, NOT SIMULATED — 0x68116b8086283E51227c61FD791b6Da1A4230080 on
+the real Sepolia PoolManager, its address CREATE2-mined so its low bits are exactly the
+beforeSwap flag, with liquidity provided. Three transactions, same sender and same pool and
+same swap, and the only difference between them is whether the record exists: refused, then
+executed with 1.000000000000000000 in and 0.987158034397061298 out, then refused again once the
+record was cleared. Both refusals were re-simulated at their own blocks, so we can say WHO
+refused and WHY rather than that something failed: the PoolManager's ERC-7751 wrapper carries
+our hook as the target and our own NoSettledRecord as the reason. Asserting the outer selector
+would have passed for any hook failing for any reason, and our first test did exactly that.
+
+THE THING WE MOST WANT TO ASK YOU. beforeSwap's sender is whoever unlocked the PoolManager,
+not the trader. On our live refusal the error carries our router 0x25cc9656... while the
+transaction came from 0xfa2582ec... So a hook cannot gate on who is trading using sender —
+everyone behind one router is the same address to it. Is there an intended pattern for a hook
+that needs to know the end user? We state the limit in the contract rather than leave it to be
+found: this pool is gated on a record existing, not on who is spending it.
 
 The swap that is proven stays on v3 SwapRouter02 — re-executed inside an unmodified zk
 guest, 13,006,200 cycles, measured on 2026-09-08 and disclosed as pre-existing. We do not put the
@@ -228,7 +248,9 @@ Universal Router on the proving path: Permit2's signature step uses ecrecover, w
 guest's divergent-precompile list with equivalence unverified, and we will not claim soundness we
 have not established.
 
-FEEDBACK.md is in the repository root and the README points at the exact contracts and lines.
+FEEDBACK.md is in the repository root — six items, each with the measurement or the address
+behind it — and the README points at the exact contracts and lines:
+https://github.com/psyto/reckn/blob/master/FEEDBACK.md
 We make no claim about Uniswap's pricing, safety or quality — the protocol is the workload being
 verified and the venue being gated, not the subject of a critique.
 ~~~
@@ -243,15 +265,30 @@ Each agent is a subname under a parent PermissionedRegistry we deploy on Sepolia
 records sit on a Permissioned Resolver, and the right to write one is an Enhanced Access
 Control role that the escrow grants on settlement and revokes after the write. Measured:
 the agent's own write reverts EACUnauthorizedAccountRoles; a grant for job:1 does not
-authorise other:key, and the two resources differ — GRANULARITY IS PER RECORD, NOT PER NAME;
-the second write by the same party after revocation is refused.
+authorise other:key, and the two resources differ; the second write by the same party after
+revocation is refused.
+
+AND THE PART WE GOT WRONG, BECAUSE WE MEASURED IT. We believed granularity was per record
+rather than per name. It is not. The resource decodeSetter returns comes from the KEY ALONE:
+agent.reckn.eth and victim.reckn.eth with one identical key return one identical resource, so
+a setter role is never scoped to a name. We handle it instead of claiming otherwise — the
+adapter's name is fixed at construction rather than taken from its caller, and the name is
+written inside the record key, so bytes placed on a foreign name sit under a key that says
+whose record it is and the canonical lookup for that name does not find them. THE FOREIGN
+WRITE IS NOT PREVENTED; IT IS MADE UNATTRIBUTABLE. If there is a way to scope a setter role to
+a name, we would like to know it — that is the question we brought to the ENS team.
 
 The authority boundary is closed at the registry too. register lets the issuer choose the roles
-that ride on the token, so the agent's subname carries no ROLE_SET_RESOLVER — it owns its
-name and still cannot repoint its own record surface. With a control arm: the same call on a
-name registered with the role succeeds, so the refusal is attributable. Root roles on the parent
-registry are renounced after setup, because while they are held that power can be handed over at
-any time.
+that ride on the token, so the agent's subname carries no ROLE_SET_RESOLVER and the agent holds
+only ROLE_RENEW on its own name. With a control arm: the same call on a name registered with the
+role succeeds, so the refusal is attributable.
+
+One thing overrides all of that while it exists: root roles on the registry and the resolver,
+held by the account that deployed them, which is also the agent. We measured that it can write
+its own record and repoint its own name, rather than assuming it could not. Root is renounced
+before this submission, and renouncing is irreversible, which is why it is the last thing done
+and not the first. The demo page runs those calls in your browser on every load and reports
+which of them still succeed — do not take our word for it.
 
 Everything resolves through UniversalResolverV2 against a name really registered on the
 Sepolia ETHRegistrar — not hard-coded, and not a direct call to our own resolver.
@@ -275,20 +312,28 @@ the prompts and the agent definitions live:
 https://github.com/psyto/reckn/blob/master/docs/tokyo-2026/AI-USE.md
 ~~~
 
-## 9. ★ Sentences that become false if a piece does not land
+## 9. ★ Sentences that became false, and the ones still load-bearing
 
-**Check this list before submitting. Do not let a draft survive into a claim.**
+**This section used to be a list of things that might not land. They all landed.** What replaces
+it is the list of sentences that were WRONG and are corrected, so nobody reinstates one from an
+older draft:
 
-| if this does not land | these must change |
+| was written | why it was false | where it is corrected |
+|---|---|---|
+| "granularity is per record, not per name" | the resolver derives the resource from the **key alone** — three names, one resource, measured 09-26 | §5, §7, `FEEDBACK.md`, the ENS deck |
+| "the agent owns its name and still cannot repoint it" | **root overrides it, and the agent holds root** until the renounce | §4, §7 |
+| "no liquidity was provided" (`013` §2.4) | liquidity is in the pool and the swap moved tokens | `013` §2.4, struck with the date |
+| "497.40 s" as the recorded proof's duration | the proof the settlement consumed took **416.56 s**, generated during the event | §5, `DEMO.md` §2 |
+| "Nothing of the Tokyo submission exists yet" (README) | it all exists | README |
+
+**Still load-bearing, and checked by something that can fail:**
+
+| | |
 |---|---|
-| the ENS record surface | §3 short description entirely; §4 paragraphs 3–4; §7 |
-| the v4 hook | §3 "pass to a v4 pool"; §4 paragraph 4; §6 paragraph 2 |
-| liquidity in the demo pool | the token figures in §6 — **a no-op swap on an empty pool is not what those numbers say** |
-| `RecknZkEscrow` on Sepolia | the ENS Continuity claim that we target an existing project's testnet deployment |
-| a live demo link | **both** ENS tracks' qualification |
-| `FEEDBACK.md` + the feedback form | **both** Uniswap tracks' qualification |
-| the disclosure pasted into §4 | **the whole submission** — omission is a disqualification, not a lost point |
+| every number in this form comes from the deployed run | `bash zk-verdict/scripts/sepolia-receipts.sh` — 54/54, both directions |
+| every fact the video shows is true at the moment of recording | `bash tokyo-2026/scripts/take-check.sh` — **refuses to record**, and today reports exactly one red row: beat 2, until the renounce |
+| the central claim | `bash scripts/no-keys.sh`, and `no-keys-control.sh` plants five dissimilar keys and requires it to go red for each |
+| the form field and the repository cannot disagree | `bash docs/tokyo-2026/check-description.sh` |
 
-**Everything quoted as a measurement above was run on a fork of Sepolia on 2026-09-21, not on
-Sepolia itself.** When the event's deployments exist, re-check each number against the deployed
-run and correct it here rather than leaving the fork figure standing.
+**The one thing none of those can check** is whether the description field actually holds
+`DESCRIPTION.txt`. That is a human paste, and `--record` is what closes it.
