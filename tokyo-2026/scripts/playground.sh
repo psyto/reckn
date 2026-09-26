@@ -88,9 +88,13 @@ send playgroundClose "$ADAPTER" "close(bytes32)" "$DEAL" --account reckn-buyer
 
 say "5. what is true now"
 printf '   pool open        %s\n' "$(cast call "$HOOK" 'isOpen()(bool)' --rpc-url "$READ_RPC")"
+# `set -o pipefail` + a command substitution turns an EXPECTED revert into a fatal error:
+# `cast call` exits non-zero when the call reverts, `| head -1` succeeds, and pipefail makes the
+# pipeline non-zero, so `r=$( … )` fails and `set -e` kills the script. It died at the exact
+# moment the check succeeded. `|| true` on the substitution is what keeps a refusal a datum.
 for who in "the buyer:$BUYER" "a stranger:0x000000000000000000000000000000000000dEaD"; do
   n=${who%%:*}; a=${who#*:}
-  r=$(cast call "$RESOLVER" "setText(bytes,string,string)" "$DNS" "$KEY" "x" --from "$a" --rpc-url "$READ_RPC" 2>&1 | head -1)
+  r=$(cast call "$RESOLVER" "setText(bytes,string,string)" "$DNS" "$KEY" "x" --from "$a" --rpc-url "$READ_RPC" 2>&1 | head -1) || true
   case "$r" in 0x*) printf '   %-16s CAN still write — the window did not close\n' "$n" ;;
                  *) printf '   %-16s refused\n' "$n" ;; esac
 done

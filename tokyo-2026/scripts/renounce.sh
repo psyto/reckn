@@ -111,9 +111,13 @@ done
 
 say "4. the three writes that decide whether beat 2 is true"
 KEY=$(rd "$HOOK" "recordKey()(string)" | tr -d '"')
+# `set -o pipefail` + a command substitution turns an EXPECTED revert into a fatal error:
+# `cast call` exits non-zero when the call reverts, `| head -1` succeeds, and pipefail makes the
+# pipeline non-zero, so `r=$( … )` fails and `set -e` kills the script. It died at the exact
+# moment the check succeeded. `|| true` on the substitution is what keeps a refusal a datum.
 for who in "the buyer:$BUYER" "a stranger:0x000000000000000000000000000000000000dEaD" "THE AGENT:$AGENT"; do
   n=${who%%:*}; a=${who#*:}
-  r=$(cast call "$RESOLVER" "setText(bytes,string,string)" "$DNS" "$KEY" "x" --from "$a" --rpc-url "$READ_RPC" 2>&1 | head -1)
+  r=$(cast call "$RESOLVER" "setText(bytes,string,string)" "$DNS" "$KEY" "x" --from "$a" --rpc-url "$READ_RPC" 2>&1 | head -1) || true
   case "$r" in
     0x*) printf '   \033[31m✗ %s can still write\033[0m\n' "$n" ;;
     *)   printf '   ✓ %s: refused\n' "$n" ;;
