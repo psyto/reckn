@@ -28,7 +28,29 @@ AGENT=0xfa2582ecAD1186A171CB9626d1FcFDC0f7995321
 DNS=0x056167656e74057265636b6e0365746800
 AMOUNT=250000000
 
-BINDING=$(python3 -c "import json;print(json.load(open('$FIX'))['deal_binding'])")
+# The buyer computes the binding from the TERMS. Reading it out of a proof fixture -- which is
+# what this line used to do -- is the reverse of the design the escrow rests on: `fund` commits
+# to a binding BEFORE the seller works, and a proof settles only if the execution it describes
+# hashes to that same value. A script that copies the answer out of the proof cannot show that
+# (`013` §4-3). The fixture's copy is still read, and the two must agree.
+BINDING_FIXTURE=$(python3 -c "import json;print(json.load(open('$FIX'))['deal_binding'])")
+CALC="$here/../zk-verdict/target/release/binding"
+if [[ ! -x "$CALC" ]]; then
+  ( cd "$here/../zk-verdict/script" && cargo build --quiet --release --bin binding ) 2>/dev/null || true
+fi
+if [[ -x "$CALC" ]]; then
+  BINDING=$("$CALC" --quiet)
+  if [[ "$BINDING" != "$BINDING_FIXTURE" ]]; then
+    echo "join-sepolia: the buyer's calculator and the proof disagree about the binding" >&2
+    echo "  calculator $BINDING" >&2
+    echo "  fixture    $BINDING_FIXTURE" >&2
+    exit 1
+  fi
+  BINDING_SOURCE="computed from the terms by the buyer, and it matches the proof"
+else
+  BINDING="$BINDING_FIXTURE"
+  BINDING_SOURCE="READ OUT OF THE PROOF -- the calculator could not be built, so this run does not show the buyer computing it in advance"
+fi
 PUB=$(python3 -c "import json;print(json.load(open('$FIX'))['public_values'])")
 PRF=$(python3 -c "import json;print(json.load(open('$FIX'))['proof'])")
 DEAL=${DEAL_ID:-$(cast keccak "reckn-tokyo-join-1")}
@@ -64,8 +86,8 @@ want_hex32 "$DEAL"
 [[ ${#PUB} -gt 100 && ${#PRF} -gt 100 ]] || { echo "join-sepolia: the fixture did not load" >&2; exit 1; }
 
 say "0. what we are about to do"
-printf '   deal      %s\n   binding   %s\n   codehash  %s\n   buyer     %s\n   agent     %s\n   adapter   %s\n' \
-  "$DEAL" "$BINDING" "$CODEHASH" "$BUYER" "$AGENT" "$ADAPTER"
+printf '   deal      %s\n   binding   %s\n     \u21b3 %s\n   codehash  %s\n   buyer     %s\n   agent     %s\n   adapter   %s\n' \
+  "$DEAL" "$BINDING" "$BINDING_SOURCE" "$CODEHASH" "$BUYER" "$AGENT" "$ADAPTER"
 
 say "1. the buyer approves the escrow  [reckn-buyer]"
 send "$USDC" "approve(address,uint256)" "$ESCROW" "$AMOUNT" --account reckn-buyer

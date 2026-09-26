@@ -360,12 +360,19 @@ pub fn evm_deal_binding(input: &reexec_io::GuestInput) -> [u8; 32] {
 /// `tests/evm_binding.rs` fails until it does, because the binding stops matching the one
 /// the guest committed. That coupling is deliberate: it is the same shape as the SVM side.
 pub fn evm_demo_input() -> GuestInput {
+    let pre = U256::from(1u128 << 64);
+    evm_deal_input(pre, pre + U256::from(100u64), U256::from(100u64), U256::MAX)
+}
+
+/// The same construction with the terms left open, so a **buyer** can build the input for a
+/// deal that has not been worked yet and hand `evm_deal_binding` the result. `evm_demo_input`
+/// is this with the shipped fixture's numbers; keeping one body means the parameterised path
+/// and the one `tests/evm_binding.rs` pins cannot drift apart.
+pub fn evm_deal_input(pre: U256, post: U256, min: U256, max: U256) -> GuestInput {
     use reckn_reexec_evm::testkit::{self, PrestateSpec, SlotSpec, SSTORE_SLOT7_RUNTIME};
     use reckn_reexec_evm::EvmCallPlanV1;
     use revm::primitives::Bytes;
 
-    let pre = U256::from(1u128 << 64);
-    let post = pre + U256::from(100u64);
     let caller = testkit::addr(0xca);
     let target = testkit::addr(0x77);
     let (anchor, witness) = testkit::anchored_witness(PrestateSpec {
@@ -379,7 +386,7 @@ pub fn evm_demo_input() -> GuestInput {
         extra_slots: vec![],
         empty_account_proof_for: None,
     });
-    let predicate = to_predicate(target, U256::from(7u64), U256::from(100u64), U256::MAX);
+    let predicate = to_predicate(target, U256::from(7u64), min, max);
     let mut calldata = [0u8; 32];
     calldata.copy_from_slice(&post.to_be_bytes::<32>());
     let plan = EvmCallPlanV1 {
