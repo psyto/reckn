@@ -18,6 +18,10 @@ interface IERC20Min {
     function approve(address, uint256) external returns (bool);
 }
 
+interface IMintable {
+    function mint(address, uint256) external;
+}
+
 /// Put the gate on the real chain.
 ///
 /// **Why a script and not a list of `cast send` lines.** Sixteen transactions is sixteen keystore
@@ -45,10 +49,15 @@ contract HookOnchain is Script {
     uint160 constant SQRT_PRICE_1_1 = 79228162514264337593543950336;
     uint256 constant AMOUNT = 250_000000;
     /// @dev Relative to this project root; `fs_permissions` in foundry.toml allows exactly this.
-    string constant OUT = "./hook-onchain.json";
+    /// @dev Relative to this project root; `fs_permissions` in foundry.toml allows exactly this.
+    ///      Both are overridable so the SAME code can stand up a second, independent pool
+    ///      without a copy of this file drifting away from the one that was measured.
+    function out() internal view returns (string memory) {
+        return vm.envOr("HOOK_OUT", string("./hook-onchain.json"));
+    }
 
-    function dealId() public pure returns (bytes32) {
-        return keccak256("reckn-tokyo-hook-1");
+    function dealId() public view returns (bytes32) {
+        return keccak256(bytes(vm.envOr("DEAL_TAG", string("reckn-tokyo-hook-1"))));
     }
 
     function _dns() internal pure returns (bytes memory) {
@@ -74,6 +83,9 @@ contract HookOnchain is Script {
     function stage1() external {
         (,, bytes32 binding) = _fixture();
         vm.startBroadcast();
+        // The buyer spent its last MockUSDC on the event-proof deal. Minting is open to anyone
+        // on this mock, which is also why the playground pool can be traded by a stranger.
+        IMintable(USDC).mint(msg.sender, AMOUNT);
         IERC20Min(USDC).approve(address(ESCROW), AMOUNT);
         ESCROW.fund(dealId(), AGENT, USDC, AMOUNT, VERIFIER, VERIFIER.codehash, binding);
         vm.stopBroadcast();
@@ -149,6 +161,6 @@ contract HookOnchain is Script {
         vm.serializeAddress(o, "token0", address(t0));
         vm.serializeAddress(o, "token1", address(t1));
         vm.serializeUint(o, "salt", salt);
-        vm.writeJson(vm.serializeUint(o, "fee", 3000), OUT);
+        vm.writeJson(vm.serializeUint(o, "fee", 3000), out());
     }
 }
