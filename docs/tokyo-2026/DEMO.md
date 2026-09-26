@@ -305,6 +305,35 @@ video's.
 - **No bridge claim, no chain-abstraction claim, and no "bridges are risky" claim.** See the
   rejected framing above.
 
+## 4b. ★ The shot list — which frame belongs to which beat
+
+Read top to bottom. The right-hand column is **the thing that must be legible**; if it is not,
+the frame is decoration.
+
+| beat | frame | what has to be readable |
+|---|---|---|
+| 1 · 0:00–0:25 | `beat1-00-self-write-refused` | red **Fail with error 'Self-feedback not allowed'** |
+| 1 · cut B | `beat1-01-state-contrast` | `agent: 0 record(s)` against `second address: 1 record(s)` |
+| 3 · 0:42–1:00 | `beat3-02-window-opened` | `From` = the agent, `To` = the adapter |
+| | `beat3-03-buyer-writes` | `From` = **the buyer**, not the agent |
+| | `beat3-04-ens-resolves-the-record` | `ENS says: "reproduced block=… verifier=…"` |
+| 5 · 1:30–2:15 | `beat5-01-swap-refused` | red **Fail** |
+| | `beat5-02-buyer-writes-the-record` | decoded: `value = reproduced block=…` |
+| | `beat5-03-swap-executes` | **1 Reckn Demo B out, 0.987158034 Reckn Demo A back** |
+| | `beat5-04-record-cleared` | decoded: `value` **empty** — one row different from the frame above |
+| | `beat5-05-refused-again` | red **Fail** |
+| **5b · 2:15–2:35** | `beat2-01-residue-closed` | the three rows, all `✓ refused`, **including the agent itself** |
+| | `beat5b-04-stranger-swaps` | `From 0xF81dFf68…` and two ERC-20 transfers |
+| 5b, optional | `beat5b-01/02/03` | the stranger minting its own tokens first, if the 20 s allows |
+
+**The renounce transactions themselves are not in the list on purpose.** On etherscan they say
+`Success` and nothing a viewer can read. What carries beat 5b is the page reporting the three
+refusals, and the stranger's swap.
+
+**`beat2-01` is the only frame of a page rather than a transaction.** It earns that: the heading,
+the paragraph and the three rows are all read from the chain on load, so it is the one shot where
+the evidence is being produced while you watch rather than recalled.
+
 ## 5. Before recording — the checklist that kills a demo
 
 1. **Every number on screen is from the take being recorded.** A rig that keeps rendering after
