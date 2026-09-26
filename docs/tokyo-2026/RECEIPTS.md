@@ -217,7 +217,7 @@ no-op and would prove nothing.
 
 ![The same swap, now Success, with two ERC-20 transfers: 1 Reckn Demo B out and 0.987158034 Reckn Demo A back.](media/beat5-03-swap-executes.png)
 
-![The buyer clears the record -- Set Text again, this time with an empty value.](media/beat5-04-record-cleared.png)
+![The buyer clears the record. Etherscan's decoded input data: name, then key = reckn:job:agent.reckn.eth:214524e3..., then value = empty.](media/beat5-04-record-cleared.png)
 
 ![The same swap once more: Fail.](media/beat5-05-refused-again.png)
 
@@ -225,10 +225,12 @@ no-op and would prove nothing.
 same router, same pool, same amounts. Between them sit the two writes, and nothing else changed
 — and the record could only be written because a job was re-executed, reproduced and settled.
 
-**One honest note about the frames.** Etherscan renders the write and the clear identically:
-both are `Set Text` from the buyer to our resolver, both succeed. What separates them is the
-value, which lives in the input data and is not on the overview. The captions carry that, the
-frames do not.
+**The clear is shown decoded, because the overview cannot show it.** A `Set Text` that writes
+and a `Set Text` that erases are the same picture on etherscan's summary — same sender, same
+resolver, same green `Success`. The difference is the value, and the value is in the input data.
+So that frame is the decoded table, where `value` is visibly empty and `key` visibly carries the
+name it belongs to. The write above it is still the summary view; its content is not in that
+frame, it is in beat 3, where ENS reads the record back.
 
 #### The transactions
 
