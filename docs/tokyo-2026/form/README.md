@@ -1,5 +1,20 @@
 # Form fields, one file each
 
+## ★ Pasted 2026-09-27 07:5x JST — all four partner fields
+
+`uniswap-using.txt`, `uniswap-easy.txt`, `ens-using.txt`, `ens-easy.txt` are in the form.
+Scores unchanged: Uniswap **8**, ENS **7**. Source links unchanged and re-checked the same
+morning.
+
+**The description field was NOT re-pasted.** It still holds the 17,534-character text recorded
+in `../PASTED` (`34a32830`), and `../DESCRIPTION.txt` in this tree is the 18,100-character
+version with the *why a pool, and why v4* paragraph added. **`check-description.sh` is red, and
+that is the correct reading** — the form and the tree really do differ by that one paragraph.
+
+Closing it is one paste: put the whole of `../DESCRIPTION.txt` in the description field, then
+`bash docs/tokyo-2026/check-description.sh --record`. Until then the red row is the truth, and
+nothing should be recorded to make it green.
+
 **Paste targets, not prose.** Each file is the whole of one ETHGlobal field, so a paste is
 select-all-and-replace and there is nothing to assemble by hand. Written 2026-09-27, after the
 project was already submitted and while the form was still editable.
