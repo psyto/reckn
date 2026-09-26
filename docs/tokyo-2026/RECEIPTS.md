@@ -213,7 +213,7 @@ no-op and would prove nothing.
 
 ![A swap with no record: Fail, execution reverted. Sent by the agent to the router.](media/beat5-01-swap-refused.png)
 
-![The buyer writes the record -- Set Text on our resolver. This is the only thing that changes between the frame above and the frame below.](media/beat5-02-buyer-writes-the-record.png)
+![The buyer writes the record. Decoded: key = reckn:job:agent.reckn.eth:214524e3..., value = reproduced block=11782689 verifier=0xe0de264d...](media/beat5-02-buyer-writes-the-record.png)
 
 ![The same swap, now Success, with two ERC-20 transfers: 1 Reckn Demo B out and 0.987158034 Reckn Demo A back.](media/beat5-03-swap-executes.png)
 
@@ -225,12 +225,18 @@ no-op and would prove nothing.
 same router, same pool, same amounts. Between them sit the two writes, and nothing else changed
 — and the record could only be written because a job was re-executed, reproduced and settled.
 
-**The clear is shown decoded, because the overview cannot show it.** A `Set Text` that writes
-and a `Set Text` that erases are the same picture on etherscan's summary — same sender, same
-resolver, same green `Success`. The difference is the value, and the value is in the input data.
-So that frame is the decoded table, where `value` is visibly empty and `key` visibly carries the
-name it belongs to. The write above it is still the summary view; its content is not in that
-frame, it is in beat 3, where ENS reads the record back.
+**Both writes are shown decoded, and that is the point of showing them at all.** On etherscan's
+summary a `Set Text` that writes and a `Set Text` that erases are the same picture: same sender,
+same resolver, same green `Success`. The difference lives in the input data. Decoded, the two
+frames are the same three-row table and **exactly one row differs**:
+
+| | `key` | `value` |
+|---|---|---|
+| writes | `reckn:job:agent.reckn.eth:214524e3…` | `reproduced block=11782689 verifier=0xe0de264d…` |
+| clears | `reckn:job:agent.reckn.eth:214524e3…` | |
+
+The key carries the name it belongs to, which is what stops a grant being aimed at somebody
+else's name. That is visible in the frame rather than asserted in a caption.
 
 #### The transactions
 
