@@ -11,16 +11,56 @@ narrower condition here: a record's write right comes from a settlement.
 A completed job becomes a record under the agent's ENSv2 subname, and the right to write it
 is an Enhanced Access Control role that the settlement creates and then destroys. The agent
 cannot write it. Its client can, once, for that one record. Attempting otherwise reverts with
-EACUnauthorizedAccountRoles. The agent owns its name and still cannot repoint it: the subname
-is issued without ROLE_SET_RESOLVER.
+EACUnauthorizedAccountRoles. The agent owns its name and holds only ROLE_RENEW on it: the
+subname is issued without ROLE_SET_RESOLVER, so it cannot repoint its own name away from the
+resolver that refuses it. See the residue paragraph below for the one thing that still
+overrides that.
 
-Then the record is spent. A Uniswap v4 beforeSwap hook reads it on chain and refuses a
-swap from an agent with no settled record. The same swap passes once the record exists, and is
-refused again if the record is cleared. DELIVER, EARN A RECORD, AND THE RECORD IS THE PASS.
+Then the record is spent. A Uniswap v4 beforeSwap hook reads it on chain, inside the swap,
+synchronously and with no CCIP-Read, and refuses a swap from an agent with no settled record.
+DELIVER, EARN A RECORD, AND THE RECORD IS THE PASS.
+
+ALL OF THIS IS ON SEPOLIA, NOT ON A FORK. The hook is at
+0x68116b8086283E51227c61FD791b6Da1A4230080, its address mined so that its low bits are exactly
+the beforeSwap flag, on the real PoolManager with liquidity provided. Three transactions, the
+same sender and the same pool and the same swap, and the only thing that changes between them
+is whether the record exists: refused, then executed with 1.000000000000000000 in and
+0.987158034397061298 out, then refused again once the record was cleared. Both refusals were
+re-simulated at their own blocks, so we can say WHO refused and WHY rather than that something
+failed: the PoolManager's ERC-7751 wrapper carries our hook as the target and our own
+NoSettledRecord as the reason.
+
+The proving pipeline ran here too. A fresh Groth16 proof of the re-execution was generated on
+2026-09-26 in 416.56 seconds over 15,972,262 constraints, and forty minutes later it settled a
+deal on chain and paid an agent 250 USDC. Every other settlement in this repository was decided
+by a proof committed before the event, which is disclosed; this one was not.
 
 The job that is proven runs on v3 SwapRouter02, which is the execution we have measured
 through the zk guest. The pass is spent on v4. Earning and spending are different acts and
 deliberately use different venues.
+
+WHAT IS NOT CLOSED, SAID BEFORE YOU FIND IT. The settlement grants the right to write the
+record, not its contents: a buyer can write "reproduced" under a job whose proof said "failed".
+The contents are checkable by anyone against the escrow and the proof; they are not enforced.
+The hook cannot identify the swapper, because beforeSwap's sender is whoever unlocked the
+PoolManager rather than the trader, so a second agent could trade behind the first one's
+record. An ENSv2 setter role is scoped to the key alone and never to a name, which we measured;
+we handle it by fixing the adapter to one name and putting that name inside the record key, so
+a write onto a foreign name is unattributable rather than impossible. And this is a testnet.
+
+THE RESIDUE, WHICH IS THE ONE THAT MATTERS. The account that is the agent also deployed the
+registry and the resolver, and root roles override every per-key role above. While it holds
+them, that account CAN write its own record and CAN repoint its own name — we measured both
+rather than assume either. Root is renounced before this is submitted, and renouncing is
+irreversible, which is why it is the last thing done and not the first. Do not take our word
+for whether it happened: the demo page runs those three calls in your browser every time it
+loads, and says which of them still succeed.
+
+Nothing above is a screenshot. The demo page reads Sepolia in your browser as it loads, and it
+reports the residue that is still open by asking the chain rather than by telling you. Every
+transaction is in a record generated from the chain, and a script checks in both directions
+that every link in the repository names a transaction the record holds and that every
+transaction the record holds is linked somewhere.
 
 PRE-EXISTING WORK IS DISCLOSED IN FULL BELOW. In short: this repository began on 2026-07-26;
 its product history runs to 501cbde on 2026-09-14, and everything dated after that is the
