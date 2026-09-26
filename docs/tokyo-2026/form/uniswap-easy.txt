@@ -1,0 +1,3 @@
+The hook interface is clear, but two behaviors needed careful live testing: hook permissions are encoded in the hook address, and PoolManager wraps a hook revert in ERC-7751 WrappedError.
+
+Also, beforeSwap's sender is the PoolManager unlocker/router rather than the end user. We asked at your booth and were pointed at the allowlist-of-routers plus IMsgSender.msgSender() pattern -- thank you. We are declining it for this project, because an allowlist is a trusted party in the one place we had removed one, and our own build check fails on the owner it would need. A trust-minimized way for a hook to learn the end user would be very valuable.

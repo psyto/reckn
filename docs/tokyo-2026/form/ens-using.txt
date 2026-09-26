@@ -1,0 +1,3 @@
+Reckn uses ENSv2's Permissioned Resolver as a write-rights system, not just a name lookup. After a work replay settles, the adapter grants the buyer a single setter role for one job key and revokes it after use; the record resolves through UniversalResolverV2 and is read on chain by a Uniswap v4 hook.
+
+The part that matters most to us: we then renounced root on both the registry and the resolver. Root overrides every per-key role, so until that happened the claim was ours to break. Now the chain answers it instead of us -- the buyer is refused, a stranger is refused, and the agent itself is refused. The record can be written by the one settlement that earned it, and that right cannot be granted again by anyone.

@@ -20,6 +20,13 @@ Then the record is spent. A Uniswap v4 beforeSwap hook reads it on chain, inside
 synchronously and with no CCIP-Read, and refuses a swap from an agent with no settled record.
 DELIVER, EARN A RECORD, AND THE RECORD IS THE PASS.
 
+WHY A POOL, AND WHY v4. A record that only says this agent did the work is a badge, and nobody
+has to look at it. In front of a pool it is a key: it decides whether you can trade. That is the
+difference between reputation and access. And the check runs INSIDE the swap, so it cannot be
+skipped and cannot be delegated -- read the record off-chain and then route the trade, and the
+party enforcing it is whoever operates the router, which is a party you have to trust in the one
+place we removed one. v4 is the first version where the pool itself carries that rule.
+
 ALL OF THIS IS ON SEPOLIA, NOT ON A FORK. The hook is at
 0x68116b8086283E51227c61FD791b6Da1A4230080, its address mined so that its low bits are exactly
 the beforeSwap flag, on the real PoolManager with liquidity provided. Three transactions, the

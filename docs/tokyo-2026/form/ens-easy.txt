@@ -1,0 +1,3 @@
+The beta ABI differed from the main branch for initialize and setText, and safely composing resolver profiles with Enhanced Access Control required substantial measurement.
+
+The important behavior for us was that decodeSetter derives the role resource from the setter calldata/key rather than from the ENS name -- we measured three different names collapsing onto one resource. We asked at your booth and Kevin's answer was to partition names across resolver instances, because the resolver instance is the trust boundary -- thank you; that is a better framing than ours. Our deployment is already that in its smallest form: one resolver serving one name. Documenting that as the intended pattern next to decodeSetter would have saved us the measurement.

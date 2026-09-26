@@ -1,0 +1,5 @@
+Reckn proves a real Uniswap v3 swap as the work, then spends the resulting ENS record at a deployed Uniswap v4 beforeSwap hook. Earn on v3, spend on v4.
+
+Why a pool: a record that only says an agent did the work is a badge. In front of a pool it is a key -- it decides whether you can trade. And the check runs inside the swap, so it cannot be skipped or delegated. Read it off-chain and route the trade instead, and the router operator is the one enforcing it: a trusted party in the one place we removed one.
+
+On Sepolia, same sender, same pool, same swap: no record, it reverts (81,680 gas); with the record, 1.000000 in and 0.987158 out (180,432); cleared, it reverts again. Both refusals re-simulate, so ERC-7751 names our hook and NoSettledRecord. A second pool is open to trade in: 0x95A466FEE528923e0061fe61232DB9beD1258080
