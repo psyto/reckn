@@ -4,3 +4,4 @@ forge-std/=lib/forge-std/src/
 @sp1-contracts/=lib/sp1-contracts/contracts/src/
 @zk/=../zk-verdict/contracts/src/
 @zktest/=../zk-verdict/contracts/test/
+v4-core/=lib/v4-core/

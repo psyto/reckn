@@ -55,6 +55,17 @@ if [[ ! -f "$lib/oz/contracts/token/ERC20/IERC20.sol" ]]; then
     https://github.com/OpenZeppelin/openzeppelin-contracts.git "$lib/oz"
 fi
 
+# Uniswap v4 core -- pinned to the commit the S6 measurement was taken against ------------
+# 46c6834, 2026-04-02. The hook only needs the interfaces and the types; v4-periphery is not
+# used, because BaseHook's constructor validates flags and this hook's address is mined instead.
+V4_COMMIT=46c6834698c48bc4a463a86d8420f4eb1d7f3b75
+if [[ ! -f "$lib/v4-core/src/interfaces/IPoolManager.sol" ]]; then
+  say "uniswap/v4-core @ ${V4_COMMIT:0:7}…"
+  rm -rf "$lib/v4-core"
+  git clone --quiet https://github.com/Uniswap/v4-core.git "$lib/v4-core"
+  ( cd "$lib/v4-core" && git checkout --quiet "$V4_COMMIT" )
+fi
+
 # The escrow's own lib, because @zk/ imports @sp1-contracts/ from there -------------------
 if [[ ! -f "$root/zk-verdict/contracts/lib/forge-std/src/Test.sol" ]]; then
   say "zk-verdict/contracts deps (via its own e2e script's fetcher)…"
