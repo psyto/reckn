@@ -209,7 +209,7 @@ accept it. Pool on the real PoolManager
 fee 3000, with **100e18 of liquidity actually provided** — a swap through an empty pool is a
 no-op and would prove nothing.
 
-### Beat 5, as four transactions
+### Beat 5, as five transactions
 
 ![A swap with no record: Fail, execution reverted. Sent by the agent to the router.](media/beat5-01-swap-refused.png)
 
@@ -217,11 +217,18 @@ no-op and would prove nothing.
 
 ![The same swap, now Success, with two ERC-20 transfers: 1 Reckn Demo B out and 0.987158034 Reckn Demo A back.](media/beat5-03-swap-executes.png)
 
-![The record cleared, the same swap again: Fail.](media/beat5-04-refused-again.png)
+![The buyer clears the record -- Set Text again, this time with an empty value.](media/beat5-04-record-cleared.png)
 
-**The middle frame is the whole argument.** Same sender, same router, same pool, same swap. The
-only thing that changed is whether a record exists — and the record exists only because a job
-was re-executed, reproduced, and settled.
+![The same swap once more: Fail.](media/beat5-05-refused-again.png)
+
+**The two swaps that fail and the one that does not are the same transaction.** Same sender,
+same router, same pool, same amounts. Between them sit the two writes, and nothing else changed
+— and the record could only be written because a job was re-executed, reproduced and settled.
+
+**One honest note about the frames.** Etherscan renders the write and the clear identically:
+both are `Set Text` from the buyer to our resolver, both succeed. What separates them is the
+value, which lives in the input data and is not on the overview. The captions carry that, the
+frames do not.
 
 #### The transactions
 
