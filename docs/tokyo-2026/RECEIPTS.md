@@ -127,7 +127,7 @@ and anyone can call `getLastIndex` and get the same two numbers.
 
 ![Etherscan decodes it: "Set Text" on our resolver, sent by the buyer -- not by the agent.](media/beat3-03-buyer-writes.png)
 
-![UniversalResolverV2 returns: ENS says "reproduced block=11779671 verifier=0xe0de264d...".](media/beat3-04-ens-resolves-the-record.png)
+![UniversalResolverV2 returns: ENS says "reproduced block=11782541 verifier=0xe0de264d...".](media/beat3-04-ens-resolves-the-record.png)
 
 **Beat 2 is missing on purpose.** It is the agent's ENS write being refused, and it cannot be
 photographed honestly yet: `reckn-agent` still holds root, so today that write succeeds. It is
@@ -135,27 +135,58 @@ taken immediately after the renounce, and the renounce's own verification is the
 
 ## The join, on the real chain
 
-`bash tokyo-2026/scripts/join-sepolia.sh` — one path, seven steps, no fork.
-Adapter [`0x6691283d8B77E1e22D08836c55E3f952c304Ccc1`](https://sepolia.etherscan.io/address/0x6691283d8B77E1e22D08836c55E3f952c304Ccc1).
+`bash tokyo-2026/scripts/join-sepolia.sh` — one path, seven steps, no fork. Run again on
+**2026-09-26** against the rebuilt adapter
+[`0xA6966f9f5E72a1841b2d2A22Ec62a23D703202b8`](https://sepolia.etherscan.io/address/0xA6966f9f5E72a1841b2d2A22Ec62a23D703202b8).
 
 | | transaction | result | gas |
 |---|---|---|---|
-| deploy the adapter | [`0x07b1fdf0…`](https://sepolia.etherscan.io/tx/0x07b1fdf08c6a65adff0b7b190f78b08da87ea6cc95ba2f02866a2044b6953acd) | success | 1,953,465 |
-| give it the role it needs | [`0xb4c7d8b7…`](https://sepolia.etherscan.io/tx/0xb4c7d8b71c40ed6ab9b23d617a12fc9785dc1fdcec4aff3aee970739b8e7b6dc) | success | 63,098 |
-| the buyer funds 250 USDC and names the verifier | [`0xf93c1c53…`](https://sepolia.etherscan.io/tx/0xf93c1c53484150aa04c5910a55f43ac0a2fdf69488f1029bcd142f46577b8d1f) | success | 244,611 |
-| **a stranger settles it, on a real proof** | [`0x51d7c9ce…`](https://sepolia.etherscan.io/tx/0x51d7c9ce802133a7793a2a29c7d3be6ee01585ea2eb8059dcc0022b363f14592) | success | 293,917 |
-| **the adapter opens one window, for the buyer** | [`0xd14d7978…`](https://sepolia.etherscan.io/tx/0xd14d797802a88d88c06a8542372f1cf3672fc71c847009775651b168c6c54602) | success | 504,363 |
-| **the buyer writes the record** | [`0xbf2ca290…`](https://sepolia.etherscan.io/tx/0xbf2ca29051e842867b44d2b43c19812b42c24c4529acd964aa8ed730fe1276aa) | success | 183,719 |
-| the window closes | [`0x6b2081b8…`](https://sepolia.etherscan.io/tx/0x6b2081b844dacdbe04612a8f1dc13990e5e4061a9200f948c7f4bed7a29d1e20) | success | 74,956 |
+| deploy the **fixed** adapter | [`0xc198491d…`](https://sepolia.etherscan.io/tx/0xc198491d3f2323f0da08d6b960ba98c2d8244e414757f90ac9e2ad4ddda96387) | success | 2,311,987 |
+| give it the role it needs | [`0x765afbe7…`](https://sepolia.etherscan.io/tx/0x765afbe7f4f4378d52bd28ed74279259286740a3ba49113bcdeeec13b0344625) | success | 63,098 |
+| **take the role away from the old one** | [`0x0d5bbf3e…`](https://sepolia.etherscan.io/tx/0x0d5bbf3e221d611ebd9ee9513ed3ff6be41bd1bc2deaed8caa77d0093901b90b) | success | 41,137 |
+| the buyer approves the escrow | [`0x79a5cff5…`](https://sepolia.etherscan.io/tx/0x79a5cff538e0818c738f379103c5d5972b1dd70bae8cba2b44bf6143079f2302) | success | 46,366 |
+| the buyer funds 250 USDC and names the verifier | [`0xb12350b6…`](https://sepolia.etherscan.io/tx/0xb12350b69da947615b35f81d42abbc9594784defc8c1e8f9ada793627234f285) | success | 244,587 |
+| **a stranger settles it, on a real proof** | [`0x2275f36d…`](https://sepolia.etherscan.io/tx/0x2275f36d3d04b5e1655d54d8d4195af38e146ca554e0ad59466f76301acec128) | success | 293,893 |
+| **the adapter opens one window, for the buyer** | [`0x2bb286d5…`](https://sepolia.etherscan.io/tx/0x2bb286d529a5a29a35a039be4631ba09252e959303c4212ac495ffd312c641b0) | success | 530,377 |
+| **the buyer writes the record** | [`0x860a8e91…`](https://sepolia.etherscan.io/tx/0x860a8e9170c22c9d68eb898308b1c6562c3cf356fbba788cf48a0c21ddaa1692) | success | 139,131 |
+| the window closes | [`0x9c597a4d…`](https://sepolia.etherscan.io/tx/0x9c597a4d86efd7c09014f989ea97154d59442658db843f5b4f368405601ffa55) | success | 75,204 |
 
 ENS returns, through `UniversalResolverV2` and not by calling our resolver directly:
 
 ```
-"reproduced block=11779671 verifier=0xe0de264d76f0664c4e943fc02e3d9fb46cd27608"
+reckn:job:agent.reckn.eth:48a603c2442fe4f372a025f32a6c879e002bc44a860552d6adc0e086cc00dae9
+  -> "reproduced block=11782541 verifier=0xe0de264d76f0664c4e943fc02e3d9fb46cd27608"
 ```
 
-and names our resolver as the one that answered. The agent's balance moved by 250 USDC, because
+ENS names our resolver as the one that answered. The agent's balance moved by 250 USDC, because
 the escrow paid it — this is a settlement, not a simulation of one.
+
+**The key names the name it belongs to**, which it did not on 09-25. The resolver derives a
+role's resource from the key alone — `agent.reckn.eth` and `victim.reckn.eth` with one key give
+one identical resource, measured — so a role is never scoped to a name. Putting the name in the
+key does not stop bytes being written onto somebody else's name; it stops them being read as
+that somebody's record.
+
+### The 09-25 run, superseded
+
+Kept, not deleted. It happened, and a record that drops what it later finds inconvenient is not
+a record. That adapter is
+[`0x6691283d8B77E1e22D08836c55E3f952c304Ccc1`](https://sepolia.etherscan.io/address/0x6691283d8B77E1e22D08836c55E3f952c304Ccc1);
+its root was revoked on 09-26, so its window can never be opened again. **Two defects, both
+found overnight**: `close` was callable by anyone with no further condition, so a stranger could
+open a deal's one window and close it in the same block and leave the record permanently
+unwritable; and the name was a caller argument, so a grant could be aimed at another name.
+
+| | transaction | result | gas |
+|---|---|---|---|
+| deploy the adapter | [`0x07b1fdf0…`](https://sepolia.etherscan.io/tx/0x07b1fdf08c6a65adff0b7b190f78b08da87ea6cc95ba2f02866a2044b6953acd) | success | 1,953,465 |
+| give it the role | [`0xb4c7d8b7…`](https://sepolia.etherscan.io/tx/0xb4c7d8b71c40ed6ab9b23d617a12fc9785dc1fdcec4aff3aee970739b8e7b6dc) | success | 63,098 |
+| approve | [`0xe2237ae6…`](https://sepolia.etherscan.io/tx/0xe2237ae614dd6a8a367c5913e774a5b5ef10c79bf1c11c6600d51ab62b00fe27) | success | 26,466 |
+| fund | [`0xf93c1c53…`](https://sepolia.etherscan.io/tx/0xf93c1c53484150aa04c5910a55f43ac0a2fdf69488f1029bcd142f46577b8d1f) | success | 244,611 |
+| settle | [`0x51d7c9ce…`](https://sepolia.etherscan.io/tx/0x51d7c9ce802133a7793a2a29c7d3be6ee01585ea2eb8059dcc0022b363f14592) | success | 293,917 |
+| open | [`0xd14d7978…`](https://sepolia.etherscan.io/tx/0xd14d797802a88d88c06a8542372f1cf3672fc71c847009775651b168c6c54602) | success | 504,363 |
+| write | [`0xbf2ca290…`](https://sepolia.etherscan.io/tx/0xbf2ca29051e842867b44d2b43c19812b42c24c4529acd964aa8ed730fe1276aa) | success | 183,719 |
+| close | [`0x6b2081b8…`](https://sepolia.etherscan.io/tx/0x6b2081b844dacdbe04612a8f1dc13990e5e4061a9200f948c7f4bed7a29d1e20) | success | 74,956 |
 
 **What that string is, exactly.** The buyer typed it. The grant authorises the KEY, not the
 bytes, so nothing on chain forced those words: a buyer could write `reproduced` under a deal

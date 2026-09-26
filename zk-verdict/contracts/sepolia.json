@@ -199,6 +199,182 @@
       "gasUsed": 51369,
       "note": "MockUSDC for the buyer; its mint has no owner guard."
     },
+    "redeployAdapter": {
+      "tx": "0xc198491d3f2323f0da08d6b960ba98c2d8244e414757f90ac9e2ad4ddda96387",
+      "block": 11782505,
+      "timestamp": "2026-09-25T23:42:48Z",
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": null,
+      "status": "success",
+      "gasUsed": 2311987,
+      "note": "the FIXED adapter. The 09-25 one at 0x6691283d had two holes found overnight: close was a griefing weapon, and the name was a caller argument while the resolver scopes a role to the key alone. This one fixes the name at construction and puts it in the key.",
+      "contractAddress": "0xa6966f9f5e72a1841b2d2a22ec62a23d703202b8"
+    },
+    "grantNewAdapter": {
+      "tx": "0x765afbe7f4f4378d52bd28ed74279259286740a3ba49113bcdeeec13b0344625",
+      "block": 11782507,
+      "timestamp": "2026-09-25T23:43:12Z",
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0x740e02ce9fb52629fef861ca02df7091f416bbf8",
+      "status": "success",
+      "gasUsed": 63098,
+      "note": "root on the resolver to the new adapter."
+    },
+    "revokeOldAdapter": {
+      "tx": "0x0d5bbf3e221d611ebd9ee9513ed3ff6be41bd1bc2deaed8caa77d0093901b90b",
+      "block": 11782508,
+      "timestamp": "2026-09-25T23:43:24Z",
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0x740e02ce9fb52629fef861ca02df7091f416bbf8",
+      "status": "success",
+      "gasUsed": 41137,
+      "note": "root taken away from 0x6691283d in the same run as the grant. Leaving it would have left a second admin on a surface whose whole claim is that nobody is in charge."
+    },
+    "joinApprove": {
+      "tx": "0x79a5cff538e0818c738f379103c5d5972b1dd70bae8cba2b44bf6143079f2302",
+      "block": 11782537,
+      "timestamp": "2026-09-25T23:50:36Z",
+      "from": "0x4b55f9e4d87505f3347c7cafcb8c7eb589970ee3",
+      "to": "0x16f95d91dba7da3aca778ec053df0ff6c6a8aa8e",
+      "status": "success",
+      "gasUsed": 46366,
+      "note": ""
+    },
+    "joinFund": {
+      "tx": "0xb12350b69da947615b35f81d42abbc9594784defc8c1e8f9ada793627234f285",
+      "block": 11782539,
+      "timestamp": "2026-09-25T23:51:00Z",
+      "from": "0x4b55f9e4d87505f3347c7cafcb8c7eb589970ee3",
+      "to": "0x6d6a9deb67d785bc131a5d732617eabe751098c5",
+      "status": "success",
+      "gasUsed": 244587,
+      "note": ""
+    },
+    "joinSettle": {
+      "tx": "0x2275f36d3d04b5e1655d54d8d4195af38e146ca554e0ad59466f76301acec128",
+      "block": 11782540,
+      "timestamp": "2026-09-25T23:51:12Z",
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0x6d6a9deb67d785bc131a5d732617eabe751098c5",
+      "status": "success",
+      "gasUsed": 293893,
+      "note": ""
+    },
+    "joinOpen": {
+      "tx": "0x2bb286d529a5a29a35a039be4631ba09252e959303c4212ac495ffd312c641b0",
+      "block": 11782541,
+      "timestamp": "2026-09-25T23:51:24Z",
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0xa6966f9f5e72a1841b2d2a22ec62a23d703202b8",
+      "status": "success",
+      "gasUsed": 530377,
+      "note": ""
+    },
+    "joinWrite": {
+      "tx": "0x860a8e9170c22c9d68eb898308b1c6562c3cf356fbba788cf48a0c21ddaa1692",
+      "block": 11782542,
+      "timestamp": "2026-09-25T23:51:36Z",
+      "from": "0x4b55f9e4d87505f3347c7cafcb8c7eb589970ee3",
+      "to": "0x740e02ce9fb52629fef861ca02df7091f416bbf8",
+      "status": "success",
+      "gasUsed": 139131,
+      "note": ""
+    },
+    "joinClose": {
+      "tx": "0x9c597a4d86efd7c09014f989ea97154d59442658db843f5b4f368405601ffa55",
+      "block": 11782543,
+      "timestamp": "2026-09-25T23:51:48Z",
+      "from": "0x4b55f9e4d87505f3347c7cafcb8c7eb589970ee3",
+      "to": "0xa6966f9f5e72a1841b2d2a22ec62a23d703202b8",
+      "status": "success",
+      "gasUsed": 75204,
+      "note": ""
+    }
+  },
+  "preEvent": {
+    "deployRehearsal": {
+      "tx": "0xb78889ce66645a11e759650cd5745fbcbeee3ed7a45773bf0cd8d94864c6671a",
+      "block": 11777027,
+      "timestamp": 1790312976,
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": null,
+      "status": 1,
+      "gasUsed": 75238,
+      "note": "throwaway CREATE, pre-event, to prove the keystore/RPC/gas/explorer path before the window. WARNING: its address equals arc.json's RecknVerdictVerifier, because both are reckn-agent nonce 1 on their own chain. It is NOT a verifier.",
+      "contractAddress": "0xc5f45b9dec0f0b00a1493c63c0204c8c920197b7"
+    },
+    "fundSecondAddress": {
+      "tx": "0x9765c2f765ab3f0c9d1428ce8ad5e51752818771de1cd5506c57cfdd13bcb1b6",
+      "block": 11777053,
+      "timestamp": 1790313288,
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0xf81dff68ae2581cfcb62d68d824403ae9f4d68d4",
+      "status": 1,
+      "gasUsed": 21000,
+      "note": "0.005 ETH to the second address. Pre-event infrastructure."
+    }
+  },
+  "stateReadBack": {
+    "getClients(10518)": [
+      "0xf81dff68ae2581cfcb62d68d824403ae9f4d68d4"
+    ],
+    "getLastIndex(10518, agentOwner)": 0,
+    "getLastIndex(10518, secondAddress)": 1,
+    "readFeedback(10518, secondAddress, 1)": {
+      "value": 100,
+      "valueDecimals": 0,
+      "tag1": "quality",
+      "tag2": "",
+      "isRevoked": false
+    },
+    "why": "the owner wrote nothing and a second address wrote one record. This is state, not transactions, and it is what beat 1 claims.",
+    "ETHRegistry.getSubregistry(reckn)": "0x1ad360d93ccd6230fb14d213134107bf89a428cf",
+    "ETHRegistry.getResolver(reckn)": "0x740e02ce9fb52629fef861ca02df7091f416bbf8",
+    "ourRegistry.roles(agent.reckn.eth, agent)": "0x10000 = ROLE_RENEW only",
+    "UniversalResolverV2.resolve(agent.reckn.eth, text)": "routes to 0x740e02ce…, our resolver — E-Q3 satisfied on the real resolution path",
+    "setResolver by a third party": "reverts EACUnauthorizedAccountRoles (0x4b27a133)",
+    "setResolver by the agent itself": "STILL SUCCEEDS, because the deployer holds ROOT roles on the parent registry. S4's claim closes only after those are renounced, which happens after the adapter is granted. 013 section 1.1 discloses exactly this residue; it is not yet closed and is not claimed to be."
+  },
+  "deployed": {
+    "RecknZkEscrow": "0x6d6a9deb67d785BC131a5d732617EABE751098C5",
+    "RecknVerdictVerifier": "0xe0dE264D76f0664C4e943fc02e3D9FB46CD27608",
+    "PermissionedRegistry": "0x1Ad360D93ccD6230FB14D213134107BF89a428cf",
+    "PermissionedResolverProxy": "0x740e02cE9FB52629feF861CA02DF7091f416BBF8",
+    "note": "bytecode of the two Reckn contracts was compared against `forge inspect`, not against out/ (a stale artifact there produced a false mismatch once tonight). The verifier differs from its artifact only where its two immutables are substituted, and those hold the intended values.",
+    "SettlementRecord": "0xA6966f9f5E72a1841b2d2A22Ec62a23D703202b8",
+    "SettlementRecord superseded": "0x6691283d8B77E1e22D08836c55E3f952c304Ccc1 -- the 09-25 adapter. Root revoked 09-26, so it can no longer open a window. Two defects, both found overnight and both recorded rather than quietly replaced: `close` was callable by anyone with no further condition, which let a stranger open a deal's one window and close it in the same block and make the record permanently unwritable; and the name was a caller argument, while the resolver derives a role's resource from the KEY alone, so a grant could be aimed at another name."
+  },
+  "ens": {
+    "family": "the deployment family the spikes measured against; three live ENSv2 families exist on Sepolia and mixing them silently produces a name nobody can resolve",
+    "ETHRegistrar": "0xAbe76F6C8DFcEd81AA5A2bB8034202A7136b94ca",
+    "ETHRegistry": "0x657ea849311d3d5823348dded7c2aaafb3ede09e",
+    "LabelStore": "0x375c082021e677a40ea2ae094d050602dba90992",
+    "UniversalResolverV2": "0x5d25C1D6aCBb71B7a28AA7899618a3412a8303e3",
+    "PermissionedResolverImpl": "0x14F09Fd05d4585759e54844DC9B00147131Cf243",
+    "VerifiableFactory": "0x118bc31a50d559f7015a8da26d54b3b030cdb70f",
+    "MockUSDC": "0x16f95D91DBa7dA3Aca778Ec053dF0FF6C6A8aA8e",
+    "name": "reckn.eth",
+    "subname": "agent.reckn.eth",
+    "subnameTokenId": "0x314c1dfbbccab41a44cf9fefc21e632eb8e01bc0346d4414114d4c3d00000000",
+    "parentExpiry": 1792760532
+  },
+  "join": {
+    "dealId": "0x48a603c2442fe4f372a025f32a6c879e002bc44a860552d6adc0e086cc00dae9",
+    "binding": "0x85ac262cbf7f0bdc2a0bda399b6c748a894825885424e361d0e107dcbcafa1ef",
+    "amount": "250.000000 MockUSDC",
+    "script": "tokyo-2026/scripts/join-sepolia.sh",
+    "resolvedThroughENS": "reproduced block=11782541 verifier=0xe0de264d76f0664c4e943fc02e3d9fb46cd27608",
+    "resolverReturnedBy UniversalResolverV2": "0x740e02cE9FB52629feF861CA02DF7091f416BBF8",
+    "afterwards": {
+      "buyer writes again": "reverts EACUnauthorizedAccountRoles -- the window closed",
+      "a third party writes": "reverts",
+      "THE AGENT writes": "STILL SUCCEEDS, re-simulated 2026-09-26 with eth_call from each address: the buyer and a third party both revert 0x4b27a133 EACUnauthorizedAccountRoles, the agent returns 0x. reckn-agent is both the agent and the account still holding root on the resolver and the registry, and root overrides per-key roles. 013 section 1.1 discloses this residue. The reason it is still open has CHANGED: until 09-26 renouncing would have made redeploying the adapter impossible, and the adapter still needed fixing. It has now been redeployed, so nothing blocks the renounce. It MUST be done before filming, or beat 2's refusal is not true on chain."
+    },
+    "recordKey": "reckn:job:agent.reckn.eth:48a603c2442fe4f372a025f32a6c879e002bc44a860552d6adc0e086cc00dae9",
+    "keyNamesTheName": "the name is inside the key because the resolver cannot scope a role to a name -- measured 09-26: agent.reckn.eth and victim.reckn.eth with one key give one identical resource. Bytes written onto a foreign name therefore sit under a key that says whose record it is, and the canonical lookup for that name does not find them. The foreign write is not prevented; it is made unattributable.",
+    "ranOn": "2026-09-26, against adapter 0xA6966f9f5E72a1841b2d2A22Ec62a23D703202b8"
+  },
+  "supersededJoin0925": {
     "joinApprove": {
       "tx": "0xe2237ae614dd6a8a367c5913e774a5b5ef10c79bf1c11c6600d51ab62b00fe27",
       "block": 11779667,
@@ -258,85 +434,7 @@
       "status": 1,
       "gasUsed": 74956,
       "note": "the window closes. The buyer's second write now reverts too."
-    }
-  },
-  "preEvent": {
-    "deployRehearsal": {
-      "tx": "0xb78889ce66645a11e759650cd5745fbcbeee3ed7a45773bf0cd8d94864c6671a",
-      "block": 11777027,
-      "timestamp": 1790312976,
-      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
-      "to": null,
-      "status": 1,
-      "gasUsed": 75238,
-      "note": "throwaway CREATE, pre-event, to prove the keystore/RPC/gas/explorer path before the window. WARNING: its address equals arc.json's RecknVerdictVerifier, because both are reckn-agent nonce 1 on their own chain. It is NOT a verifier.",
-      "contractAddress": "0xc5f45b9dec0f0b00a1493c63c0204c8c920197b7"
     },
-    "fundSecondAddress": {
-      "tx": "0x9765c2f765ab3f0c9d1428ce8ad5e51752818771de1cd5506c57cfdd13bcb1b6",
-      "block": 11777053,
-      "timestamp": 1790313288,
-      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
-      "to": "0xf81dff68ae2581cfcb62d68d824403ae9f4d68d4",
-      "status": 1,
-      "gasUsed": 21000,
-      "note": "0.005 ETH to the second address. Pre-event infrastructure."
-    }
-  },
-  "stateReadBack": {
-    "getClients(10518)": [
-      "0xf81dff68ae2581cfcb62d68d824403ae9f4d68d4"
-    ],
-    "getLastIndex(10518, agentOwner)": 0,
-    "getLastIndex(10518, secondAddress)": 1,
-    "readFeedback(10518, secondAddress, 1)": {
-      "value": 100,
-      "valueDecimals": 0,
-      "tag1": "quality",
-      "tag2": "",
-      "isRevoked": false
-    },
-    "why": "the owner wrote nothing and a second address wrote one record. This is state, not transactions, and it is what beat 1 claims.",
-    "ETHRegistry.getSubregistry(reckn)": "0x1ad360d93ccd6230fb14d213134107bf89a428cf",
-    "ETHRegistry.getResolver(reckn)": "0x740e02ce9fb52629fef861ca02df7091f416bbf8",
-    "ourRegistry.roles(agent.reckn.eth, agent)": "0x10000 = ROLE_RENEW only",
-    "UniversalResolverV2.resolve(agent.reckn.eth, text)": "routes to 0x740e02ce…, our resolver — E-Q3 satisfied on the real resolution path",
-    "setResolver by a third party": "reverts EACUnauthorizedAccountRoles (0x4b27a133)",
-    "setResolver by the agent itself": "STILL SUCCEEDS, because the deployer holds ROOT roles on the parent registry. S4's claim closes only after those are renounced, which happens after the adapter is granted. 013 section 1.1 discloses exactly this residue; it is not yet closed and is not claimed to be."
-  },
-  "deployed": {
-    "RecknZkEscrow": "0x6d6a9deb67d785BC131a5d732617EABE751098C5",
-    "RecknVerdictVerifier": "0xe0dE264D76f0664C4e943fc02e3D9FB46CD27608",
-    "PermissionedRegistry": "0x1Ad360D93ccD6230FB14D213134107BF89a428cf",
-    "PermissionedResolverProxy": "0x740e02cE9FB52629feF861CA02DF7091f416BBF8",
-    "note": "bytecode of the two Reckn contracts was compared against `forge inspect`, not against out/ (a stale artifact there produced a false mismatch once tonight). The verifier differs from its artifact only where its two immutables are substituted, and those hold the intended values.",
-    "SettlementRecord": "0x6691283d8B77E1e22D08836c55E3f952c304Ccc1"
-  },
-  "ens": {
-    "family": "the deployment family the spikes measured against; three live ENSv2 families exist on Sepolia and mixing them silently produces a name nobody can resolve",
-    "ETHRegistrar": "0xAbe76F6C8DFcEd81AA5A2bB8034202A7136b94ca",
-    "ETHRegistry": "0x657ea849311d3d5823348dded7c2aaafb3ede09e",
-    "LabelStore": "0x375c082021e677a40ea2ae094d050602dba90992",
-    "UniversalResolverV2": "0x5d25C1D6aCBb71B7a28AA7899618a3412a8303e3",
-    "PermissionedResolverImpl": "0x14F09Fd05d4585759e54844DC9B00147131Cf243",
-    "VerifiableFactory": "0x118bc31a50d559f7015a8da26d54b3b030cdb70f",
-    "MockUSDC": "0x16f95D91DBa7dA3Aca778Ec053dF0FF6C6A8aA8e",
-    "name": "reckn.eth",
-    "subname": "agent.reckn.eth",
-    "subnameTokenId": "0x314c1dfbbccab41a44cf9fefc21e632eb8e01bc0346d4414114d4c3d00000000",
-    "parentExpiry": 1792760532
-  },
-  "join": {
-    "dealId": "0x753a957692c858c419ce0ba38615e4e605e101616788266c936e5badefb6c511",
-    "binding": "0x85ac262cbf7f0bdc2a0bda399b6c748a894825885424e361d0e107dcbcafa1ef",
-    "amount": "250.000000 MockUSDC",
-    "script": "tokyo-2026/scripts/join-sepolia.sh",
-    "resolvedThroughENS": "reproduced block=11779671 verifier=0xe0de264d76f0664c4e943fc02e3d9fb46cd27608",
-    "resolverReturnedBy UniversalResolverV2": "0x740e02cE9FB52629feF861CA02DF7091f416BBF8",
-    "afterwards": {
-      "buyer writes again": "reverts EACUnauthorizedAccountRoles -- the window closed",
-      "a third party writes": "reverts",
-      "THE AGENT writes": "STILL SUCCEEDS. reckn-agent is both the agent and the account still holding root on the resolver and the registry. 013 section 1.1 discloses this residue; renouncing is what closes it, and it has not been done because redeploying the adapter would then be impossible. It MUST be done before filming, or beat 2's refusal is not true on chain."
-    }
+    "note": "the 09-25 run, against adapter 0x6691283d. Superseded on 09-26, not deleted: it happened, the links to it are in this repository, and a record that drops what it now finds inconvenient is not a record. That adapter no longer holds root, so its window can never be opened again."
   }
 }

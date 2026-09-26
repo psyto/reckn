@@ -19,9 +19,15 @@ rec="$root/zk-verdict/contracts/sepolia.json"
 [[ -f "$rec" ]] || { echo "sepolia-receipts: no record at $rec"; exit 1; }
 
 # bash 3.2 (the macOS default) has no `mapfile`.
+#
+# The hashes are gathered STRUCTURALLY -- every object anywhere in the record that has a `tx`
+# -- and not by naming the sections that hold them. Naming them meant that adding a section
+# (`supersededJoin0925`, on 09-26) silently dropped six real transactions out of the checked
+# set while their links stayed in the repository. A check that a new key can walk past is the
+# kind of check R-7 is about.
 known=()
 while IFS= read -r t; do known+=("$t"); done \
-  < <(jq -r '(.eventWork,.preEvent) | .[].tx' "$rec" | LC_ALL=C sort)
+  < <(jq -r '[.. | objects | select(has("tx")) | .tx] | .[]' "$rec" | LC_ALL=C sort)
 [[ ${#known[@]} -ge 5 ]] || { echo "sepolia-receipts: record holds only ${#known[@]} transactions"; exit 1; }
 
 # (a) — collect links WITHOUT a pipe into a short-circuiting reader. A `grep -q` at the
