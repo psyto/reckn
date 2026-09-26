@@ -368,7 +368,7 @@
     "afterwards": {
       "buyer writes again": "reverts EACUnauthorizedAccountRoles -- the window closed",
       "a third party writes": "reverts",
-      "THE AGENT writes": "STILL SUCCEEDS, re-simulated 2026-09-26 with eth_call from each address: the buyer and a third party both revert 0x4b27a133 EACUnauthorizedAccountRoles, the agent returns 0x. reckn-agent is both the agent and the account still holding root on the resolver and the registry, and root overrides per-key roles. 013 section 1.1 discloses this residue. The reason it is still open has CHANGED: until 09-26 renouncing would have made redeploying the adapter impossible, and the adapter still needed fixing. It has now been redeployed, so nothing blocks the renounce. It MUST be done before filming, or beat 2's refusal is not true on chain."
+      "THE AGENT writes": "REFUSED, since 2026-09-26. It succeeded for the whole of this project's life, because the agent held root on the resolver and root overrides per-key roles. Both root roles were renounced (see the `renounce` section) and the three writes were re-read from chain immediately after: buyer refused, stranger refused, agent refused. 013 section 1.1 disclosed this residue in advance and this is it closing."
     },
     "recordKey": "reckn:job:agent.reckn.eth:48a603c2442fe4f372a025f32a6c879e002bc44a860552d6adc0e086cc00dae9",
     "keyNamesTheName": "the name is inside the key because the resolver cannot scope a role to a name -- measured 09-26: agent.reckn.eth and victim.reckn.eth with one key give one identical resource. Bytes written onto a foreign name therefore sit under a key that says whose record it is, and the canonical lookup for that name does not find them. The foreign write is not prevented; it is made unattributable.",
@@ -669,6 +669,101 @@
       "status": "success",
       "gasUsed": 293881,
       "note": "settled by a Groth16 proof GENERATED DURING THE EVENT -- 2026-09-26, 416.56 s wall on CPU, 15,972,262 constraints. Every other settlement in this record was decided by a proof committed to the tree before the event, which is disclosed and fine, but left one sentence unavailable: that the proving pipeline ran here. The agent was paid 250.000000 MockUSDC."
+    }
+  },
+  "renounce": {
+    "what": "013 §1.1's residue, closed. The account that is the agent deployed the registry and the resolver and held root on both; root overrides every per-key role the submission rests on. Renounced 2026-09-26. Irreversible: no role can be granted to a replacement adapter after this.",
+    "order": "REGISTRY FIRST, then the resolver, and the order is the safety property. Interrupted between them, registry-first lands in a state that looks unfinished -- the agent can still write records, so every gate says so. Resolver-first lands in the state where take-check.sh printed 'Record.' while the agent could still repoint the name (found by review, on a fork).",
+    "renounceRegistry": {
+      "tx": "0x5cd3b7fc000e0e6a0ef1a14f3fdefd9a308c75d48f4c53f7bc75e0635670dff3",
+      "block": 11784631,
+      "timestamp": "2026-09-26T07:05:00Z",
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0x1ad360d93ccd6230fb14d213134107bf89a428cf",
+      "status": "success",
+      "gasUsed": 30066,
+      "note": "revokeRootRoles(ALL_ROLES, reckn-agent) on the registry"
+    },
+    "renounceResolver": {
+      "tx": "0x9416e39e0fdd99bb11409ac3fa61f6f67c20118829a9327f9b20fe5ce1ae4719",
+      "block": 11784632,
+      "timestamp": "2026-09-26T07:05:12Z",
+      "from": "0xfa2582ecad1186a171cb9626d1fcfdc0f7995321",
+      "to": "0x740e02ce9fb52629fef861ca02df7091f416bbf8",
+      "status": "success",
+      "gasUsed": 39137,
+      "note": "revokeRootRoles(ALL_ROLES, reckn-agent) on the resolver"
+    },
+    "readBack": "resolver roleCount(ROOT) = 1 x ALL_ROLES -- exactly one holder left and it is the adapter. registry roleCount(ROOT) = 0 -- none at all. Then the three writes that decide beat 2: the buyer refused, a stranger refused, THE AGENT REFUSED. take-check.sh went green."
+  },
+  "playgroundPool": {
+    "what": "A second pool, standing at the other end of the same argument. The evidence pool (0x68116b80) is SHUT and cannot reopen -- opened[dealId] never resets and the hook's key is fixed at construction, so clearing the record as beat 5's last act closed it permanently. This one was settled, written by the buyer, CLOSED, and only then did the renounce happen. It is open, and nobody can ever change it.",
+    "hook": "0x95A466FEE528923e0061fe61232DB9beD1258080",
+    "router": "0x480cd4E3c7158B770fC42B24c04780bbc4fd6304",
+    "token0": "0x17Ae456B813dC3dcCAc0f6dc80E2b8EB9c0841D8",
+    "token1": "0x3567BEab6B84432E84Af681Be1Ec9a328003c58F",
+    "dealId": "0xc6f39ed1b84b5ec79f7b65009733bfda49665c9e2b079738c37711d545c2956e",
+    "recordKey": "reckn:job:agent.reckn.eth:c6f39ed1b84b5ec79f7b65009733bfda49665c9e2b079738c37711d545c2956e",
+    "playgroundWrite": {
+      "tx": "0x31b73ee7d3226b3bc1a2fff808e38354305400e6d95e68078442a047ee791bc3",
+      "block": 11784602,
+      "timestamp": "2026-09-26T06:59:12Z",
+      "from": "0x4b55f9e4d87505f3347c7cafcb8c7eb589970ee3",
+      "to": "0x740e02ce9fb52629fef861ca02df7091f416bbf8",
+      "status": "success",
+      "gasUsed": 139131,
+      "note": "the buyer writes, under the role the settlement granted. NOT root."
+    },
+    "playgroundClose": {
+      "tx": "0xc5a969ae4ba83f8ccf669d50303b53611e1ab3ad83624ba85ad890005338d6d9",
+      "block": 11784603,
+      "timestamp": "2026-09-26T06:59:24Z",
+      "from": "0x4b55f9e4d87505f3347c7cafcb8c7eb589970ee3",
+      "to": "0xa6966f9f5e72a1841b2d2a22ec62a23d703202b8",
+      "status": "success",
+      "gasUsed": 75216,
+      "note": "the buyer closes its own window. The right ends; the record stays."
+    },
+    "thenTheKeyWasDestroyed": "see the renounce section -- it happened after this and before the trade below",
+    "strangerMint0": {
+      "tx": "0x40bb8b60cf4d61d9e2d1dd9a686b51b8e7c54e145371589d1cd4f91a631d3689",
+      "block": 11784642,
+      "timestamp": "2026-09-26T07:07:12Z",
+      "from": "0xf81dff68ae2581cfcb62d68d824403ae9f4d68d4",
+      "to": "0x17ae456b813dc3dccac0f6dc80e2b8eb9c0841d8",
+      "status": "success",
+      "gasUsed": 51816,
+      "note": "reckn-agent2 mints its own test tokens. The demo tokens are open to anyone."
+    },
+    "strangerMint1": {
+      "tx": "0x96c3ae29955a10871ea0e85ded1e7503da4b631240ae320e24f6c4904be13cd8",
+      "block": 11784643,
+      "timestamp": "2026-09-26T07:07:24Z",
+      "from": "0xf81dff68ae2581cfcb62d68d824403ae9f4d68d4",
+      "to": "0x3567beab6b84432e84af681be1ec9a328003c58f",
+      "status": "success",
+      "gasUsed": 51816,
+      "note": ""
+    },
+    "strangerFund": {
+      "tx": "0x0c858fee7a83a99bd8a98ca50524efdf100a8706f2c667ce75bf0f94c025aa49",
+      "block": 11784644,
+      "timestamp": "2026-09-26T07:07:36Z",
+      "from": "0xf81dff68ae2581cfcb62d68d824403ae9f4d68d4",
+      "to": "0x17ae456b813dc3dccac0f6dc80e2b8eb9c0841d8",
+      "status": "success",
+      "gasUsed": 35061,
+      "note": "and sends them to the router, which holds the pool's side and settles it."
+    },
+    "strangerSwap": {
+      "tx": "0x080f7de0d8eb66b7ad1d45d6c057b28324cdcb50ed4b59d37ecf2eddbe3d61c2",
+      "block": 11784646,
+      "timestamp": "2026-09-26T07:08:00Z",
+      "from": "0xf81dff68ae2581cfcb62d68d824403ae9f4d68d4",
+      "to": "0x480cd4e3c7158b770fc42b24c04780bbc4fd6304",
+      "status": "success",
+      "gasUsed": 180432,
+      "note": "THE TRADE. Sent by an address that was never granted anything, is not the buyer, and never funded a deal -- after the only key that could have opened this pool was destroyed. 0.9871580343970613 token1 out."
     }
   }
 }

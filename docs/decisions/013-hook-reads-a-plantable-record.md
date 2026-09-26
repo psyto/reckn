@@ -23,7 +23,7 @@ resource   953974009937591666178889193481160260393882318378195200422564463863605
 |---|---|
 | the buyer of that deal | **refused** `0x4b27a133` — the window closed |
 | a stranger | **refused** `0x4b27a133` |
-| **the agent** | **succeeds** |
+| **the agent** | **refused, since 2026-09-26** — root renounced |
 
 ## The finding does not reach the gate
 
@@ -43,8 +43,11 @@ roles, and the table above shows it: today the agent can write the gate's record
 own pool. This is the same residue `013` §1.1 discloses everywhere else, not a new one, and
 renouncing is what closes it.
 
-**It therefore gives the renounce gate a row it did not have.** After `revokeRootRoles`, re-run
-the three calls above. The agent must move from *succeeds* to **refused**, and that is the first
-time the gate is closed to everyone it should be closed to. Until then, **do not say the pool
-can only be opened by a settlement** — say it can only be opened by a settlement *or by the key
-we have not yet thrown away*.
+**That row was added to the renounce gate, and it has now been run.** `renounce.sh` re-reads the
+three calls immediately after destroying the key, and on 2026-09-26 the agent moved from
+*succeeds* to **refused**. From that moment the sentence is available without a qualifier:
+
+> **The pool can only be opened by a settlement.**
+
+And the playground pool is the demonstration: settled, written by its buyer, closed, and then
+traded by an address that was never granted anything — after the key was gone.

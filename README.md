@@ -56,8 +56,14 @@ two roles are deliberate: **earn on v3, spend on v4.**
 - The hook gates on a settled record, not on the ultimate trader identity; `beforeSwap` sees the
   PoolManager unlocker/router.
 
-The live page also reports the only state that must not be taken on faith: whether the deployed
-agent account still holds a root role capable of overriding the per-record rule.
+The live page reports the one state that must not be taken on faith — whether the deployed agent
+account still holds a root role capable of overriding the per-record rule. **It no longer does**,
+and the page says so because it asked, not because we edited it.
+
+There is also a pool you can trade in: [`0x95A466FE…0080`](https://sepolia.etherscan.io/address/0x95A466FEE528923e0061fe61232DB9beD1258080),
+opened by one settlement, closed to further writes, and
+[traded by an address that was never granted anything](https://sepolia.etherscan.io/tx/0x080f7de0d8eb66b7ad1d45d6c057b28324cdcb50ed4b59d37ecf2eddbe3d61c2)
+after the key was destroyed. The demo tokens mint to anyone.
 
 ### Tokyo work, and what was already here
 
@@ -543,7 +549,9 @@ is whether the record exists:
 **What is still open** is in [`013` §1.1](docs/specs/013-settlement-granted-record-rights.md) and
 on the page itself, which reads it off the chain rather than asserting it: the record's *contents*
 are not proof-derived, the hook cannot identify the swapper (`beforeSwap`'s `sender` is the
-unlocker), and until root is renounced the agent can still write its own record.
+unlocker). Root was renounced on 2026-09-26 and the agent can no longer write its own record —
+re-read from chain in the same run that destroyed the key, and the live page checks it on every
+load rather than asserting it.
 
 Developer feedback for the sponsors: [`FEEDBACK.md`](FEEDBACK.md).
 

@@ -129,9 +129,10 @@ and anyone can call `getLastIndex` and get the same two numbers.
 
 ![UniversalResolverV2 returns: ENS says "reproduced block=11782541 verifier=0xe0de264d...".](media/beat3-04-ens-resolves-the-record.png)
 
-**Beat 2 is missing on purpose.** It is the agent's ENS write being refused, and it cannot be
-photographed honestly yet: `reckn-agent` still holds root, so today that write succeeds. It is
-taken immediately after the renounce, and the renounce's own verification is the shot.
+**Beat 2 became photographable on 2026-09-26.** It is the agent's ENS write being refused, and
+until the renounce it could not be photographed honestly, because that write succeeded. The
+renounce's own verification is the shot: three reads, taken from chain in the same run that
+destroyed the key.
 
 ## The join, on the real chain
 
@@ -195,6 +196,65 @@ is what `013` is named for — not the record's contents. The contents are *chec
 re-derive `recordValue(outcome, block, verifier)` from the escrow and the proof and compare. They
 are not *enforced*. This paragraph exists because the block above, sitting under a row of green
 transaction hashes, invites the reader to think the chain produced the words. It did not.
+
+## The last key, thrown away
+
+`013` §1.1 disclosed this from the start: the account that is the agent also deployed the
+registry and the resolver and held **root** on both, and root overrides every per-key role
+everything else here rests on. Until 2026-09-26 it could write its own record and repoint its
+own name — measured, not assumed, and reported live on the demo page rather than buried.
+
+| | transaction | result | gas |
+|---|---|---|---|
+| **registry root** — renounced first, on purpose | [`0x5cd3b7fc…`](https://sepolia.etherscan.io/tx/0x5cd3b7fc000e0e6a0ef1a14f3fdefd9a308c75d48f4c53f7bc75e0635670dff3) | success | 30,066 |
+| **resolver root** | [`0x9416e39e…`](https://sepolia.etherscan.io/tx/0x9416e39e0fdd99bb11409ac3fa61f6f67c20118829a9327f9b20fe5ce1ae4719) | success | 39,137 |
+
+**Registry first is the safety property, not a preference.** Interrupted between the two,
+registry-first lands in a state that looks unfinished: the agent can still write records, so
+every gate says so. Resolver-first lands in the state where `take-check.sh` printed *"Record."*
+while the agent could still repoint the name at a resolver of its own — found by the 09-26
+review, by executing it on a fork.
+
+Read back rather than believed: `roleCount(ROOT)` is **1 × ALL_ROLES** on the resolver (exactly
+one holder, and it is the adapter) and **0** on the registry. Then the three writes that decide
+whether beat 2 is true:
+
+| | |
+|---|---|
+| the buyer | refused |
+| a stranger | refused |
+| **the agent itself** | **refused** |
+
+That last row was `can write it` for the whole of this project's life.
+
+## The pool that survived it
+
+The evidence pool [`0x68116b80…`](https://sepolia.etherscan.io/address/0x68116b8086283E51227c61FD791b6Da1A4230080)
+is **shut and cannot reopen**: `opened[dealId]` never resets and the hook's key is fixed at
+construction, so clearing the record as beat 5's last act closed it permanently. That is the
+right ending for a piece of evidence and the wrong one for something a person might want to try.
+
+So a second pool, the same code, settled **before** the renounce and closed before it too:
+[`0x95A466FEE528923e0061fe61232DB9beD1258080`](https://sepolia.etherscan.io/address/0x95A466FEE528923e0061fe61232DB9beD1258080).
+
+| | transaction | result | gas |
+|---|---|---|---|
+| the buyer writes the record — **not root** | [`0x31b73ee7…`](https://sepolia.etherscan.io/tx/0x31b73ee7d3226b3bc1a2fff808e38354305400e6d95e68078442a047ee791bc3) | success | 139,131 |
+| the buyer closes its own window — the right ends, the record stays | [`0xc5a969ae…`](https://sepolia.etherscan.io/tx/0xc5a969ae4ba83f8ccf669d50303b53611e1ab3ad83624ba85ad890005338d6d9) | success | 75,216 |
+| *…then both root roles were destroyed (above)…* | | | |
+| a stranger mints its own test tokens | [`0x40bb8b60…`](https://sepolia.etherscan.io/tx/0x40bb8b60cf4d61d9e2d1dd9a686b51b8e7c54e145371589d1cd4f91a631d3689) | success | 51,816 |
+| and the other side of the pair | [`0x96c3ae29…`](https://sepolia.etherscan.io/tx/0x96c3ae29955a10871ea0e85ded1e7503da4b631240ae320e24f6c4904be13cd8) | success | 51,816 |
+| and funds the router | [`0x0c858fee…`](https://sepolia.etherscan.io/tx/0x0c858fee7a83a99bd8a98ca50524efdf100a8706f2c667ce75bf0f94c025aa49) | success | 35,061 |
+| **the trade** — 0.9871580343970613 out | [`0x080f7de0…`](https://sepolia.etherscan.io/tx/0x080f7de0d8eb66b7ad1d45d6c057b28324cdcb50ed4b59d37ecf2eddbe3d61c2) | success | 180,432 |
+
+**Who sent that last transaction matters.** `0xF81dFf68…` was never granted a role on the
+resolver, never funded a deal, and is not the buyer. The pool let it trade because a record
+exists; the record exists because one settlement created a right that one buyer used once and
+then gave up; and by the time it traded, the only key that could have written that record by
+hand no longer existed.
+
+It is not that the right is irrevocable. **It is that the record a spent right wrote outlives
+the right, and outlives us.**
 
 ## A proof made during the event, settled during the event
 
@@ -315,12 +375,13 @@ The window was left unwritten on purpose. A pool that is already open cannot be 
 |---|---|
 | the buyer, again | reverts — **the window closed** |
 | a third party | reverts |
-| **the agent itself** | **still succeeds** |
+| **the agent itself** | **refused, since 2026-09-26** |
 
-**The last row is the residue, and it is the same one as before.** `reckn-agent` is both the agent
-and the account still holding **root** on the resolver and the registry, and root overrides
-per-record roles. `013` §1.1 discloses it in advance. Renouncing is what closes it, and it has
-not been done yet because redeploying the adapter would then be impossible.
+**The last row was the residue for the whole of this project's life.** `reckn-agent` is both the
+agent and the account that held **root** on the resolver and the registry, and root overrides
+per-record roles. `013` §1.1 disclosed it in advance. It was renounced on 2026-09-26, after the
+adapter was final and after the playground pool had been settled — because renouncing makes both
+impossible. See *The last key, thrown away* above.
 
 ### Supporting transactions
 
