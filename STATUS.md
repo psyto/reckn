@@ -1776,3 +1776,43 @@ base 測定のトークンに置き換えることを承認。009 の着地 comm
   審査されるため、source link が機能しないと審査が成立しない）。公開前に走査済み:
   `.env` / 秘密鍵 / keypair / mnemonic / PEM いずれも追跡下に無し、`.DS_Store` 未追跡、
   LICENSE は Apache-2.0。
+
+## 013 Tokyo adapter — 独立レビュー r1（2026-09-25、Codex 1回）
+
+`docs/reviews/013-tokyo-adapter-r1.md`。**VERDICT: CHANGES**（BLOCKER 2 / MAJOR 3 / MINOR 3）。
+payload `/tmp/reckn-payload-013-tokyo-adapter-r1.md`、Codex 生出力
+`/tmp/reckn-codex-013-tokyo-adapter-r1.md`。Codex は read-only サンドボックスで forge を
+走らせられなかったので、**測定は全部レビュア側**（Sepolia fork、scratchpad、repo の外）。
+
+- **ベースライン再測**: `cd tokyo-2026 && forge test --fork-url sepolia` → **12 passed**。
+  `58ac444` の 12/12 は本物。
+- **B-1**: 配備済み resolver の `decodeSetter` が返す resource は **key だけの関数**で、
+  **名前に依存しない**（3つの名前で同一値を実測。root 名 `0x00` と `foo.bar` を含む）。
+  grant は「record ごと」ではなく「**key ごと × 全名前**」。1単位のトークンで自作 deal を
+  1件決済した攻撃者が、**namespace の任意の agent 名の下に任意の文字列を書ける**（実測 PASS）。
+  `docs/tokyo-2026/SUBMISSION-FORM.md:148` の "granted per record, not per name" は逆。
+- **B-2**: record に入るバイト列を proof に縛るものが無い。`recordValue` は `pure` な助言。
+  **Failed の verdict で決済した deal の buyer が "reproduced …" を書けて ENS がそれを返す**（実測 PASS）。
+  → `AGENTS.md` §5 の tier 違反（pure formatter の出力を on-chain record として見せている）。
+- **M-3**: grant を削っただけの mutant に対し、**9行のうち7行が緑**（実測）。捕まえるのは
+  join / R-4 / L-2 の3行だけ。L-3 も緑になる。
+- **M-4**: `close` ガードは griefing を**1日遅らせるだけ**で消していない（実測 PASS）。
+  `opened` が one-shot で `open` が permissionless である限り残る。
+- **M-5**: 配備済み adapter `0x6691283d…` に fix は入っていない（実チェーンで `WRITE_WINDOW()` /
+  `openedAt()` が revert）。commit はそう書いており不実表示ではないが、
+  `RECEIPTS.md:164-172` の順序制約（root の renounce は adapter 再デプロイ後）により
+  **再デプロイはデモのクリティカルパス上にある**。
+- **著者の「最も自信の無い2点」**: ① `close` ガードは**部分的に生存**（必要だが十分でない）。
+  ② `resource != 0` は**コードとしては生存**（到達不能な fail-safe）だが、**その根拠は誤り**で、
+  その誤りこそが B-1 を生んだ。
+- 却下: Codex の BLOCKER 2（live の root 残渣）は `013` §1.1 / `RECEIPTS.md` / `a5b6cd1` で
+  **事前開示済み**なので finding ではない。Codex の「R-10 が破れる」も却下（R-10 自体は成立）。
+- 繰延: v4 `beforeSwap` hook は B-1 の射程内（植え付けた record でゲートを通せる）。
+  → **2026-09-26 に実測で解決**、`docs/decisions/013-hook-reads-a-plantable-record.md`。
+  hook が読むのは **deal id を含む1本の key だけ**なので、攻撃者が自作 deal で得る grant は
+  **別の resource** になり、ゲートは見ない。**B-1 は hook に届かない。**
+  ただし **root 残渣は届く**——実測で `agent` だけが当該 key に書けた（buyer も第三者も
+  `0x4b27a133`）。renounce ゲートに検証行が1本増えた: **renounce 後に同じ3本を再実行し、
+  `agent` が「通る」から「拒否」に変わること**。それまでは「決済だけがプールを開ける」と
+  言わない。
+  hook はこの diff に無いので `docs/decisions/013-hook-reads-a-plantable-record.md` へ。
