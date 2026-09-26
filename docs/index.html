@@ -3,28 +3,28 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Reckn — an agent cannot write its own history</title>
-<meta name="description" content="A settlement, not a self-report, creates the right to write one ENS record about a job. Your browser checks it against Sepolia as this page loads.">
+<title>Reckn — pay for work, not a claim</title>
+<meta name="description" content="A work replay creates a one-time right to write an ENS record. That record opens a live Uniswap v4 swap on Sepolia.">
 <style>
-  :root{--bg:#f7f8fa;--fg:#12161c;--dim:#5b6572;--line:#dfe3e9;--card:#fff;
-        --ok:#137333;--bad:#b3261e;--acc:#0b57d0;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
-  @media (prefers-color-scheme:dark){:root{--bg:#0b0e13;--fg:#e6ebf2;--dim:#94a0b0;--line:#212936;
-        --card:#121722;--ok:#4ade80;--bad:#f87171;--acc:#7aa2f7}}
+  :root{--bg:#090d13;--fg:#f3f6fb;--dim:#9ca9bb;--line:#283242;--card:#111823;
+        --card2:#0d131d;--ok:#4cf49a;--bad:#ff747b;--acc:#8eb7ff;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--fg);
+  body{margin:0;background:radial-gradient(900px 540px at 50% -180px,#1b2e4b 0%,transparent 68%),var(--bg);color:var(--fg);
        font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
-  main{max-width:820px;margin:0 auto;padding:40px 20px 80px}
-  h1{font-size:1.9rem;line-height:1.25;margin:0 0 .4rem;letter-spacing:-.02em}
-  h2{font-size:1.15rem;margin:2.4rem 0 .6rem;letter-spacing:-.01em}
+  body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.18;background-image:linear-gradient(rgba(142,183,255,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(142,183,255,.055) 1px,transparent 1px);background-size:42px 42px;mask-image:linear-gradient(to bottom,#000,transparent 72%)}
+  main{max-width:1050px;margin:0 auto;padding:26px 20px 84px;position:relative}
+  h1{font-size:clamp(2.9rem,8vw,6.25rem);line-height:.95;margin:0;letter-spacing:-.065em;max-width:800px}
+  h1 span{color:var(--ok)}
+  h2{font-size:1.25rem;margin:3.5rem 0 .7rem;letter-spacing:-.025em}
   p{margin:.7rem 0}
   .lede{font-size:1.06rem;color:var(--dim)}
   code,.m{font-family:var(--mono);font-size:.88em}
   a{color:var(--acc)}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;
+  .card{background:linear-gradient(140deg,rgba(20,29,42,.96),rgba(12,18,28,.96));border:1px solid var(--line);border-radius:16px;
         padding:16px 18px;margin:14px 0}
   .st{display:inline-block;min-width:1.4em;font-weight:700}
   .ok{color:var(--ok)} .bad{color:var(--bad)} .pend{color:var(--dim)}
-  .k{color:var(--dim);font-size:.85em;text-transform:uppercase;letter-spacing:.05em}
+  .k{color:var(--dim);font-size:.78em;text-transform:uppercase;letter-spacing:.09em}
   table{border-collapse:collapse;width:100%;font-size:.93rem}
   th,td{text-align:left;padding:.42rem .7rem .42rem 0;vertical-align:top;
         border-bottom:1px solid var(--line)}
@@ -32,22 +32,42 @@
   .wrap{overflow-x:auto}
   .note{color:var(--dim);font-size:.9rem}
   .big{font-size:1.05rem;font-weight:600}
-  pre{background:var(--card);border:1px solid var(--line);border-radius:8px;
+  pre{background:#080d14;border:1px solid var(--line);border-radius:10px;
       padding:12px 14px;overflow-x:auto;font-size:.84rem;margin:.6rem 0}
   .flow{display:grid;grid-template-columns:1fr;gap:8px;margin:14px 0}
   @media(min-width:720px){.flow{grid-template-columns:1fr auto 1fr auto 1fr;align-items:center}}
   .stage{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--bg)}
   .stage b{display:block;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;
         color:var(--dim);margin-bottom:4px}
-  .tri{display:grid;grid-template-columns:1fr;gap:10px;margin:22px 0 6px}
+  .hero{position:relative;overflow:hidden;padding:26px 0 6px}
+  .hero:after{content:"";position:absolute;width:520px;height:520px;right:-290px;top:40px;border:1px solid rgba(76,244,154,.28);border-radius:50%;box-shadow:0 0 0 48px rgba(76,244,154,.025),0 0 0 96px rgba(76,244,154,.018);pointer-events:none}
+  .brandbar{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:58px;position:relative;z-index:1}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:750;letter-spacing:-.03em}
+  .brand img{width:29px;height:29px;border-radius:8px}
+  .live{border:1px solid rgba(76,244,154,.44);background:rgba(76,244,154,.08);padding:5px 9px;border-radius:999px;color:#b9ffd8;font:700 .68rem/1 var(--mono);letter-spacing:.06em;white-space:nowrap}
+  .live:before{content:"";display:inline-block;width:6px;height:6px;border-radius:100%;background:var(--ok);box-shadow:0 0 10px var(--ok);margin:0 7px 1px 0}
+  .eyebrow{font:700 .74rem/1 var(--mono);letter-spacing:.12em;color:#b9c9df;text-transform:uppercase;margin:0 0 18px}
+  .hero-copy{font-size:clamp(1.02rem,2.3vw,1.25rem);line-height:1.55;max-width:640px;color:#c1cbda;margin:26px 0 30px}
+  .hero-copy b{color:var(--fg)}
+  .proof{position:relative;z-index:1;background:linear-gradient(135deg,rgba(18,28,43,.98),rgba(9,15,23,.97));border:1px solid #33445d;border-radius:22px;padding:20px;margin:40px 0 8px;box-shadow:0 20px 70px rgba(0,0,0,.22)}
+  .proof-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:18px;color:var(--dim);font:700 .7rem/1 var(--mono);letter-spacing:.09em;text-transform:uppercase}
+  .proof-head b{color:#c8d6e9;font-weight:700}
+  .proof-flow{display:flex;align-items:stretch;gap:9px;margin-bottom:17px}
+  .proof-step{flex:1;min-width:0;border:1px solid #34445a;background:#0b111a;border-radius:12px;padding:12px}
+  .proof-step em{display:block;font:700 .64rem/1 var(--mono);font-style:normal;color:var(--dim);letter-spacing:.07em;margin-bottom:7px}
+  .proof-step strong{display:block;font-size:.98rem;line-height:1.2;letter-spacing:-.02em}
+  .proof-step.good{border-color:rgba(76,244,154,.64);background:rgba(76,244,154,.05)}
+  .proof-step.good strong{color:var(--ok)}
+  .proof-arrow{align-self:center;color:var(--ok);font-size:1.35rem}
+  .tri{display:grid;grid-template-columns:1fr;gap:10px;margin:0}
   @media(min-width:720px){.tri{grid-template-columns:1fr 1.25fr 1fr}}
-  .t{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--card)}
+  .t{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:#0a1018}
   .t b{display:block;font-size:.76rem;text-transform:uppercase;letter-spacing:.06em;
        color:var(--dim);font-weight:600}
   .t .v{display:block;font-size:1.12rem;font-weight:700;margin:.35rem 0 .3rem;letter-spacing:-.01em}
   .t a{font-size:.8rem}
-  .t-yes{border-color:var(--ok)}
-  .t-no{border-style:dashed}
+  .t-yes{border-color:var(--ok);box-shadow:inset 0 0 0 1px rgba(76,244,154,.1)}
+  .t-no{border-style:dashed;border-color:#465164}
   .arrow{text-align:center;color:var(--acc);font-family:var(--mono);font-size:.8rem;
         white-space:nowrap;padding:2px 4px}
   .two{border-collapse:collapse;width:100%;margin-top:10px;font-size:.93rem}
@@ -64,45 +84,67 @@
   .val{font-family:var(--mono);font-size:.82rem;word-break:break-all}
   .moves{color:var(--bad)} .still{color:var(--ok)}
   .tally{margin-top:10px;font-size:.92rem}
+  .evidence-intro{display:grid;grid-template-columns:1fr;gap:14px;margin:24px 0 4px}
+  .evidence-intro .card{margin:0;padding:15px 18px}
+  .evidence-intro b{display:block;font:700 .7rem/1 var(--mono);letter-spacing:.09em;color:var(--ok);margin-bottom:7px}
+  .evidence-intro span{display:block;line-height:1.35;font-weight:650;font-size:1.03rem;letter-spacing:-.02em}
+  .evidence-intro p{font-size:.87rem;margin:.45rem 0 0;color:var(--dim)}
   .foot{margin-top:3rem;padding-top:1.2rem;border-top:1px solid var(--line);color:var(--dim);font-size:.9rem}
+  @media(min-width:720px){.evidence-intro{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:560px){main{padding-inline:15px}.brandbar{margin-bottom:44px}.proof{padding:14px}.proof-flow{gap:5px}.proof-step{padding:10px}.proof-step strong{font-size:.8rem}.proof-arrow{font-size:1rem}.hero:after{right:-390px}}
 </style>
 </head>
 <body>
 <main>
 
-<span class="k">ETHGlobal Tokyo 2026 &middot; Continuity &middot; ENS + Uniswap Foundation</span>
-
-<h1>An agent cannot write its own history.</h1>
-
-<p class="lede">Every reputation system for AI agents ends up asking the agent, or asking someone
-with a key. Here the <b>right to write one record</b> is created by a settlement &mdash; and the
-settlement only happens because the job was re-executed and reproduced the same result.</p>
-
-<!-- The whole argument, as three transactions. Everything after this is how and why. -->
-<div class="tri" aria-label="the same swap, three times">
-  <div class="t t-no">
-    <b>no record</b>
-    <span class="v bad">refused</span>
-    <a class="m" href="https://sepolia.etherscan.io/tx/0xda60d7df7940bf25fd01466444573d0b364a8865641e97dc061096ad1f1f94be">0xda60d7df&hellip;</a>
+<section class="hero" aria-labelledby="hero-title">
+  <div class="brandbar">
+    <div class="brand"><img src="tokyo-2026/media/logo.png" alt="Reckn">reckn</div>
+    <span class="live">SEPOLIA EVIDENCE</span>
   </div>
-  <div class="t t-yes">
-    <b>the buyer writes the record</b>
-    <span class="v ok">1.0 in &rarr; 0.987158034 out</span>
-    <a class="m" href="https://sepolia.etherscan.io/tx/0xa40bb3162ed17e084155277cd2d0a9605c1fea510ddef6df62dbf502831f5698">0xa40bb316&hellip;</a>
+  <p class="eyebrow">ETHGlobal Tokyo 2026 &nbsp;/&nbsp; ENS + Uniswap Foundation</p>
+  <h1 id="hero-title">Pay for work.<br><span>Not for a claim.</span></h1>
+  <p class="hero-copy">I want a world where work can be paid <b>before we decide who to trust.</b>
+  Reckn replays a job. If the result matches, settlement gives the buyer one right to write a record.
+  That record becomes a pass to a Uniswap pool.</p>
+  <div class="proof" aria-label="how a settlement creates an access pass">
+    <div class="proof-head"><b>One settlement. One record. One pass.</b><span>Live on Sepolia</span></div>
+    <div class="proof-flow">
+      <div class="proof-step"><em>01 / work</em><strong>Replay the job</strong></div>
+      <div class="proof-arrow" aria-hidden="true">→</div>
+      <div class="proof-step good"><em>02 / settlement</em><strong>Result matches</strong></div>
+      <div class="proof-arrow" aria-hidden="true">→</div>
+      <div class="proof-step"><em>03 / access</em><strong>One record opens one pool</strong></div>
+    </div>
+    <!-- The whole claim, as three transactions. -->
+    <div class="tri" aria-label="the same swap, three times">
+      <div class="t t-no">
+        <b>no record</b>
+        <span class="v bad">refused</span>
+        <a class="m" href="https://sepolia.etherscan.io/tx/0xda60d7df7940bf25fd01466444573d0b364a8865641e97dc061096ad1f1f94be">0xda60d7df&hellip;</a>
+      </div>
+      <div class="t t-yes">
+        <b>settled record</b>
+        <span class="v ok">1.0 in &rarr; 0.987158034 out</span>
+        <a class="m" href="https://sepolia.etherscan.io/tx/0xa40bb3162ed17e084155277cd2d0a9605c1fea510ddef6df62dbf502831f5698">0xa40bb316&hellip;</a>
+      </div>
+      <div class="t t-no">
+        <b>record cleared</b>
+        <span class="v bad">refused again</span>
+        <a class="m" href="https://sepolia.etherscan.io/tx/0xce00489eb9f2ebca202643c28841360737b35bc30e81a276e47fab64e2f1fa79">0xce00489e&hellip;</a>
+      </div>
+    </div>
   </div>
-  <div class="t t-no">
-    <b>the record is cleared</b>
-    <span class="v bad">refused</span>
-    <a class="m" href="https://sepolia.etherscan.io/tx/0xce00489eb9f2ebca202643c28841360737b35bc30e81a276e47fab64e2f1fa79">0xce00489e&hellip;</a>
-  </div>
+</section>
+
+<div class="evidence-intro" aria-label="three things this page verifies">
+  <div class="card"><b>01 / NO SELF-SCORE</b><span>The official registry blocks the agent.</span><p>A second address can still write anything. That is the hole.</p></div>
+  <div class="card"><b>02 / SETTLEMENT WRITES</b><span>A replayed result gives the buyer one write.</span><p>No judge chooses whether the matching replay settles.</p></div>
+  <div class="card"><b>03 / THE RECORD IS USED</b><span>The same Uniswap swap opens, then closes again.</span><p>Same sender. Same pool. Only the record changes.</p></div>
 </div>
-<p class="note" style="margin-top:2px"><b>Same sender, same pool, same swap, on Sepolia.</b> The
-only thing that differs between those three transactions is whether an ENS record exists &mdash;
-and that record could only be written because a job was re-executed and reproduced.</p>
 
-<p class="lede" style="margin-top:22px">Nothing below is a screenshot. Your browser is calling
-<span class="m">Sepolia</span> right now, through the same public RPC anyone can use, and
-reporting what comes back &mdash; including the parts that are not finished.</p>
+<p class="lede" style="margin-top:26px">This is not a screenshot. Your browser is calling
+<span class="m">Sepolia</span> now and reports what comes back &mdash; including what is unfinished.</p>
 
 <div class="card">
   <p><span class="st pend" id="s-rpc">&hellip;</span>
@@ -256,9 +298,8 @@ reporting what comes back &mdash; including the parts that are not finished.</p>
 
 <p class="note" style="margin-top:28px">
 <a href="https://github.com/psyto/reckn">github.com/psyto/reckn</a> &middot;
-<a href="arc.html">the earlier Arc work</a> &mdash; a different, earlier submission, which this
-entry does not claim &middot;
-<a href="money-shot.html">one dispute, judged two ways</a>
+<a href="https://github.com/psyto/reckn/blob/master/docs/tokyo-2026/DEMO.md">demo runbook</a> &middot;
+<a href="https://github.com/psyto/reckn/blob/master/docs/tokyo-2026/RECEIPTS.md">chain receipts</a>
 </p>
 
 </main>
