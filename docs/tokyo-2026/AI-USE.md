@@ -15,9 +15,10 @@ did not.
 > agrees with itself.
 
 During the event window, **Claude Code (Opus 5) wrote the Solidity, the tests, the scripts and
-the prose**, directed turn by turn by the founder. **Codex** was the independent reviewer. The
-founder held the keys, made every design decision where the work forked, and ran every
-transaction.
+most of the prose**, directed turn by turn by the founder. **Codex** independently reviewed the
+specification and the settlement adapter, then produced the public demo-page UI and the three
+submission visual explainers. The founder held the keys, made every design decision where the
+work forked, and ran every transaction.
 
 **No AI produced a measurement or an on-chain result.** Every number in
 [`RECEIPTS.md`](RECEIPTS.md) came from running the code and reading the chain back.
@@ -37,7 +38,9 @@ record; nothing is squashed.
 | `zk-verdict/script/src/bin/binding.rs` | Claude Code | pinned by a pre-existing test |
 | `scripts/no-keys.sh` check 6, `scripts/no-keys-control.sh` | Claude Code | its own negative control |
 | `docs/specs/013-*.md` | Claude Code | Codex, twice, before the event |
-| `docs/tokyo-2026/*` | Claude Code | founder |
+| `docs/tokyo-2026/*` except `media/submission/*` | Claude Code | founder |
+| `docs/index.html` | Codex | founder |
+| `docs/tokyo-2026/media/submission/*` | Codex | founder |
 | **every contract under `zk-verdict/` other than the two above** | **pre-existing work.** See [`DISCLOSURE.md`](DISCLOSURE.md) | |
 
 ## What the founder did

@@ -301,11 +301,13 @@ express "this name's records are writable by a contract and not by their subject
 
 ~~~text
 Claude Code and the Codex CLI were both used, under a rule of AUTHOR INDEPENDENCE: whoever
-writes a spec does not implement it, and whoever implements does not review. The design was
-drafted by Claude and reviewed adversarially by Codex; both rounds returned CHANGES, and the
-four blockers and their fixes are in docs/reviews/013-spec-r1.md and -r2.md along with the
-exact prompts the reviewer was given. AI did not produce the measurements or the on-chain
-results — those come from running the code.
+writes a spec does not implement it, and whoever implements does not review. Claude Code wrote
+the event contracts, tests, scripts and most documentation under founder direction. Codex
+independently reviewed the specification and settlement adapter, and produced the demo-page UI
+and the three submission visual explainers. The founder made the scope decisions, held the keys,
+sent every Sepolia transaction, and checked the generated claims and assets. AI did not produce
+the measurements or the on-chain results — those come from running the code and reading the
+chain receipts.
 
 Full attribution, file by file, including what the models got wrong and where the spec files,
 the prompts and the agent definitions live:
