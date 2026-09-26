@@ -229,6 +229,10 @@ drafted by Claude and reviewed adversarially by Codex; both rounds returned CHAN
 four blockers and their fixes are in docs/reviews/013-spec-r1.md and -r2.md along with the
 exact prompts the reviewer was given. AI did not produce the measurements or the on-chain
 results — those come from running the code.
+
+Full attribution, file by file, including what the models got wrong and where the spec files,
+the prompts and the agent definitions live:
+https://github.com/psyto/reckn/blob/master/docs/tokyo-2026/AI-USE.md
 ~~~
 
 ## 9. ★ Sentences that become false if a piece does not land

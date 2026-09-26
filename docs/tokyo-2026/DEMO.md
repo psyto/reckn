@@ -1,6 +1,7 @@
 # Demo script — Reckn, ETHGlobal Tokyo 2026
 
-**Form requirements**: 2–4 minutes, ≥720p, **audio with no music**.
+**Form requirements**: 2–4 minutes, ≥720p, **a human voice with no music**. The video is
+optional; everything below assumes we make one, because the showcase runs on it.
 **Live judging**: 2026-09-27 **14:30 JST**, in person, panel — a different medium, scripted in §3.
 
 **Why this document is rewritten rather than reused.** ETHOnline 2026 Round 1 was not lost on the
@@ -208,10 +209,32 @@ submission text is what changes** (`SUBMISSION-FORM.md` §9).
 
 ## 3. Live judging, 09-27 14:30 — a different medium
 
-A panel can interrupt, so the script is a **spine plus prepared answers**, not a recitation.
+**★ The slot is 7 minutes: 4 for the demo, then 3 for Q&A** (ETHGlobal's own description). A
+panel can interrupt, so the script is a **spine plus prepared answers**, not a recitation — but a
+90-second spine would hand back two and a half minutes of the demo slot, so it is longer than the
+video's.
 
-**Spine (90 seconds)**: the same first minute as §1, then "here is the pool refusing, here it is
-passing, here it is refusing again", then stop and let them ask.
+**Spine (~3 minutes, leaving a minute of slack)**
+
+1. **0:00–0:40** the same opening as §1 — the official ERC-8004 registry refusing the agent's
+   own feedback, and the second address being accepted. *"The standard did its job, and the
+   problem just moved."*
+2. **0:40–1:20** where the right comes from: an escrow that settles on a re-execution proof,
+   with no resolver and no owner, and the same settlement granting **the buyer** one ENS record.
+3. **1:20–2:10** the record is a pass: the pool refusing, the record being written, the same
+   swap executing with the tokens moving, the record cleared, refused again.
+4. **2:10–2:40** what is **not** closed, said before they ask — the bytes are not proof-derived,
+   the hook cannot identify the swapper, and this is Sepolia.
+5. **2:40–3:00** stop early on purpose. *"The receipts are all in the repo and the page reads
+   them off the chain live — ask me anything."*
+
+**The three questions ETHGlobal says every panel asks**, answered short:
+
+| | |
+|---|---|
+| **What inspired it?** | Every reputation system for agents ends up asking the agent, or asking someone with a key. I wanted to know what is left if you refuse both. What is left is: **did the work reproduce?** |
+| **What tools, and why?** | SP1 because the adjudication has to be re-execution, not opinion. **ENSv2's permissioned resolver because it grants against the setter's calldata** — that is what makes "one record, then the right is gone" expressible at all. Uniswap v4 because a `beforeSwap` hook can read the record synchronously, inside the swap, with no CCIP-Read. |
+| **What did you solve, and how?** | Three, and each is in a commit: `close` was a griefing weapon until a guard was added; an ENSv2 role turned out to be scoped to the key and never to the name, so the name went **inside** the key; and the hook existed only on a fork, which would have made it the one part of the submission with no receipt. |
 
 ### The questions that will come, and the honest answers
 
@@ -255,7 +278,10 @@ passing, here it is refusing again", then stop and let them ask.
 1. **Every number on screen is from the take being recorded.** A rig that keeps rendering after
    the thing behind it broke is the failure mode to fear; assert the load-bearing lines and refuse
    to record if one is missing.
-2. **No music.** The form requires audio without it.
+2. **★ Four things that get the upload rejected outright** (ETHGlobal's list, and they mean it):
+   **no text-to-speech and no AI voiceover** — the narration is the founder's own voice;
+   **no phone** as the recording device; **no speeding the video up** to fit; and **no music with
+   on-screen text instead of talking**. Under 720p or over 4 minutes fails at upload.
 3. **Record after the deployments exist**, not against a fork. A fork-only video contradicts the
    ENS tracks' "functional, not hard-coded".
 4. **The first twenty seconds must work with the sound off.** The refusal has to be legible as a
