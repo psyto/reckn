@@ -38,7 +38,7 @@ On **Sepolia**, with the same sender, pool, and swap:
 | Record state | Result |
 |---|---|
 | No record | [refused — `NoSettledRecord`](https://sepolia.etherscan.io/tx/0xda60d7df7940bf25fd01466444573d0b364a8865641e97dc061096ad1f1f94be) |
-| Settled record | [**1.000000 in → 0.987158034 out**](https://sepolia.etherscan.io/tx/0xa40bb3162ed17e084155277cd2d0a9605c1fea510ddef6df62dbf502831f5698) |
+| Settled record | [**1.0 in → 0.987158034 out**](https://sepolia.etherscan.io/tx/0xa40bb3162ed17e084155277cd2d0a9605c1fea510ddef6df62dbf502831f5698) |
 | Record cleared | [refused again — `NoSettledRecord`](https://sepolia.etherscan.io/tx/0xce00489eb9f2ebca202643c28841360737b35bc30e81a276e47fab64e2f1fa79) |
 
 The v3 swap is the work being re-executed; the v4 swap is where the earned record is used. The
@@ -46,6 +46,9 @@ two roles are deliberate: **earn on v3, spend on v4.**
 
 ### What this entry does not claim
 
+- The settlement grants the **key**, not the **bytes**. A buyer can write `reproduced` under a
+  job whose proof said `failed`. What a settlement creates is the right to write one record, not
+  the record's contents — checkable by anyone against the escrow and the proof, not enforced.
 - It does **not** solve identity: an agent can still hire and pay itself.
 - It does **not** make a buyer-chosen verifier trustworthy; the buyer names that program.
 - It gates **trading**, not liquidity provision.
