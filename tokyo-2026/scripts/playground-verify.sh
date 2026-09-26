@@ -49,11 +49,14 @@ say "0. root is gone, and the pool is still open"
 printf '   hook   %s\n   open   true\n   root   renounced\n' "$HOOK"
 
 say "1. a stranger mints its own test tokens  [reckn-agent2]"
-send strangerMint0 "$T0" "mint(address,uint256)" "$STRANGER" 5000000000000000000
-send strangerMint1 "$T1" "mint(address,uint256)" "$STRANGER" 5000000000000000000
+send strangerMint0 "$T0" "mint(address,uint256)" "$STRANGER" 5000000000000000000 --account reckn-agent2
+send strangerMint1 "$T1" "mint(address,uint256)" "$STRANGER" 5000000000000000000 --account reckn-agent2
 
+# The router holds the pool's side of a swap and settles it, so the stranger funds it and then
+# sends the swap. What is being shown is not custody -- it is that a transaction from an address
+# that was never granted anything now succeeds, and would not have an hour ago.
 say "2. it sends them to the router and trades  [reckn-agent2]"
-send strangerFund "$T0" "transfer(address,uint256)" "$ROUTER" 2000000000000000000
+send strangerFund "$T0" "transfer(address,uint256)" "$ROUTER" 2000000000000000000 --account reckn-agent2
 B1=$(cast call "$T1" "balanceOf(address)(uint256)" "$ROUTER" --rpc-url "$READ_RPC" | awk '{print $1}')
 PK="($T0,$T1,3000,60,$HOOK)"
 send strangerSwap "$ROUTER" "swap((address,address,uint24,int24,address),(bool,int256,uint160))" \
