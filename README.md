@@ -1,40 +1,87 @@
 # Reckn
 
-## Keep assets native. Settle on proof.
+## Pay for work. Not for a claim.
 
-**Agents may choose where work happens. Assets remain native.**
-**Reproducible execution decides payout.**
+> **ETHGlobal Tokyo 2026 · Continuity Track · ENS + Uniswap Foundation**
 
-Reckn is building the standard for that — proof-driven settlement across execution
-environments.
+[![Reckn — a settled record opens a Uniswap v4 pool](docs/tokyo-2026/media/cover.png)](https://psyto.github.io/reckn/)
 
-*`building`, not `is` — [`docs/positioning.md`](docs/positioning.md#what-a-standard-would-have-to-fix)
-names the five boundaries a standard would have to fix, and marks the one that is still open.*
+Reckn pays for **reproduced work**. A program replays a job; when the result matches, settlement
+gives the buyer one right to write an ENS record. That record is then read inside a Uniswap v4
+swap. It is not a reputation badge: it changes whether the swap can execute.
 
-An escrow that releases only when the work it was funded against can be **re-executed and
-reproduced** — and refunds the buyer when it cannot. The money never leaves the chain it was
-funded on: a proof crosses, the asset does not.
+**[Open the live Sepolia evidence →](https://psyto.github.io/reckn/)** ·
+**[Read the 3-minute demo runbook →](docs/tokyo-2026/DEMO.md)** ·
+**[Read every receipt →](docs/tokyo-2026/RECEIPTS.md)**
 
-No owner, no resolver, no admin, no upgrade path. **Reproduce, or refund.**
-
----
-
-**This page is long because it is the evidence, not the pitch.** Jump to what you came for:
-
-| you want to | go to |
+| What a judge should see | Where to check it |
 |---|---|
-| **use it with your own service** | **[`docs/use-with-your-service.md`](docs/use-with-your-service.md)** — the whole integration in one page |
-| understand the idea | [The problem](#the-problem) · [What Reckn does instead](#what-reckn-does-instead) · [Why](#why) |
-| see how it compares | [`docs/positioning.md`](docs/positioning.md) — bridges, oracles, TEEs, x402: which layer decides what · [`docs/chain-fit.md`](docs/chain-fit.md) — why Arc and why Tempo are different answers |
-| know what it can decide | [Scope](#scope-what-re-execution-can-adjudicate) · [The one design invariant](#the-one-design-invariant) |
-| check the claim yourself | [The claim is a build condition](#the-claim-is-a-build-condition-not-a-promise) · [What crosses, and what does not](#what-crosses-and-what-does-not) |
-| run it in ten minutes | [Try it (one command)](#try-it-one-command) |
-| see what is *not* done | [`docs/status.md`](docs/status.md) — `Known gaps (not closed)` |
-| find any other document | [`docs/README.md`](docs/README.md) — what each page is *for* |
-| judge the Tokyo entry | [The current entry](#ethglobal-tokyo-2026--the-entry-this-repository-is-currently-preparing) · [`docs/tokyo-2026/`](docs/tokyo-2026/) |
-| judge the ETHOnline entry (concluded) | [Where the boundary was](#ethonline-2026--where-the-boundary-was) · [`docs/ethonline-2026/`](docs/ethonline-2026/) |
+| The official ERC-8004 registry blocks an agent from self-feedback, but a second address can submit feedback without proving work. | [Live page](https://psyto.github.io/reckn/) · [receipt](docs/tokyo-2026/RECEIPTS.md) |
+| A settled replay grants the buyer one ENSv2 setter right, then that right is revoked. | [`SettlementRecord.sol`](tokyo-2026/src/SettlementRecord.sol) · [ENS evidence](docs/tokyo-2026/RECEIPTS.md#the-join-on-the-real-chain) |
+| The same v4 swap is refused with no record, executes with a record, and is refused again after clearing it. | [three live transactions](#the-three-swap-transactions) |
+| Every live claim and every open limitation is read from Sepolia, not printed as a screenshot. | [Live page](https://psyto.github.io/reckn/) |
+
+### The whole story in three moves
+
+1. **The hole.** ERC-8004 prevents an agent owner from submitting its own feedback. That still
+   does not establish that a different feedback writer did any work.
+2. **The right.** A buyer funds an escrow. A proof of reproduced work settles it, and the same
+   settlement opens one ENSv2 write window for that buyer. No owner, resolver, or admin chooses
+   the result.
+3. **The pass.** A Uniswap v4 `beforeSwap` hook reads the settled ENS record synchronously on
+   chain. No record, no swap. Clear it, and the same swap closes again.
+
+### The three swap transactions
+
+On **Sepolia**, with the same sender, pool, and swap:
+
+| Record state | Result |
+|---|---|
+| No record | [refused — `NoSettledRecord`](https://sepolia.etherscan.io/tx/0xda60d7df7940bf25fd01466444573d0b364a8865641e97dc061096ad1f1f94be) |
+| Settled record | [**1.000000 in → 0.987158034 out**](https://sepolia.etherscan.io/tx/0xa40bb3162ed17e084155277cd2d0a9605c1fea510ddef6df62dbf502831f5698) |
+| Record cleared | [refused again — `NoSettledRecord`](https://sepolia.etherscan.io/tx/0xce00489eb9f2ebca202643c28841360737b35bc30e81a276e47fab64e2f1fa79) |
+
+The v3 swap is the work being re-executed; the v4 swap is where the earned record is used. The
+two roles are deliberate: **earn on v3, spend on v4.**
+
+### What this entry does not claim
+
+- It does **not** solve identity: an agent can still hire and pay itself.
+- It does **not** make a buyer-chosen verifier trustworthy; the buyer names that program.
+- It gates **trading**, not liquidity provision.
+- It is **Sepolia**, test tokens, and a testnet deployment — not mainnet.
+- The hook gates on a settled record, not on the ultimate trader identity; `beforeSwap` sees the
+  PoolManager unlocker/router.
+
+The live page also reports the only state that must not be taken on faith: whether the deployed
+agent account still holds a root role capable of overriding the per-record rule.
+
+### Tokyo work, and what was already here
+
+The zk re-execution escrow and proving pipeline are pre-existing work. The **Tokyo event work**
+is the ENSv2 record-right adapter, the Uniswap v4 record gate, the Sepolia deployment and
+receipts, live demo, tests, and submission visuals. The full boundary and prior-work disclosure
+are in [`docs/tokyo-2026/DISCLOSURE.md`](docs/tokyo-2026/DISCLOSURE.md).
+
+AI use is disclosed file by file in [`docs/tokyo-2026/AI-USE.md`](docs/tokyo-2026/AI-USE.md).
+
+### Verify the central escrow claim
+
+```bash
+bash scripts/no-keys.sh
+```
+
+It fails if `RecknZkEscrow` gains an owner, admin, resolver, pause, upgrade path, an unlisted
+state-changing entry point, or a caller-identity gate. The live Tokyo evidence is documented in
+[`docs/tokyo-2026/RECEIPTS.md`](docs/tokyo-2026/RECEIPTS.md).
 
 ---
+
+## Earlier Reckn background (pre-existing work)
+
+The rest of this README preserves the broader research and earlier demos. They are **not** the
+Tokyo submission's evidence; use the Tokyo section above and its linked receipts when judging
+this entry.
 
 ## The problem
 
@@ -449,7 +496,7 @@ and the file that checks each one, are in
 **The 150-word version of all of this**, with every clause traced to the file that carries it and
 an audit of what the words may not mean: [`docs/cwf-2026/PITCH.md`](docs/cwf-2026/PITCH.md).
 
-## ETHGlobal Tokyo 2026 — the entry this repository is currently preparing
+## ETHGlobal Tokyo 2026 — technical reference
 
 **2026-09-25 → 09-27, Continuity track**, applying for the **ENS** and **Uniswap
 Foundation** partner prizes and for Top 10 Finalist judging.
@@ -459,7 +506,7 @@ Foundation** partner prizes and for Top 10 Finalist judging.
 | The lane | [`docs/specs/013-settlement-granted-record-rights.md`](docs/specs/013-settlement-granted-record-rights.md), at r4 — it supersedes `012` and absorbs its Uniswap half |
 | **Event work** | **commits after 2026-09-25 21:00 JST, when hacking began.** A commit merely dated 09-25 is not event work — five landed that day before the boundary. Check it yourself: `git log --oneline eddac8d..HEAD` |
 | Boundary commit | `eddac8d` (2026-09-25 19:31 +0900), recorded in [`STATUS.md`](STATUS.md) before the window opened |
-| Pre-existing work | [`docs/tokyo-2026/DISCLOSURE.md`](docs/tokyo-2026/DISCLOSURE.md). Everything in this README is pre-event work and is disclosed as such |
+| Pre-existing work | [`docs/tokyo-2026/DISCLOSURE.md`](docs/tokyo-2026/DISCLOSURE.md). The broader Reckn research below is pre-existing; the Tokyo section at the top names the event work separately |
 | What was measured before building | [`spikes/tokyo-2026/FINDINGS.md`](spikes/tokyo-2026/FINDINGS.md) — including two places the design was wrong |
 
 ### What was built, and the exact lines

@@ -47,11 +47,12 @@ detail underneath it.
 | [tokyo-partner-pilot.md](tokyo-partner-pilot.md) | A runbook for producing adoption evidence with one partner, in one session. |
 | [architecture-brief.md](architecture-brief.md) | The convergence brief written for an independent reviewer. |
 
-## The ETHGlobal Tokyo 2026 entry — the one being prepared
+## The ETHGlobal Tokyo 2026 entry
 
 | page | what it is for |
 |---|---|
-| **[tokyo-2026/DISCLOSURE.md](tokyo-2026/DISCLOSURE.md)** | **What existed before the event and what will be written during it.** The rules require the disclosure in writing and name no channel, so it is filed by reproducing it in full in the submission form's description. It does not hide the ratio. |
+| **[tokyo-2026/README.md](tokyo-2026/README.md)** | **The judge's entry point:** live evidence, the three-transaction proof, what is new for Tokyo, and the limits stated up front. |
+| **[tokyo-2026/DISCLOSURE.md](tokyo-2026/DISCLOSURE.md)** | **What existed before the event and what landed during it.** The rules require the disclosure in writing and name no channel, so it is filed by reproducing it in full in the submission form's description. It does not hide the ratio. |
 | [tokyo-2026/SUBMISSION-FORM.md](tokyo-2026/SUBMISSION-FORM.md) | Every form field, written from measured results — and §9, the list of which sentences become false if a piece does not land. |
 | [tokyo-2026/DEMO.md](tokyo-2026/DEMO.md) | The first sixty seconds, which is what ETHOnline actually lost on; the rest of the video; and the live-judging answers, including the honest one to *"who is using this"*. |
 | [tokyo-2026/PREFLIGHT.md](tokyo-2026/PREFLIGHT.md) | The things only the founder can do, and §5 — three traps measured on 09-21 that would otherwise have bitten during the event. |
