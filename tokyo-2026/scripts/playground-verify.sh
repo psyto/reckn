@@ -56,15 +56,33 @@ send strangerMint1 "$T1" "mint(address,uint256)" "$STRANGER" 5000000000000000000
 # sends the swap. What is being shown is not custody -- it is that a transaction from an address
 # that was never granted anything now succeeds, and would not have an hour ago.
 say "2. it sends them to the router and trades  [reckn-agent2]"
-send strangerFund "$T0" "transfer(address,uint256)" "$ROUTER" 2000000000000000000 --account reckn-agent2
-B1=$(cast call "$T1" "balanceOf(address)(uint256)" "$ROUTER" --rpc-url "$READ_RPC" | awk '{print $1}')
+# ★ 2026-09-27, found live at the venue. This swapped token0 -> token1 every time, and every
+# run pushed the price down. It eventually sat ON the floor and the next run reverted with
+# PriceLimitAlreadyExceeded(4295128740, 4295128740) -- MIN_SQRT_PRICE + 1, on both sides.
+# That is the AMM, not the hook: the pool had no room left in that direction. A demo that can
+# only be run while the pool happens to have room in one fixed direction is a demo with a
+# countdown on it, so the direction is chosen rather than assumed. Both tokens are funded
+# because the choice is made by trying, and the loser's tokens are simply unused.
+MIN_LIMIT=4295128740
+MAX_LIMIT=1461446703485210103287273052203988822378723970341
 PK="($T0,$T1,3000,60,$HOOK)"
-send strangerSwap "$ROUTER" "swap((address,address,uint24,int24,address),(bool,int256,uint160))" \
-  "$PK" "(true,-1000000000000000000,4295128740)" --account reckn-agent2
-A1=$(cast call "$T1" "balanceOf(address)(uint256)" "$ROUTER" --rpc-url "$READ_RPC" | awk '{print $1}')
+SIG="swap((address,address,uint24,int24,address),(bool,int256,uint160))"
+send strangerFund0 "$T0" "transfer(address,uint256)" "$ROUTER" 2000000000000000000 --account reckn-agent2
+send strangerFund1 "$T1" "transfer(address,uint256)" "$ROUTER" 2000000000000000000 --account reckn-agent2
+
+if cast call "$ROUTER" "$SIG" "$PK" "(true,-1000000000000000000,$MIN_LIMIT)" \
+     --from "$STRANGER" --rpc-url "$READ_RPC" >/dev/null 2>&1; then
+  ZFO=true;  LIMIT=$MIN_LIMIT; IN=$T0; OUT=$T1; OUTNAME=token1
+else
+  ZFO=false; LIMIT=$MAX_LIMIT; IN=$T1; OUT=$T0; OUTNAME=token0
+  printf '   (the pool is at its floor for token0 -> token1, so this trade goes the other way)\n'
+fi
+B1=$(cast call "$OUT" "balanceOf(address)(uint256)" "$ROUTER" --rpc-url "$READ_RPC" | awk '{print $1}')
+send strangerSwap "$ROUTER" "$SIG" "$PK" "($ZFO,-1000000000000000000,$LIMIT)" --account reckn-agent2
+A1=$(cast call "$OUT" "balanceOf(address)(uint256)" "$ROUTER" --rpc-url "$READ_RPC" | awk '{print $1}')
 
 say "done"
-python3 -c "print('   token1 received', ($A1 - $B1)/1e18)"
+python3 -c "print('   $OUTNAME received', ($A1 - $B1)/1e18)"
 echo "   A pool opened by one settlement, traded by somebody who was never granted anything,"
 echo "   after the only key that could have opened it was destroyed."
 cat "$LOG"
