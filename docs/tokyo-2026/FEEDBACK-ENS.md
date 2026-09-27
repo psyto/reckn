@@ -7,8 +7,8 @@ and our registry is
 both on Sepolia. Everything below is something we hit while building, with the measurement or
 the address that shows it. Raw notes: [`spikes/tokyo-2026/FINDINGS.md`](../../spikes/tokyo-2026/FINDINGS.md).
 
-> **A correction.** At the booth on 2026-09-27 this was described as *"four EAS contracts on
-> devnet"*, which is not what we meant and not something we measured. **The finding is §1
+> **A correction.** Talking it through in person at the booth on 2026-09-27, this came out as
+> *"four EAS contracts on devnet"*, which is not what we meant and not something we measured. **The finding is §1
 > below: the deployed Sepolia beta and the `contracts-v2` main branch have different ABIs.**
 > The mistake was ours, made out loud, so it is corrected here in writing rather than quietly.
 
@@ -53,8 +53,9 @@ For us that means a setter role granted for `job:1` is not bound to the name it 
 against. We handle it by fixing the adapter to one name at construction and putting the name
 **inside** the key, so a write onto a foreign name is unattributable rather than impossible.
 
-**We asked Kevin at the booth and the answer was better than ours: partition names across
-resolver instances, because the resolver instance is the trust boundary.** Our deployment is
+**We asked Kevin, who answered on Discord on 2026-09-26 and again in person at the booth on
+the 27th, and the answer was better than ours: partition names across resolver instances,
+because the resolver instance is the trust boundary.** Our deployment is
 already that in its smallest form — one resolver serving one name — and we did not realise that
 was the intended pattern. **Saying so next to `decodeSetter` would have saved us the
 measurement, and would stop someone else assuming the role is name-scoped.**
