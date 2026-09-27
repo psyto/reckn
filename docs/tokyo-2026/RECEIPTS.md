@@ -446,3 +446,45 @@ receipt is the failure this file exists to prevent.
 > **The rehearsal's contract address equals `arc.json`'s `RecknVerdictVerifier`.** Both are
 > `reckn-agent` at nonce 1 on their own chain, and CREATE addresses do not depend on the chain.
 > The Sepolia one writes `1` to slot 0 and returns empty code. **It is not a verifier.**
+
+## ★ The live demo failed at the booth, 2026-09-27 — and both halves are here
+
+**This is the one section written after judging started.** The playground demo was run in front
+of the ENS booth during partner judging and **it reverted**. It is recorded because a repository
+that only holds the runs that worked cannot be used to check anything.
+
+**What happened.** `PriceLimitAlreadyExceeded(4295128740, 4295128740)`. Every earlier run swapped
+token0 → token1 against `sqrtPriceLimitX96 = MIN_SQRT_PRICE + 1`, and each one pushed the price
+down. By this morning the pool sat **on the floor**, and the next swap that way had no room.
+**That is the AMM, not the hook** — `isOpen()` returned `true` throughout, and the hook would
+have allowed the trade.
+
+**Why it was read as something else.** `cast` prints it as *"Error: Failed to estimate gas: …
+execution reverted"*, so the first words say gas and the cause sits in the revert data. It was
+taken for an empty account. It was not: `reckn-agent2` held **0.00317 ETH, about sixteen swaps**
+at the 1.04 gwei in force. The balances were read before any of this was written down.
+
+| the attempt that died, 03:05–03:06 UTC | tx | result | gas |
+|---|---|---|---|
+| mint token0 | [`0x734c50a5…`](https://sepolia.etherscan.io/tx/0x734c50a5844acbdb850daa673035d2828a0c98cc5ee9bfc427b44ebb63209a60) | success | 34,716 |
+| mint token1 | [`0x97ffe100…`](https://sepolia.etherscan.io/tx/0x97ffe100816b2db6f88abb88429cb4096952881f0ff137e777b4c7cc7dca5ed2) | success | 34,716 |
+| fund the router with token0 — the side with no room | [`0xa5d48b98…`](https://sepolia.etherscan.io/tx/0xa5d48b9886fd442902086900a0b34266f9296876a5101dfb4228c35b007719ff) | success | 35,061 |
+| the swap | **never became a transaction** — gas estimation reverted | — | — |
+
+**The fix, and the reason it is a fix.** A demo that only runs while the pool happens to have
+room in one fixed direction is a demo with a countdown on it. `playground-verify.sh` now funds
+the router with **both** tokens, probes token0 → token1 with a `cast call`, and swaps the other
+way when the probe reverts. **The direction is chosen rather than assumed.**
+
+| recovered, 03:32–03:33 UTC | tx | result | gas |
+|---|---|---|---|
+| mint token0 | [`0xb523f963…`](https://sepolia.etherscan.io/tx/0xb523f9636019cab32660ec97b1311112471f01b3ad0d0365cf3f951e8a002ef7) | success | 34,716 |
+| mint token1 | [`0xdd5bc37e…`](https://sepolia.etherscan.io/tx/0xdd5bc37e06656731d5f7f697f473ce21de56d91907339864fb9b94f044585a8f) | success | 34,716 |
+| fund the router, token0 | [`0xd3942523…`](https://sepolia.etherscan.io/tx/0xd39425237964099a8f3a1c19f533ec050af50ba88d09e258f1b42cbe3b2dc75d) | success | 35,061 |
+| fund the router, token1 | [`0x174ca49b…`](https://sepolia.etherscan.io/tx/0x174ca49b625373278f93753651f04aff533f797d88761013d939e65e1cb565c7) | success | 35,061 |
+| **the trade, the other way** — 1.0478823202890613 token0 out | [`0x78c4b357…`](https://sepolia.etherscan.io/tx/0x78c4b357e413fdce61b2f45db6dc3432f5f159cdd631358cd7d8910c01d5b646) | success | 520,738 |
+
+**520,738 gas against 180,432** for the first trade: climbing off the floor crosses many
+initialised ticks. Still sent by an address that was never granted anything, and still after the
+only key that could have opened this pool was destroyed. **The pool is open to anyone again.**
+

@@ -290,6 +290,27 @@ clone rather than the working tree.
 
 ---
 
+## ★ 5.8 Two traps measured at the venue on 2026-09-27, mid-judging
+
+**`cast` names gas first and the cause last.** A reverting call prints
+
+```
+Error: Failed to estimate gas: ... execution reverted, data: "0x7c9c6e8f..."
+```
+
+The first four words say *gas*, so an empty account is the natural reading, and that is what it
+was read as at the booth. It was a revert: `PriceLimitAlreadyExceeded`. **Read the decoded error
+at the end of the line before touching a faucet** — `reckn-agent2` held 0.00317 ETH, about
+sixteen swaps at the gas price in force.
+
+**A demo pool has a direction, and the direction runs out.** Every rehearsal swapped
+token0 → token1 against `MIN_SQRT_PRICE + 1`, and each one moved the price down until the pool
+sat on the floor. **The hook was fine** — `isOpen()` was `true` and it would have allowed the
+trade. **A live demo that only works while the pool happens to have room one way has a countdown
+on it**, and the countdown expires in front of a judge, not in rehearsal. `playground-verify.sh`
+now funds both sides, probes with a `cast call`, and trades whichever way has room. Receipts for
+the failure and the recovery are both in `RECEIPTS.md`.
+
 ## ★ 5.5 `gh` reverted to the other account once — and that is a loud failure, not a checklist item
 
 **The measurement stands and is not deleted**: `gh auth status` showed `psyto` active on 09-21;
