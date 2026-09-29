@@ -2,7 +2,9 @@
 
 ## Pay for work. Not for a claim.
 
-> **ETHGlobal Tokyo 2026 · Continuity Track · ENS + Uniswap Foundation**
+> **🥉 3rd Place — Uniswap Foundation, Best Uniswap Stack Contribution · ETHGlobal Tokyo 2026**
+>
+> Continuity Track · ENS + Uniswap Foundation
 
 [![Reckn — a settled record opens a Uniswap v4 pool](docs/tokyo-2026/media/cover.png)](https://psyto.github.io/reckn/)
 
@@ -14,7 +16,7 @@ swap. It is not a reputation badge: it changes whether the swap can execute.
 **[Read the 3-minute demo runbook →](docs/tokyo-2026/DEMO.md)** ·
 **[Read every receipt →](docs/tokyo-2026/RECEIPTS.md)**
 
-**Submitted 2026-09-27:** [ethglobal.com/showcase/reckn-47t6m](https://ethglobal.com/showcase/reckn-47t6m)
+**Submitted 2026-09-27:** [ethglobal.com/showcase/reckn-47t6m](https://ethglobal.com/showcase/reckn-47t6m) — **3rd place, Uniswap Foundation Best Uniswap Stack Contribution.**
 
 | What a judge should see | Where to check it |
 |---|---|
@@ -551,6 +553,7 @@ an audit of what the words may not mean: [`docs/cwf-2026/PITCH.md`](docs/cwf-202
 **2026-09-25 → 09-27, Continuity track.** **Submitted 2026-09-27** —
 [ethglobal.com/showcase/reckn-47t6m](https://ethglobal.com/showcase/reckn-47t6m) — for the
 **ENS** and **Uniswap Foundation** partner prizes and for Top 10 Finalist judging.
+**Result: 3rd place, Uniswap Foundation — Best Uniswap Stack Contribution.**
 
 | | |
 |---|---|

@@ -15,7 +15,7 @@ TEE の LLM 判事でも、自己申告フィードバックでも、監査不�
 |---|---|
 | **ETHOnline 2026** | **Round 1 で終了**（2026-09-14 通知。ライブ審査には進まず）。**パートナー賞（Arc 2枠）は対象のまま**、**Finale 9/17 01:00 JST**。`master` はそこまで凍結 |
 | **Crypto World's Fair** | ~~Tempo × Solana で参加~~ → **2026-09-14 に取り消し。Reckn は参加しない。** 出るのは別レーンで、**この repo はそれを記述しない**（`docs/specs/010` §11）。取り消しの全文 `docs/cwf-2026/RETRACTED-2026-09-14.md` |
-| **ETHGlobal Tokyo** | **提出済み 2026-09-27**（締切 09:00 の8時間以上前）。公開ページ **https://ethglobal.com/showcase/reckn-47t6m**。仕様は **`docs/specs/013-settlement-granted-record-rights.md`（r4）** ——2026-09-21 に 012 を置換し、その Uniswap 半分を吸収して **ENS を加えた**。パートナー賞は **ENS と Uniswap Foundation**。**Reckn の生きているレーンはこれ一本**。**審査は 09-27 09:30–12:30**（4F 割当部屋 ＋ 5F パートナーブース。**14:30 ではない** ——旧値の出典は `013` G-Q3 の *"founder's calendar, not a file"*）。事前作業の開示・フォーム文面・デモ台本・準備手順は `docs/tokyo-2026/`、測定は `spikes/tokyo-2026/FINDINGS.md` |
+| **ETHGlobal Tokyo** | **🥉 3rd Place — Uniswap Foundation, Best Uniswap Stack Contribution。Reckn 初の受賞。** 提出 2026-09-27（締切 09:00 の8時間以上前）。公開ページ **https://ethglobal.com/showcase/reckn-47t6m**。仕様は **`docs/specs/013-settlement-granted-record-rights.md`（r4）** ——2026-09-21 に 012 を置換し、その Uniswap 半分を吸収して **ENS を加えた**。パートナー賞は **ENS と Uniswap Foundation**。**Reckn の生きているレーンはこれ一本**。**審査は 09-27 09:30–12:30**（4F 割当部屋 ＋ 5F パートナーブース。**14:30 ではない** ——旧値の出典は `013` G-Q3 の *"founder's calendar, not a file"*）。事前作業の開示・フォーム文面・デモ台本・準備手順は `docs/tokyo-2026/`、測定は `spikes/tokyo-2026/FINDINGS.md` |
 
 **① 9/14 01:00 JST から 9/17 01:00 JST は `master` 凍結**（founder 裁定 2026-09-12）。
 凍結中の作業は **`freeze-window` ブランチ**に積み、Finale 後に日付を保ってマージする
@@ -137,7 +137,8 @@ optimistic 系=bonded resolver / feedback 系=投票者）。**アーキテク�
 - `program-svm` は 986,097 cycles（ed25519 sigverify + lattice 再計算）。
 - ~~**本プロジェクトは一度もハッカソンに提出されていない**（2026-09-07 現在も未提出）~~
   → **2026-09-12 更新: ETHOnline 2026 に提出済み**（Arc × Solana、Continuity: Ship a Feature）。
-  **「未提出」と書かない。** 判定日程は下の「いま走っている大会」節。
+  **「未提出」と書かない。** **2026-09-27 更新: ETHGlobal Tokyo で 3rd Place（Uniswap Foundation,
+  Best Uniswap Stack Contribution）。「受賞歴なし」とも書かない。**
   **リポジトリは 2026-09-04 に public 済み**——応募が現物のソースに対して審査されるようにするため、
   提出時でなく前倒しで公開した。**「今も private」は偽**なので、そう書かない。
   **提出フォームは 2026-09-06 に入力済み**（description は `DISCLOSURE.md` の全文再掲）。

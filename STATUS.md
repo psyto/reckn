@@ -27,6 +27,17 @@
 
 **Tokyo の `EVENT_START` は ETHOnline のもの（`121194c`）とは別物。混同しない。**
 
+### ★ 結果 — 3rd Place, Uniswap Foundation Best Uniswap Stack Contribution
+
+**ETHGlobal Tokyo 2026。Reckn が初めて受賞した大会**（ETHOnline 2026 は Round 1 敗退）。
+
+**Uniswap ブースには行っていない。** 審査員の前にあったのは**書いたものだけ**——当日朝に入れ替えた
+提出フォームの2フィールド（badge と key、検査が swap の中で走ること）、README の
+*Why a pool, and why v4*、09-26 に出した Developer Feedback Form（`FEEDBACK.md`）、
+そして3本のトランザクション。**同じ日に、ライブのプールは審査中に revert している**
+（`RECEIPTS.md` の当日の節）。**実演が落ちた日に、書いたものが勝った。**
+次に時間配分を決めるときの、実測された1点。
+
 ### ★ 提出済み — 2026-09-27（締切の8時間以上前）
 
 | | |
