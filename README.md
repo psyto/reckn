@@ -4,7 +4,7 @@
 
 > **🥉 3rd Place — Uniswap Foundation, Best Uniswap Stack Contribution · ETHGlobal Tokyo 2026**
 >
-> Continuity Track · ENS + Uniswap Foundation
+> Continuity Track
 
 [![Reckn — a settled record opens a Uniswap v4 pool](docs/tokyo-2026/media/cover.png)](https://psyto.github.io/reckn/)
 
